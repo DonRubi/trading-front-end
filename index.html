@@ -211,7 +211,7 @@
             color: #fff;
         }
 
-        /* Dolny pasek nawigacyjny szybkiego dostępu (Opcjonalny dla UX) */
+        /* Dolny pasek nawigacyjny szybkiego dostępu */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -308,198 +308,109 @@
         <h2>Podsumowanie Portfela</h2>
     </section>
 
-<section id="database-module" class="app-module">
-    <style>
-        .macro-management-section {
-            margin-top: 40px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1); /* Delikatna linia podziału */
-            padding-top: 25px;
-        }
-        .macro-header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .macro-header-container h3 {
-            margin: 0;
-            font-size: 1.3em;
-        }
-        .btn-macro-update {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            cursor: pointer;
-            border-radius: 4px;
-            font-weight: bold;
-            transition: background 0.2s ease;
-        }
-        .btn-macro-update:hover {
-            background-color: #218838;
-        }
-        .macro-table-wrapper {
-            overflow-x: auto;
-            border-radius: 6px;
-        }
-        .macro-custom-table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.95em;
-        }
-        .macro-custom-table th {
-            background-color: rgba(0, 0, 0, 0.05); /* Dopasowuje się zarówno do jasnego, jak i ciemnego tła */
-            padding: 12px 10px;
-            font-weight: 600;
-            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
-        }
-        .macro-custom-table td {
-            padding: 12px 10px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        }
-        /* Style dla wyróżnienia konkretnych danych rynkowych */
-        .macro-val-currency {
-            font-weight: bold;
-            color: #0056b3;
-        }
-        .macro-val-vix {
-            font-weight: bold;
-            color: #dc3545; /* Czerwony akcent dla indeksu strachu */
-        }
-        .macro-val-date {
-            font-weight: 500;
-        }
-        .macro-val-time {
-            color: #666;
-            font-size: 0.85em;
-        }
-    </style>
+    <section id="database-module" class="app-module">
+        <style>
+            .macro-management-section {
+                margin-top: 40px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                padding-top: 25px;
+            }
+            .macro-header-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+            .macro-header-container h3 {
+                margin: 0;
+                font-size: 1.3em;
+            }
+            .btn-macro-update {
+                background-color: #28a745;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                cursor: pointer;
+                border-radius: 4px;
+                font-weight: bold;
+                transition: background 0.2s ease;
+            }
+            .btn-macro-update:hover {
+                background-color: #218838;
+            }
+            .macro-table-wrapper {
+                overflow-x: auto;
+                border-radius: 6px;
+            }
+            .macro-custom-table {
+                width: 100%;
+                border-collapse: collapse;
+                text-align: left;
+                font-size: 0.95em;
+            }
+            .macro-custom-table th {
+                background-color: rgba(0, 0, 0, 0.05);
+                padding: 12px 10px;
+                font-weight: 600;
+                border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+            }
+            .macro-custom-table td {
+                padding: 12px 10px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            }
+            .macro-val-currency {
+                font-weight: bold;
+                color: #0056b3;
+            }
+            .macro-val-vix {
+                font-weight: bold;
+                color: #dc3545;
+            }
+            .macro-val-date {
+                font-weight: 500;
+            }
+            .macro-val-time {
+                color: #666;
+                font-size: 0.85em;
+            }
+        </style>
 
-    <div class="ticker-management-section">
-        <h3>Baza Tickerów Akcji</h3>
-        <div class="input-group">
-            <input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. TSLA)">
-            <button onclick="addTicker()">Dodaj</button>
+        <div class="ticker-management-section">
+            <h3>Baza Tickerów Akcji</h3>
+            <div class="input-group">
+                <input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. TSLA)">
+                <button onclick="addTicker()">Dodaj</button>
+            </div>
+            <div id="db-list-container"></div>
         </div>
-        <div id="db-list-container"></div>
-    </div>
 
-    <div class="macro-management-section">
-        <div class="macro-header-container">
-            <h3>Panel Sentymentu i Walut (Makro)</h3>
-            <button class="btn-macro-update" onclick="forceMacroUpdate()">Wymuś aktualizację</button>
+        <div class="macro-management-section">
+            <div class="macro-header-container">
+                <h3>Panel Sentymentu i Walut (Makro)</h3>
+                <button class="btn-macro-update" onclick="forceMacroUpdate()">Wymuś aktualizację</button>
+            </div>
+            
+            <div class="macro-table-wrapper">
+                <table class="macro-custom-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>EUR/PLN</th>
+                            <th>USD/PLN</th>
+                            <th>VIX (Strach)</th>
+                            <th>S&P 500</th>
+                            <th>Ostatni odczyt</th>
+                        </tr>
+                    </thead>
+                    <tbody id="macro-table-body">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 20px; color: #777;">Ładowanie danych makro...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        
-        <div class="macro-table-wrapper">
-            <table class="macro-custom-table">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>EUR/PLN</th>
-                        <th>USD/PLN</th>
-                        <th>VIX (Strach)</th>
-                        <th>S&P 500</th>
-                        <th>Ostatni odczyt</th>
-                    </tr>
-                </thead>
-                <tbody id="macro-table-body">
-                    <tr>
-                        <td colspan="6" style="text-align: center; padding: 20px; color: #777;">Ładowanie danych makro...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</section> 
-
-<script>
-    // Konfiguracja adresu produkcyjnego API
-    const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
-
-    /**
-     * Pobiera dane makro z serwera i wstrzykuje je do tabeli
-     */
-    function loadMacroData() {
-        const tbody = document.getElementById('macro-table-body');
-        if (!tbody) {
-            console.error("Nie znaleziono w strukturze HTML elementu o id 'macro-table-body'!");
-            return;
-        }
-
-        console.log("Rozpoczynam pobieranie danych makro z: " + API_BASE_URL + "/api/macro");
-
-        fetch(`${API_BASE_URL}/api/macro`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Serwer zwrócił błąd: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log("Dane makro odebrane pomyślnie:", data);
-                tbody.innerHTML = ''; // Czyszczenie komunikatu ładowania
-
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak historycznych wpisów makro w bazie.</td></tr>`;
-                    return;
-                }
-
-                // Generowanie wierszy dla każdego zapisanego dnia w bazie danych (tabela rośnie w dół)
-                data.forEach(row => {
-                    const tr = document.createElement('tr');
-                    
-                    tr.innerHTML = `
-                        <td class="macro-val-date">${row.date}</td>
-                        <td class="macro-val-currency">${row.EURPLN}</td>
-                        <td class="macro-val-currency">${row.USDPLN}</td>
-                        <td class="macro-val-vix">${row.VIX}</td>
-                        <td style="font-weight: 500;">${row.SP500}</td>
-                        <td class="macro-val-time">${row.updated_at || '-'}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            })
-            .catch(error => {
-                console.error('Błąd w loadMacroData:', error);
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc3545; font-weight: bold;">Błąd połączenia z API: ${error.message}</td></tr>`;
-            });
-    }
-
-    /**
-     * Wymusza natychmiastową aktualizację danych makro intraday
-     */
-    function forceMacroUpdate() {
-        const tbody = document.getElementById('macro-table-body');
-        if (tbody) tbody.style.opacity = '0.5';
-
-        fetch(`${API_BASE_URL}/api/macro/force`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('Błąd serwera przy wymuszeniu.');
-            return response.json();
-        })
-        .then(result => {
-            if (tbody) tbody.style.opacity = '1';
-            alert(result.message);
-            loadMacroData(); // Ponowne załadowanie całej historii w celu odświeżenia widoku
-        })
-        .catch(error => {
-            if (tbody) tbody.style.opacity = '1';
-            console.error('Błąd forceMacroUpdate:', error);
-            alert(`Nie udało się wymusić aktualizacji: ${error.message}`);
-        });
-    }
-
-    // Automatyczne i bezpieczne uruchomienie ładowania danych po inicjalizacji skryptu
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', loadMacroData);
-    } else {
-        loadMacroData();
-    }
-</script>
+    </section> 
 
     <section id="service-module" class="app-module">
         <h2>Serwisy i Integracje</h2>
@@ -513,30 +424,31 @@
         <h2>Lista Obserwowanych (Focus List)</h2>
     </section>
 
-<section id="alerthistory-module" class="app-module">
-    <div class="macro-header-container">
-        <h3>Historia Wywołanych Alertów</h3>
-    </div>
-    
-    <div class="macro-table-wrapper">
-        <table class="macro-custom-table">
-            <thead>
-                <tr>
-                    <th>Data Wywołania</th>
-                    <th>Ticker</th>
-                    <th>Warunek</th>
-                    <th>Poziom Alertu</th>
-                    <th>Dzienne Ekstrema</th>
-                    <th>Akcja</th> </tr>
-            </thead>
-            <tbody id="alert-history-tbody">
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</section>
+    <section id="alerthistory-module" class="app-module">
+        <div class="macro-header-container">
+            <h3>Historia Wywołanych Alertów</h3>
+        </div>
+        
+        <div class="macro-table-wrapper">
+            <table class="macro-custom-table">
+                <thead>
+                    <tr>
+                        <th>Data Wywołania</th>
+                        <th>Ticker</th>
+                        <th>Warunek</th>
+                        <th>Poziom Alertu</th>
+                        <th>Dzienne Ekstrema</th>
+                        <th>Akcja</th> 
+                    </tr>
+                </thead>
+                <tbody id="alert-history-tbody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 
     <nav class="bottom-nav">
         <button class="nav-item active" onclick="openDashboard()">
@@ -545,58 +457,110 @@
         <button class="nav-item" onclick="openModule('focus-module', 'Focus')">
             <span>🎯</span>Focus
         </button>
-        <button class="nav-item" onclick="openModule('database-module', 'DataBase')">
+        <button class="nav-item" onclick="openModule('database-module', 'Baza')">
             <span>🗄️</span>Baza
         </button>
     </nav>
 
     <script>
-        const API_URL = 'https://kuba-quant-desk.onrender.com'; // Podmień po uruchomieniu Rendera
+        // Główny adres Twojego backendu na Renderze
+        const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
 
         // --- NAWIGACJA SPA (Single Page Application) ---
-function openModule(moduleId, moduleTitle) {
-            // Ukryj dashboard i wszystkie inne moduły
+        function openModule(moduleId, moduleTitle) {
             document.getElementById('dashboard').style.display = 'none';
             const modules = document.querySelectorAll('.app-module');
             modules.forEach(m => m.style.display = 'none');
 
-            // Pokaż wybrany moduł
             document.getElementById(moduleId).style.display = 'block';
 
-            // Zaktualizuj Nagłówek
             document.getElementById('app-title').innerText = moduleTitle;
             document.getElementById('back-btn').style.display = 'flex';
             document.getElementById('spacer').style.display = 'none';
 
-            // Jeśli otwarto bazę, załaduj dane
             if (moduleId === 'database-module') {
                 loadDatabase();
+                loadMacroData();
             }
 
-            // NOWY FRAGMENT: Jeśli otwarto historię alertów, pobierz dane
             if (moduleId === 'alerthistory-module') {
                 loadAlertHistory();
             }
         }
 
         function openDashboard() {
-            // Ukryj moduły
             const modules = document.querySelectorAll('.app-module');
             modules.forEach(m => m.style.display = 'none');
 
-            // Pokaż dashboard
             document.getElementById('dashboard').style.display = 'block';
 
-            // Resetuj nagłówek
             document.getElementById('app-title').innerHTML = 'Quant<span>Desk</span>';
             document.getElementById('back-btn').style.display = 'none';
             document.getElementById('spacer').style.display = 'block';
         }
 
-        // --- LOGIKA MODUŁU DATABASE ---
+        // --- LOGIKA MODUŁU DATABASE & MACRO ---
+        function loadMacroData() {
+            const tbody = document.getElementById('macro-table-body');
+            if (!tbody) return;
+
+            fetch(`${API_BASE_URL}/api/macro`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Serwer zwrócił błąd: ' + response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    tbody.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak historycznych wpisów makro w bazie.</td></tr>`;
+                        return;
+                    }
+                    data.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="macro-val-date">${row.date}</td>
+                            <td class="macro-val-currency">${row.EURPLN}</td>
+                            <td class="macro-val-currency">${row.USDPLN}</td>
+                            <td class="macro-val-vix">${row.VIX}</td>
+                            <td style="font-weight: 500;">${row.SP500}</td>
+                            <td class="macro-val-time">${row.updated_at || '-'}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(error => {
+                    console.error('Błąd w loadMacroData:', error);
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc3545; font-weight: bold;">Błąd połączenia z API: ${error.message}</td></tr>`;
+                });
+        }
+
+        function forceMacroUpdate() {
+            const tbody = document.getElementById('macro-table-body');
+            if (tbody) tbody.style.opacity = '0.5';
+
+            fetch(`${API_BASE_URL}/api/macro/force`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Błąd serwera przy wymuszeniu.');
+                return response.json();
+            })
+            .then(result => {
+                if (tbody) tbody.style.opacity = '1';
+                alert(result.message);
+                loadMacroData();
+            })
+            .catch(error => {
+                if (tbody) tbody.style.opacity = '1';
+                console.error('Błąd forceMacroUpdate:', error);
+                alert(`Nie udało się wymusić aktualizacji: ${error.message}`);
+            });
+        }
+
         async function loadDatabase() {
             try {
-                const response = await fetch(`${API_URL}/api/database`);
+                const response = await fetch(`${API_BASE_URL}/api/database`);
                 const data = await response.json();
                 renderMobileList(data);
             } catch (error) {
@@ -637,7 +601,7 @@ function openModule(moduleId, moduleTitle) {
             if (!ticker) return;
 
             try {
-                const response = await fetch(`${API_URL}/api/database/add`, {
+                const response = await fetch(`${API_BASE_URL}/api/database/add`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ticker: ticker })
@@ -659,7 +623,7 @@ function openModule(moduleId, moduleTitle) {
             if (!confirm(`Usunąć ${ticker} z listy obserwacyjnych?`)) return;
 
             try {
-                const response = await fetch(`${API_URL}/api/database/delete`, {
+                const response = await fetch(`${API_BASE_URL}/api/database/delete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ticker: ticker })
@@ -672,122 +636,75 @@ function openModule(moduleId, moduleTitle) {
                 console.error("Błąd:", error);
             }
         }
-/**
-     * Pobiera historię alertów z backendu i renderuje w tabeli
-     */
-    function loadAlertHistory() {
-        const tbody = document.getElementById('alert-history-tbody');
-        if (!tbody) return;
-        
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Ładowanie historii...</td></tr>';
 
-        fetch(`${API_BASE_URL}/api/alerts/history`)
-            .then(response => response.json())
-            .then(data => {
-                tbody.innerHTML = '';
+        // --- LOGIKA MODUŁU ALERT HISTORY ---
+        async function loadAlertHistory() {
+            const tbody = document.getElementById("alert-history-tbody");
+            if (!tbody) return;
+
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Ładowanie historii...</td></tr>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/alerts/history`);
+                const data = await response.json();
+
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #777;">Brak wywołanych alertów w bazie.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wywołanych alertów w bazie.</td></tr>`;
                     return;
                 }
 
-                data.forEach(row => {
-                    const tr = document.createElement('tr');
+                tbody.innerHTML = "";
+
+                data.forEach(item => {
+                    const row = document.createElement("tr");
                     
-                    // Formatujemy warunek z ang na polski dla UI
-                    const conditionText = row.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
-                    const conditionColor = row.condition === 'ABOVE' ? '#28a745' : '#dc3545';
+                    const dateStr = item.triggered_at ? new Date(item.triggered_at).toLocaleString('pl-PL') : 'Brak daty';
+                    const conditionText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
+                    const conditionColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
 
-                    tr.innerHTML = `
-                        <td class="macro-val-date">${row.triggered_at}</td>
-                        <td style="font-weight: bold; color: var(--accent);">${row.ticker}</td>
+                    row.innerHTML = `
+                        <td class="macro-val-date">${dateStr}</td>
+                        <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
                         <td style="color: ${conditionColor}; font-weight: 500;">${conditionText}</td>
-                        <td style="font-weight: bold;">${row.target_price} $</td>
-                        <td style="font-size: 0.9em; color: #666;">L: ${row.day_low} | H: ${row.day_high}</td>
+                        <td style="font-weight: bold;">${item.target_price} $</td>
+                        <td style="font-size: 0.9em; color: #848e9c;">L: ${item.day_low} | H: ${item.day_high}</td>
+                        <td>
+                            <button onclick="deleteAlert('${item.id}')" style="color: #f6465d; background: none; border: 1px solid #f6465d; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-weight: 600;">
+                                Usuń
+                            </button>
+                        </td>
                     `;
-                    tbody.appendChild(tr);
+                    tbody.appendChild(row);
                 });
-            })
-            .catch(error => {
-                console.error('Błąd ładownia historii alertów:', error);
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: red;">Błąd wczytywania danych.</td></tr>`;
-            });
-    }
-        // Główny adres Twojego backendu na Renderze
-const API_BASE_URL = "https://kuba-quant-desk.onrender.com";
 
-// 1. FUNKCJA POBIERAJĄCA I WYŚWIETLAJĄCA HISTORIĘ
-async function loadAlertHistory() {
-    const tbody = document.getElementById("alert-history-tbody");
-    if (!tbody) return;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/alerts/history`);
-        const data = await response.json();
-
-        // Jeśli baza jest pusta
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak alertów w historii.</td></tr>`;
-            return;
+            } catch (error) {
+                console.error("Błąd podczas pobierania historii:", error);
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #f6465d;">Błąd ładowania danych z serwera.</td></tr>`;
+            }
         }
 
-        // Czyszczenie tabeli przed załadowaniem nowych danych
-        tbody.innerHTML = "";
+        async function deleteAlert(id) {
+            if (!confirm("Czy na pewno chcesz usunąć ten alert z historii?")) return;
 
-        // Generowanie wierszy dla każdego alertu z Supabase
-        data.forEach(item => {
-            const row = document.createElement("tr");
-            
-            // Formatowanie daty (opcjonalne, dla lepszej czytelności)
-            const dateStr = new Date(item.triggered_at).toLocaleString('pl-PL');
-
-            row.innerHTML = `
-                <td>${dateStr}</td>
-                <td style="font-weight: bold;">${item.ticker}</td>
-                <td><span class="badge ${item.condition}">${item.condition}</span></td>
-                <td>${item.target_price}</td>
-                <td style="color: #888;">L: ${item.day_low} / H: ${item.day_high}</td>
-                <td>
-                    <button onclick="deleteAlert(${item.id})" class="btn-delete" style="color: #ff4d4d; background: none; border: 1px solid #ff4d4d; padding: 4px 8px; cursor: pointer; border-radius: 4px;">
-                        Usuń
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
-
-    } catch (error) {
-        console.error("Błąd podczas pobierania historii:", error);
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #ff4d4d;">Błąd ładowania danych z serwera.</td></tr>`;
-    }
-}
-
-// 2. FUNKCJA USUWAJĄCA ALERT Z SUPABASE
-async function deleteAlert(id) {
-    if (!confirm("Czy na pewno chcesz usunąć ten alert z historii?")) return;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: id })
-        });
-        
-        const result = await response.json();
-        
-        if (result.status === 'success') {
-            // Ponowne załadowanie tabeli, żeby usunięty wiersz zniknął "w locie"
-            loadAlertHistory(); 
-        } else {
-            alert("Nie udało się usunąć: " + result.message);
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    loadAlertHistory(); 
+                } else {
+                    alert("Nie udało się usunąć: " + result.message);
+                }
+            } catch (error) {
+                console.error("Błąd sieci przy usuwaniu:", error);
+                alert("Błąd połączenia z serwerem.");
+            }
         }
-    } catch (error) {
-        console.error("Błąd sieci przy usuwaniu:", error);
-        alert("Błąd połączenia z serwerem.");
-    }
-}
-
-// Przykładowe wywołanie funkcji przy załadowaniu modułu (podepnij pod swój system zakładek)
-// document.addEventListener("DOMContentLoaded", loadAlertHistory);
     </script>
 </body>
 </html>
