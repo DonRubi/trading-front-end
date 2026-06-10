@@ -514,30 +514,29 @@
     </section>
 
 <section id="alerthistory-module" class="app-module">
-        <div class="macro-header-container">
-            <h3>Historia Wywołanych Alertów</h3>
-        </div>
-        
-        <div class="macro-table-wrapper">
-            <table class="macro-custom-table">
-                <thead>
-                    <tr>
-                        <th>Data Wywołania</th>
-                        <th>Ticker</th>
-                        <th>Warunek</th>
-                        <th>Poziom Alertu</th>
-                        <th>Dzienne Ekstrema</th>
-                        <th>Akcja</th>
-                    </tr>
-                </thead>
-                <tbody id="alert-history-tbody">
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 20px; color: #777;">Wybierz moduł, aby załadować historię...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
+    <div class="macro-header-container">
+        <h3>Historia Wywołanych Alertów</h3>
+    </div>
+    
+    <div class="macro-table-wrapper">
+        <table class="macro-custom-table">
+            <thead>
+                <tr>
+                    <th>Data Wywołania</th>
+                    <th>Ticker</th>
+                    <th>Warunek</th>
+                    <th>Poziom Alertu</th>
+                    <th>Dzienne Ekstrema</th>
+                    <th>Akcja</th> </tr>
+            </thead>
+            <tbody id="alert-history-tbody">
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
 
     <nav class="bottom-nav">
         <button class="nav-item active" onclick="openDashboard()">
@@ -713,6 +712,82 @@ function openModule(moduleId, moduleTitle) {
                 tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: red;">Błąd wczytywania danych.</td></tr>`;
             });
     }
+        // Główny adres Twojego backendu na Renderze
+const API_BASE_URL = "https://kuba-quant-desk.onrender.com";
+
+// 1. FUNKCJA POBIERAJĄCA I WYŚWIETLAJĄCA HISTORIĘ
+async function loadAlertHistory() {
+    const tbody = document.getElementById("alert-history-tbody");
+    if (!tbody) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/alerts/history`);
+        const data = await response.json();
+
+        // Jeśli baza jest pusta
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak alertów w historii.</td></tr>`;
+            return;
+        }
+
+        // Czyszczenie tabeli przed załadowaniem nowych danych
+        tbody.innerHTML = "";
+
+        // Generowanie wierszy dla każdego alertu z Supabase
+        data.forEach(item => {
+            const row = document.createElement("tr");
+            
+            // Formatowanie daty (opcjonalne, dla lepszej czytelności)
+            const dateStr = new Date(item.triggered_at).toLocaleString('pl-PL');
+
+            row.innerHTML = `
+                <td>${dateStr}</td>
+                <td style="font-weight: bold;">${item.ticker}</td>
+                <td><span class="badge ${item.condition}">${item.condition}</span></td>
+                <td>${item.target_price}</td>
+                <td style="color: #888;">L: ${item.day_low} / H: ${item.day_high}</td>
+                <td>
+                    <button onclick="deleteAlert(${item.id})" class="btn-delete" style="color: #ff4d4d; background: none; border: 1px solid #ff4d4d; padding: 4px 8px; cursor: pointer; border-radius: 4px;">
+                        Usuń
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error("Błąd podczas pobierania historii:", error);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #ff4d4d;">Błąd ładowania danych z serwera.</td></tr>`;
+    }
+}
+
+// 2. FUNKCJA USUWAJĄCA ALERT Z SUPABASE
+async function deleteAlert(id) {
+    if (!confirm("Czy na pewno chcesz usunąć ten alert z historii?")) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id })
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            // Ponowne załadowanie tabeli, żeby usunięty wiersz zniknął "w locie"
+            loadAlertHistory(); 
+        } else {
+            alert("Nie udało się usunąć: " + result.message);
+        }
+    } catch (error) {
+        console.error("Błąd sieci przy usuwaniu:", error);
+        alert("Błąd połączenia z serwerem.");
+    }
+}
+
+// Przykładowe wywołanie funkcji przy załadowaniu modułu (podepnij pod swój system zakładek)
+// document.addEventListener("DOMContentLoaded", loadAlertHistory);
     </script>
 </body>
 </html>
