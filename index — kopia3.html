@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quant Desk v2</title>
+    <style>
+        /* --- NOWOCZESNE STYLE SYSTEMOWE (DARK THEME) --- */
+        :root {
+            --bg-main: #0b0e11;
+            --bg-card: #181a20;
+            --bg-input: #2b3139;
+            --text-main: #eaecef;
+            --text-muted: #848e9c;
+            --accent: #c99400; /* Tradingowy złoty/żółty */
+            --accent-hover: #fcd535;
+            --danger: #f6465d;
+            --success: #0ecb81;
+            --border-color: #2b3139;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding-bottom: 70px; /* Miejsce na dolne menu mobilne */
+        }
+
+        header {
+            background-color: var(--bg-card);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        header h1 span {
+            color: var(--accent);
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 1rem;
+            display: none; /* Pokazywany tylko wewnątrz modułu */
+            cursor: pointer;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* --- DASHBOARD (MENU GŁÓWNE) --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 15px;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(3, 1fr);
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+        }
+
+        .menu-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .menu-card:active {
+            transform: scale(0.95);
+            background-color: #20242c;
+        }
+
+        .menu-card .icon {
+            font-size: 1.8rem;
+        }
+
+        .menu-card h3 {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        /* --- MODUŁY (DOMYŚLNIE UKRYTE) --- */
+        .app-module {
+            display: none;
+            padding: 15px;
+            animation: fadeIn 0.3s ease-in-out;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .module-header {
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* --- FORMULARZE I ELEMENTY UI --- */
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            padding: 12px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:active {
+            background-color: var(--accent-hover);
+        }
+
+        /* --- LISTY I TABELE (MOBILE-FIRST) --- */
+        .data-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .data-card-info h4 {
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .data-card-info p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .price-tag {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--success);
+        }
+
+        .btn-delete {
+            background-color: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+        }
+
+        .btn-delete:active {
+            background-color: var(--danger);
+            color: #fff;
+        }
+
+        /* Dolny pasek nawigacyjny szybkiego dostępu (Opcjonalny dla UX) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 100;
+        }
+
+        .nav-item {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-weight: 400;
+            padding: 5px;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="back-btn" id="back-btn" onclick="openDashboard()">← Powrót</button>
+        <h1 id="app-title">Quant<span>Desk</span></h1>
+        <div style="width: 24px;" id="spacer"></div>
+    </header>
+
+    <main id="dashboard">
+        <div class="dashboard-grid">
+            <div class="menu-card" onclick="openModule('form-module', 'Form')">
+                <span class="icon">📝</span>
+                <h3>Form</h3>
+            </div>
+            <div class="menu-card" onclick="openModule('focus-module', 'Focus')">
+                <span class="icon">🎯</span>
+                <h3>Focus</h3>
+            </div>
+            <div class="menu-card" onclick="openModule('tradeslist-module', 'TradesList')">
+                <span class="icon">📊</span>
+                <h3>TradesList</h3>
+            </div>
+            <div class="menu-card" onclick="openModule('summary-module', 'Summary')">
+                <span class="icon">📈</span>
+                <h3>Summary</h3>
+            </div>
+            <div class="menu-card" onclick="openModule('database-module', 'DataBase')">
+                <span class="icon">🗄️</span>
+                <h3>DataBase</h3>
+            </div>
+            <div class="menu-card" onclick="openModule('service-module', 'Service')">
+                <span class="icon">⚙️</span>
+                <h3>Service</h3>
+            </div>
+            <div class="menu-card" onclick="openModule('technicalanalysis-module', 'TechnicalAnalysis')">
+                <span class="icon">📐</span>
+                <h3>TechnicalAnalysis</h3>
+            </div>
+            <div class="menu-card" onclick="openModule('focuslist-module', 'FocusList')">
+                <span class="icon">👁️</span>
+                <h3>FocusList</h3>
+            </div>
+            <div class="menu-card" onclick="openModule('alerthistory-module', 'AlertHistory')">
+                <span class="icon">🔔</span>
+                <h3>AlertHistory</h3>
+            </div>
+        </div>
+    </main>
+
+    <section id="form-module" class="app-module">
+        <h2>Formularz Wejściowy</h2>
+    </section>
+
+    <section id="focus-module" class="app-module">
+        <h2>Moduł Focus (Analiza Dnia)</h2>
+    </section>
+
+    <section id="tradeslist-module" class="app-module">
+        <h2>Aktywne Pozycje</h2>
+    </section>
+
+    <section id="summary-module" class="app-module">
+        <h2>Podsumowanie Portfela</h2>
+    </section>
+
+<section id="database-module" class="app-module">
+    <style>
+        .macro-management-section {
+            margin-top: 40px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1); /* Delikatna linia podziału */
+            padding-top: 25px;
+        }
+        .macro-header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .macro-header-container h3 {
+            margin: 0;
+            font-size: 1.3em;
+        }
+        .btn-macro-update {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background 0.2s ease;
+        }
+        .btn-macro-update:hover {
+            background-color: #218838;
+        }
+        .macro-table-wrapper {
+            overflow-x: auto;
+            border-radius: 6px;
+        }
+        .macro-custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95em;
+        }
+        .macro-custom-table th {
+            background-color: rgba(0, 0, 0, 0.05); /* Dopasowuje się zarówno do jasnego, jak i ciemnego tła */
+            padding: 12px 10px;
+            font-weight: 600;
+            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+        }
+        .macro-custom-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        /* Style dla wyróżnienia konkretnych danych rynkowych */
+        .macro-val-currency {
+            font-weight: bold;
+            color: #0056b3;
+        }
+        .macro-val-vix {
+            font-weight: bold;
+            color: #dc3545; /* Czerwony akcent dla indeksu strachu */
+        }
+        .macro-val-date {
+            font-weight: 500;
+        }
+        .macro-val-time {
+            color: #666;
+            font-size: 0.85em;
+        }
+    </style>
+
+    <div class="ticker-management-section">
+        <h3>Baza Tickerów Akcji</h3>
+        <div class="input-group">
+            <input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. TSLA)">
+            <button onclick="addTicker()">Dodaj</button>
+        </div>
+        <div id="db-list-container"></div>
+    </div>
+
+    <div class="macro-management-section">
+        <div class="macro-header-container">
+            <h3>Panel Sentymentu i Walut (Makro)</h3>
+            <button class="btn-macro-update" onclick="forceMacroUpdate()">Wymuś aktualizację</button>
+        </div>
+        
+        <div class="macro-table-wrapper">
+            <table class="macro-custom-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>EUR/PLN</th>
+                        <th>USD/PLN</th>
+                        <th>VIX (Strach)</th>
+                        <th>S&P 500</th>
+                        <th>Ostatni odczyt</th>
+                    </tr>
+                </thead>
+                <tbody id="macro-table-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 20px; color: #777;">Ładowanie danych makro...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section> 
+
+<script>
+    // Konfiguracja adresu produkcyjnego API
+    const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
+
+    /**
+     * Pobiera dane makro z serwera i wstrzykuje je do tabeli
+     */
+    function loadMacroData() {
+        const tbody = document.getElementById('macro-table-body');
+        if (!tbody) {
+            console.error("Nie znaleziono w strukturze HTML elementu o id 'macro-table-body'!");
+            return;
+        }
+
+        console.log("Rozpoczynam pobieranie danych makro z: " + API_BASE_URL + "/api/macro");
+
+        fetch(`${API_BASE_URL}/api/macro`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Serwer zwrócił błąd: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Dane makro odebrane pomyślnie:", data);
+                tbody.innerHTML = ''; // Czyszczenie komunikatu ładowania
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak historycznych wpisów makro w bazie.</td></tr>`;
+                    return;
+                }
+
+                // Generowanie wierszy dla każdego zapisanego dnia w bazie danych (tabela rośnie w dół)
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    
+                    tr.innerHTML = `
+                        <td class="macro-val-date">${row.date}</td>
+                        <td class="macro-val-currency">${row.EURPLN}</td>
+                        <td class="macro-val-currency">${row.USDPLN}</td>
+                        <td class="macro-val-vix">${row.VIX}</td>
+                        <td style="font-weight: 500;">${row.SP500}</td>
+                        <td class="macro-val-time">${row.updated_at || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(error => {
+                console.error('Błąd w loadMacroData:', error);
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc3545; font-weight: bold;">Błąd połączenia z API: ${error.message}</td></tr>`;
+            });
+    }
+
+    /**
+     * Wymusza natychmiastową aktualizację danych makro intraday
+     */
+    function forceMacroUpdate() {
+        const tbody = document.getElementById('macro-table-body');
+        if (tbody) tbody.style.opacity = '0.5';
+
+        fetch(`${API_BASE_URL}/api/macro/force`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Błąd serwera przy wymuszeniu.');
+            return response.json();
+        })
+        .then(result => {
+            if (tbody) tbody.style.opacity = '1';
+            alert(result.message);
+            loadMacroData(); // Ponowne załadowanie całej historii w celu odświeżenia widoku
+        })
+        .catch(error => {
+            if (tbody) tbody.style.opacity = '1';
+            console.error('Błąd forceMacroUpdate:', error);
+            alert(`Nie udało się wymusić aktualizacji: ${error.message}`);
+        });
+    }
+
+    // Automatyczne i bezpieczne uruchomienie ładowania danych po inicjalizacji skryptu
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadMacroData);
+    } else {
+        loadMacroData();
+    }
+</script>
+
+    <section id="service-module" class="app-module">
+        <h2>Serwisy i Integracje</h2>
+    </section>
+
+    <section id="technicalanalysis-module" class="app-module">
+        <h2>Analiza Techniczna & Elliott Wave</h2>
+    </section>
+
+    <section id="focuslist-module" class="app-module">
+        <h2>Lista Obserwowanych (Focus List)</h2>
+    </section>
+
+<section id="alerthistory-module" class="app-module">
+        <div class="macro-header-container">
+            <h3>Historia Wywołanych Alertów</h3>
+        </div>
+        
+        <div class="macro-table-wrapper">
+            <table class="macro-custom-table">
+                <thead>
+                    <tr>
+                        <th>Data Wywołania</th>
+                        <th>Ticker</th>
+                        <th>Warunek</th>
+                        <th>Poziom Alertu</th>
+                        <th>Dzienne Ekstrema</th>
+                    </tr>
+                </thead>
+                <tbody id="alert-history-tbody">
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 20px; color: #777;">Wybierz moduł, aby załadować historię...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="openDashboard()">
+            <span>🏠</span>Home
+        </button>
+        <button class="nav-item" onclick="openModule('focus-module', 'Focus')">
+            <span>🎯</span>Focus
+        </button>
+        <button class="nav-item" onclick="openModule('database-module', 'DataBase')">
+            <span>🗄️</span>Baza
+        </button>
+    </nav>
+
+    <script>
+        const API_URL = 'https://kuba-quant-desk.onrender.com'; // Podmień po uruchomieniu Rendera
+
+        // --- NAWIGACJA SPA (Single Page Application) ---
+function openModule(moduleId, moduleTitle) {
+            // Ukryj dashboard i wszystkie inne moduły
+            document.getElementById('dashboard').style.display = 'none';
+            const modules = document.querySelectorAll('.app-module');
+            modules.forEach(m => m.style.display = 'none');
+
+            // Pokaż wybrany moduł
+            document.getElementById(moduleId).style.display = 'block';
+
+            // Zaktualizuj Nagłówek
+            document.getElementById('app-title').innerText = moduleTitle;
+            document.getElementById('back-btn').style.display = 'flex';
+            document.getElementById('spacer').style.display = 'none';
+
+            // Jeśli otwarto bazę, załaduj dane
+            if (moduleId === 'database-module') {
+                loadDatabase();
+            }
+
+            // NOWY FRAGMENT: Jeśli otwarto historię alertów, pobierz dane
+            if (moduleId === 'alerthistory-module') {
+                loadAlertHistory();
+            }
+        }
+
+        function openDashboard() {
+            // Ukryj moduły
+            const modules = document.querySelectorAll('.app-module');
+            modules.forEach(m => m.style.display = 'none');
+
+            // Pokaż dashboard
+            document.getElementById('dashboard').style.display = 'block';
+
+            // Resetuj nagłówek
+            document.getElementById('app-title').innerHTML = 'Quant<span>Desk</span>';
+            document.getElementById('back-btn').style.display = 'none';
+            document.getElementById('spacer').style.display = 'block';
+        }
+
+        // --- LOGIKA MODUŁU DATABASE ---
+        async function loadDatabase() {
+            try {
+                const response = await fetch(`${API_URL}/api/database`);
+                const data = await response.json();
+                renderMobileList(data);
+            } catch (error) {
+                console.error("Błąd ładowania bazy:", error);
+            }
+        }
+
+        function renderMobileList(data) {
+            const container = document.getElementById('db-list-container');
+            container.innerHTML = '';
+            
+            if (data.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Baza jest pusta. Dodaj swój pierwszy ticker.</p>`;
+                return;
+            }
+
+            data.forEach((item) => {
+                const card = `
+                    <div class="data-card">
+                        <div class="data-card-info">
+                            <h4>${item.ticker}</h4>
+                            <p>Dodano: ${item.date_added}</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span class="price-tag">${item.price !== null ? item.price + ' $' : 'Ładowanie...'}</span>
+                            <button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        }
+
+        async function addTicker() {
+            const tickerInput = document.getElementById('new-ticker');
+            const ticker = tickerInput.value.trim().toUpperCase();
+            
+            if (!ticker) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/database/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker: ticker })
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    tickerInput.value = '';
+                    loadDatabase();
+                } else {
+                    alert(result.message);
+                }
+            } catch (error) {
+                console.error("Błąd:", error);
+            }
+        }
+
+        async function removeTicker(ticker) {
+            if (!confirm(`Usunąć ${ticker} z listy obserwacyjnych?`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/database/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker: ticker })
+                });
+                
+                if (response.ok) {
+                    loadDatabase();
+                }
+            } catch (error) {
+                console.error("Błąd:", error);
+            }
+        }
+/**
+     * Pobiera historię alertów z backendu i renderuje w tabeli
+     */
+    function loadAlertHistory() {
+        const tbody = document.getElementById('alert-history-tbody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Ładowanie historii...</td></tr>';
+
+        fetch(`${API_BASE_URL}/api/alerts/history`)
+            .then(response => response.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #777;">Brak wywołanych alertów w bazie.</td></tr>`;
+                    return;
+                }
+
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    
+                    // Formatujemy warunek z ang na polski dla UI
+                    const conditionText = row.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
+                    const conditionColor = row.condition === 'ABOVE' ? '#28a745' : '#dc3545';
+
+                    tr.innerHTML = `
+                        <td class="macro-val-date">${row.triggered_at}</td>
+                        <td style="font-weight: bold; color: var(--accent);">${row.ticker}</td>
+                        <td style="color: ${conditionColor}; font-weight: 500;">${conditionText}</td>
+                        <td style="font-weight: bold;">${row.target_price} $</td>
+                        <td style="font-size: 0.9em; color: #666;">L: ${row.day_low} | H: ${row.day_high}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(error => {
+                console.error('Błąd ładownia historii alertów:', error);
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: red;">Błąd wczytywania danych.</td></tr>`;
+            });
+    }
+    </script>
+</body>
+</html>
