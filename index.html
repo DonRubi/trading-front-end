@@ -676,6 +676,7 @@ function openModule(moduleId, moduleTitle) {
      * Pobiera historię alertów z backendu i renderuje w tabeli
      */
     function loadAlertHistory() {
+        console.log("Ładuję historię..."); // To musi się pojawić w konsoli!
         const tbody = document.getElementById('alert-history-tbody');
         if (!tbody) return;
         
