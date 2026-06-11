@@ -889,241 +889,41 @@
     <script>
         // Główny adres Twojego backendu na Renderze
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
+
         // --- POMOCNICZA FUNKCJA GENEROWANIA LINKÓW TRADINGVIEW ---
-function getTradingViewLink(ticker) {
-    if (!ticker) return '#';
-    const cleanTicker = ticker.trim().toUpperCase();
-    
-    // Twój dedykowany identyfikator szablonu wykresu TradingView.
-    // Dzięki temu wykres otworzy się z Twoimi rysunkami i wskaźnikami!
-    const LAYOUT_ID = 'k5llKflB'; 
-    const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/';
+        function getTradingViewLink(ticker) {
+            if (!ticker) return '#';
+            const cleanTicker = ticker.trim().toUpperCase();
+            const LAYOUT_ID = 'k5llKflB'; 
+            const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/';
 
-    // Jeśli ticker ma już w sobie zdefiniowaną giełdę (np. "NASDAQ:AAPL")
-    if (cleanTicker.includes(':')) {
-        return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`;
-    }
-    
-    // Automatyczna heurystyka dla najpopularniejszych walorów, jeśli wpiszesz sam ticker:
-    const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ'];
-    const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA'];
-    
-    let exchange = '';
-    if (nasdaqTickers.includes(cleanTicker)) {
-        exchange = 'NASDAQ:';
-    } else if (nyseTickers.includes(cleanTicker)) {
-        exchange = 'NYSE:';
-    } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) {
-        exchange = 'BINANCE:';
-    }
-    
-    // Zwraca pełny link. Jeśli giełda nie została wykryta, TradingView spróbuje dopasować ją automatycznie
-    return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
-}
-
-        // --- STAN GLOBALNY MODUŁU TRANSAKCJI ---
-let journalEntries = [];       // Pełny zestaw danych z bazy
-let filteredEntries = [];      // Dane po nałożeniu filtrów wyszukiwania
-let journalCurrentPage = 1;    // Aktualna podstrona
-const journalRowsPerPage = 6;  // Maksymalna ilość wierszy na stronę
-let journalSortKey = 'created_at'; // Aktualny klucz sortowania
-let journalSortDir = 'desc';   // Kierunek sortowania ('asc' lub 'desc')
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Pierwsze pobranie danych po załadowaniu DOM
-    fetchJournalEntries();
-    
-    // Spięcie obsługi formularza wejściowego
-    const tradingForm = document.getElementById('trading-form');
-    if (tradingForm) {
-        tradingForm.addEventListener('submit', handleJournalFormSubmit);
-    }
-});
-
-// 1. POBIERANIE Z BACKENDU
-async function fetchJournalEntries() {
-    try {
-        const response = await fetch('/api/form');
-        if (!response.ok) throw new Error('Błąd API przy pobieraniu dziennika');
-        journalEntries = await response.json();
-        applyFilterAndSort(); // Przetwórz dane wejściowe
-    } catch (error) {
-        console.error('Błąd modułu Form:', error);
-    }
-}
-
-// 2. DODAWANIE WPISU
-async function handleJournalFormSubmit(e) {
-    e.preventDefault();
-    const data = {
-        ticker: document.getElementById('form-ticker').value,
-        entry_price: document.getElementById('form-entry-price').value,
-        stop_loss: document.getElementById('form-stop-loss').value,
-        take_profit: document.getElementById('form-take-profit').value,
-        strategy: document.getElementById('form-strategy').value,
-        notes: document.getElementById('form-notes').value
-    };
-    
-    try {
-        const response = await fetch('/api/form/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        const result = await response.json();
-        if (result.status === 'success') {
-            document.getElementById('trading-form').reset();
-            fetchJournalEntries(); // Automatyczne przeładowanie i odświeżenie widoku
-        } else {
-            alert('Wystąpił błąd: ' + result.message);
+            if (cleanTicker.includes(':')) {
+                return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`;
+            }
+            
+            const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ'];
+            const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA'];
+            
+            let exchange = '';
+            if (nasdaqTickers.includes(cleanTicker)) {
+                exchange = 'NASDAQ:';
+            } else if (nyseTickers.includes(cleanTicker)) {
+                exchange = 'NYSE:';
+            } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) {
+                exchange = 'BINANCE:';
+            }
+            
+            return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
         }
-    } catch (error) {
-        console.error('Błąd zapisu pozycji:', error);
-    }
-}
-
-// 3. USUWANIE WPISU (Poprawione działanie przycisku)
-async function deleteJournalEntry(id) {
-    if (!confirm('Czy na pewno chcesz bezpowrotnie usunąć ten wpis z dziennika?')) return;
-    
-    try {
-        const response = await fetch('/api/form/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: id })
-        });
-        const result = await response.json();
-        if (result.status === 'success') {
-            fetchJournalEntries(); // Ponowne zaciągnięcie aktualnego stanu z bazy
-        } else {
-            alert('Nie udało się usunąć: ' + result.message);
-        }
-    } catch (error) {
-        console.error('Błąd usuwania pozycji:', error);
-    }
-}
-
-// 4. OBSŁUGA FILTROWANIA
-function handleFilterChange(value) {
-    journalFilterText = value.toLowerCase();
-    journalCurrentPage = 1; // Zresetuj do pierwszej strony przy filtrowaniu
-    applyFilterAndSort();
-}
-
-// 5. OBSŁUGA KLIKNIĘCIA NAGŁÓWKA (SORTOWANIE)
-function handleSort(key) {
-    if (journalSortKey === key) {
-        journalSortDir = journalSortDir === 'asc' ? 'desc' : 'asc';
-    } else {
-        journalSortKey = key;
-        journalSortDir = 'asc';
-    }
-    updateSortIcons();
-    applyFilterAndSort();
-}
-
-// Wizualna aktualizacja strzałek w tabeli (▲ / ▼)
-function updateSortIcons() {
-    const columns = ['ticker', 'entry_price', 'stop_loss', 'take_profit', 'strategy', 'created_at'];
-    columns.forEach(col => {
-        const icon = document.getElementById(`sort-icon-${col}`);
-        if (!icon) return;
-        if (journalSortKey === col) {
-            icon.innerText = journalSortDir === 'asc' ? ' ▲' : ' ▼';
-        } else {
-            icon.innerText = ' ─';
-        }
-    });
-}
-
-// 6. PRZETWARZANIE STANU (Mózg tabeli)
-let journalFilterText = '';
-function applyFilterAndSort() {
-    // A. Filtrowanie w locie
-    filteredEntries = journalEntries.filter(entry => {
-        const t = (entry.ticker || '').toLowerCase();
-        const s = (entry.strategy || '').toLowerCase();
-        const n = (entry.notes || '').toLowerCase();
-        return t.includes(journalFilterText) || s.includes(journalFilterText) || n.includes(journalFilterText);
-    });
-    
-    // B. Sortowanie typów danych
-    filteredEntries.sort((a, b) => {
-        let valA = a[journalSortKey];
-        let valB = b[journalSortKey];
-        
-        if (valA === null || valA === undefined) valA = '';
-        if (valB === null || valB === undefined) valB = '';
-        
-        // Zabezpieczenie rzutowania dla typów numerycznych
-        if (['entry_price', 'stop_loss', 'take_profit'].includes(journalSortKey)) {
-            return journalSortDir === 'asc' ? (Number(valA) - Number(valB)) : (Number(valB) - Number(valA));
-        }
-        
-        // Sortowanie tekstowe / daty
-        if (valA < valB) return journalSortDir === 'asc' ? -1 : 1;
-        if (valA > valB) return journalSortDir === 'asc' ? 1 : -1;
-        return 0;
-    });
-    
-    renderJournalTable();
-}
-
-// 7. RENDEROWANIE WIDOKU (Paging wstrzykiwany do DOM)
-function renderJournalTable() {
-    const tbody = document.getElementById('journal-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    
-    const startIndex = (journalCurrentPage - 1) * journalRowsPerPage;
-    const endIndex = startIndex + journalRowsPerPage;
-    const itemsToDisplay = filteredEntries.slice(startIndex, endIndex);
-    
-    if (itemsToDisplay.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#9399b2; padding: 20px;">Brak wpisów spełniających podane kryteria.</td></tr>`;
-    } else {
-        itemsToDisplay.forEach(entry => {
-            const dateStr = entry.created_at ? entry.created_at.split('T')[0] : 'N/A';
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="font-weight: bold; color: #89b4fa;">${entry.ticker || ''}</td>
-                <td>${entry.entry_price ? Number(entry.entry_price).toFixed(2) : '-'}</td>
-                <td style="color: #f38ba8; font-weight: 500;">${entry.stop_loss ? Number(entry.stop_loss).toFixed(2) : '-'}</td>
-                <td style="color: #a6e3a1; font-weight: 500;">${entry.take_profit ? Number(entry.take_profit).toFixed(2) : '-'}</td>
-                <td><span style="background: #313244; padding: 3px 8px; border-radius: 4px; font-size: 12px;">${entry.strategy || 'Brak'}</span></td>
-                <td style="color: #a6adc8; font-size: 13px;">${dateStr}</td>
-                <td>
-                    <button class="btn-delete-journal" onclick="deleteJournalEntry('${entry.id}')">Usuń</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-    
-    // Aktualizacja nawigacji stronicowania
-    const totalPages = Math.ceil(filteredEntries.length / journalRowsPerPage) || 1;
-    document.getElementById('page-info').innerText = `Strona ${journalCurrentPage} z ${totalPages}`;
-    document.getElementById('btn-prev-page').disabled = (journalCurrentPage === 1);
-    document.getElementById('btn-next-page').disabled = (journalCurrentPage === totalPages);
-}
-
-function changePage(direction) {
-    const totalPages = Math.ceil(filteredEntries.length / journalRowsPerPage) || 1;
-    const targetPage = journalCurrentPage + direction;
-    if (targetPage >= 1 && targetPage <= totalPages) {
-        journalCurrentPage = targetPage;
-        renderJournalTable();
-    }
-}
 
         // --- STAN STRONICOWANIA DLA MODUŁU DATABASE ---
         let macroDataArray = [];
         let currentMacroPage = 1;
-        const macroPageSize = 10; // 10 wpisów na stronę
+        const macroPageSize = 10;
 
         let tickerDataArray = [];
         let currentTickerPage = 1;
-        const tickerPageSize = 20; // 20 wpisów na stronę
+        const tickerPageSize = 20;
 
         // --- NAWIGACJA SPA (Single Page Application) ---
         function openModule(moduleId, moduleTitle) {
@@ -1141,7 +941,6 @@ function changePage(direction) {
                 loadDatabase();
                 loadMacroData();
             }
-
             if (moduleId === 'alerthistory-module') {
                 loadAlertHistory();
             }
@@ -1169,43 +968,8 @@ function changePage(direction) {
             const tbody = document.getElementById('macro-table-body');
             if (!tbody) return;
 
-            fetch(`${API_BASE_URL}/api/macro`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Serwer zwrócił błąd: ' + response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    tbody.innerHTML = '';
-                    if (!data || data.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak historycznych wpisów makro w bazie.</td></tr>`;
-                        return;
-                    }
-                    data.forEach(row => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td class="macro-val-date">${row.date}</td>
-                            <td class="macro-val-currency">${row.EURPLN}</td>
-                            <td class="macro-val-currency">${row.USDPLN}</td>
-                            <td class="macro-val-vix">${row.VIX}</td>
-                            <td style="font-weight: 500;">${row.SP500}</td>
-                            <td class="macro-val-time">${row.updated_at || '-'}</td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                })
-                .catch(error => {
-                    console.error('Błąd w loadMacroData:', error);
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc3545; font-weight: bold;">Błąd połączenia z API: ${error.message}</td></tr>`;
-                });
-        }
-
-        function loadMacroData() {
-            const tbody = document.getElementById('macro-table-body');
-            if (!tbody) return;
-
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Pobieranie historii makro z Supabase...</td></tr>';
 
-            // Zmieniono endpoint na /api/macro/history aby zaciągać całą bazę danych
             fetch(`${API_BASE_URL}/api/macro/history`)
                 .then(response => {
                     if (!response.ok) throw new Error('Serwer zwrócił błąd: ' + response.status);
@@ -1213,7 +977,7 @@ function changePage(direction) {
                 })
                 .then(data => {
                     macroDataArray = data || [];
-                    currentMacroPage = 1; // Reset do pierwszej strony po załadowaniu świeżych danych
+                    currentMacroPage = 1; 
                     renderMacroTable();
                 })
                 .catch(error => {
@@ -1238,7 +1002,6 @@ function changePage(direction) {
             if (currentMacroPage > totalPages) currentMacroPage = totalPages;
             if (currentMacroPage < 1) currentMacroPage = 1;
 
-            // Wycinanie fragmentu danych na bieżącą stronę
             const start = (currentMacroPage - 1) * macroPageSize;
             const end = start + macroPageSize;
             const pageData = macroDataArray.slice(start, end);
@@ -1246,8 +1009,6 @@ function changePage(direction) {
             tbody.innerHTML = '';
             pageData.forEach(row => {
                 const tr = document.createElement('tr');
-                
-                // Zabezpieczenie nazw pól - Supabase zwraca małe litery (usdpln), lokalne API mogło zwracać wielkie (USDPLN)
                 const date = row.date || '-';
                 const eurpln = row.eurpln !== undefined ? row.eurpln : (row.EURPLN !== undefined ? row.EURPLN : '-');
                 const usdpln = row.usdpln !== undefined ? row.usdpln : (row.USDPLN !== undefined ? row.USDPLN : '-');
@@ -1266,7 +1027,6 @@ function changePage(direction) {
                 tbody.appendChild(tr);
             });
 
-            // Aktualizacja kontrolek stronicowania
             document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`;
             document.getElementById('macro-prev-btn').disabled = (currentMacroPage === 1);
             document.getElementById('macro-next-btn').disabled = (currentMacroPage === totalPages);
@@ -1276,30 +1036,28 @@ function changePage(direction) {
             currentMacroPage += direction;
             renderMacroTable();
         }
+
         async function forceMacroUpdate() {
             const btn = document.querySelector('.btn-macro-update');
             if (btn) {
-            btn.disabled = true;
-            btn.innerText = 'Aktualizacja...';
+                btn.disabled = true;
+                btn.innerText = 'Aktualizacja...';
             }
-
             try {
                 const response = await fetch(`${API_BASE_URL}/api/macro/force`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 const result = await response.json();
-        
-            if (response.ok) {
-                alert(result.message);
-                // Kluczowe: Ponowne załadowanie danych z Supabase po udanym wymuszeniu
-                loadMacroData(); 
-            } else {
-            alert("Błąd serwera: " + result.message);
+                if (response.ok) {
+                    alert(result.message);
+                    loadMacroData(); 
+                } else {
+                    alert("Błąd serwera: " + result.message);
                 }
             } catch (error) {
-                console.error("Błąd podczas wymuszania aktualizacji makro:", error);
-                alert("Błąd połączenia z serwerem backendu.");
+                console.error("Błąd aktualizacji makro:", error);
+                alert("Błąd połączenia z serwerem.");
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -1313,61 +1071,57 @@ function changePage(direction) {
                 const response = await fetch(`${API_BASE_URL}/api/database`);
                 const data = await response.json();
                 tickerDataArray = data || [];
-                // Wywołujemy render bez resetu strony, by nie przewijało na 1. stronę po usunięciu elementu
                 renderMobileList();
             } catch (error) {
                 console.error("Błąd bazy tickerów:", error);
             }
         }
 
-// Zaktualizowana funkcja renderMobileList()
-function renderMobileList() {
-    const container = document.getElementById('db-list-container');
-    if (!container) return;
-    container.innerHTML = '';
-    
-    if (tickerDataArray.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Baza jest pusta. Dodaj swój pierwszy ticker.</p>`;
-        document.getElementById('ticker-prev-btn').disabled = true;
-        document.getElementById('ticker-next-btn').disabled = true;
-        document.getElementById('ticker-page-info').innerText = 'Strona 0 z 0';
-        return;
-    }
+        function renderMobileList() {
+            const container = document.getElementById('db-list-container');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            if (tickerDataArray.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Baza jest pusta. Dodaj swój pierwszy ticker.</p>`;
+                document.getElementById('ticker-prev-btn').disabled = true;
+                document.getElementById('ticker-next-btn').disabled = true;
+                document.getElementById('ticker-page-info').innerText = 'Strona 0 z 0';
+                return;
+            }
 
-    const totalPages = Math.ceil(tickerDataArray.length / tickerPageSize);
-    if (currentTickerPage > totalPages) currentTickerPage = totalPages;
-    if (currentTickerPage < 1) currentTickerPage = 1;
+            const totalPages = Math.ceil(tickerDataArray.length / tickerPageSize);
+            if (currentTickerPage > totalPages) currentTickerPage = totalPages;
+            if (currentTickerPage < 1) currentTickerPage = 1;
 
-    const start = (currentTickerPage - 1) * tickerPageSize;
-    const end = start + tickerPageSize;
-    const pageData = tickerDataArray.slice(start, end);
+            const start = (currentTickerPage - 1) * tickerPageSize;
+            const end = start + tickerPageSize;
+            const pageData = tickerDataArray.slice(start, end);
 
-    pageData.forEach((item) => {
-        // Generowanie linku dla karty
-        const tvLink = getTradingViewLink(item.ticker);
-        
-        const card = `
-            <div class="data-card">
-                <div class="data-card-info">
-                    <h4>${item.ticker}</h4>
-                    <p>Dodano: ${item.date_added}</p>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span class="price-tag">${item.price !== null ? item.price + ' $' : 'Ładowanie...'}</span>
-                    <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: bold; border: 1px solid var(--accent); padding: 6px 10px; border-radius: 6px; background-color: rgba(201, 148, 0, 0.05);">
-                        📈 TV
-                    </a>
-                    <button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button>
-                </div>
-            </div>
-        `;
-        container.innerHTML += card;
-    });
+            pageData.forEach((item) => {
+                const tvLink = getTradingViewLink(item.ticker);
+                const card = `
+                    <div class="data-card">
+                        <div class="data-card-info">
+                            <h4>${item.ticker}</h4>
+                            <p>Dodano: ${item.date_added}</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="price-tag">${item.price !== null ? item.price + ' $' : 'Ładowanie...'}</span>
+                            <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: bold; border: 1px solid var(--accent); padding: 6px 10px; border-radius: 6px; background-color: rgba(201, 148, 0, 0.05);">
+                                📈 TV
+                            </a>
+                            <button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
 
-    document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${totalPages}`;
-    document.getElementById('ticker-prev-btn').disabled = (currentTickerPage === 1);
-    document.getElementById('ticker-next-btn').disabled = (currentTickerPage === totalPages);
-}
+            document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${totalPages}`;
+            document.getElementById('ticker-prev-btn').disabled = (currentTickerPage === 1);
+            document.getElementById('ticker-next-btn').disabled = (currentTickerPage === totalPages);
+        }
 
         function changeTickerPage(direction) {
             currentTickerPage += direction;
@@ -1377,9 +1131,7 @@ function renderMobileList() {
         async function addTicker() {
             const tickerInput = document.getElementById('new-ticker');
             const ticker = tickerInput.value.trim().toUpperCase();
-            
             if (!ticker) return;
-
             try {
                 const response = await fetch(`${API_BASE_URL}/api/database/add`, {
                     method: 'POST',
@@ -1387,157 +1139,135 @@ function renderMobileList() {
                     body: JSON.stringify({ ticker: ticker })
                 });
                 const result = await response.json();
-                
                 if (response.ok) {
                     tickerInput.value = '';
                     loadDatabase();
                 } else {
                     alert(result.message);
                 }
-            } catch (error) {
-                console.error("Błąd:", error);
-            }
+            } catch (error) { console.error("Błąd:", error); }
         }
 
         async function removeTicker(ticker) {
-            if (!confirm(`Usunąć ${ticker} z listy obserwacyjnych?`)) return;
-
+            if (!confirm(`Usunąć ${ticker}?`)) return;
             try {
                 const response = await fetch(`${API_BASE_URL}/api/database/delete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ticker: ticker })
                 });
-                
-                if (response.ok) {
-                    loadDatabase();
-                }
-            } catch (error) {
-                console.error("Błąd:", error);
-            }
+                if (response.ok) loadDatabase();
+            } catch (error) { console.error("Błąd:", error); }
         }
 
         // --- LOGIKA MODUŁU ALERT HISTORY ---
         async function loadAlertHistory() {
             const tbody = document.getElementById("alert-history-tbody");
             if (!tbody) return;
-
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Ładowanie historii...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Ładowanie historii...</td></tr>';
 
             try {
                 const response = await fetch(`${API_BASE_URL}/api/alerts/history`);
                 const data = await response.json();
 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wywołanych alertów w bazie.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #777;">Brak wywołanych alertów w bazie.</td></tr>`;
                     return;
                 }
 
                 tbody.innerHTML = "";
+                data.forEach(item => {
+                    const row = document.createElement("tr");
+                    const dateStr = item.triggered_at ? new Date(item.triggered_at).toLocaleString('pl-PL') : 'Brak daty';
+                    const conditionText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
+                    const conditionColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
+                    const tvLink = getTradingViewLink(item.ticker);
 
-// Zaktualizowany fragment wewnątrz loadAlertHistory() pętli data.forEach:
-data.forEach(item => {
-    const row = document.createElement("tr");
-    
-    const dateStr = item.triggered_at ? new Date(item.triggered_at).toLocaleString('pl-PL') : 'Brak daty';
-    const conditionText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
-    const conditionColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
-    
-    // Generowanie automatycznego linku TV dla bieżącego tickera
-    const tvLink = getTradingViewLink(item.ticker);
-
-    row.innerHTML = `
-        <td class="macro-val-date">${dateStr}</td>
-        <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
-        <td style="color: ${conditionColor}; font-weight: 500;">${conditionText}</td>
-        <td style="font-weight: bold;">${item.target_price} $</td>
-        <td style="font-size: 0.9em; color: #848e9c;">L: ${item.day_low} | H: ${item.day_high}</td>
-        <td>
-            <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--bg-input); font-size: 0.85rem;">
-                📈 Wykres
-            </a>
-        </td>
-        <td>
-            <button onclick="deleteAlert('${item.id}')" style="color: #f6465d; background: none; border: 1px solid #f6465d; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-weight: 600;">
-                Usuń
-            </button>
-        </td>
-    `;
-    tbody.appendChild(row);
-});
-
+                    row.innerHTML = `
+                        <td class="macro-val-date">${dateStr}</td>
+                        <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
+                        <td style="color: ${conditionColor}; font-weight: 500;">${conditionText}</td>
+                        <td style="font-weight: bold;">${item.target_price} $</td>
+                        <td style="font-size: 0.9em; color: #848e9c;">L: ${item.day_low} | H: ${item.day_high}</td>
+                        <td>
+                            <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--bg-input); font-size: 0.85rem;">
+                                📈 Wykres
+                            </a>
+                        </td>
+                        <td>
+                            <button onclick="deleteAlert('${item.id}')" style="color: #f6465d; background: none; border: 1px solid #f6465d; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-weight: 600;">
+                                Usuń
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
             } catch (error) {
-                console.error("Błąd podczas pobierania historii:", error);
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #f6465d;">Błąd ładowania danych z serwera.</td></tr>`;
+                console.error("Błąd pobierania historii:", error);
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f6465d;">Błąd ładowania danych z serwera.</td></tr>`;
             }
         }
 
         async function deleteAlert(id) {
             if (!confirm("Czy na pewno chcesz usunąć ten alert z historii?")) return;
-
             try {
                 const response = await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: id })
                 });
-                
                 const result = await response.json();
-                
-                if (result.status === 'success') {
-                    loadAlertHistory(); 
-                } else {
-                    alert("Nie udało się usunąć: " + result.message);
-                }
-            } catch (error) {
-                console.error("Błąd sieci przy usuwaniu:", error);
-                alert("Błąd połączenia z serwerem.");
-            }
+                if (result.status === 'success') loadAlertHistory(); 
+                else alert("Nie udało się usunąć: " + result.message);
+            } catch (error) { console.error("Błąd:", error); }
         }
+
         // --- LOGIKA MODUŁU DAILYBRIEF ---
         async function loadDailyBriefs() {
             const container = document.getElementById('dailybrief-carousel');
             if (!container) return;
-
             container.innerHTML = '<p style="text-align: center; color: var(--text-muted); width: 100%; padding: 20px;">Pobieranie analiz z Supabase...</p>';
 
             try {
                 const response = await fetch(`${API_BASE_URL}/api/blog/briefs`);
-                if (!response.ok) throw new Error('Błąd serwera: ' + response.status);
-                
+                if (!response.ok) throw new Error('Błąd serwera');
                 const data = await response.json();
 
                 if (!data || data.length === 0) {
                     container.innerHTML = '<p style="text-align: center; color: var(--text-muted); width: 100%; padding: 20px;">Brak zapisanych briefów w bazie.</p>';
                     return;
                 }
-
-                container.innerHTML = ''; // Czyszczenie komunikatu ładowania
-
+                container.innerHTML = ''; 
                 data.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'brief-card';
-                    
                     card.innerHTML = `
                         <h4>${item.title}</h4>
                         <div class="brief-text">${item.summary}</div>
                         <div class="brief-card-footer">
-                            <a href="${item.url}" target="_blank" class="brief-link">
-                                Oryginalny wpis 🔗
-                            </a>
+                            <a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a>
                         </div>
                     `;
                     container.appendChild(card);
                 });
-
             } catch (error) {
-                console.error("Błąd ładowania briefów:", error);
+                console.error("Błąd briefów:", error);
                 container.innerHTML = '<p style="text-align: center; color: var(--danger); width: 100%; padding: 20px;">Nie udało się załadować danych z bazy.</p>';
             }
         }
-        // --- LOGIKA MODUŁU FORM ---
+
+        // ==========================================
+        // LOGIKA MODUŁU FORM (ZAAWANSOWANA TABELA)
+        // ==========================================
+        let formEntries = [];       
+        let filteredFormEntries = [];      
+        let formCurrentPage = 1;    
+        const formRowsPerPage = 6;  
+        let formSortKey = 'created_at'; 
+        let formSortDir = 'desc';   
+        let formFilterText = '';
+
         async function initFormModule() {
-            // Zapewnienie, że tickery są załadowane z bazy
             if(tickerDataArray.length === 0) {
                 await loadDatabase(); 
             }
@@ -1548,38 +1278,148 @@ data.forEach(item => {
             });
 
             loadFormReasons();
-            loadFormEntries();
+            fetchFormEntries();
+            
+            const formEl = document.getElementById('trading-form');
+            formEl.removeEventListener('submit', submitAdvancedForm);
+            formEl.addEventListener('submit', submitAdvancedForm);
         }
 
-function toggleFibo() {
-            const drawer = document.getElementById('fibo-drawer');
-            drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block';
-            if (drawer.style.display === 'block') {
-                updateFiboLabels(); // Odśwież opcje przy otwarciu
+        async function fetchFormEntries() {
+            const tbody = document.getElementById('form-table-body');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Pobieranie z bazy...</td></tr>';
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/form/entries`);
+                if (!response.ok) throw new Error('Błąd API');
+                const rawData = await response.json();
+                
+                formEntries = rawData.map(item => ({
+                    ...item,
+                    score: item.reasons ? item.reasons.length : 0
+                }));
+                
+                applyFormFilterAndSort(); 
+            } catch (error) {
+                console.error('Błąd pobierania form:', error);
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--danger);">Błąd pobierania danych.</td></tr>`;
             }
         }
 
-        function applyFibo() {
-            const start = parseFloat(document.getElementById('fibo-start').value);
-            const peak = parseFloat(document.getElementById('fibo-peak').value);
-            const level = parseFloat(document.getElementById('fibo-level').value);
-            const direction = document.getElementById('form-direction').value;
-            
-            if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
-            
-            let tp = 0;
-            // Zastosowanie uniwersalnego modyfikatora logiki
-            if(direction === 'DBR' || direction === 'RBR') {
-                tp = peak + (peak - start) * level; // LONG
+        function handleFormFilter(value) {
+            formFilterText = value.toLowerCase();
+            formCurrentPage = 1;
+            applyFormFilterAndSort();
+        }
+
+        function handleFormSort(key) {
+            if (formSortKey === key) {
+                formSortDir = formSortDir === 'asc' ? 'desc' : 'asc';
             } else {
-                tp = peak - (start - peak) * level; // SHORT
+                formSortKey = key;
+                formSortDir = 'asc';
             }
-            
-            document.getElementById('form-tp').value = tp.toFixed(2);
-            toggleFibo();
+            updateFormSortIcons();
+            applyFormFilterAndSort();
         }
 
-        async function submitForm() {
+        function updateFormSortIcons() {
+            const columns = ['entry_id', 'ticker', 'direction', 'score'];
+            columns.forEach(col => {
+                const icon = document.getElementById(`sort-icon-${col}`);
+                if (!icon) return;
+                icon.innerText = formSortKey === col ? (formSortDir === 'asc' ? ' ▲' : ' ▼') : ' ─';
+            });
+        }
+
+        function applyFormFilterAndSort() {
+            filteredFormEntries = formEntries.filter(entry => {
+                const t = (entry.ticker || '').toLowerCase();
+                const d = (entry.direction || '').toLowerCase();
+                return t.includes(formFilterText) || d.includes(formFilterText);
+            });
+            
+            filteredFormEntries.sort((a, b) => {
+                let valA = a[formSortKey] || '';
+                let valB = b[formSortKey] || '';
+                
+                if (formSortKey === 'score') {
+                    return formSortDir === 'asc' ? valA - valB : valB - valA;
+                }
+                
+                if (valA < valB) return formSortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return formSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            renderAdvancedFormTable();
+        }
+
+        function renderAdvancedFormTable() {
+            const tbody = document.getElementById('form-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            const startIndex = (formCurrentPage - 1) * formRowsPerPage;
+            const endIndex = startIndex + formRowsPerPage;
+            const itemsToDisplay = filteredFormEntries.slice(startIndex, endIndex);
+            
+            if (itemsToDisplay.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding: 20px;">Brak wpisów.</td></tr>`;
+            } else {
+                itemsToDisplay.forEach(item => {
+                    const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
+                    const mod = isLong ? 1 : -1;
+                    const tp = parseFloat(item.take_profit);
+                    const entry = parseFloat(item.entry_point);
+                    const sl = parseFloat(item.stop_loss);
+                    
+                    let rr = 0;
+                    if(entry - sl !== 0) rr = ((tp - entry) * mod) / ((entry - sl) * mod);
+
+                    const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
+                    const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
+                    const diff = (Math.abs(currentPrice - entry) / entry) * 100;
+                    
+                    let status = 'Obserwacja';
+                    let statusColor = '#848e9c';
+                    if(diff > 15) { status = 'Ignorowanie'; statusColor = '#f6465d'; }
+                    else if(diff > 10) { status = 'Czekanie'; statusColor = '#fcd535'; }
+                    else if(diff <= 10 && item.priority === 1) { status = 'Skupienie'; statusColor = '#0ecb81'; }
+                    
+                    const tvLink = getTradingViewLink(item.ticker);
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight:bold;">${item.entry_id}</td>
+                        <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
+                        <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br>${item.start_zone} - ${item.end_zone}</td>
+                        <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
+                        <td>${rr.toFixed(2)}</td>
+                        <td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
+                        <td><a href="${tvLink}" target="_blank" style="text-decoration:none;">📈 Link</a></td>
+                        <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.id}')">Usuń</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            
+            const totalPages = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
+            document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage} z ${totalPages}`;
+            document.getElementById('form-prev-page').disabled = (formCurrentPage === 1);
+            document.getElementById('form-next-page').disabled = (formCurrentPage === totalPages);
+        }
+
+        function changeFormPage(direction) {
+            const totalPages = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
+            const targetPage = formCurrentPage + direction;
+            if (targetPage >= 1 && targetPage <= totalPages) {
+                formCurrentPage = targetPage;
+                renderAdvancedFormTable();
+            }
+        }
+
+        async function submitAdvancedForm(e) {
+            e.preventDefault();
             const data = {
                 ticker: document.getElementById('form-ticker').value,
                 direction: document.getElementById('form-direction').value,
@@ -1594,11 +1434,11 @@ function toggleFibo() {
                     document.getElementById('form-reason-3').value,
                     document.getElementById('form-reason-4').value,
                     document.getElementById('form-reason-5').value
-                ].filter(r => r.trim() !== '') // Zbieranie tylko wypełnionych
+                ].filter(r => r.trim() !== '')
             };
 
             if(!data.ticker || !data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) {
-                return alert('Uzupełnij wszystkie pola liczbowe, aby zapisać Setup!');
+                return alert('Uzupełnij wszystkie pola liczbowe!');
             }
 
             try {
@@ -1609,12 +1449,8 @@ function toggleFibo() {
                 });
                 if(res.ok) {
                     alert('Dodano Setup do bazy!');
-                    document.getElementById('form-start').value = '';
-                    document.getElementById('form-end').value = '';
-                    document.getElementById('form-entry').value = '';
-                    document.getElementById('form-tp').value = '';
-                    document.getElementById('form-reason-1').value = '';
-                    loadFormEntries();
+                    document.getElementById('trading-form').reset();
+                    fetchFormEntries();
                     loadFormReasons(); 
                 } else {
                     const error = await res.json();
@@ -1623,6 +1459,24 @@ function toggleFibo() {
             } catch(e) { console.error(e); }
         }
 
+        async function deleteAdvancedFormEntry(id) {
+            if(!confirm('Usunąć ten wpis z bazy?')) return;
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/form/delete`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: id})
+                });
+                if(response.ok) {
+                    fetchFormEntries();
+                } else {
+                    const err = await response.json();
+                    alert('Błąd usuwania: ' + err.message);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        // --- ASYSTENT FIBO I POWODY (WYMAGANE DLA FORMULARZA) ---
         async function loadFormReasons() {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/form/reasons`);
@@ -1635,77 +1489,14 @@ function toggleFibo() {
             } catch(e) { console.error(e); }
         }
 
-        async function loadFormEntries() {
-            const tbody = document.getElementById('form-table-body');
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Pobieranie z Supabase...</td></tr>';
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/form/entries`);
-                const data = await res.json();
-                
-                tbody.innerHTML = '';
-                if(data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Brak wpisów w bazie.</td></tr>';
-                    return;
-                }
-
-                data.forEach(item => {
-                    // Matematyka R:R z użyciem Modyfikatora Znaku (Sign Modifier)
-                    const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
-                    const mod = isLong ? 1 : -1;
-                    
-                    const tp = parseFloat(item.take_profit);
-                    const entry = parseFloat(item.entry_point);
-                    const sl = parseFloat(item.stop_loss);
-                    
-                    let rr = 0;
-                    if(entry - sl !== 0) {
-                        rr = ((tp - entry) * mod) / ((entry - sl) * mod);
-                    }
-
-                    // Znajdź obecną cenę pobraną z /api/database
-                    const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
-                    const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
-                    
-                    // Kalkulacja dystansu
-                    const diff = (Math.abs(currentPrice - entry) / entry) * 100;
-                    
-                    // Ustalenie Statusu
-                    let status = 'Obserwacja';
-                    let statusColor = '#848e9c';
-                    if(diff > 15) { status = 'Ignorowanie'; statusColor = '#f6465d'; }
-                    else if(diff > 10) { status = 'Czekanie'; statusColor = '#fcd535'; }
-                    else if(diff <= 10 && item.priority === 1) { status = 'Skupienie'; statusColor = '#0ecb81'; }
-                    
-                    const wynik = item.reasons ? item.reasons.length : 0;
-                    const dateStr = new Date(item.created_at).toLocaleDateString('pl-PL');
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="font-weight:bold;">${item.entry_id}</td>
-                            <td>${dateStr}</td>
-                            <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
-                            <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br>${item.start_zone} - ${item.end_zone}</td>
-                            <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
-                            <td>${rr.toFixed(2)}</td>
-                            <td>${wynik}/5</td>
-                            <td><button class="btn-delete" onclick="deleteFormEntry('${item.id}')">Usuń</button></td>
-                        </tr>
-                    `;
-                });
-            } catch(e) { console.error(e); }
+        function toggleFibo() {
+            const drawer = document.getElementById('fibo-drawer');
+            drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block';
+            if (drawer.style.display === 'block') {
+                updateFiboLabels();
+            }
         }
 
-        async function deleteFormEntry(id) {
-            if(!confirm('Zaraz usuniesz ten Setup. Kontynuować?')) return;
-            try {
-                await fetch(`${API_BASE_URL}/api/form/delete`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id: id})
-                });
-                loadFormEntries();
-            } catch(e) { console.error(e); }
-        }
         function updateFiboLabels() {
             const start = parseFloat(document.getElementById('fibo-start').value);
             const peak = parseFloat(document.getElementById('fibo-peak').value);
@@ -1714,32 +1505,28 @@ function toggleFibo() {
             
             if (!select) return;
             
-            // Definiujemy bazowe poziomy rozszerzeń
             const levels = [1.272, 1.618, 2.000, 2.618];
-            const currentSelected = select.value; // Zapamiętaj, co użytkownik kliknął
+            const currentSelected = select.value; 
             
-            select.innerHTML = ''; // Wyczyszczenie starej listy
+            select.innerHTML = ''; 
             
             levels.forEach(lvl => {
                 let optionText = lvl.toFixed(3);
                 
-                // Jeśli wartości A i B są poprawne, obliczamy podgląd ceny
                 if (!isNaN(start) && !isNaN(peak)) {
                     let calculatedPrice = 0;
                     if (direction === 'DBR' || direction === 'RBR') {
-                        calculatedPrice = peak + (peak - start) * lvl; // Logika dla LONG
+                        calculatedPrice = peak + (peak - start) * lvl; 
                     } else {
-                        calculatedPrice = peak - (start - peak) * lvl; // Logika dla SHORT
+                        calculatedPrice = peak - (start - peak) * lvl; 
                     }
                     optionText += ` (cena: ${calculatedPrice.toFixed(2)})`;
                 }
                 
-                // Tworzenie nowego elementu listy rozwijanej
                 const opt = document.createElement('option');
                 opt.value = lvl.toString();
                 opt.textContent = optionText;
                 
-                // Przywrócenie zaznaczenia, jeśli to ten sam poziom
                 if (lvl.toString() === currentSelected) {
                     opt.selected = true;
                 }
@@ -1747,6 +1534,24 @@ function toggleFibo() {
                 select.appendChild(opt);
             });
         }
+
+        function applyFibo() {
+            const start = parseFloat(document.getElementById('fibo-start').value);
+            const peak = parseFloat(document.getElementById('fibo-peak').value);
+            const level = parseFloat(document.getElementById('fibo-level').value);
+            const direction = document.getElementById('form-direction').value;
+            
+            if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
+            
+            let tp = 0;
+            if(direction === 'DBR' || direction === 'RBR') {
+                tp = peak + (peak - start) * level; 
+            } else {
+                tp = peak - (start - peak) * level; 
+            }
+            
+            document.getElementById('form-tp').value = tp.toFixed(2);
+            toggleFibo();
+        }
     </script>
-</body>
 </html>
