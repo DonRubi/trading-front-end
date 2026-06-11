@@ -1624,5 +1624,48 @@ itemsToDisplay.forEach(item => {
                 linkEl.style.display = 'none';
             }
         }
+        // RĘCZNE WYWOŁANIE SPRAWDZANIA ALERTÓW
+        async function forceAlertsCheck() {
+            const out = document.getElementById('service-output');
+            out.style.display = 'block';
+            out.innerHTML = '⏳ Uruchamianie silnika sprawdzania alertów SMC...';
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`);
+                const result = await res.json();
+                if(res.ok) {
+                    out.innerHTML = `✅ <strong>Skrypt wykonany pomyślnie.</strong><br>Aktywowane zlecenia: ${result.alerts_triggered || 0}`;
+                    // Odświeżamy moduł form na wypadek gdyby jakaś pozycja została wyciszona
+                    if (document.getElementById('form-module').style.display === 'block') {
+                        fetchFormEntries();
+                    }
+                } else {
+                    out.innerHTML = `❌ Błąd serwera: ${result.message}`;
+                }
+            } catch(e) {
+                console.error(e);
+                out.innerHTML = `❌ Brak połączenia z backendem.`;
+            }
+        }
+
+        // RĘCZNE WYWOŁANIE GLOBALNEJ AKTUALIZACJI CEN
+        async function forceCronPricesUpdate() {
+            const out = document.getElementById('service-output');
+            out.style.display = 'block';
+            out.innerHTML = '⏳ Trwa pobieranie aktualnych kursów z Yahoo Finance...';
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`);
+                const result = await res.json();
+                if(res.ok) {
+                    out.innerHTML = `✅ <strong>Baza cen zaktualizowana.</strong><br>Przetworzonych tickerów: ${result.updated_tickers || 0}`;
+                } else {
+                    out.innerHTML = `❌ Błąd: ${result.message}`;
+                }
+            } catch(e) {
+                console.error(e);
+                out.innerHTML = `❌ Błąd sieci.`;
+            }
+        }
     </script>
 </html>
