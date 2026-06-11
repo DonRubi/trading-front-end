@@ -773,6 +773,37 @@
             currentMacroPage += direction;
             renderMacroTable();
         }
+        async function forceMacroUpdate() {
+    const btn = document.querySelector('.btn-macro-update');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Aktualizacja...';
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/macro/force`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert(result.message);
+            // Kluczowe: Ponowne załadowanie danych z Supabase po udanym wymuszeniu
+            loadMacroData(); 
+        } else {
+            alert("Błąd serwera: " + result.message);
+        }
+    } catch (error) {
+        console.error("Błąd podczas wymuszania aktualizacji makro:", error);
+        alert("Błąd połączenia z serwerem backendu.");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = 'Wymuś aktualizację';
+        }
+    }
+}
 
         async function loadDatabase() {
             try {
