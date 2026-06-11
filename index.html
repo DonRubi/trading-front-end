@@ -553,9 +553,14 @@
         <div class="journal-sidebar">
             <form id="trading-form">
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Ticker (Pobierany z bazy)</label>
-                        <select id="form-ticker"></select>
+<div class="form-group">
+                        <label style="display: flex; align-items: center; justify-content: space-between;">
+                            Ticker (Pobierany z bazy)
+                            <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; font-weight: bold; border-bottom: 1px dashed var(--accent);">
+                                📈 Wykres TV
+                            </a>
+                        </label>
+                        <select id="form-ticker" onchange="updateFormTvLink()"></select>
                     </div>
                 </div>
                 <div class="form-row">
@@ -1100,14 +1105,18 @@
 
             pageData.forEach((item) => {
                 const tvLink = getTradingViewLink(item.ticker);
+                
+                // Formatyzacja daty z Supabase do czytelnej formy
+                const dateAddedStr = item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-';
+                
                 const card = `
                     <div class="data-card">
                         <div class="data-card-info">
                             <h4>${item.ticker}</h4>
-                            <p>Dodano: ${item.date_added}</p>
+                            <p>Dodano: ${dateAddedStr}</p>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <span class="price-tag">${item.price !== null ? item.price + ' $' : 'Ładowanie...'}</span>
+                            <span class="price-tag">${item.price !== null ? item.price + ' $' : '...'}</span>
                             <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: bold; border: 1px solid var(--accent); padding: 6px 10px; border-radius: 6px; background-color: rgba(201, 148, 0, 0.05);">
                                 📈 TV
                             </a>
@@ -1283,6 +1292,8 @@
             const formEl = document.getElementById('trading-form');
             formEl.removeEventListener('submit', submitAdvancedForm);
             formEl.addEventListener('submit', submitAdvancedForm);
+            
+            updateFormTvLink();
         }
 
         async function fetchFormEntries() {
@@ -1552,6 +1563,17 @@
             
             document.getElementById('form-tp').value = tp.toFixed(2);
             toggleFibo();
+        }
+
+        function updateFormTvLink() {
+            const ticker = document.getElementById('form-ticker').value;
+            const linkEl = document.getElementById('form-tv-link');
+            if (ticker) {
+                linkEl.href = getTradingViewLink(ticker);
+                linkEl.style.display = 'inline-block';
+            } else {
+                linkEl.style.display = 'none';
+            }
         }
     </script>
 </html>
