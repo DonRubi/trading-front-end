@@ -696,50 +696,119 @@
                 });
         }
 
-        function forceMacroUpdate() {
+        function loadMacroData() {
             const tbody = document.getElementById('macro-table-body');
-            if (tbody) tbody.style.opacity = '0.5';
+            if (!tbody) return;
 
-            fetch(`${API_BASE_URL}/api/macro/force`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Błąd serwera przy wymuszeniu.');
-                return response.json();
-            })
-            .then(result => {
-                if (tbody) tbody.style.opacity = '1';
-                alert(result.message);
-                loadMacroData();
-            })
-            .catch(error => {
-                if (tbody) tbody.style.opacity = '1';
-                console.error('Błąd forceMacroUpdate:', error);
-                alert(`Nie udało się wymusić aktualizacji: ${error.message}`);
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Pobieranie historii makro z Supabase...</td></tr>';
+
+            // Zmieniono endpoint na /api/macro/history aby zaciągać całą bazę danych
+            fetch(`${API_BASE_URL}/api/macro/history`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Serwer zwrócił błąd: ' + response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    macroDataArray = data || [];
+                    currentMacroPage = 1; // Reset do pierwszej strony po załadowaniu świeżych danych
+                    renderMacroTable();
+                })
+                .catch(error => {
+                    console.error('Błąd w loadMacroData:', error);
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc3545; font-weight: bold;">Błąd połączenia z API: ${error.message}</td></tr>`;
+                });
+        }
+
+        function renderMacroTable() {
+            const tbody = document.getElementById('macro-table-body');
+            if (!tbody) return;
+
+            if (macroDataArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro w bazie.</td></tr>`;
+                document.getElementById('macro-prev-btn').disabled = true;
+                document.getElementById('macro-next-btn').disabled = true;
+                document.getElementById('macro-page-info').innerText = 'Strona 0 z 0';
+                return;
+            }
+
+            const totalPages = Math.ceil(macroDataArray.length / macroPageSize);
+            if (currentMacroPage > totalPages) currentMacroPage = totalPages;
+            if (currentMacroPage < 1) currentMacroPage = 1;
+
+            // Wycinanie fragmentu danych na bieżącą stronę
+            const start = (currentMacroPage - 1) * macroPageSize;
+            const end = start + macroPageSize;
+            const pageData = macroDataArray.slice(start, end);
+
+            tbody.innerHTML = '';
+            pageData.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                // Zabezpieczenie nazw pól - Supabase zwraca małe litery (usdpln), lokalne API mogło zwracać wielkie (USDPLN)
+                const date = row.date || '-';
+                const eurpln = row.eurpln !== undefined ? row.eurpln : (row.EURPLN !== undefined ? row.EURPLN : '-');
+                const usdpln = row.usdpln !== undefined ? row.usdpln : (row.USDPLN !== undefined ? row.USDPLN : '-');
+                const vix = row.vix !== undefined ? row.vix : (row.VIX !== undefined ? row.VIX : '-');
+                const sp500 = row.sp500 !== undefined ? row.sp500 : (row.SP500 !== undefined ? row.SP500 : '-');
+                const updated = row.updated_at || (row.created_at ? new Date(row.created_at).toLocaleTimeString('pl-PL') : '-');
+
+                tr.innerHTML = `
+                    <td class="macro-val-date">${date}</td>
+                    <td class="macro-val-currency">${eurpln}</td>
+                    <td class="macro-val-currency">${usdpln}</td>
+                    <td class="macro-val-vix">${vix}</td>
+                    <td style="font-weight: 500;">${sp500}</td>
+                    <td class="macro-val-time">${updated}</td>
+                `;
+                tbody.appendChild(tr);
             });
+
+            // Aktualizacja kontrolek stronicowania
+            document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`;
+            document.getElementById('macro-prev-btn').disabled = (currentMacroPage === 1);
+            document.getElementById('macro-next-btn').disabled = (currentMacroPage === totalPages);
+        }
+
+        function changeMacroPage(direction) {
+            currentMacroPage += direction;
+            renderMacroTable();
         }
 
         async function loadDatabase() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/database`);
                 const data = await response.json();
-                renderMobileList(data);
+                tickerDataArray = data || [];
+                // Wywołujemy render bez resetu strony, by nie przewijało na 1. stronę po usunięciu elementu
+                renderMobileList();
             } catch (error) {
-                console.error("Błąd ładowania bazy:", error);
+                console.error("Błąd bazy tickerów:", error);
             }
         }
 
-        function renderMobileList(data) {
+        function renderMobileList() {
             const container = document.getElementById('db-list-container');
+            if (!container) return;
             container.innerHTML = '';
             
-            if (data.length === 0) {
+            if (tickerDataArray.length === 0) {
                 container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Baza jest pusta. Dodaj swój pierwszy ticker.</p>`;
+                document.getElementById('ticker-prev-btn').disabled = true;
+                document.getElementById('ticker-next-btn').disabled = true;
+                document.getElementById('ticker-page-info').innerText = 'Strona 0 z 0';
                 return;
             }
 
-            data.forEach((item) => {
+            const totalPages = Math.ceil(tickerDataArray.length / tickerPageSize);
+            if (currentTickerPage > totalPages) currentTickerPage = totalPages;
+            if (currentTickerPage < 1) currentTickerPage = 1;
+
+            // Wycinanie fragmentu danych na bieżącą stronę (po 20 sztuk)
+            const start = (currentTickerPage - 1) * tickerPageSize;
+            const end = start + tickerPageSize;
+            const pageData = tickerDataArray.slice(start, end);
+
+            pageData.forEach((item) => {
                 const card = `
                     <div class="data-card">
                         <div class="data-card-info">
@@ -754,6 +823,16 @@
                 `;
                 container.innerHTML += card;
             });
+
+            // Aktualizacja kontrolek stronicowania tickerów
+            document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${totalPages}`;
+            document.getElementById('ticker-prev-btn').disabled = (currentTickerPage === 1);
+            document.getElementById('ticker-next-btn').disabled = (currentTickerPage === totalPages);
+        }
+
+        function changeTickerPage(direction) {
+            currentTickerPage += direction;
+            renderMobileList();
         }
 
         async function addTicker() {
