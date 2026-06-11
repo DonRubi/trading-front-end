@@ -5,6 +5,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Quant Desk v2</title>
     <style>
+        /* Kontener główny modułu - podział na 2 kolumny */
+.journal-container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    margin-top: 15px;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .journal-container {
+        grid-template-columns: 1fr; /* Responsywność dla mniejszych ekranów */
+    }
+}
+
+/* Panel boczny formularza */
+.journal-sidebar {
+    background: #1e1e2e;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #313244;
+}
+
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    font-size: 13px;
+    color: #cdd6f4;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #11111b;
+    border: 1px solid #45475a;
+    color: #cdd6f4;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none;
+    border-color: #89b4fa;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 10px;
+    background: #89b4fa;
+    color: #11111b;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-submit:hover {
+    background: #b4befe;
+}
+
+/* Filtry i tabela */
+.table-controls {
+    margin-bottom: 12px;
+}
+
+#journal-search {
+    width: 100%;
+    max-width: 350px;
+    padding: 9px 12px;
+    background: #1e1e2e;
+    border: 1px solid #45475a;
+    border-radius: 6px;
+    color: #cdd6f4;
+}
+
+#journal-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1e1e2e;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#journal-table th, #journal-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid #313244;
+    font-size: 14px;
+}
+
+#journal-table th {
+    background: #313244;
+    color: #cdd6f4;
+    cursor: pointer;
+    user-select: none;
+}
+
+#journal-table th:hover {
+    background: #45475a;
+}
+
+/* Stronicowanie */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 5px;
+}
+
+.btn-pag {
+    padding: 6px 14px;
+    background: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.btn-pag:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.btn-delete-journal {
+    background: #f38ba8;
+    color: #11111b;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.btn-delete-journal:hover {
+    background: #eba0ac;
+}
         /* --- STYLE DLA MODUŁU DAILYBRIEF (MOBILNA KARUZELA SZUFLADOWA) --- */
         .brief-carousel-container {
             display: flex;
@@ -398,111 +545,76 @@
     </main>
 
 <section id="form-module" class="app-module">
-        <div class="macro-header-container">
-            <h3>Kreator Pozycji (Form)</h3>
-        </div>
-        
-        <div class="form-container data-card" style="flex-direction: column; align-items: stretch;">
-            <div class="form-row">
+    <h2>Dziennik Transakcji (Formularz Wejściowy)</h2>
+    
+    <div class="journal-container">
+        <div class="journal-sidebar">
+            <form id="trading-form">
                 <div class="form-group">
-                    <label>Ticker (Pobierany z bazy)</label>
-                    <select id="form-ticker"></select>
+                    <label for="form-ticker">Ticker:</label>
+                    <input type="text" id="form-ticker" placeholder="np. AAPL, BTC-USD" required>
                 </div>
-<div class="form-group">
-    <label>Kierunek</label>
-    <select id="form-direction" onchange="updateFiboLabels()">
-        <option value="DBR">DBR (Long)</option>
-        <option value="RBR">RBR (Long)</option>
-        <option value="DBD">DBD (Short)</option>
-        <option value="RBD">RBD (Short)</option>
-    </select>
-</div>
                 <div class="form-group">
-                    <label>Priorytet</label>
-                    <select id="form-priority">
-                        <option value="0">0 (Normalny)</option>
-                        <option value="1">1 (Wysoki)</option>
+                    <label for="form-entry-price">Cena wejścia:</label>
+                    <input type="number" id="form-entry-price" step="0.0001" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="form-stop-loss">Stop Loss:</label>
+                    <input type="number" id="form-stop-loss" step="0.0001" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="form-take-profit">Take Profit:</label>
+                    <input type="number" id="form-take-profit" step="0.0001" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="form-strategy">Strategia / Setup:</label>
+                    <select id="form-strategy">
+                        <option value="">Wybierz...</option>
+                        <option value="Smart Money Concepts">Smart Money Concepts</option>
+                        <option value="Order Flow / CVD">Order Flow / CVD</option>
+                        <option value="Volume Profile / VWAP">Volume Profile / VWAP</option>
+                        <option value="Swing Trading">Inna / Klasyczny Swing</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="form-notes">Notatki:</label>
+                    <textarea id="form-notes" rows="3" placeholder="Kontekst wyższego interwału (HTF)..."></textarea>
+                </div>
+                <button type="submit" class="btn-submit">Zapisz pozycję</button>
+            </form>
+        </div>
+        
+        <div class="journal-main">
+            <div class="table-controls">
+                <input type="text" id="journal-search" placeholder="🔍 Filtruj dziennik po tickerze lub strategii..." oninput="handleFilterChange(this.value)">
             </div>
             
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Początek strefy</label>
-                    <input type="number" id="form-start" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>Koniec strefy (Stop Loss)</label>
-                    <input type="number" id="form-end" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>Punkt wejścia</label>
-                    <input type="number" id="form-entry" step="0.01">
-                </div>
+            <div class="table-responsive">
+                <table id="journal-table">
+                    <thead>
+                        <tr>
+                            <th onclick="handleSort('ticker')">Ticker <span id="sort-icon-ticker">─</span></th>
+                            <th onclick="handleSort('entry_price')">Cena <span id="sort-icon-entry_price">─</span></th>
+                            <th onclick="handleSort('stop_loss')">SL <span id="sort-icon-stop_loss">─</span></th>
+                            <th onclick="handleSort('take_profit')">TP <span id="sort-icon-take_profit">─</span></th>
+                            <th onclick="handleSort('strategy')">Strategia <span id="sort-icon-strategy">─</span></th>
+                            <th onclick="handleSort('created_at')">Data dodania <span id="sort-icon-created_at">▼</span></th>
+                            <th>Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="journal-table-body">
+                        </tbody>
+                </table>
             </div>
-
-<div class="form-group">
-    <label>Take Profit <span style="cursor:pointer; color: var(--accent);" onclick="toggleFibo()">[ 📐 Asystent Fibo ]</span></label>
-    <input type="number" id="form-tp" step="0.01">
-    
-    <div class="fibo-drawer" id="fibo-drawer">
-        <p style="font-size: 0.85rem; color: var(--accent); margin-bottom: 10px;">Automatycznie dostosowuje wzór Fibo do wybranego Kierunku z góry.</p>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Początek (A)</label>
-                <input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()">
-            </div>
-            <div class="form-group">
-                <label>Szczyt (B)</label>
-                <input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()">
-            </div>
-            <div class="form-group">
-                <label>Rozszerzenie Fibo</label>
-                <select id="fibo-level">
-                    <option value="1.272">1.272</option>
-                    <option value="1.618">1.618</option>
-                    <option value="2.0">2.000</option>
-                    <option value="2.618">2.618</option>
-                </select>
+            
+            <div class="pagination-container">
+                <button onclick="changePage(-1)" id="btn-prev-page" class="btn-pag">◀ Poprzednia</button>
+                <span id="page-info">Strona 1 z 1</span>
+                <button onclick="changePage(1)" id="btn-next-page" class="btn-pag">Następna ▶</button>
             </div>
         </div>
-        <button type="button" onclick="applyFibo()" style="margin-top:15px; width:100%; background-color: var(--bg-card); color: var(--accent); border: 1px solid var(--accent);">Zastosuj i Wstaw TP</button>
     </div>
-</div>
-
-            <div class="form-group">
-                <label>Powody wejścia (Opcjonalne, max 5)</label>
-                <input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1...">
-                <input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2...">
-                <input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3...">
-                <input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4...">
-                <input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5...">
-                <datalist id="reasons-list"></datalist>
-            </div>
-            
-            <button onclick="submitForm()" style="margin-top: 10px;">Zapisz Setup do Bazy</button>
-        </div>
-
-        <div class="form-table-wrapper">
-            <table class="macro-custom-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Data</th>
-                        <th>Ticker</th>
-                        <th>Strefa</th>
-                        <th>Status</th>
-                        <th>R:R</th>
-                        <th>Wynik</th>
-                        <th>Akcja</th>
-                    </tr>
-                </thead>
-                <tbody id="form-table-body">
-                    <tr><td colspan="8" style="text-align: center;">Ładowanie setupów...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
+</section>
 
     <section id="focus-module" class="app-module">
         <h2>Moduł Focus (Analiza Dnia)</h2>
