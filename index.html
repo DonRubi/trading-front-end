@@ -109,6 +109,7 @@
     cursor: pointer;
     user-select: none;
 }
+        
 
 #journal-table th:hover {
     background: #45475a;
@@ -791,8 +792,81 @@
         </div>
     </section>
 
-    <section id="tradeslist-module" class="app-module">
-        <h2>Aktywne Pozycje</h2>
+<section id="tradeslist-module" class="app-module">
+        <div class="macro-header-container">
+            <h3>Dziennik Otwartych Pozycji (Trades)</h3>
+        </div>
+        
+        <div class="journal-container">
+            <div class="journal-sidebar">
+                <form id="trade-form" onsubmit="submitTradeForm(event)">
+                    <div class="form-group">
+                        <label>Powiązane z ID Focus</label>
+                        <select id="trade-focus-id" onchange="onTradeFocusChange()">
+                            <option value="">Wybierz przeanalizowany Setup...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);">
+                        <div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div>
+                        <div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div>
+                        <div class="form-group"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div>
+                        <div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div>
+                        <div class="form-group"><label>Max Wydatek</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Pełna nazwa spółki</label>
+                        <input type="text" id="trade-name" placeholder="np. CD Projekt SA">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div>
+                        <div class="form-group"><label>Cena zakupu</label><input type="number" step="0.01" id="trade-buy-price" required></div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group"><label>Wydano gotówki</label><input type="number" step="1" id="trade-spent" required></div>
+                        <div class="form-group"><label>Dźwignia (1 = Akcje)</label><input type="number" step="1" min="1" id="trade-leverage" value="1" required></div>
+                    </div>
+
+                    <input type="hidden" id="trade-tp">
+                    <input type="hidden" id="trade-sl">
+                    <input type="hidden" id="trade-score">
+
+                    <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">
+                        🛒 Zarejestruj Transakcję
+                    </button>
+                </form>
+            </div>
+            
+            <div class="journal-main">
+                <div class="table-responsive">
+                    <table id="journal-table">
+                        <thead>
+                            <tr>
+                                <th>Data/ID</th>
+                                <th>Spółka</th>
+                                <th>Zainwestowano</th>
+                                <th>Ceny (Wejście/Obecna)</th>
+                                <th>R:R | Dynamic SL</th>
+                                <th>Zysk (Obecny)</th>
+                                <th>Zysk PLN</th>
+                                <th style="min-width: 150px;">Progres TP</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trades-table-body"></tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination-container">
+                    <button onclick="changeTradePage(-1)" id="trade-prev-page" class="btn-pag">◀ Poprzednia</button>
+                    <span id="trade-page-info">Strona 1 z 1</span>
+                    <button onclick="changeTradePage(1)" id="trade-next-page" class="btn-pag">Następna ▶</button>
+                </div>
+            </div>
+        </div>
     </section>
 
     <section id="summary-module" class="app-module">
@@ -1083,6 +1157,8 @@
 
         // --- NAWIGACJA SPA (Single Page Application) ---
         function openModule(moduleId, moduleTitle) {
+            if (moduleId === 'focus-module') initFocusModule();
+            if (moduleId === 'tradeslist-module') initTradesModule(); // DODANO TO
             document.getElementById('dashboard').style.display = 'none';
             const modules = document.querySelectorAll('.app-module');
             modules.forEach(m => m.style.display = 'none');
@@ -1971,6 +2047,237 @@ function renderFocusTable() {
                     body: JSON.stringify({ id })
                 });
                 if(res.ok) fetchFocusEntries();
+            } catch(e) { console.error(e); }
+        }
+
+        // ==========================================
+        // LOGIKA MODUŁU TRADES LIST
+        // ==========================================
+        let tradesDataArray = [];
+        let currentTradePage = 1;
+        const tradePageSize = 20;
+
+        async function initTradesModule() {
+            // Wypełnienie listy Focus IDs
+            if(focusDataArray.length === 0) await fetchFocusEntries();
+            const select = document.getElementById('trade-focus-id');
+            select.innerHTML = '<option value="">Wybierz przeanalizowany Setup...</option>';
+            focusDataArray.forEach(f => {
+                select.innerHTML += `<option value="${f.id}">#${f.id} - ${f.ticker} (Zalecane: ${f.allocated_cash} ${f.currency})</option>`;
+            });
+
+            // Ustawienie dzisiejszej daty jako domyślnej
+            document.getElementById('trade-buy-date').valueAsDate = new Date();
+            
+            fetchTradesEntries();
+        }
+
+        async function onTradeFocusChange() {
+            const fId = document.getElementById('trade-focus-id').value;
+            const focus = focusDataArray.find(f => f.id == fId);
+            if(!focus) return;
+
+            // Pobieramy dane powiązanego z Focus wpisu Form (żeby ściągnąć TP, SL, Kierunek)
+            const formRes = await fetch(`${API_BASE_URL}/api/form/entries`);
+            const formDb = await formRes.json();
+            const form = formDb.find(frm => frm.entry_id === focus.entry_id);
+
+            document.getElementById('trade-ticker').value = focus.ticker;
+            document.getElementById('trade-form-id').value = focus.entry_id;
+            document.getElementById('trade-currency').value = focus.currency;
+            document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`;
+            document.getElementById('trade-score').value = focus.points_total;
+            
+            if(form) {
+                document.getElementById('trade-direction').value = form.direction;
+                document.getElementById('trade-tp').value = form.take_profit;
+                document.getElementById('trade-sl').value = form.stop_loss;
+            }
+        }
+
+        async function submitTradeForm(e) {
+            e.preventDefault();
+            const spent = parseFloat(document.getElementById('trade-spent').value);
+            const lev = parseInt(document.getElementById('trade-leverage').value);
+            const maxSpendStr = document.getElementById('trade-max-spend').value;
+            const maxSpend = parseFloat(maxSpendStr.split(" ")[0]);
+
+            if (spent * lev > maxSpend) {
+                alert(`⚠️ OSTRZEŻENIE! Twój wydatek bazowy * dźwignia (${spent * lev}) przekracza maksymalny wydatek zalecony z analizy Focus (${maxSpend}). Kontynuuję z zapisem, ale zbadaj zarządzanie ryzykiem!`);
+            }
+
+            const data = {
+                focus_id: document.getElementById('trade-focus-id').value,
+                form_id: document.getElementById('trade-form-id').value,
+                ticker: document.getElementById('trade-ticker').value,
+                direction: document.getElementById('trade-direction').value,
+                stock_name: document.getElementById('trade-name').value,
+                buy_date: document.getElementById('trade-buy-date').value,
+                buy_price: document.getElementById('trade-buy-price').value,
+                spent: spent,
+                leverage: lev,
+                currency: document.getElementById('trade-currency').value,
+                focus_score: document.getElementById('trade-score').value,
+                tp: document.getElementById('trade-tp').value,
+                sl: document.getElementById('trade-sl').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/add`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if(res.ok) {
+                    alert('Transakcja pomyślnie dopisana do portfolio!');
+                    document.getElementById('trade-form').reset();
+                    fetchTradesEntries();
+                } else alert('Błąd dodawania transakcji.');
+            } catch(e) { console.error(e); }
+        }
+
+        async function fetchTradesEntries() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
+                const allTrades = await res.json();
+                tradesDataArray = allTrades.filter(t => t.status === 'OPEN'); // Ten moduł pokazuje tylko Otwarte
+                
+                // Upewniamy się, że mamy dostęp do aktualnych cen
+                if(tickerDataArray.length === 0) await loadDatabase();
+                
+                renderTradesTable();
+            } catch(e) { console.error(e); }
+        }
+
+        function renderTradesTable() {
+            const tbody = document.getElementById('trades-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            if (tradesDataArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--text-muted);">Brak otwartych pozycji.</td></tr>`;
+                return;
+            }
+
+            const start = (currentTradePage - 1) * tradePageSize;
+            const displayed = tradesDataArray.slice(start, start + tradePageSize);
+
+            displayed.forEach(item => {
+                const isLong = ['DBR', 'RBR'].includes(item.direction);
+                const mod = isLong ? 1 : -1;
+                
+                // Znajdź obecną cenę z bazy Yahoo (lub użyj ceny kupna jeśli błąd/weekend)
+                const tickerMeta = tickerDataArray.find(t => t.ticker === item.ticker);
+                const currentPrice = tickerMeta && tickerMeta.price ? tickerMeta.price : item.buy_price;
+
+                const value = item.spent * item.leverage; // Wartość (Wydano * Dźwignia)
+                
+                // --- MATEMATYKA ZYSKÓW ---
+                const priceMovePct = ((currentPrice - item.buy_price) / item.buy_price) * mod;
+                const profit = value * priceMovePct;
+                const currentValue = value + profit;
+                
+                // Wartość PLN na żywo na podstawie kursu bazowego (przybliżenie dla Otwartych)
+                const spentPln = item.spent * item.buy_fx_rate;
+                const profitPln = profit * item.buy_fx_rate;
+
+                // --- MATEMATYKA R:R i DYNAMIC STOP LOSS ---
+                const entry = item.buy_price;
+                const tp = item.tp;
+                let sl = item.sl;
+                
+                let rr = 0;
+                if(entry - sl !== 0) rr = ((tp - entry) * mod) / ((entry - sl) * mod);
+
+                // Progres drogi do TP
+                let progress = 0;
+                if(tp - entry !== 0) progress = ((currentPrice - entry) * mod) / ((tp - entry) * mod);
+                
+                // Mechanika kroczącego SL z wytycznych
+                let dynamicSl = sl;
+                if (progress >= 1.0) dynamicSl = tp;
+                else if (progress >= 0.5) {
+                    if (isLong) dynamicSl = entry + ((tp - entry) * (progress - 0.2));
+                    else dynamicSl = entry - ((entry - tp) * (progress - 0.2));
+                }
+
+                // Ograniczenia wizualne dla Paska Progresu
+                let progDraw = progress * 100;
+                let progColor = 'var(--success)';
+                if (progDraw < 0) {
+                    progColor = 'var(--danger)';
+                    // Progres stratny względem SL
+                    if (entry - sl !== 0) progDraw = Math.abs(((currentPrice - entry) * mod) / ((entry - sl) * mod)) * 100;
+                    else progDraw = 0;
+                }
+                if (progDraw > 100) progDraw = 100;
+
+                const profColor = profit >= 0 ? '#0ecb81' : '#f6465d';
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-size:0.85em; color:var(--text-muted);">${item.buy_date}<br><b style="color:#eaecef;">#${item.id}</b></td>
+                    <td><strong style="color:var(--accent);">${item.ticker}</strong><br><small>${item.stock_name}</small></td>
+                    <td>${item.spent.toFixed(2)} ${item.currency}<br><small>Wart: ${value.toFixed(2)} (x${item.leverage})</small></td>
+                    <td>
+                        <span style="color:var(--text-muted);">WE:</span> ${entry.toFixed(2)}$<br>
+                        <span style="color:var(--accent);">TERAZ:</span> <b>${currentPrice.toFixed(2)}$</b>
+                    </td>
+                    <td>
+                        <span style="color:var(--text-muted);">R:R</span> <b>${rr.toFixed(1)}</b><br>
+                        <span style="color:var(--accent);">Trail:</span> <b style="color:#fcd535;">${dynamicSl.toFixed(2)}$</b>
+                    </td>
+                    <td style="color:${profColor}; font-weight:bold;">${profit > 0 ? '+':''}${profit.toFixed(2)} ${item.currency}</td>
+                    <td style="color:${profColor}; font-weight:bold;">${profitPln > 0 ? '+':''}${profitPln.toFixed(2)} PLN</td>
+                    <td>
+                        <div style="font-size:0.8em; margin-bottom:3px; display:flex; justify-content:space-between;">
+                            <span>${progress < 0 ? 'STRATA' : 'ZYSK'}</span><span>${(progress*100).toFixed(0)}%</span>
+                        </div>
+                        <div style="width:100%; background:var(--bg-input); height:8px; border-radius:4px; overflow:hidden;">
+                            <div style="width:${progDraw}%; background:${progColor}; height:100%;"></div>
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn-delete" onclick="openCloseModal(${item.id})" style="color:var(--accent); border-color:var(--accent); margin-bottom:4px;">Sprzedaj</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage} z ${Math.ceil(tradesDataArray.length / tradePageSize) || 1}`;
+        }
+
+        function changeTradePage(d) {
+            const total = Math.ceil(tradesDataArray.length / tradePageSize) || 1;
+            if (currentTradePage + d >= 1 && currentTradePage + d <= total) {
+                currentTradePage += d;
+                renderTradesTable();
+            }
+        }
+
+        // Proste symulowane okno do zamknięcia pozycji
+        async function openCloseModal(id) {
+            const price = prompt("Podaj cenę wyjścia z pozycji (Cena Sprzedaży):");
+            if(!price) return;
+            const date = prompt("Podaj datę zamknięcia (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+            if(!date) return;
+            const div = prompt("Otrzymana dywidenda (jeśli brak wpisz 0):", "0");
+            
+            try {
+                await fetch(`${API_BASE_URL}/api/trades/update`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        id: id, 
+                        updates: { 
+                            sell_price: parseFloat(price), 
+                            sell_date: date,
+                            dividend: parseFloat(div)
+                        } 
+                    })
+                });
+                alert("Pozycja pomyślnie zamknięta. Przeniesiono do modułu Summary (w budowie).");
+                fetchTradesEntries();
             } catch(e) { console.error(e); }
         }
     </script>
