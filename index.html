@@ -5,6 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Quant Desk v2</title>
     <style>
+        /* --- STYLE DLA MODUŁU DAILYBRIEF (MOBILNA KARUZELA SZUFLADOWA) --- */
+        .brief-carousel-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory; /* Wymusza magnetyczne przyciąganie kart lewo/prawo */
+            gap: 16px;
+            padding: 10px 5px 20px 5px;
+            scrollbar-width: none; /* Ukrywa pasek przewijania (Firefox) */
+        }
+        
+        .brief-carousel-container::-webkit-scrollbar {
+            display: none; /* Ukrywa pasek przewijania (Chrome/Safari) */
+        }
+
+        .brief-card {
+            flex: 0 0 100%; /* Na telefonie karta zajmuje dokładnie 100% szerokości ekranu */
+            scroll-snap-align: start; /* Punkt zatrzasku karty */
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (min-width: 768px) {
+            .brief-card {
+                flex: 0 0 calc(50% - 8px); /* Na komputerze pokazujemy 2 karty obok siebie */
+            }
+        }
+
+        .brief-card h4 {
+            font-size: 1.15rem;
+            color: var(--accent);
+            line-height: 1.4;
+            font-weight: 600;
+        }
+
+        .brief-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            white-space: pre-line; /* Zachowuje entery i punktor od Gemini */
+            overflow-y: auto;
+            max-height: 340px; /* Zapobiega rozciąganiu pionowemu przy bardzo długich tekstach */
+            padding-right: 5px;
+        }
+
+        .brief-card-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+            text-align: right;
+        }
+
+        .brief-link {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .brief-link:hover {
+            color: var(--accent-hover);
+        }
+
+        .carousel-nav-hints {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
         /* --- NOWOCZESNE STYLE SYSTEMOWE (DARK THEME) --- */
         :root {
             --bg-main: #0b0e11;
@@ -289,6 +370,10 @@
                 <span class="icon">🔔</span>
                 <h3>AlertHistory</h3>
             </div>
+            <div class="menu-card" onclick="openModule('dailybrief-module', 'DailyBrief')">
+                <span class="icon">📰</span>
+                <h3>DailyBrief</h3>
+            </div>
         </div>
     </main>
 
@@ -449,6 +534,19 @@
             </table>
         </div>
     </section>
+    <section id="dailybrief-module" class="app-module">
+        <div class="macro-header-container">
+            <h3>Analizy i Wpisy Makro (AI Brief)</h3>
+        </div>
+        
+        <div class="brief-carousel-container" id="dailybrief-carousel">
+            <p style="text-align: center; color: var(--text-muted); width: 100%; padding: 20px;">Ładowanie analiz...</p>
+        </div>
+        
+        <div class="carousel-nav-hints">
+            <span>👈 Przesuń palcem w lewo / prawo 👉</span>
+        </div>
+    </section>
 
     <nav class="bottom-nav">
         <button class="nav-item active" onclick="openDashboard()">
@@ -485,6 +583,9 @@
 
             if (moduleId === 'alerthistory-module') {
                 loadAlertHistory();
+            }
+            if (moduleId === 'dailybrief-module') {
+                loadDailyBriefs();
             }
         }
 
@@ -703,6 +804,47 @@
             } catch (error) {
                 console.error("Błąd sieci przy usuwaniu:", error);
                 alert("Błąd połączenia z serwerem.");
+            }
+        }
+        // --- LOGIKA MODUŁU DAILYBRIEF ---
+        async function loadDailyBriefs() {
+            const container = document.getElementById('dailybrief-carousel');
+            if (!container) return;
+
+            container.innerHTML = '<p style="text-align: center; color: var(--text-muted); width: 100%; padding: 20px;">Pobieranie analiz z Supabase...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/blog/briefs`);
+                if (!response.ok) throw new Error('Błąd serwera: ' + response.status);
+                
+                const data = await response.json();
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); width: 100%; padding: 20px;">Brak zapisanych briefów w bazie.</p>';
+                    return;
+                }
+
+                container.innerHTML = ''; // Czyszczenie komunikatu ładowania
+
+                data.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'brief-card';
+                    
+                    card.innerHTML = `
+                        <h4>${item.title}</h4>
+                        <div class="brief-text">${item.summary}</div>
+                        <div class="brief-card-footer">
+                            <a href="${item.url}" target="_blank" class="brief-link">
+                                Oryginalny wpis 🔗
+                            </a>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error("Błąd ładowania briefów:", error);
+                container.innerHTML = '<p style="text-align: center; color: var(--danger); width: 100%; padding: 20px;">Nie udało się załadować danych z bazy.</p>';
             }
         }
     </script>
