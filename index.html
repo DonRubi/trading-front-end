@@ -870,10 +870,11 @@
                         <tr>
                             <th>Data Wywołania</th>
                             <th>Ticker</th>
-                            <th>Priorytet</th> 
+                            <th>Priorytet</th>
                             <th>Warunek</th>
                             <th>Cena Docelowa</th>
                             <th>Ekstrema Dnia (L/H)</th>
+                            <th>Wynik (Score)</th> 
                             <th>Wykres TV</th>
                             <th>Akcje</th>
                         </tr>
@@ -1190,19 +1191,20 @@
         }
 
         // --- LOGIKA MODUŁU ALERT HISTORY ---
+// --- LOGIKA MODUŁU ALERT HISTORY ---
         async function loadAlertHistory() {
             const tbody = document.getElementById("alert-history-tbody");
             if (!tbody) return;
 
-            // Zmieniono colspan na 8 z powodu dodania nowej kolumny
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">Ładowanie historii...</td></tr>';
+            // Zmieniono colspan na 9 z powodu dodania nowej kolumny Score
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">Ładowanie historii...</td></tr>';
 
             try {
                 const response = await fetch(`${API_BASE_URL}/api/alerts/history`);
                 const data = await response.json();
 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #777;">Brak wywołanych alertów w bazie.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #777;">Brak wywołanych alertów w bazie.</td></tr>`;
                     return;
                 }
 
@@ -1215,10 +1217,12 @@
                     const conditionText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
                     const conditionColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
                     
-                    // Powielenie identycznej logiki wizualnej plakietki priorytetu z modułu Form
                     const priorityBadge = item.priority === 1 
                         ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' 
                         : '<span style="color: var(--text-muted);">Normalny</span>';
+
+                    // Pobieranie i bezpieczne mapowanie wartości Score
+                    const scoreVal = item.score !== undefined && item.score !== null ? item.score : 0;
 
                     // Zastosowanie sztywnego zaokrąglenia do 2 miejsc po przecinku (.toFixed(2))
                     const targetPriceFormatted = item.target_price ? Number(item.target_price).toFixed(2) : '0.00';
@@ -1230,10 +1234,11 @@
                     row.innerHTML = `
                         <td class="macro-val-date">${dateStr}</td>
                         <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
-                        <td>${priorityBadge}</td> <td style="color: ${conditionColor}; font-weight: 500;">${conditionText}</td>
+                        <td>${priorityBadge}</td>
+                        <td style="color: ${conditionColor}; font-weight: 500;">${conditionText}</td>
                         <td style="font-weight: bold;">${targetPriceFormatted} $</td>
                         <td style="font-size: 0.9em; color: #848e9c;">L: ${dayLowFormatted} | H: ${dayHighFormatted}</td>
-                        <td>
+                        <td style="font-weight: bold; color: #a6e3a1;">${scoreVal}/5</td> <td>
                             <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--bg-input); font-size: 0.85rem;">
                                 📈 Wykres
                             </a>
@@ -1249,7 +1254,7 @@
 
             } catch (error) {
                 console.error("Błąd podczas pobierania historii:", error);
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #f6465d;">Błąd ładowania danych z serwera.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #f6465d;">Błąd ładowania danych z serwera.</td></tr>`;
             }
         }
 
