@@ -393,12 +393,11 @@
         <h2>Podsumowanie Portfela</h2>
     </section>
 
-    <section id="database-module" class="app-module">
+<section id="database-module" class="app-module">
         <style>
             .macro-management-section {
-                margin-top: 40px;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                padding-top: 25px;
+                margin-bottom: 40px; /* Margines od dołu, bo teraz jest na górze */
+                padding-bottom: 25px;
             }
             .macro-header-container {
                 display: flex;
@@ -458,16 +457,48 @@
                 color: #666;
                 font-size: 0.85em;
             }
-        </style>
+            .ticker-management-section {
+                margin-top: 20px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                padding-top: 25px;
+            }
 
-        <div class="ticker-management-section">
-            <h3>Baza Tickerów Akcji</h3>
-            <div class="input-group">
-                <input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. TSLA)">
-                <button onclick="addTicker()">Dodaj</button>
-            </div>
-            <div id="db-list-container"></div>
-        </div>
+            /* --- STYLE DLA PAGINACJI --- */
+            .pagination-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 15px;
+                margin-top: 15px;
+                padding: 10px 0;
+            }
+            .pagination-btn {
+                background-color: var(--bg-input);
+                color: var(--text-main);
+                border: 1px solid var(--border-color);
+                padding: 6px 14px;
+                font-size: 0.85rem;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: background-color 0.2s;
+            }
+            .pagination-btn:disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+            .pagination-btn:active:not(:disabled) {
+                background-color: var(--accent);
+                color: #000;
+            }
+            .pagination-info {
+                font-size: 0.85rem;
+                color: var(--text-muted);
+                font-weight: 500;
+                min-width: 90px;
+                text-align: center;
+            }
+        </style>
 
         <div class="macro-management-section">
             <div class="macro-header-container">
@@ -494,8 +525,29 @@
                     </tbody>
                 </table>
             </div>
+
+            <div class="pagination-container">
+                <button class="pagination-btn" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprzednia</button>
+                <span class="pagination-info" id="macro-page-info">Strona 1 z 1</span>
+                <button class="pagination-btn" id="macro-next-btn" onclick="changeMacroPage(1)">Następna →</button>
+            </div>
         </div>
-    </section> 
+
+        <div class="ticker-management-section">
+            <h3>Baza Tickerów Akcji</h3>
+            <div class="input-group" style="margin-top: 15px;">
+                <input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. TSLA)">
+                <button onclick="addTicker()">Dodaj</button>
+            </div>
+            <div id="db-list-container"></div>
+
+            <div class="pagination-container">
+                <button class="pagination-btn" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprzednia</button>
+                <span class="pagination-info" id="ticker-page-info">Strona 1 z 1</span>
+                <button class="pagination-btn" id="ticker-next-btn" onclick="changeTickerPage(1)">Następna →</button>
+            </div>
+        </div>
+    </section>
 
     <section id="service-module" class="app-module">
         <h2>Serwisy i Integracje</h2>
@@ -563,6 +615,15 @@
     <script>
         // Główny adres Twojego backendu na Renderze
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
+
+        // --- STAN STRONICOWANIA DLA MODUŁU DATABASE ---
+        let macroDataArray = [];
+        let currentMacroPage = 1;
+        const macroPageSize = 10; // 10 wpisów na stronę
+
+        let tickerDataArray = [];
+        let currentTickerPage = 1;
+        const tickerPageSize = 20; // 20 wpisów na stronę
 
         // --- NAWIGACJA SPA (Single Page Application) ---
         function openModule(moduleId, moduleTitle) {
