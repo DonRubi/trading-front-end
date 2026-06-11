@@ -663,8 +663,132 @@
     </div>
 </section>
 
-    <section id="focus-module" class="app-module">
-        <h2>Moduł Focus (Analiza Dnia)</h2>
+<section id="focus-module" class="app-module">
+        <div class="macro-header-container">
+            <h3>Analiza Dnia przed Wejściem (Focus)</h3>
+        </div>
+        
+        <div class="journal-container">
+            <div class="journal-sidebar">
+                <form id="focus-form" onsubmit="submitFocusForm(e)">
+                    <div class="form-group">
+                        <label>Wybierz ID Form (Setup)</label>
+                        <select id="focus-form-id" onchange="onFocusIdChange()"></select>
+                    </div>
+
+                    <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
+                        <div class="form-group">
+                            <label>Wybrany Ticker</label>
+                            <input type="text" id="focus-ticker" readonly style="opacity:0.7;">
+                        </div>
+                        <div class="form-group">
+                            <label>Kierunek</label>
+                            <input type="text" id="focus-direction" readonly style="opacity:0.7;">
+                        </div>
+                    </div>
+
+                    <div style="text-align: right; margin-bottom: 10px;">
+                        <button type="button" onclick="autoCalculateSMC()" style="background: #0284c7; color:#fff; padding: 6px 12px; font-size: 0.8rem;">
+                            🤖 Automatyzuj SMC (Yahoo)
+                        </button>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Świeca (D+1H) [0-1]</label>
+                            <input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Wolumen (SMC) [0-1]</label>
+                            <input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Luka Sesyjna</label>
+                            <select id="focus-gap">
+                                <option value="1">1.0 (Pełne domknięcie/Zgodna)</option>
+                                <option value="0.5">0.5 (Neutralna)</option>
+                                <option value="0">0.0 (Brak luki/Negatywna)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Kalendarz (Wpisy)</label>
+                            <select id="focus-calendar">
+                                <option value="1">1.0 (Bezpiecznie > 30 dni)</option>
+                                <option value="0.5">0.5 (Blisko < 30 dni)</option>
+                                <option value="0">0.0 (Ryzyko Raportu < 20 dni)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>CVD Order Flow [0-3 pkt]</label>
+                        <select id="focus-cvd">
+                            <option value="3">3.0 - Silna absorpcja / Divergence (SMC)</option>
+                            <option value="2">2.0 - Zgodny trend delty z ceną</option>
+                            <option value="1">1.0 - Słaba delta / Churn</option>
+                            <option value="0">0.0 - Negatywne uderzenia / Agresja przeciwko nam</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>VIX Sentyment [0-2]</label>
+                            <input type="number" id="focus-vix" step="0.5" min="0" max="2" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Indeks (Siła) [0-2]</label>
+                            <input type="number" id="focus-index" step="1" min="0" max="2" value="0">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>HTF Market Structure [0-1]</label>
+                        <select id="focus-htf">
+                            <option value="1">1.0 - Zgodny z Order Flow wyższego rzędu</option>
+                            <option value="0">0.0 - Pod prąd struktury HTF</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                        <label style="color: var(--accent);">Całkowity Kapitał Portfela</label>
+                        <input type="number" id="focus-deposit-total" value="50000" step="500">
+                    </div>
+
+                    <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">
+                        💾 Oblicz i Zapisz do Focus
+                    </button>
+                </form>
+            </div>
+            
+            <div class="journal-main">
+                <div class="table-responsive">
+                    <table id="journal-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>ID Form</th>
+                                <th>Ticker</th>
+                                <th>Punkty</th>
+                                <th>Wynik %</th>
+                                <th>Alokacja %</th>
+                                <th>Wielkość Pozycji</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody id="focus-table-body"></tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination-container">
+                    <button onclick="changeFocusPage(-1)" id="focus-prev-page" class="btn-pag">◀ Poprzednia</button>
+                    <span id="focus-page-info">Strona 1 z 1</span>
+                    <button onclick="changeFocusPage(1)" id="focus-next-page" class="btn-pag">Następna ▶</button>
+                </div>
+            </div>
+        </div>
     </section>
 
     <section id="tradeslist-module" class="app-module">
