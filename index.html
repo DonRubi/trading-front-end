@@ -882,6 +882,201 @@ function getTradingViewLink(ticker) {
     return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
 }
 
+        // --- STAN GLOBALNY MODUŁU TRANSAKCJI ---
+let journalEntries = [];       // Pełny zestaw danych z bazy
+let filteredEntries = [];      // Dane po nałożeniu filtrów wyszukiwania
+let journalCurrentPage = 1;    // Aktualna podstrona
+const journalRowsPerPage = 6;  // Maksymalna ilość wierszy na stronę
+let journalSortKey = 'created_at'; // Aktualny klucz sortowania
+let journalSortDir = 'desc';   // Kierunek sortowania ('asc' lub 'desc')
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Pierwsze pobranie danych po załadowaniu DOM
+    fetchJournalEntries();
+    
+    // Spięcie obsługi formularza wejściowego
+    const tradingForm = document.getElementById('trading-form');
+    if (tradingForm) {
+        tradingForm.addEventListener('submit', handleJournalFormSubmit);
+    }
+});
+
+// 1. POBIERANIE Z BACKENDU
+async function fetchJournalEntries() {
+    try {
+        const response = await fetch('/api/form');
+        if (!response.ok) throw new Error('Błąd API przy pobieraniu dziennika');
+        journalEntries = await response.json();
+        applyFilterAndSort(); // Przetwórz dane wejściowe
+    } catch (error) {
+        console.error('Błąd modułu Form:', error);
+    }
+}
+
+// 2. DODAWANIE WPISU
+async function handleJournalFormSubmit(e) {
+    e.preventDefault();
+    const data = {
+        ticker: document.getElementById('form-ticker').value,
+        entry_price: document.getElementById('form-entry-price').value,
+        stop_loss: document.getElementById('form-stop-loss').value,
+        take_profit: document.getElementById('form-take-profit').value,
+        strategy: document.getElementById('form-strategy').value,
+        notes: document.getElementById('form-notes').value
+    };
+    
+    try {
+        const response = await fetch('/api/form/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.status === 'success') {
+            document.getElementById('trading-form').reset();
+            fetchJournalEntries(); // Automatyczne przeładowanie i odświeżenie widoku
+        } else {
+            alert('Wystąpił błąd: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Błąd zapisu pozycji:', error);
+    }
+}
+
+// 3. USUWANIE WPISU (Poprawione działanie przycisku)
+async function deleteJournalEntry(id) {
+    if (!confirm('Czy na pewno chcesz bezpowrotnie usunąć ten wpis z dziennika?')) return;
+    
+    try {
+        const response = await fetch('/api/form/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id })
+        });
+        const result = await response.json();
+        if (result.status === 'success') {
+            fetchJournalEntries(); // Ponowne zaciągnięcie aktualnego stanu z bazy
+        } else {
+            alert('Nie udało się usunąć: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Błąd usuwania pozycji:', error);
+    }
+}
+
+// 4. OBSŁUGA FILTROWANIA
+function handleFilterChange(value) {
+    journalFilterText = value.toLowerCase();
+    journalCurrentPage = 1; // Zresetuj do pierwszej strony przy filtrowaniu
+    applyFilterAndSort();
+}
+
+// 5. OBSŁUGA KLIKNIĘCIA NAGŁÓWKA (SORTOWANIE)
+function handleSort(key) {
+    if (journalSortKey === key) {
+        journalSortDir = journalSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        journalSortKey = key;
+        journalSortDir = 'asc';
+    }
+    updateSortIcons();
+    applyFilterAndSort();
+}
+
+// Wizualna aktualizacja strzałek w tabeli (▲ / ▼)
+function updateSortIcons() {
+    const columns = ['ticker', 'entry_price', 'stop_loss', 'take_profit', 'strategy', 'created_at'];
+    columns.forEach(col => {
+        const icon = document.getElementById(`sort-icon-${col}`);
+        if (!icon) return;
+        if (journalSortKey === col) {
+            icon.innerText = journalSortDir === 'asc' ? ' ▲' : ' ▼';
+        } else {
+            icon.innerText = ' ─';
+        }
+    });
+}
+
+// 6. PRZETWARZANIE STANU (Mózg tabeli)
+let journalFilterText = '';
+function applyFilterAndSort() {
+    // A. Filtrowanie w locie
+    filteredEntries = journalEntries.filter(entry => {
+        const t = (entry.ticker || '').toLowerCase();
+        const s = (entry.strategy || '').toLowerCase();
+        const n = (entry.notes || '').toLowerCase();
+        return t.includes(journalFilterText) || s.includes(journalFilterText) || n.includes(journalFilterText);
+    });
+    
+    // B. Sortowanie typów danych
+    filteredEntries.sort((a, b) => {
+        let valA = a[journalSortKey];
+        let valB = b[journalSortKey];
+        
+        if (valA === null || valA === undefined) valA = '';
+        if (valB === null || valB === undefined) valB = '';
+        
+        // Zabezpieczenie rzutowania dla typów numerycznych
+        if (['entry_price', 'stop_loss', 'take_profit'].includes(journalSortKey)) {
+            return journalSortDir === 'asc' ? (Number(valA) - Number(valB)) : (Number(valB) - Number(valA));
+        }
+        
+        // Sortowanie tekstowe / daty
+        if (valA < valB) return journalSortDir === 'asc' ? -1 : 1;
+        if (valA > valB) return journalSortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    renderJournalTable();
+}
+
+// 7. RENDEROWANIE WIDOKU (Paging wstrzykiwany do DOM)
+function renderJournalTable() {
+    const tbody = document.getElementById('journal-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    const startIndex = (journalCurrentPage - 1) * journalRowsPerPage;
+    const endIndex = startIndex + journalRowsPerPage;
+    const itemsToDisplay = filteredEntries.slice(startIndex, endIndex);
+    
+    if (itemsToDisplay.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#9399b2; padding: 20px;">Brak wpisów spełniających podane kryteria.</td></tr>`;
+    } else {
+        itemsToDisplay.forEach(entry => {
+            const dateStr = entry.created_at ? entry.created_at.split('T')[0] : 'N/A';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight: bold; color: #89b4fa;">${entry.ticker || ''}</td>
+                <td>${entry.entry_price ? Number(entry.entry_price).toFixed(2) : '-'}</td>
+                <td style="color: #f38ba8; font-weight: 500;">${entry.stop_loss ? Number(entry.stop_loss).toFixed(2) : '-'}</td>
+                <td style="color: #a6e3a1; font-weight: 500;">${entry.take_profit ? Number(entry.take_profit).toFixed(2) : '-'}</td>
+                <td><span style="background: #313244; padding: 3px 8px; border-radius: 4px; font-size: 12px;">${entry.strategy || 'Brak'}</span></td>
+                <td style="color: #a6adc8; font-size: 13px;">${dateStr}</td>
+                <td>
+                    <button class="btn-delete-journal" onclick="deleteJournalEntry('${entry.id}')">Usuń</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    // Aktualizacja nawigacji stronicowania
+    const totalPages = Math.ceil(filteredEntries.length / journalRowsPerPage) || 1;
+    document.getElementById('page-info').innerText = `Strona ${journalCurrentPage} z ${totalPages}`;
+    document.getElementById('btn-prev-page').disabled = (journalCurrentPage === 1);
+    document.getElementById('btn-next-page').disabled = (journalCurrentPage === totalPages);
+}
+
+function changePage(direction) {
+    const totalPages = Math.ceil(filteredEntries.length / journalRowsPerPage) || 1;
+    const targetPage = journalCurrentPage + direction;
+    if (targetPage >= 1 && targetPage <= totalPages) {
+        journalCurrentPage = targetPage;
+        renderJournalTable();
+    }
+}
+
         // --- STAN STRONICOWANIA DLA MODUŁU DATABASE ---
         let macroDataArray = [];
         let currentMacroPage = 1;
