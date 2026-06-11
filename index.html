@@ -545,72 +545,111 @@
     </main>
 
 <section id="form-module" class="app-module">
-    <h2>Dziennik Transakcji (Formularz Wejściowy)</h2>
+    <div class="macro-header-container">
+        <h3>Kreator Pozycji (Form)</h3>
+    </div>
     
     <div class="journal-container">
         <div class="journal-sidebar">
             <form id="trading-form">
-                <div class="form-group">
-                    <label for="form-ticker">Ticker:</label>
-                    <input type="text" id="form-ticker" placeholder="np. AAPL, BTC-USD" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ticker (Pobierany z bazy)</label>
+                        <select id="form-ticker"></select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="form-entry-price">Cena wejścia:</label>
-                    <input type="number" id="form-entry-price" step="0.0001" placeholder="0.00">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Kierunek</label>
+                        <select id="form-direction" onchange="updateFiboLabels()">
+                            <option value="DBR">DBR (Long)</option>
+                            <option value="RBR">RBR (Long)</option>
+                            <option value="DBD">DBD (Short)</option>
+                            <option value="RBD">RBD (Short)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priorytet</label>
+                        <select id="form-priority">
+                            <option value="0">0 (Normalny)</option>
+                            <option value="1">1 (Wysoki)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="form-stop-loss">Stop Loss:</label>
-                    <input type="number" id="form-stop-loss" step="0.0001" placeholder="0.00">
+                
+                <div class="form-row">
+                    <div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div>
+                    <div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div>
                 </div>
+                
                 <div class="form-group">
-                    <label for="form-take-profit">Take Profit:</label>
-                    <input type="number" id="form-take-profit" step="0.0001" placeholder="0.00">
+                    <label>Punkt wejścia</label>
+                    <input type="number" id="form-entry" step="0.01">
                 </div>
+
                 <div class="form-group">
-                    <label for="form-strategy">Strategia / Setup:</label>
-                    <select id="form-strategy">
-                        <option value="">Wybierz...</option>
-                        <option value="Smart Money Concepts">Smart Money Concepts</option>
-                        <option value="Order Flow / CVD">Order Flow / CVD</option>
-                        <option value="Volume Profile / VWAP">Volume Profile / VWAP</option>
-                        <option value="Swing Trading">Inna / Klasyczny Swing</option>
-                    </select>
+                    <label>Take Profit <span style="cursor:pointer; color: var(--accent);" onclick="toggleFibo()">[ 📐 Asystent Fibo ]</span></label>
+                    <input type="number" id="form-tp" step="0.01">
+                    
+                    <div class="fibo-drawer" id="fibo-drawer" style="display: none; background: #2b3139; padding: 15px; border-radius: 8px; margin-top: 5px; border: 1px dashed var(--accent);">
+                        <p style="font-size: 0.85rem; color: var(--accent); margin-bottom: 10px;">Dostosowuje wzór Fibo do Kierunku.</p>
+                        <div class="form-row">
+                            <div class="form-group"><label>Początek (A)</label><input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()"></div>
+                            <div class="form-group"><label>Szczyt (B)</label><input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()"></div>
+                            <div class="form-group">
+                                <label>Rozszerzenie Fibo</label>
+                                <select id="fibo-level">
+                                    <option value="1.272">1.272</option><option value="1.618">1.618</option>
+                                    <option value="2.0">2.000</option><option value="2.618">2.618</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="button" onclick="applyFibo()" style="margin-top:15px; width:100%; background-color: var(--bg-card); color: var(--accent); border: 1px solid var(--accent);">Zastosuj TP</button>
+                    </div>
                 </div>
+
                 <div class="form-group">
-                    <label for="form-notes">Notatki:</label>
-                    <textarea id="form-notes" rows="3" placeholder="Kontekst wyższego interwału (HTF)..."></textarea>
+                    <label>Powody wejścia (Opcjonalne, max 5)</label>
+                    <input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1...">
+                    <input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2...">
+                    <input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3...">
+                    <input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4...">
+                    <input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5...">
+                    <datalist id="reasons-list"></datalist>
                 </div>
-                <button type="submit" class="btn-submit">Zapisz pozycję</button>
+                
+                <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
             </form>
         </div>
         
         <div class="journal-main">
             <div class="table-controls">
-                <input type="text" id="journal-search" placeholder="🔍 Filtruj dziennik po tickerze lub strategii..." oninput="handleFilterChange(this.value)">
+                <input type="text" id="journal-search" placeholder="🔍 Filtruj po tickerze lub kierunku..." oninput="handleFormFilter(this.value)">
             </div>
             
             <div class="table-responsive">
                 <table id="journal-table">
                     <thead>
                         <tr>
-                            <th onclick="handleSort('ticker')">Ticker <span id="sort-icon-ticker">─</span></th>
-                            <th onclick="handleSort('entry_price')">Cena <span id="sort-icon-entry_price">─</span></th>
-                            <th onclick="handleSort('stop_loss')">SL <span id="sort-icon-stop_loss">─</span></th>
-                            <th onclick="handleSort('take_profit')">TP <span id="sort-icon-take_profit">─</span></th>
-                            <th onclick="handleSort('strategy')">Strategia <span id="sort-icon-strategy">─</span></th>
-                            <th onclick="handleSort('created_at')">Data dodania <span id="sort-icon-created_at">▼</span></th>
+                            <th onclick="handleFormSort('entry_id')">ID <span id="sort-icon-entry_id">─</span></th>
+                            <th onclick="handleFormSort('ticker')">Ticker <span id="sort-icon-ticker">─</span></th>
+                            <th onclick="handleFormSort('direction')">Kierunek <span id="sort-icon-direction">─</span></th>
+                            <th>Status (Dystans)</th>
+                            <th>R:R</th>
+                            <th onclick="handleFormSort('score')">Wynik <span id="sort-icon-score">─</span></th>
+                            <th>Wykres TV</th>
                             <th>Akcje</th>
                         </tr>
                     </thead>
-                    <tbody id="journal-table-body">
+                    <tbody id="form-table-body">
                         </tbody>
                 </table>
             </div>
             
             <div class="pagination-container">
-                <button onclick="changePage(-1)" id="btn-prev-page" class="btn-pag">◀ Poprzednia</button>
-                <span id="page-info">Strona 1 z 1</span>
-                <button onclick="changePage(1)" id="btn-next-page" class="btn-pag">Następna ▶</button>
+                <button onclick="changeFormPage(-1)" id="form-prev-page" class="btn-pag">◀ Poprzednia</button>
+                <span id="form-page-info">Strona 1 z 1</span>
+                <button onclick="changeFormPage(1)" id="form-next-page" class="btn-pag">Następna ▶</button>
             </div>
         </div>
     </div>
