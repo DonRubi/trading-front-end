@@ -408,15 +408,15 @@
                     <label>Ticker (Pobierany z bazy)</label>
                     <select id="form-ticker"></select>
                 </div>
-                <div class="form-group">
-                    <label>Kierunek</label>
-                    <select id="form-direction">
-                        <option value="DBR">DBR (Long)</option>
-                        <option value="RBR">RBR (Long)</option>
-                        <option value="DBD">DBD (Short)</option>
-                        <option value="RBD">RBD (Short)</option>
-                    </select>
-                </div>
+<div class="form-group">
+    <label>Kierunek</label>
+    <select id="form-direction" onchange="updateFiboLabels()">
+        <option value="DBR">DBR (Long)</option>
+        <option value="RBR">RBR (Long)</option>
+        <option value="DBD">DBD (Short)</option>
+        <option value="RBD">RBD (Short)</option>
+    </select>
+</div>
                 <div class="form-group">
                     <label>Priorytet</label>
                     <select id="form-priority">
@@ -441,28 +441,34 @@
                 </div>
             </div>
 
+<div class="form-group">
+    <label>Take Profit <span style="cursor:pointer; color: var(--accent);" onclick="toggleFibo()">[ 📐 Asystent Fibo ]</span></label>
+    <input type="number" id="form-tp" step="0.01">
+    
+    <div class="fibo-drawer" id="fibo-drawer">
+        <p style="font-size: 0.85rem; color: var(--accent); margin-bottom: 10px;">Automatycznie dostosowuje wzór Fibo do wybranego Kierunku z góry.</p>
+        <div class="form-row">
             <div class="form-group">
-                <label>Take Profit <span style="cursor:pointer; color: var(--accent);" onclick="toggleFibo()">[ 📐 Asystent Fibo ]</span></label>
-                <input type="number" id="form-tp" step="0.01">
-                
-                <div class="fibo-drawer" id="fibo-drawer">
-                    <p style="font-size: 0.85rem; color: var(--accent); margin-bottom: 10px;">Automatycznie dostosowuje wzór Fibo do wybranego Kierunku z góry.</p>
-                    <div class="form-row">
-                        <div class="form-group"><label>Początek (A)</label><input type="number" id="fibo-start" step="0.01"></div>
-                        <div class="form-group"><label>Szczyt (B)</label><input type="number" id="fibo-peak" step="0.01"></div>
-                        <div class="form-group">
-                            <label>Rozszerzenie Fibo</label>
-                            <select id="fibo-level">
-                                <option value="1.272">1.272</option>
-                                <option value="1.618">1.618</option>
-                                <option value="2.0">2.000</option>
-                                <option value="2.618">2.618</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button type="button" onclick="applyFibo()" style="margin-top:15px; width:100%; background-color: var(--bg-card); color: var(--accent); border: 1px solid var(--accent);">Przelicz i Wstaw TP</button>
-                </div>
+                <label>Początek (A)</label>
+                <input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()">
             </div>
+            <div class="form-group">
+                <label>Szczyt (B)</label>
+                <input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()">
+            </div>
+            <div class="form-group">
+                <label>Rozszerzenie Fibo</label>
+                <select id="fibo-level">
+                    <option value="1.272">1.272</option>
+                    <option value="1.618">1.618</option>
+                    <option value="2.0">2.000</option>
+                    <option value="2.618">2.618</option>
+                </select>
+            </div>
+        </div>
+        <button type="button" onclick="applyFibo()" style="margin-top:15px; width:100%; background-color: var(--bg-card); color: var(--accent); border: 1px solid var(--accent);">Zastosuj i Wstaw TP</button>
+    </div>
+</div>
 
             <div class="form-group">
                 <label>Powody wejścia (Opcjonalne, max 5)</label>
@@ -678,31 +684,31 @@
         <h2>Lista Obserwowanych (Focus List)</h2>
     </section>
 
-    <section id="alerthistory-module" class="app-module">
-        <div class="macro-header-container">
-            <h3>Historia Wywołanych Alertów</h3>
-        </div>
-        
-        <div class="macro-table-wrapper">
-            <table class="macro-custom-table">
-                <thead>
-                    <tr>
-                        <th>Data Wywołania</th>
-                        <th>Ticker</th>
-                        <th>Warunek</th>
-                        <th>Poziom Alertu</th>
-                        <th>Dzienne Ekstrema</th>
-                        <th>Akcja</th> 
-                    </tr>
-                </thead>
-                <tbody id="alert-history-tbody">
-                    <tr>
-                        <td colspan="6" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
+<section id="alerthistory-module" class="app-module">
+    <div class="macro-header-container">
+        <h3>Historia Wywołanych Alertów</h3>
+    </div>
+    
+    <div class="macro-table-wrapper">
+        <table class="macro-custom-table">
+            <thead>
+                <tr>
+                    <th>Data Wywołania</th>
+                    <th>Ticker</th>
+                    <th>Warunek</th>
+                    <th>Poziom Alertu</th>
+                    <th>Dzienne Ekstrema</th>
+                    <th>Wykres TV</th> 
+                    <th>Akcja</th> 
+                </tr>
+            </thead>
+            <tbody id="alert-history-tbody">
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td> </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
     <section id="dailybrief-module" class="app-module">
         <div class="macro-header-container">
             <h3>Analizy i Wpisy Makro (AI Brief)</h3>
@@ -732,6 +738,37 @@
     <script>
         // Główny adres Twojego backendu na Renderze
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
+        // --- POMOCNICZA FUNKCJA GENEROWANIA LINKÓW TRADINGVIEW ---
+function getTradingViewLink(ticker) {
+    if (!ticker) return '#';
+    const cleanTicker = ticker.trim().toUpperCase();
+    
+    // Twój dedykowany identyfikator szablonu wykresu TradingView.
+    // Dzięki temu wykres otworzy się z Twoimi rysunkami i wskaźnikami!
+    const LAYOUT_ID = 'k5llKflB'; 
+    const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/';
+
+    // Jeśli ticker ma już w sobie zdefiniowaną giełdę (np. "NASDAQ:AAPL")
+    if (cleanTicker.includes(':')) {
+        return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`;
+    }
+    
+    // Automatyczna heurystyka dla najpopularniejszych walorów, jeśli wpiszesz sam ticker:
+    const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ'];
+    const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA'];
+    
+    let exchange = '';
+    if (nasdaqTickers.includes(cleanTicker)) {
+        exchange = 'NASDAQ:';
+    } else if (nyseTickers.includes(cleanTicker)) {
+        exchange = 'NYSE:';
+    } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) {
+        exchange = 'BINANCE:';
+    }
+    
+    // Zwraca pełny link. Jeśli giełda nie została wykryta, TradingView spróbuje dopasować ją automatycznie
+    return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
+}
 
         // --- STAN STRONICOWANIA DLA MODUŁU DATABASE ---
         let macroDataArray = [];
@@ -937,49 +974,54 @@
             }
         }
 
-        function renderMobileList() {
-            const container = document.getElementById('db-list-container');
-            if (!container) return;
-            container.innerHTML = '';
-            
-            if (tickerDataArray.length === 0) {
-                container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Baza jest pusta. Dodaj swój pierwszy ticker.</p>`;
-                document.getElementById('ticker-prev-btn').disabled = true;
-                document.getElementById('ticker-next-btn').disabled = true;
-                document.getElementById('ticker-page-info').innerText = 'Strona 0 z 0';
-                return;
-            }
+// Zaktualizowana funkcja renderMobileList()
+function renderMobileList() {
+    const container = document.getElementById('db-list-container');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    if (tickerDataArray.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Baza jest pusta. Dodaj swój pierwszy ticker.</p>`;
+        document.getElementById('ticker-prev-btn').disabled = true;
+        document.getElementById('ticker-next-btn').disabled = true;
+        document.getElementById('ticker-page-info').innerText = 'Strona 0 z 0';
+        return;
+    }
 
-            const totalPages = Math.ceil(tickerDataArray.length / tickerPageSize);
-            if (currentTickerPage > totalPages) currentTickerPage = totalPages;
-            if (currentTickerPage < 1) currentTickerPage = 1;
+    const totalPages = Math.ceil(tickerDataArray.length / tickerPageSize);
+    if (currentTickerPage > totalPages) currentTickerPage = totalPages;
+    if (currentTickerPage < 1) currentTickerPage = 1;
 
-            // Wycinanie fragmentu danych na bieżącą stronę (po 20 sztuk)
-            const start = (currentTickerPage - 1) * tickerPageSize;
-            const end = start + tickerPageSize;
-            const pageData = tickerDataArray.slice(start, end);
+    const start = (currentTickerPage - 1) * tickerPageSize;
+    const end = start + tickerPageSize;
+    const pageData = tickerDataArray.slice(start, end);
 
-            pageData.forEach((item) => {
-                const card = `
-                    <div class="data-card">
-                        <div class="data-card-info">
-                            <h4>${item.ticker}</h4>
-                            <p>Dodano: ${item.date_added}</p>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <span class="price-tag">${item.price !== null ? item.price + ' $' : 'Ładowanie...'}</span>
-                            <button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += card;
-            });
+    pageData.forEach((item) => {
+        // Generowanie linku dla karty
+        const tvLink = getTradingViewLink(item.ticker);
+        
+        const card = `
+            <div class="data-card">
+                <div class="data-card-info">
+                    <h4>${item.ticker}</h4>
+                    <p>Dodano: ${item.date_added}</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="price-tag">${item.price !== null ? item.price + ' $' : 'Ładowanie...'}</span>
+                    <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: bold; border: 1px solid var(--accent); padding: 6px 10px; border-radius: 6px; background-color: rgba(201, 148, 0, 0.05);">
+                        📈 TV
+                    </a>
+                    <button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button>
+                </div>
+            </div>
+        `;
+        container.innerHTML += card;
+    });
 
-            // Aktualizacja kontrolek stronicowania tickerów
-            document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${totalPages}`;
-            document.getElementById('ticker-prev-btn').disabled = (currentTickerPage === 1);
-            document.getElementById('ticker-next-btn').disabled = (currentTickerPage === totalPages);
-        }
+    document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${totalPages}`;
+    document.getElementById('ticker-prev-btn').disabled = (currentTickerPage === 1);
+    document.getElementById('ticker-next-btn').disabled = (currentTickerPage === totalPages);
+}
 
         function changeTickerPage(direction) {
             currentTickerPage += direction;
@@ -1047,27 +1089,36 @@
 
                 tbody.innerHTML = "";
 
-                data.forEach(item => {
-                    const row = document.createElement("tr");
-                    
-                    const dateStr = item.triggered_at ? new Date(item.triggered_at).toLocaleString('pl-PL') : 'Brak daty';
-                    const conditionText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
-                    const conditionColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
+// Zaktualizowany fragment wewnątrz loadAlertHistory() pętli data.forEach:
+data.forEach(item => {
+    const row = document.createElement("tr");
+    
+    const dateStr = item.triggered_at ? new Date(item.triggered_at).toLocaleString('pl-PL') : 'Brak daty';
+    const conditionText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
+    const conditionColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
+    
+    // Generowanie automatycznego linku TV dla bieżącego tickera
+    const tvLink = getTradingViewLink(item.ticker);
 
-                    row.innerHTML = `
-                        <td class="macro-val-date">${dateStr}</td>
-                        <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
-                        <td style="color: ${conditionColor}; font-weight: 500;">${conditionText}</td>
-                        <td style="font-weight: bold;">${item.target_price} $</td>
-                        <td style="font-size: 0.9em; color: #848e9c;">L: ${item.day_low} | H: ${item.day_high}</td>
-                        <td>
-                            <button onclick="deleteAlert('${item.id}')" style="color: #f6465d; background: none; border: 1px solid #f6465d; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-weight: 600;">
-                                Usuń
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+    row.innerHTML = `
+        <td class="macro-val-date">${dateStr}</td>
+        <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
+        <td style="color: ${conditionColor}; font-weight: 500;">${conditionText}</td>
+        <td style="font-weight: bold;">${item.target_price} $</td>
+        <td style="font-size: 0.9em; color: #848e9c;">L: ${item.day_low} | H: ${item.day_high}</td>
+        <td>
+            <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--bg-input); font-size: 0.85rem;">
+                📈 Wykres
+            </a>
+        </td>
+        <td>
+            <button onclick="deleteAlert('${item.id}')" style="color: #f6465d; background: none; border: 1px solid #f6465d; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-weight: 600;">
+                Usuń
+            </button>
+        </td>
+    `;
+    tbody.appendChild(row);
+});
 
             } catch (error) {
                 console.error("Błąd podczas pobierania historii:", error);
@@ -1154,9 +1205,12 @@
             loadFormEntries();
         }
 
-        function toggleFibo() {
+function toggleFibo() {
             const drawer = document.getElementById('fibo-drawer');
             drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block';
+            if (drawer.style.display === 'block') {
+                updateFiboLabels(); // Odśwież opcje przy otwarciu
+            }
         }
 
         function applyFibo() {
@@ -1305,6 +1359,47 @@
                 });
                 loadFormEntries();
             } catch(e) { console.error(e); }
+        }
+        function updateFiboLabels() {
+            const start = parseFloat(document.getElementById('fibo-start').value);
+            const peak = parseFloat(document.getElementById('fibo-peak').value);
+            const direction = document.getElementById('form-direction').value;
+            const select = document.getElementById('fibo-level');
+            
+            if (!select) return;
+            
+            // Definiujemy bazowe poziomy rozszerzeń
+            const levels = [1.272, 1.618, 2.000, 2.618];
+            const currentSelected = select.value; // Zapamiętaj, co użytkownik kliknął
+            
+            select.innerHTML = ''; // Wyczyszczenie starej listy
+            
+            levels.forEach(lvl => {
+                let optionText = lvl.toFixed(3);
+                
+                // Jeśli wartości A i B są poprawne, obliczamy podgląd ceny
+                if (!isNaN(start) && !isNaN(peak)) {
+                    let calculatedPrice = 0;
+                    if (direction === 'DBR' || direction === 'RBR') {
+                        calculatedPrice = peak + (peak - start) * lvl; // Logika dla LONG
+                    } else {
+                        calculatedPrice = peak - (start - peak) * lvl; // Logika dla SHORT
+                    }
+                    optionText += ` (cena: ${calculatedPrice.toFixed(2)})`;
+                }
+                
+                // Tworzenie nowego elementu listy rozwijanej
+                const opt = document.createElement('option');
+                opt.value = lvl.toString();
+                opt.textContent = optionText;
+                
+                // Przywrócenie zaznaczenia, jeśli to ten sam poziom
+                if (lvl.toString() === currentSelected) {
+                    opt.selected = true;
+                }
+                
+                select.appendChild(opt);
+            });
         }
     </script>
 </body>
