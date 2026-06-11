@@ -322,6 +322,26 @@
         .nav-item.active {
             color: var(--accent);
         }
+        /* --- STYLE MODUŁU FORM --- */
+        select, input[type="number"] {
+            flex: 1;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            padding: 12px;
+            font-size: 1rem;
+            outline: none;
+        }
+        select:focus, input[type="number"]:focus {
+            border-color: var(--accent);
+        }
+        .form-container { display: grid; gap: 15px; }
+        .form-row { display: flex; flex-wrap: wrap; gap: 10px; }
+        .form-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.85rem; color: var(--text-muted); }
+        .fibo-drawer { display: none; background: #2b3139; padding: 15px; border-radius: 8px; margin-top: 5px; border: 1px dashed var(--accent); }
+        .form-table-wrapper { overflow-x: auto; margin-top: 30px; }
     </style>
 </head>
 <body>
@@ -377,8 +397,105 @@
         </div>
     </main>
 
-    <section id="form-module" class="app-module">
-        <h2>Formularz Wejściowy</h2>
+<section id="form-module" class="app-module">
+        <div class="macro-header-container">
+            <h3>Kreator Pozycji (Form)</h3>
+        </div>
+        
+        <div class="form-container data-card" style="flex-direction: column; align-items: stretch;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ticker (Pobierany z bazy)</label>
+                    <select id="form-ticker"></select>
+                </div>
+                <div class="form-group">
+                    <label>Kierunek</label>
+                    <select id="form-direction">
+                        <option value="DBR">DBR (Long)</option>
+                        <option value="RBR">RBR (Long)</option>
+                        <option value="DBD">DBD (Short)</option>
+                        <option value="RBD">RBD (Short)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Priorytet</label>
+                    <select id="form-priority">
+                        <option value="0">0 (Normalny)</option>
+                        <option value="1">1 (Wysoki)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Początek strefy</label>
+                    <input type="number" id="form-start" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Koniec strefy (Stop Loss)</label>
+                    <input type="number" id="form-end" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Punkt wejścia</label>
+                    <input type="number" id="form-entry" step="0.01">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Take Profit <span style="cursor:pointer; color: var(--accent);" onclick="toggleFibo()">[ 📐 Asystent Fibo ]</span></label>
+                <input type="number" id="form-tp" step="0.01">
+                
+                <div class="fibo-drawer" id="fibo-drawer">
+                    <p style="font-size: 0.85rem; color: var(--accent); margin-bottom: 10px;">Automatycznie dostosowuje wzór Fibo do wybranego Kierunku z góry.</p>
+                    <div class="form-row">
+                        <div class="form-group"><label>Początek (A)</label><input type="number" id="fibo-start" step="0.01"></div>
+                        <div class="form-group"><label>Szczyt (B)</label><input type="number" id="fibo-peak" step="0.01"></div>
+                        <div class="form-group">
+                            <label>Rozszerzenie Fibo</label>
+                            <select id="fibo-level">
+                                <option value="1.272">1.272</option>
+                                <option value="1.618">1.618</option>
+                                <option value="2.0">2.000</option>
+                                <option value="2.618">2.618</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" onclick="applyFibo()" style="margin-top:15px; width:100%; background-color: var(--bg-card); color: var(--accent); border: 1px solid var(--accent);">Przelicz i Wstaw TP</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Powody wejścia (Opcjonalne, max 5)</label>
+                <input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1...">
+                <input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2...">
+                <input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3...">
+                <input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4...">
+                <input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5...">
+                <datalist id="reasons-list"></datalist>
+            </div>
+            
+            <button onclick="submitForm()" style="margin-top: 10px;">Zapisz Setup do Bazy</button>
+        </div>
+
+        <div class="form-table-wrapper">
+            <table class="macro-custom-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Data</th>
+                        <th>Ticker</th>
+                        <th>Strefa</th>
+                        <th>Status</th>
+                        <th>R:R</th>
+                        <th>Wynik</th>
+                        <th>Akcja</th>
+                    </tr>
+                </thead>
+                <tbody id="form-table-body">
+                    <tr><td colspan="8" style="text-align: center;">Ładowanie setupów...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </section>
 
     <section id="focus-module" class="app-module">
@@ -647,6 +764,9 @@
             }
             if (moduleId === 'dailybrief-module') {
                 loadDailyBriefs();
+            }
+            if (moduleId === 'form-module') {
+                initFormModule();
             }
         }
 
@@ -1017,6 +1137,174 @@
                 console.error("Błąd ładowania briefów:", error);
                 container.innerHTML = '<p style="text-align: center; color: var(--danger); width: 100%; padding: 20px;">Nie udało się załadować danych z bazy.</p>';
             }
+        }
+        // --- LOGIKA MODUŁU FORM ---
+        async function initFormModule() {
+            // Zapewnienie, że tickery są załadowane z bazy
+            if(tickerDataArray.length === 0) {
+                await loadDatabase(); 
+            }
+            const select = document.getElementById('form-ticker');
+            select.innerHTML = '';
+            tickerDataArray.forEach(t => {
+                select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`;
+            });
+
+            loadFormReasons();
+            loadFormEntries();
+        }
+
+        function toggleFibo() {
+            const drawer = document.getElementById('fibo-drawer');
+            drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function applyFibo() {
+            const start = parseFloat(document.getElementById('fibo-start').value);
+            const peak = parseFloat(document.getElementById('fibo-peak').value);
+            const level = parseFloat(document.getElementById('fibo-level').value);
+            const direction = document.getElementById('form-direction').value;
+            
+            if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
+            
+            let tp = 0;
+            // Zastosowanie uniwersalnego modyfikatora logiki
+            if(direction === 'DBR' || direction === 'RBR') {
+                tp = peak + (peak - start) * level; // LONG
+            } else {
+                tp = peak - (start - peak) * level; // SHORT
+            }
+            
+            document.getElementById('form-tp').value = tp.toFixed(2);
+            toggleFibo();
+        }
+
+        async function submitForm() {
+            const data = {
+                ticker: document.getElementById('form-ticker').value,
+                direction: document.getElementById('form-direction').value,
+                priority: document.getElementById('form-priority').value,
+                start_zone: document.getElementById('form-start').value,
+                end_zone: document.getElementById('form-end').value,
+                entry_point: document.getElementById('form-entry').value,
+                take_profit: document.getElementById('form-tp').value,
+                reasons: [
+                    document.getElementById('form-reason-1').value,
+                    document.getElementById('form-reason-2').value,
+                    document.getElementById('form-reason-3').value,
+                    document.getElementById('form-reason-4').value,
+                    document.getElementById('form-reason-5').value
+                ].filter(r => r.trim() !== '') // Zbieranie tylko wypełnionych
+            };
+
+            if(!data.ticker || !data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) {
+                return alert('Uzupełnij wszystkie pola liczbowe, aby zapisać Setup!');
+            }
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/form/add`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if(res.ok) {
+                    alert('Dodano Setup do bazy!');
+                    document.getElementById('form-start').value = '';
+                    document.getElementById('form-end').value = '';
+                    document.getElementById('form-entry').value = '';
+                    document.getElementById('form-tp').value = '';
+                    document.getElementById('form-reason-1').value = '';
+                    loadFormEntries();
+                    loadFormReasons(); 
+                } else {
+                    const error = await res.json();
+                    alert("Błąd: " + error.message);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadFormReasons() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/form/reasons`);
+                const reasons = await res.json();
+                const datalist = document.getElementById('reasons-list');
+                datalist.innerHTML = '';
+                reasons.forEach(r => {
+                    datalist.innerHTML += `<option value="${r}">`;
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadFormEntries() {
+            const tbody = document.getElementById('form-table-body');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Pobieranie z Supabase...</td></tr>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/form/entries`);
+                const data = await res.json();
+                
+                tbody.innerHTML = '';
+                if(data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Brak wpisów w bazie.</td></tr>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    // Matematyka R:R z użyciem Modyfikatora Znaku (Sign Modifier)
+                    const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
+                    const mod = isLong ? 1 : -1;
+                    
+                    const tp = parseFloat(item.take_profit);
+                    const entry = parseFloat(item.entry_point);
+                    const sl = parseFloat(item.stop_loss);
+                    
+                    let rr = 0;
+                    if(entry - sl !== 0) {
+                        rr = ((tp - entry) * mod) / ((entry - sl) * mod);
+                    }
+
+                    // Znajdź obecną cenę pobraną z /api/database
+                    const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
+                    const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
+                    
+                    // Kalkulacja dystansu
+                    const diff = (Math.abs(currentPrice - entry) / entry) * 100;
+                    
+                    // Ustalenie Statusu
+                    let status = 'Obserwacja';
+                    let statusColor = '#848e9c';
+                    if(diff > 15) { status = 'Ignorowanie'; statusColor = '#f6465d'; }
+                    else if(diff > 10) { status = 'Czekanie'; statusColor = '#fcd535'; }
+                    else if(diff <= 10 && item.priority === 1) { status = 'Skupienie'; statusColor = '#0ecb81'; }
+                    
+                    const wynik = item.reasons ? item.reasons.length : 0;
+                    const dateStr = new Date(item.created_at).toLocaleDateString('pl-PL');
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="font-weight:bold;">${item.entry_id}</td>
+                            <td>${dateStr}</td>
+                            <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
+                            <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br>${item.start_zone} - ${item.end_zone}</td>
+                            <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
+                            <td>${rr.toFixed(2)}</td>
+                            <td>${wynik}/5</td>
+                            <td><button class="btn-delete" onclick="deleteFormEntry('${item.id}')">Usuń</button></td>
+                        </tr>
+                    `;
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        async function deleteFormEntry(id) {
+            if(!confirm('Zaraz usuniesz ten Setup. Kontynuować?')) return;
+            try {
+                await fetch(`${API_BASE_URL}/api/form/delete`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: id})
+                });
+                loadFormEntries();
+            } catch(e) { console.error(e); }
         }
     </script>
 </body>
