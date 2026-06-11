@@ -634,18 +634,21 @@
             
             <div class="table-responsive">
                 <table id="journal-table">
-<thead>
-    <tr>
-        <th onclick="handleFormSort('entry_id')">ID <span id="sort-icon-entry_id">─</span></th>
-        <th onclick="handleFormSort('ticker')">Ticker <span id="sort-icon-ticker">─</span></th>
-        <th onclick="handleFormSort('direction')">Kierunek <span id="sort-icon-direction">─</span></th>
-        <th>Punkt Wejścia</th> <th>Priorytet</th>     <th>Status (Dystans)</th>
-        <th>R:R</th>
-        <th onclick="handleFormSort('score')">Wynik <span id="sort-icon-score">─</span></th>
-        <th>Wykres TV</th>
-        <th>Akcje</th>
-    </tr>
-</thead>
+        <thead>
+                        <tr>
+                            <th onclick="handleFormSort('entry_id')">ID <span id="sort-icon-entry_id">─</span></th>
+                            <th onclick="handleFormSort('ticker')">Ticker <span id="sort-icon-ticker">─</span></th>
+                            <th onclick="handleFormSort('direction')">Kierunek <span id="sort-icon-direction">─</span></th>
+                            <th>Punkt Wejścia</th>
+                            <th onclick="handleFormSort('priority')">Priorytet <span id="sort-icon-priority">─</span></th>
+                            <th onclick="handleFormSort('mute')">Wyciszenie <span id="sort-icon-mute">─</span></th>
+                            <th>Status (Dystans)</th>
+                            <th>R:R</th>
+                            <th onclick="handleFormSort('score')">Wynik <span id="sort-icon-score">─</span></th>
+                            <th>Wykres TV</th>
+                            <th>Akcje</th>
+                        </tr>
+         </thead>
                     <tbody id="form-table-body">
                         </tbody>
                 </table>
@@ -1334,7 +1337,7 @@
         }
 
         function updateFormSortIcons() {
-            const columns = ['entry_id', 'ticker', 'direction', 'score'];
+            const columns = ['entry_id', 'ticker', 'direction', 'score', 'priority', 'mute'];
             columns.forEach(col => {
                 const icon = document.getElementById(`sort-icon-${col}`);
                 if (!icon) return;
@@ -1353,9 +1356,9 @@
                 let valA = a[formSortKey] || '';
                 let valB = b[formSortKey] || '';
                 
-                if (formSortKey === 'score') {
-                    return formSortDir === 'asc' ? valA - valB : valB - valA;
-                }
+if (formSortKey === 'score' || formSortKey === 'priority' || formSortKey === 'mute') {
+            return formSortDir === 'asc' ? valA - valB : valB - valA;
+        }
                 
                 if (valA < valB) return formSortDir === 'asc' ? -1 : 1;
                 if (valA > valB) return formSortDir === 'asc' ? 1 : -1;
@@ -1400,16 +1403,25 @@ itemsToDisplay.forEach(item => {
                 const tvLink = getTradingViewLink(item.ticker);
 
                 // Mapowanie priorytetu na czytelną etykietę wizualną
+// Pobieranie wartości wyciszenia (zabezpieczenie jeśli jest stare, to domyślnie 1)
+                const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
+
+                // Interaktywne etykiety (Kliknięcie wysyła odwrotną wartość do bazy)
                 const priorityBadge = item.priority === 1 
-                    ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' 
-                    : '<span style="color: var(--text-muted);">Normalny</span>';
+                    ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535; padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` 
+                    : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
+
+                const muteBadge = muteVal === 1
+                    ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>`
+                    : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="font-weight:bold;">${item.entry_id}</td>
                     <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
                     <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
-                    <td style="font-weight: 600;">${entry.toFixed(2)} $</td> <td>${priorityBadge}</td>                                 <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
+                    <td style="font-weight: 600;">${entry.toFixed(2)} $</td>
+                    <td>${priorityBadge}</td>  <td>${muteBadge}</td>      <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
                     <td>${rr.toFixed(2)}</td>
                     <td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
                     <td><a href="${tvLink}" target="_blank" style="text-decoration:none;">📈 Link</a></td>
@@ -1488,6 +1500,22 @@ itemsToDisplay.forEach(item => {
                 } else {
                     const err = await response.json();
                     alert('Błąd usuwania: ' + err.message);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function updateFormEntryField(entryId, field, newValue) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/form/update`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ entry_id: entryId, field: field, value: newValue })
+                });
+                if(res.ok) {
+                    fetchFormEntries(); // Ciche i szybkie odświeżenie tabeli po zmianie wartości
+                } else {
+                    const err = await res.json();
+                    alert('Błąd aktualizacji: ' + err.message);
                 }
             } catch(e) { console.error(e); }
         }
