@@ -634,18 +634,18 @@
             
             <div class="table-responsive">
                 <table id="journal-table">
-                    <thead>
-                        <tr>
-                            <th onclick="handleFormSort('entry_id')">ID <span id="sort-icon-entry_id">─</span></th>
-                            <th onclick="handleFormSort('ticker')">Ticker <span id="sort-icon-ticker">─</span></th>
-                            <th onclick="handleFormSort('direction')">Kierunek <span id="sort-icon-direction">─</span></th>
-                            <th>Status (Dystans)</th>
-                            <th>R:R</th>
-                            <th onclick="handleFormSort('score')">Wynik <span id="sort-icon-score">─</span></th>
-                            <th>Wykres TV</th>
-                            <th>Akcje</th>
-                        </tr>
-                    </thead>
+<thead>
+    <tr>
+        <th onclick="handleFormSort('entry_id')">ID <span id="sort-icon-entry_id">─</span></th>
+        <th onclick="handleFormSort('ticker')">Ticker <span id="sort-icon-ticker">─</span></th>
+        <th onclick="handleFormSort('direction')">Kierunek <span id="sort-icon-direction">─</span></th>
+        <th>Punkt Wejścia</th> <th>Priorytet</th>     <th>Status (Dystans)</th>
+        <th>R:R</th>
+        <th onclick="handleFormSort('score')">Wynik <span id="sort-icon-score">─</span></th>
+        <th>Wykres TV</th>
+        <th>Akcje</th>
+    </tr>
+</thead>
                     <tbody id="form-table-body">
                         </tbody>
                 </table>
@@ -1377,41 +1377,46 @@
             if (itemsToDisplay.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding: 20px;">Brak wpisów.</td></tr>`;
             } else {
-                itemsToDisplay.forEach(item => {
-                    const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
-                    const mod = isLong ? 1 : -1;
-                    const tp = parseFloat(item.take_profit);
-                    const entry = parseFloat(item.entry_point);
-                    const sl = parseFloat(item.stop_loss);
-                    
-                    let rr = 0;
-                    if(entry - sl !== 0) rr = ((tp - entry) * mod) / ((entry - sl) * mod);
+itemsToDisplay.forEach(item => {
+                const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
+                const mod = isLong ? 1 : -1;
+                const tp = parseFloat(item.take_profit);
+                const entry = parseFloat(item.entry_point);
+                const sl = parseFloat(item.stop_loss);
+                
+                let rr = 0;
+                if(entry - sl !== 0) rr = ((tp - entry) * mod) / ((entry - sl) * mod);
 
-                    const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
-                    const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
-                    const diff = (Math.abs(currentPrice - entry) / entry) * 100;
-                    
-                    let status = 'Obserwacja';
-                    let statusColor = '#848e9c';
-                    if(diff > 15) { status = 'Ignorowanie'; statusColor = '#f6465d'; }
-                    else if(diff > 10) { status = 'Czekanie'; statusColor = '#fcd535'; }
-                    else if(diff <= 10 && item.priority === 1) { status = 'Skupienie'; statusColor = '#0ecb81'; }
-                    
-                    const tvLink = getTradingViewLink(item.ticker);
+                const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
+                const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
+                const diff = (Math.abs(currentPrice - entry) / entry) * 100;
+                
+                let status = 'Obserwacja';
+                let statusColor = '#848e9c';
+                if(diff > 15) { status = 'Ignorowanie'; statusColor = '#f6465d'; }
+                else if(diff > 10) { status = 'Czekanie'; statusColor = '#fcd535'; }
+                else if(diff <= 10 && item.priority === 1) { status = 'Skupienie'; statusColor = '#0ecb81'; }
+                
+                const tvLink = getTradingViewLink(item.ticker);
 
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td style="font-weight:bold;">${item.entry_id}</td>
-                        <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
-                        <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br>${item.start_zone} - ${item.end_zone}</td>
-                        <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
-                        <td>${rr.toFixed(2)}</td>
-                        <td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
-                        <td><a href="${tvLink}" target="_blank" style="text-decoration:none;">📈 Link</a></td>
-                        <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.id}')">Usuń</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+                // Mapowanie priorytetu na czytelną etykietę wizualną
+                const priorityBadge = item.priority === 1 
+                    ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' 
+                    : '<span style="color: var(--text-muted);">Normalny</span>';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:bold;">${item.entry_id}</td>
+                    <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
+                    <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
+                    <td style="font-weight: 600;">${entry.toFixed(2)} $</td> <td>${priorityBadge}</td>                                 <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
+                    <td>${rr.toFixed(2)}</td>
+                    <td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
+                    <td><a href="${tvLink}" target="_blank" style="text-decoration:none;">📈 Link</a></td>
+                    <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="color: var(--danger); background: none; border: 1px solid var(--danger); padding: 3px 8px; border-radius: 4px; cursor: pointer;">Usuń</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
             }
             
             const totalPages = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
