@@ -3,493 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quant Desk v2</title>
+    <title>Quant Desk v3</title>
     <style>
-        /* Kontener główny modułu - podział na 2 kolumny */
-.journal-container {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 24px;
-    margin-top: 15px;
-    align-items: start;
-}
-
-@media (max-width: 1024px) {
-    .journal-container {
-        grid-template-columns: 1fr; /* Responsywność dla mniejszych ekranów */
-    }
-}
-
-/* Panel boczny formularza */
-.journal-sidebar {
-    background: #1e1e2e;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #313244;
-}
-
-.form-group {
-    margin-bottom: 14px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-    font-size: 13px;
-    color: #cdd6f4;
-}
-
-.form-group input, .form-group select, .form-group textarea {
-    width: 100%;
-    padding: 8px 10px;
-    border-radius: 6px;
-    background: #11111b;
-    border: 1px solid #45475a;
-    color: #cdd6f4;
-    box-sizing: border-box;
-    font-family: inherit;
-    font-size: 14px;
-}
-
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-    outline: none;
-    border-color: #89b4fa;
-}
-
-.btn-submit {
-    width: 100%;
-    padding: 10px;
-    background: #89b4fa;
-    color: #11111b;
-    border: none;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-submit:hover {
-    background: #b4befe;
-}
-
-/* Filtry i tabela */
-.table-controls {
-    margin-bottom: 12px;
-}
-
-#journal-search {
-    width: 100%;
-    max-width: 350px;
-    padding: 9px 12px;
-    background: #1e1e2e;
-    border: 1px solid #45475a;
-    border-radius: 6px;
-    color: #cdd6f4;
-}
-
-#journal-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #1e1e2e;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-#journal-table th, #journal-table td {
-    padding: 10px 14px;
-    text-align: left;
-    border-bottom: 1px solid #313244;
-    font-size: 14px;
-}
-
-#journal-table th {
-    background: #313244;
-    color: #cdd6f4;
-    cursor: pointer;
-    user-select: none;
-}
+        .journal-container { display: grid; grid-template-columns: 300px 1fr; gap: 24px; margin-top: 15px; align-items: start; }
+        @media (max-width: 1024px) { .journal-container { grid-template-columns: 1fr; } }
+        .journal-sidebar { background: #1e1e2e; padding: 20px; border-radius: 8px; border: 1px solid #313244; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 13px; color: #cdd6f4; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border-radius: 6px; background: #11111b; border: 1px solid #45475a; color: #cdd6f4; box-sizing: border-box; font-family: inherit; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #89b4fa; }
+        .btn-submit { width: 100%; padding: 10px; background: #89b4fa; color: #11111b; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .btn-submit:hover { background: #b4befe; }
+        .table-controls { margin-bottom: 12px; }
+        #journal-search { width: 100%; max-width: 350px; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4; }
+        .table-responsive { overflow-x: auto; }
+        #journal-table { width: 100%; border-collapse: collapse; background: #1e1e2e; border-radius: 8px; overflow: hidden; min-width: 800px; }
+        #journal-table th, #journal-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #313244; font-size: 14px; }
+        #journal-table th { background: #313244; color: #cdd6f4; cursor: pointer; user-select: none; }
+        #journal-table th:hover { background: #45475a; }
+        .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 5px; }
+        .btn-pag { padding: 6px 14px; background: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-pag:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-delete-journal { background: #f38ba8; color: #11111b; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .btn-delete-journal:hover { background: #eba0ac; }
+        .brief-carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding: 10px 5px 20px 5px; scrollbar-width: none; }
+        .brief-carousel-container::-webkit-scrollbar { display: none; }
+        .brief-card { flex: 0 0 100%; scroll-snap-align: start; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+        @media (min-width: 768px) { .brief-card { flex: 0 0 calc(50% - 8px); } }
+        .brief-card h4 { font-size: 1.15rem; color: var(--accent); line-height: 1.4; font-weight: 600; }
+        .brief-text { font-size: 0.95rem; line-height: 1.6; color: var(--text-main); white-space: pre-line; overflow-y: auto; max-height: 340px; padding-right: 5px; }
+        .brief-card-footer { margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 12px; text-align: right; }
+        .brief-link { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+        .brief-link:hover { color: var(--accent-hover); }
+        .carousel-nav-hints { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; }
         
-
-#journal-table th:hover {
-    background: #45475a;
-}
-
-/* Stronicowanie */
-.pagination-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 15px;
-    padding-top: 5px;
-}
-
-.btn-pag {
-    padding: 6px 14px;
-    background: #313244;
-    color: #cdd6f4;
-    border: 1px solid #45475a;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.btn-pag:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
-.btn-delete-journal {
-    background: #f38ba8;
-    color: #11111b;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.btn-delete-journal:hover {
-    background: #eba0ac;
-}
-        /* --- STYLE DLA MODUŁU DAILYBRIEF (MOBILNA KARUZELA SZUFLADOWA) --- */
-        .brief-carousel-container {
-            display: flex;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory; /* Wymusza magnetyczne przyciąganie kart lewo/prawo */
-            gap: 16px;
-            padding: 10px 5px 20px 5px;
-            scrollbar-width: none; /* Ukrywa pasek przewijania (Firefox) */
-        }
-        
-        .brief-carousel-container::-webkit-scrollbar {
-            display: none; /* Ukrywa pasek przewijania (Chrome/Safari) */
-        }
-
-        .brief-card {
-            flex: 0 0 100%; /* Na telefonie karta zajmuje dokładnie 100% szerokości ekranu */
-            scroll-snap-align: start; /* Punkt zatrzasku karty */
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 20px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        @media (min-width: 768px) {
-            .brief-card {
-                flex: 0 0 calc(50% - 8px); /* Na komputerze pokazujemy 2 karty obok siebie */
-            }
-        }
-
-        .brief-card h4 {
-            font-size: 1.15rem;
-            color: var(--accent);
-            line-height: 1.4;
-            font-weight: 600;
-        }
-
-        .brief-text {
-            font-size: 0.95rem;
-            line-height: 1.6;
-            color: var(--text-main);
-            white-space: pre-line; /* Zachowuje entery i punktor od Gemini */
-            overflow-y: auto;
-            max-height: 340px; /* Zapobiega rozciąganiu pionowemu przy bardzo długich tekstach */
-            padding-right: 5px;
-        }
-
-        .brief-card-footer {
-            margin-top: auto;
-            border-top: 1px solid var(--border-color);
-            padding-top: 12px;
-            text-align: right;
-        }
-
-        .brief-link {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .brief-link:hover {
-            color: var(--accent-hover);
-        }
-
-        .carousel-nav-hints {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            margin-top: 5px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-        }
-        /* --- NOWOCZESNE STYLE SYSTEMOWE (DARK THEME) --- */
         :root {
-            --bg-main: #0b0e11;
-            --bg-card: #181a20;
-            --bg-input: #2b3139;
-            --text-main: #eaecef;
-            --text-muted: #848e9c;
-            --accent: #c99400; /* Tradingowy złoty/żółty */
-            --accent-hover: #fcd535;
-            --danger: #f6465d;
-            --success: #0ecb81;
-            --border-color: #2b3139;
+            --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef;
+            --text-muted: #848e9c; --accent: #c99400; --accent-hover: #fcd535; --danger: #f6465d;
+            --success: #0ecb81; --border-color: #2b3139;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            padding-bottom: 70px; /* Miejsce na dolne menu mobilne */
-        }
-
-        header {
-            background-color: var(--bg-card);
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        header h1 {
-            font-size: 1.2rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        header h1 span {
-            color: var(--accent);
-        }
-
-        .back-btn {
-            background: none;
-            border: none;
-            color: var(--accent);
-            font-size: 1rem;
-            display: none; /* Pokazywany tylko wewnątrz modułu */
-            cursor: pointer;
-            align-items: center;
-            gap: 5px;
-        }
-
-        /* --- DASHBOARD (MENU GŁÓWNE) --- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            padding: 15px;
-        }
-
-        @media (min-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: repeat(3, 1fr);
-                max-width: 1200px;
-                margin: 0 auto;
-            }
-        }
-
-        .menu-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .menu-card:active {
-            transform: scale(0.95);
-            background-color: #20242c;
-        }
-
-        .menu-card .icon {
-            font-size: 1.8rem;
-        }
-
-        .menu-card h3 {
-            font-size: 0.95rem;
-            font-weight: 500;
-        }
-
-        /* --- MODUŁY (DOMYŚLNIE UKRYTE) --- */
-        .app-module {
-            display: none;
-            padding: 15px;
-            animation: fadeIn 0.3s ease-in-out;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .module-header {
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        /* --- FORMULARZE I ELEMENTY UI --- */
-        .input-group {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            background-color: var(--bg-input);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-main);
-            padding: 12px;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        input[type="text"]:focus {
-            border-color: var(--accent);
-        }
-
-        button {
-            background-color: var(--accent);
-            color: #000;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 20px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        button:active {
-            background-color: var(--accent-hover);
-        }
-
-        /* --- LISTY I TABELE (MOBILE-FIRST) --- */
-        .data-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .data-card-info h4 {
-            font-size: 1.1rem;
-            margin-bottom: 4px;
-        }
-
-        .data-card-info p {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .price-tag {
-            font-weight: 700;
-            font-size: 1.05rem;
-            color: var(--success);
-        }
-
-        .btn-delete {
-            background-color: transparent;
-            color: var(--danger);
-            border: 1px solid var(--danger);
-            padding: 6px 12px;
-            font-size: 0.85rem;
-            border-radius: 6px;
-        }
-
-        .btn-delete:active {
-            background-color: var(--danger);
-            color: #fff;
-        }
-
-        /* Dolny pasek nawigacyjny szybkiego dostępu */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: var(--bg-card);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            z-index: 100;
-        }
-
-        .nav-item {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            font-weight: 400;
-            padding: 5px;
-        }
-
-        .nav-item.active {
-            color: var(--accent);
-        }
-        /* --- STYLE MODUŁU FORM --- */
-        select, input[type="number"] {
-            flex: 1;
-            background-color: var(--bg-input);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-main);
-            padding: 12px;
-            font-size: 1rem;
-            outline: none;
-        }
-        select:focus, input[type="number"]:focus {
-            border-color: var(--accent);
-        }
-        .form-container { display: grid; gap: 15px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 70px; }
+        header { background-color: var(--bg-card); padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        header h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
+        header h1 span { color: var(--accent); }
+        .back-btn { background: none; border: none; color: var(--accent); font-size: 1rem; display: none; cursor: pointer; align-items: center; gap: 5px; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 15px; }
+        @media (min-width: 768px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); max-width: 1200px; margin: 0 auto; } }
+        .menu-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: transform 0.2s, border-color 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .menu-card:active { transform: scale(0.95); background-color: #20242c; }
+        .menu-card .icon { font-size: 1.8rem; }
+        .menu-card h3 { font-size: 0.95rem; font-weight: 500; }
+        .app-module { display: none; padding: 15px; animation: fadeIn 0.3s ease-in-out; max-width: 1000px; margin: 0 auto; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
+        input[type="text"], input[type="number"], select { background-color: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); padding: 12px; font-size: 1rem; outline: none; }
+        input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: var(--accent); }
+        button { background-color: var(--accent); color: #000; border: none; border-radius: 8px; padding: 12px 20px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background-color 0.2s; }
+        button:active { background-color: var(--accent-hover); }
+        .data-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .price-tag { font-weight: 700; font-size: 1.05rem; color: var(--success); }
+        .btn-delete { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; }
+        .btn-delete:active { background-color: var(--danger); color: #fff; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; }
+        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 400; padding: 5px; }
+        .nav-item.active { color: var(--accent); }
         .form-row { display: flex; flex-wrap: wrap; gap: 10px; }
         .form-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 5px; }
-        .form-group label { font-size: 0.85rem; color: var(--text-muted); }
-        .fibo-drawer { display: none; background: #2b3139; padding: 15px; border-radius: 8px; margin-top: 5px; border: 1px dashed var(--accent); }
-        .form-table-wrapper { overflow-x: auto; margin-top: 30px; }
+        .tabs { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; overflow-x:auto;}
+        .tab-btn { background: none; border: none; padding: 10px 20px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: bold; font-size: 1rem; white-space:nowrap; }
+        .tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .kpi-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .kpi-card h4 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+        .kpi-card .value { font-size: 1.4rem; font-weight: bold; color: var(--text-main); }
     </style>
 </head>
 <body>
@@ -502,311 +91,114 @@
 
     <main id="dashboard">
         <div class="dashboard-grid">
-            <div class="menu-card" onclick="openModule('form-module', 'Form')">
-                <span class="icon">📝</span>
-                <h3>Form</h3>
-            </div>
-            <div class="menu-card" onclick="openModule('focus-module', 'Focus')">
-                <span class="icon">🎯</span>
-                <h3>Focus</h3>
-            </div>
-            <div class="menu-card" onclick="openModule('tradeslist-module', 'TradesList')">
-                <span class="icon">📊</span>
-                <h3>TradesList</h3>
-            </div>
-            <div class="menu-card" onclick="openModule('summary-module', 'Summary')">
-                <span class="icon">📈</span>
-                <h3>Summary</h3>
-            </div>
-            <div class="menu-card" onclick="openModule('database-module', 'DataBase')">
-                <span class="icon">🗄️</span>
-                <h3>DataBase</h3>
-            </div>
-            <div class="menu-card" onclick="openModule('service-module', 'Service')">
-                <span class="icon">⚙️</span>
-                <h3>Service</h3>
-            </div>
-            <div class="menu-card" onclick="openModule('technicalanalysis-module', 'TechnicalAnalysis')">
-                <span class="icon">📐</span>
-                <h3>TechnicalAnalysis</h3>
-            </div>
-            <div class="menu-card" onclick="openModule('focuslist-module', 'FocusList')">
-                <span class="icon">👁️</span>
-                <h3>FocusList</h3>
-            </div>
-            <div class="menu-card" onclick="openModule('alerthistory-module', 'AlertHistory')">
-                <span class="icon">🔔</span>
-                <h3>AlertHistory</h3>
-            </div>
-            <div class="menu-card" onclick="openModule('dailybrief-module', 'DailyBrief')">
-                <span class="icon">📰</span>
-                <h3>DailyBrief</h3>
-            </div>
+            <div class="menu-card" onclick="openModule('form-module', 'Form')"><span class="icon">📝</span><h3>Form</h3></div>
+            <div class="menu-card" onclick="openModule('focus-module', 'Focus')"><span class="icon">🎯</span><h3>Focus</h3></div>
+            <div class="menu-card" onclick="openModule('tradeslist-module', 'TradesList')"><span class="icon">📊</span><h3>TradesList</h3></div>
+            <div class="menu-card" onclick="openModule('summary-module', 'Summary')"><span class="icon">📈</span><h3>Summary</h3></div>
+            <div class="menu-card" onclick="openModule('database-module', 'DataBase')"><span class="icon">🗄️</span><h3>DataBase</h3></div>
+            <div class="menu-card" onclick="openModule('service-module', 'Service')"><span class="icon">⚙️</span><h3>Service</h3></div>
+            <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Tech. Analysis')"><span class="icon">📐</span><h3>Tech. Analysis</h3></div>
+            <div class="menu-card" onclick="openModule('focuslist-module', 'FocusList')"><span class="icon">👁️</span><h3>FocusList</h3></div>
+            <div class="menu-card" onclick="openModule('alerthistory-module', 'Alerts History')"><span class="icon">🔔</span><h3>AlertHistory</h3></div>
+            <div class="menu-card" onclick="openModule('dailybrief-module', 'Daily Brief')"><span class="icon">📰</span><h3>DailyBrief</h3></div>
         </div>
     </main>
 
-<section id="form-module" class="app-module">
-    <div class="macro-header-container">
-        <h3>Kreator Pozycji (Form)</h3>
-    </div>
-    
-    <div class="journal-container">
-        <div class="journal-sidebar">
-            <form id="trading-form">
-                <div class="form-row">
-<div class="form-group">
-                        <label style="display: flex; align-items: center; justify-content: space-between;">
-                            Ticker (Pobierany z bazy)
-                            <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; font-weight: bold; border-bottom: 1px dashed var(--accent);">
-                                📈 Wykres TV
-                            </a>
-                        </label>
-                        <select id="form-ticker" onchange="updateFormTvLink()"></select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Kierunek</label>
-                        <select id="form-direction" onchange="updateFiboLabels()">
-                            <option value="DBR">DBR (Long)</option>
-                            <option value="RBR">RBR (Long)</option>
-                            <option value="DBD">DBD (Short)</option>
-                            <option value="RBD">RBD (Short)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Priorytet</label>
-                        <select id="form-priority">
-                            <option value="0">0 (Normalny)</option>
-                            <option value="1">1 (Wysoki)</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div>
-                    <div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Punkt wejścia</label>
-                    <input type="number" id="form-entry" step="0.01">
-                </div>
-
-                <div class="form-group">
-                    <label>Take Profit <span style="cursor:pointer; color: var(--accent);" onclick="toggleFibo()">[ 📐 Asystent Fibo ]</span></label>
-                    <input type="number" id="form-tp" step="0.01">
-                    
-                    <div class="fibo-drawer" id="fibo-drawer" style="display: none; background: #2b3139; padding: 15px; border-radius: 8px; margin-top: 5px; border: 1px dashed var(--accent);">
-                        <p style="font-size: 0.85rem; color: var(--accent); margin-bottom: 10px;">Dostosowuje wzór Fibo do Kierunku.</p>
-                        <div class="form-row">
-                            <div class="form-group"><label>Początek (A)</label><input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()"></div>
-                            <div class="form-group"><label>Szczyt (B)</label><input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()"></div>
-                            <div class="form-group">
-                                <label>Rozszerzenie Fibo</label>
-                                <select id="fibo-level">
-                                    <option value="1.272">1.272</option><option value="1.618">1.618</option>
-                                    <option value="2.0">2.000</option><option value="2.618">2.618</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="button" onclick="applyFibo()" style="margin-top:15px; width:100%; background-color: var(--bg-card); color: var(--accent); border: 1px solid var(--accent);">Zastosuj TP</button>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Powody wejścia (Opcjonalne, max 5)</label>
-                    <input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1...">
-                    <input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2...">
-                    <input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3...">
-                    <input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4...">
-                    <input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5...">
-                    <datalist id="reasons-list"></datalist>
-                </div>
-                
-                <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
-            </form>
-        </div>
-        
-        <div class="journal-main">
-            <div class="table-controls">
-                <input type="text" id="journal-search" placeholder="🔍 Filtruj po tickerze lub kierunku..." oninput="handleFormFilter(this.value)">
-            </div>
-            
-            <div class="table-responsive">
-                <table id="journal-table">
-        <thead>
-                        <tr>
-                            <th onclick="handleFormSort('entry_id')">ID <span id="sort-icon-entry_id">─</span></th>
-                            <th onclick="handleFormSort('ticker')">Ticker <span id="sort-icon-ticker">─</span></th>
-                            <th onclick="handleFormSort('direction')">Kierunek <span id="sort-icon-direction">─</span></th>
-                            <th>Punkt Wejścia</th>
-                            <th onclick="handleFormSort('priority')">Priorytet <span id="sort-icon-priority">─</span></th>
-                            <th onclick="handleFormSort('mute')">Wyciszenie <span id="sort-icon-mute">─</span></th>
-                            <th>Status (Dystans)</th>
-                            <th>R:R</th>
-                            <th onclick="handleFormSort('score')">Wynik <span id="sort-icon-score">─</span></th>
-                            <th>Wykres TV</th>
-                            <th>Akcje</th>
-                        </tr>
-         </thead>
-                    <tbody id="form-table-body">
-                        </tbody>
-                </table>
-            </div>
-            
-            <div class="pagination-container">
-                <button onclick="changeFormPage(-1)" id="form-prev-page" class="btn-pag">◀ Poprzednia</button>
-                <span id="form-page-info">Strona 1 z 1</span>
-                <button onclick="changeFormPage(1)" id="form-next-page" class="btn-pag">Następna ▶</button>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section id="focus-module" class="app-module">
-        <div class="macro-header-container">
-            <h3>Analiza Dnia przed Wejściem (Focus)</h3>
-        </div>
-        
+    <section id="form-module" class="app-module">
+        <div class="macro-header-container"><h3>Kreator Pozycji (Form)</h3></div>
         <div class="journal-container">
             <div class="journal-sidebar">
-                <form id="focus-form" onsubmit="submitFocusForm(e)">
-                    <div class="form-group">
-                        <label>Wybierz ID Form (Setup)</label>
-                        <select id="focus-form-id" onchange="onFocusIdChange()"></select>
-                    </div>
-
-                    <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
-                        <div class="form-group">
-                            <label>Wybrany Ticker</label>
-                            <input type="text" id="focus-ticker" readonly style="opacity:0.7;">
-                        </div>
-                        <div class="form-group">
-                            <label>Kierunek</label>
-                            <input type="text" id="focus-direction" readonly style="opacity:0.7;">
-                        </div>
-                    </div>
-
-                    <div style="text-align: right; margin-bottom: 10px;">
-                        <button type="button" onclick="autoCalculateSMC()" style="background: #0284c7; color:#fff; padding: 6px 12px; font-size: 0.8rem;">
-                            🤖 Automatyzuj SMC (Yahoo)
-                        </button>
-                    </div>
-
+                <form id="trading-form">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Świeca (D+1H) [0-1]</label>
-                            <input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5">
-                        </div>
-                        <div class="form-group">
-                            <label>Wolumen (SMC) [0-1]</label>
-                            <input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5">
+                            <label style="display: flex; justify-content: space-between;">Ticker <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label>
+                            <select id="form-ticker" onchange="updateFormTvLink()"></select>
                         </div>
                     </div>
-
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>Luka Sesyjna</label>
-                            <select id="focus-gap">
-                                <option value="1">1.0 (Pełne domknięcie/Zgodna)</option>
-                                <option value="0.5">0.5 (Neutralna)</option>
-                                <option value="0">0.0 (Brak luki/Negatywna)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Kalendarz (Wpisy)</label>
-                            <select id="focus-calendar">
-                                <option value="1">1.0 (Bezpiecznie > 30 dni)</option>
-                                <option value="0.5">0.5 (Blisko < 30 dni)</option>
-                                <option value="0">0.0 (Ryzyko Raportu < 20 dni)</option>
-                            </select>
-                        </div>
+                        <div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div>
+                        <div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div>
                     </div>
-
-                    <div class="form-group">
-                        <label>CVD Order Flow [0-3 pkt]</label>
-                        <select id="focus-cvd">
-                            <option value="3">3.0 - Silna absorpcja / Divergence (SMC)</option>
-                            <option value="2">2.0 - Zgodny trend delty z ceną</option>
-                            <option value="1">1.0 - Słaba delta / Churn</option>
-                            <option value="0">0.0 - Negatywne uderzenia / Agresja przeciwko nam</option>
-                        </select>
-                    </div>
-
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>VIX Sentyment [0-2]</label>
-                            <input type="number" id="focus-vix" step="0.5" min="0" max="2" value="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Indeks (Siła) [0-2]</label>
-                            <input type="number" id="focus-index" step="1" min="0" max="2" value="0">
-                        </div>
+                        <div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div>
+                        <div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div>
                     </div>
-
+                    <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01"></div>
+                    <div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01"></div>
                     <div class="form-group">
-                        <label>HTF Market Structure [0-1]</label>
-                        <select id="focus-htf">
-                            <option value="1">1.0 - Zgodny z Order Flow wyższego rzędu</option>
-                            <option value="0">0.0 - Pod prąd struktury HTF</option>
-                        </select>
+                        <label>Powody wejścia (Opcjonalne)</label>
+                        <input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2...">
+                        <datalist id="reasons-list"></datalist>
                     </div>
-
-                    <div class="form-group" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                        <label style="color: var(--accent);">Całkowity Kapitał Portfela</label>
-                        <input type="number" id="focus-deposit-total" value="50000" step="500">
-                    </div>
-
-                    <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">
-                        💾 Oblicz i Zapisz do Focus
-                    </button>
+                    <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
                 </form>
             </div>
             
             <div class="journal-main">
+                <div class="table-controls"><input type="text" id="journal-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleFormFilter(this.value)"></div>
                 <div class="table-responsive">
                     <table id="journal-table">
-                        <thead>
-                            <tr>
-                                <th>ID Focus</th> <th>Data</th>
-                                <th>ID Form</th>
-                                <th>Ticker</th>
-                                <th>Punkty</th>
-                                <th>Wynik %</th>
-                                <th>Alokacja %</th>
-                                <th>Wielkość Pozycji</th>
-                                <th>Akcje</th>
-                            </tr>
-                        </thead>
-                        <tbody id="focus-table-body"></tbody>
+                        <thead><tr><th>ID</th><th>Ticker</th><th>Kierunek</th><th>Wejście</th><th>Priorytet</th><th>Mute</th><th>Status</th><th>R:R</th><th>Score</th><th>Akcje</th></tr></thead>
+                        <tbody id="form-table-body"></tbody>
                     </table>
                 </div>
-                
-                <div class="pagination-container">
-                    <button onclick="changeFocusPage(-1)" id="focus-prev-page" class="btn-pag">◀ Poprzednia</button>
-                    <span id="focus-page-info">Strona 1 z 1</span>
-                    <button onclick="changeFocusPage(1)" id="focus-next-page" class="btn-pag">Następna ▶</button>
-                </div>
+                <div class="pagination-container"><button onclick="changeFormPage(-1)" id="form-prev-page" class="btn-pag">◀ Poprzednia</button><span id="form-page-info">Strona 1 z 1</span><button onclick="changeFormPage(1)" id="form-next-page" class="btn-pag">Następna ▶</button></div>
             </div>
         </div>
     </section>
 
-<section id="tradeslist-module" class="app-module">
-        <div class="macro-header-container">
-            <h3>Dziennik Otwartych Pozycji (Trades)</h3>
+    <section id="focus-module" class="app-module">
+        <div class="macro-header-container"><h3>Analiza przed Wejściem (Focus)</h3></div>
+        <div class="journal-container">
+            <div class="journal-sidebar">
+                <form id="focus-form" onsubmit="submitFocusForm(event)">
+                    <div class="form-group"><label>Wybierz ID Form</label><select id="focus-form-id" onchange="onFocusIdChange()"></select></div>
+                    <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
+                        <div class="form-group"><label>Wybrany Ticker</label><input type="text" id="focus-ticker" readonly style="opacity:0.7;"></div>
+                        <div class="form-group"><label>Kierunek</label><input type="text" id="focus-direction" readonly style="opacity:0.7;"></div>
+                    </div>
+                    <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC()" style="background: #0284c7; color:#fff; padding: 6px 12px; font-size: 0.8rem;">🤖 Automatyzuj SMC (Yahoo)</button></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5"></div>
+                        <div class="form-group"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Luka Sesyjna</label><select id="focus-gap"><option value="1">1.0 (Pełne domknięcie/Zgodna)</option><option value="0.5">0.5 (Neutralna)</option><option value="0">0.0 (Brak luki/Negatywna)</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Kalendarz (Raporty)</label><select id="focus-calendar"><option value="1">1.0 (Bezpiecznie > 30 dni)</option><option value="0.5">0.5 (Blisko < 30 dni)</option><option value="0">0.0 (Ryzyko < 20 dni)</option></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>CVD Order Flow [0-3]</label><select id="focus-cvd"><option value="3">3.0 - Silna absorpcja</option><option value="2">2.0 - Zgodny trend delty z ceną</option><option value="1">1.0 - Słaba delta / Churn</option><option value="0">0.0 - Negatywne uderzenia</option></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>VIX Sentyment [0-2]</label><input type="number" id="focus-vix" step="0.5" min="0" max="2" value="1"></div>
+                        <div class="form-group"><label>Indeks (Siła) [0-2]</label><input type="number" id="focus-index" step="1" min="0" max="2" value="0"></div>
+                    </div>
+                    <div class="form-group"><label>HTF Market Structure [0-1]</label><select id="focus-htf"><option value="1">1.0 - Zgodny z trendem wyższego rzędu</option><option value="0">0.0 - Pod prąd trendu</option></select></div>
+                    <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">💾 Zapisz Analizę</button>
+                </form>
+            </div>
+            <div class="journal-main">
+                <div class="table-responsive">
+                    <table id="journal-table">
+                        <thead><tr><th>ID Focus</th><th>Data</th><th>ID Form</th><th>Ticker</th><th>Punkty</th><th>Wynik %</th><th>Alokacja %</th><th>Rozmiar Pozycji</th><th>Akcje</th></tr></thead>
+                        <tbody id="focus-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-container"><button onclick="changeFocusPage(-1)" id="focus-prev-page" class="btn-pag">◀ Poprzednia</button><span id="focus-page-info">Strona 1 z 1</span><button onclick="changeFocusPage(1)" id="focus-next-page" class="btn-pag">Następna ▶</button></div>
+            </div>
         </div>
-        
+    </section>
+
+    <section id="tradeslist-module" class="app-module">
+        <div class="macro-header-container"><h3>Dziennik Otwartych Pozycji (Trades)</h3></div>
         <div class="journal-container">
             <div class="journal-sidebar">
                 <form id="trade-form" onsubmit="submitTradeForm(event)">
-                    <div class="form-group">
-                        <label>Powiązane z ID Focus</label>
-                        <select id="trade-focus-id" onchange="onTradeFocusChange()">
-                            <option value="">Wybierz przeanalizowany Setup...</option>
-                        </select>
-                    </div>
-
+                    <div class="form-group"><label>Powiązane z ID Focus</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Wybierz przeanalizowany Setup...</option></select></div>
                     <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);">
                         <div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div>
                         <div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div>
@@ -814,303 +206,129 @@
                         <div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div>
                         <div class="form-group"><label>Max Wydatek</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div>
                     </div>
-
-                    <div class="form-group">
-                        <label>Pełna nazwa spółki</label>
-                        <input type="text" id="trade-name" placeholder="np. CD Projekt SA">
-                    </div>
-
+                    <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
                     <div class="form-row">
                         <div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div>
-                        <div class="form-group"><label>Cena zakupu</label><input type="number" step="0.01" id="trade-buy-price" required></div>
+                        <div class="form-group"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group"><label>Wydano gotówki</label><input type="number" step="1" id="trade-spent" required></div>
-                        <div class="form-group"><label>Dźwignia (1 = Akcje)</label><input type="number" step="1" min="1" id="trade-leverage" value="1" required></div>
+                        <div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="1" min="1" id="trade-leverage" value="1" required></div>
                     </div>
-
-                    <input type="hidden" id="trade-tp">
-                    <input type="hidden" id="trade-sl">
-                    <input type="hidden" id="trade-score">
-
-                    <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">
-                        🛒 Zarejestruj Transakcję
-                    </button>
+                    <input type="hidden" id="trade-tp"><input type="hidden" id="trade-sl"><input type="hidden" id="trade-score">
+                    <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">🛒 Zarejestruj Transakcję</button>
                 </form>
             </div>
-            
             <div class="journal-main">
+                <div class="table-controls" style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center;">
+                    <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze lub nazwie..." oninput="handleTradesFilter()" style="flex: 1; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                    <select id="trade-status-filter" onchange="handleTradesFilter()" style="max-width: 200px; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                        <option value="ALL">Wszystkie Statusy</option>
+                        <option value="OPEN" selected>Otwarte</option>
+                        <option value="CLOSED">Zamknięte</option>
+                    </select>
+                </div>
+                
                 <div class="table-responsive">
                     <table id="journal-table">
-                        <thead>
-                            <tr>
-                                <th>Data/ID</th>
-                                <th>Spółka</th>
-                                <th>Zainwestowano</th>
-                                <th>Ceny (Wejście/Obecna)</th>
-                                <th>R:R | Dynamic SL</th>
-                                <th>Zysk (Obecny)</th>
-                                <th>Zysk PLN</th>
-                                <th style="min-width: 150px;">Progres TP</th>
-                                <th>Akcje</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>Data/ID</th><th>Spółka</th><th>Zainwestowano</th><th>Ceny (Wejście/Obecnie)</th><th>R:R | Trail SL</th><th>Zysk (Waluta)</th><th>Zysk PLN</th><th style="min-width: 150px;">Progres TP</th><th>Akcje</th></tr></thead>
                         <tbody id="trades-table-body"></tbody>
                     </table>
                 </div>
-                
-                <div class="pagination-container">
-                    <button onclick="changeTradePage(-1)" id="trade-prev-page" class="btn-pag">◀ Poprzednia</button>
-                    <span id="trade-page-info">Strona 1 z 1</span>
-                    <button onclick="changeTradePage(1)" id="trade-next-page" class="btn-pag">Następna ▶</button>
-                </div>
+                <div class="pagination-container"><button onclick="changeTradePage(-1)" id="trade-prev-page" class="btn-pag">◀ Poprzednia</button><span id="trade-page-info">Strona 1 z 1</span><button onclick="changeTradePage(1)" id="trade-next-page" class="btn-pag">Następna ▶</button></div>
             </div>
         </div>
     </section>
 
     <section id="summary-module" class="app-module">
-        <h2>Podsumowanie Portfela</h2>
-    </section>
-
-<section id="database-module" class="app-module">
-        <style>
-            .macro-management-section {
-                margin-bottom: 40px; /* Margines od dołu, bo teraz jest na górze */
-                padding-bottom: 25px;
-            }
-            .macro-header-container {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 20px;
-            }
-            .macro-header-container h3 {
-                margin: 0;
-                font-size: 1.3em;
-            }
-            .btn-macro-update {
-                background-color: #28a745;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                cursor: pointer;
-                border-radius: 4px;
-                font-weight: bold;
-                transition: background 0.2s ease;
-            }
-            .btn-macro-update:hover {
-                background-color: #218838;
-            }
-            .macro-table-wrapper {
-                overflow-x: auto;
-                border-radius: 6px;
-            }
-            .macro-custom-table {
-                width: 100%;
-                border-collapse: collapse;
-                text-align: left;
-                font-size: 0.95em;
-            }
-            .macro-custom-table th {
-                background-color: rgba(0, 0, 0, 0.05);
-                padding: 12px 10px;
-                font-weight: 600;
-                border-bottom: 2px solid rgba(0, 0, 0, 0.1);
-            }
-            .macro-custom-table td {
-                padding: 12px 10px;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-            }
-            .macro-val-currency {
-                font-weight: bold;
-                color: #0056b3;
-            }
-            .macro-val-vix {
-                font-weight: bold;
-                color: #dc3545;
-            }
-            .macro-val-date {
-                font-weight: 500;
-            }
-            .macro-val-time {
-                color: #666;
-                font-size: 0.85em;
-            }
-            .ticker-management-section {
-                margin-top: 20px;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                padding-top: 25px;
-            }
-
-            /* --- STYLE DLA PAGINACJI --- */
-            .pagination-container {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 15px;
-                margin-top: 15px;
-                padding: 10px 0;
-            }
-            .pagination-btn {
-                background-color: var(--bg-input);
-                color: var(--text-main);
-                border: 1px solid var(--border-color);
-                padding: 6px 14px;
-                font-size: 0.85rem;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: 500;
-                transition: background-color 0.2s;
-            }
-            .pagination-btn:disabled {
-                opacity: 0.3;
-                cursor: not-allowed;
-            }
-            .pagination-btn:active:not(:disabled) {
-                background-color: var(--accent);
-                color: #000;
-            }
-            .pagination-info {
-                font-size: 0.85rem;
-                color: var(--text-muted);
-                font-weight: 500;
-                min-width: 90px;
-                text-align: center;
-            }
-        </style>
-
-        <div class="macro-management-section">
-            <div class="macro-header-container">
-                <h3>Panel Sentymentu i Walut (Makro)</h3>
-                <button class="btn-macro-update" onclick="forceMacroUpdate()">Wymuś aktualizację</button>
+        <div class="macro-header-container"><h3>Podsumowanie Portfela</h3></div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchSummaryTab('overall')">Overall (Portfel)</button>
+            <button class="tab-btn" onclick="switchSummaryTab('analysis')">Analysis (Statystyki)</button>
+        </div>
+        <div id="tab-overall" class="tab-content active">
+            <div class="kpi-grid">
+                <div class="kpi-card"><h4>Suma Depozytów</h4><div class="value" id="kpi-deposits">0.00 $</div></div>
+                <div class="kpi-card"><h4>Zamknięty PnL</h4><div class="value" style="color:var(--success);" id="kpi-pnl">0.00 $</div></div>
+                <div class="kpi-card"><h4>Całkowity Kapitał</h4><div class="value" style="color:var(--accent);" id="kpi-capital">0.00 $</div></div>
+                <div class="kpi-card"><h4>Zablokowane w Focus</h4><div class="value" style="color:#89b4fa;" id="kpi-allocated">0.00 $</div></div>
+                <div class="kpi-card"><h4>Dostępna Gotówka</h4><div class="value" style="color:var(--success);" id="kpi-available">0.00 $</div></div>
             </div>
-            
-            <div class="macro-table-wrapper">
-                <table class="macro-custom-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>EUR/PLN</th>
-                            <th>USD/PLN</th>
-                            <th>VIX (Strach)</th>
-                            <th>S&P 500</th>
-                            <th>Ostatni odczyt</th>
-                        </tr>
-                    </thead>
-                    <tbody id="macro-table-body">
-                        <tr>
-                            <td colspan="6" style="text-align: center; padding: 20px; color: #777;">Ładowanie danych makro...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="pagination-container">
-                <button class="pagination-btn" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprzednia</button>
-                <span class="pagination-info" id="macro-page-info">Strona 1 z 1</span>
-                <button class="pagination-btn" id="macro-next-btn" onclick="changeMacroPage(1)">Następna →</button>
+            <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <h4 style="margin-bottom: 15px; color: var(--accent);">Rejestr Wpłat Depozytu</h4>
+                <div class="input-group" style="max-width: 400px;"><input type="number" id="new-deposit-amount" placeholder="Kwota wpłaty..." step="100"><button onclick="addDeposit()">Dodaj</button></div>
+                <div class="table-responsive" style="margin-top: 15px;">
+                    <table class="macro-custom-table" style="width:100%;">
+                        <thead><tr><th>Data</th><th>Zaksięgowana Kwota</th><th>Akcja</th></tr></thead>
+                        <tbody id="deposits-table-body"><tr><td colspan="3" style="text-align:center;">Ładowanie depozytów...</td></tr></tbody>
+                    </table>
+                </div>
             </div>
         </div>
+        <div id="tab-analysis" class="tab-content"><div style="text-align: center; padding: 50px; color: var(--text-muted);"><span style="font-size: 3rem;">📊</span><h3 style="margin-top: 15px;">Moduł Analysis jest w budowie</h3></div></div>
+    </section>
 
-        <div class="ticker-management-section">
-            <h3>Baza Tickerów Akcji</h3>
-            <div class="input-group" style="margin-top: 15px;">
-                <input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. TSLA)">
-                <button onclick="addTicker()">Dodaj</button>
-            </div>
+    <section id="database-module" class="app-module">
+        <div class="macro-header-container"><h3>Panel Sentymentu (Makro)</h3><button class="btn-submit" style="width:auto; padding:8px 16px;" onclick="forceMacroUpdate()">Wymuś aktualizację</button></div>
+        <div class="table-responsive"><table class="macro-custom-table" style="width:100%;"><thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&P 500</th><th>Odczyt</th></tr></thead><tbody id="macro-table-body"></tbody></table></div>
+        <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><span id="macro-page-info">Strona 1 z 1</span><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div>
+        <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <h3>Baza Tickerów</h3>
+            <div class="input-group" style="max-width:400px; margin-top:15px;"><input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. AAPL)"><button onclick="addTicker()">Dodaj</button></div>
             <div id="db-list-container"></div>
-
-            <div class="pagination-container">
-                <button class="pagination-btn" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprzednia</button>
-                <span class="pagination-info" id="ticker-page-info">Strona 1 z 1</span>
-                <button class="pagination-btn" id="ticker-next-btn" onclick="changeTickerPage(1)">Następna →</button>
-            </div>
+            <div class="pagination-container"><button class="btn-pag" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprz</button><span id="ticker-page-info">Strona 1 z 1</span><button class="btn-pag" id="ticker-next-btn" onclick="changeTickerPage(1)">Nast →</button></div>
         </div>
     </section>
 
-<section id="service-module" class="app-module">
-        <h2>Serwisy i Integracje (Panel Admina)</h2>
-        <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">
-            Ręczne wymuszanie procesów asynchronicznych bez czekania na automatyczny interwał CRON.
-        </p>
-        
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;">
-                <span>🔔</span> Wymuś sprawdzenie alertów i zleceń (SMC)
-            </button>
-            
-            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;">
-                <span>📈</span> Wymuś globalną aktualizację cen z Yahoo (Tło)
-            </button>
+    <section id="service-module" class="app-module">
+        <h2>Panel Admina (Service)</h2>
+        <div style="display: flex; flex-direction: column; gap: 12px; max-width:400px; margin-top:20px;">
+            <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff;">🔔 Wymuś sprawdzenie alertów (SMC)</button>
+            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff;">📈 Wymuś aktualizację cen tickerów</button>
         </div>
-        
-        <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: var(--text-muted); display: none;">
-        </div>
+        <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div>
     </section>
 
-    <section id="technicalanalysis-module" class="app-module">
-        <h2>Analiza Techniczna & Elliott Wave</h2>
+    <section id="technicalanalysis-module" class="app-module"><h2>Analiza Techniczna & Elliott Wave</h2></section>
+    <section id="focuslist-module" class="app-module"><h2>Lista Obserwowanych (Focus List)</h2></section>
+
+    <section id="alerthistory-module" class="app-module">
+        <div class="macro-header-container"><h3>Historia Wywołanych Alertów</h3></div>
+        <div class="table-responsive"><table class="macro-custom-table" style="width:100%;"><thead><tr><th>Data Wywołania</th><th>Ticker</th><th>Priorytet</th><th>Warunek</th><th>Cena Docelowa</th><th>L / H</th><th>Score</th><th>Link</th><th>Akcje</th></tr></thead><tbody id="alert-history-tbody"></tbody></table></div>
     </section>
 
-    <section id="focuslist-module" class="app-module">
-        <h2>Lista Obserwowanych (Focus List)</h2>
-    </section>
-
-<section id="alerthistory-module" class="app-module">
-    <div class="macro-header-container">
-        <h3>Historia Wywołanych Alertów</h3>
-    </div>
-    
-    <div class="macro-table-wrapper">
-        <table class="macro-custom-table">
-<thead>
-                        <tr>
-                            <th>Data Wywołania</th>
-                            <th>Ticker</th>
-                            <th>Priorytet</th>
-                            <th>Warunek</th>
-                            <th>Cena Docelowa</th>
-                            <th>Ekstrema Dnia (L/H)</th>
-                            <th>Wynik (Score)</th> 
-                            <th>Wykres TV</th>
-                            <th>Akcje</th>
-                        </tr>
-                    </thead>
-            <tbody id="alert-history-tbody">
-                <tr>
-                    <td colspan="7" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td> </tr>
-            </tbody>
-        </table>
-    </div>
-</section>
     <section id="dailybrief-module" class="app-module">
-        <div class="macro-header-container">
-            <h3>Analizy i Wpisy Makro (AI Brief)</h3>
-        </div>
-        
-        <div class="brief-carousel-container" id="dailybrief-carousel">
-            <p style="text-align: center; color: var(--text-muted); width: 100%; padding: 20px;">Ładowanie analiz...</p>
-        </div>
-        
-        <div class="carousel-nav-hints">
-            <span>👈 Przesuń palcem w lewo / prawo 👉</span>
-        </div>
+        <div class="macro-header-container"><h3>Wpisy Makro (AI Brief)</h3></div>
+        <div class="brief-carousel-container" id="dailybrief-carousel"><p style="text-align:center; padding:20px;">Ładowanie...</p></div>
     </section>
 
     <nav class="bottom-nav">
-        <button class="nav-item active" onclick="openDashboard()">
-            <span>🏠</span>Home
-        </button>
-        <button class="nav-item" onclick="openModule('focus-module', 'Focus')">
-            <span>🎯</span>Focus
-        </button>
-        <button class="nav-item" onclick="openModule('database-module', 'Baza')">
-            <span>🗄️</span>Baza
-        </button>
+        <button class="nav-item active" onclick="openDashboard()"><span>🏠</span>Home</button>
+        <button class="nav-item" onclick="openModule('tradeslist-module', 'Trades')"><span>📊</span>Trades</button>
+        <button class="nav-item" onclick="openModule('database-module', 'Baza')"><span>🗄️</span>Baza</button>
     </nav>
 
-    <script>
+    <div id="sell-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:90%; max-width:400px; border:1px solid var(--border-color);">
+            <h3 style="color:var(--accent); margin-bottom:15px;">Zamknięcie Pozycji (Kalkulator)</h3>
+            <input type="hidden" id="sell-trade-id">
+
+            <div class="form-group"><label>Data Sprzedaży</label><input type="date" id="sell-date"></div>
+            <div class="form-group"><label>Cena Sprzedaży z platformy</label><input type="number" step="0.0001" id="sell-price" placeholder="np. 154.32"></div>
+            <div class="form-group">
+                <label style="color:var(--success);">Ile % pozycji sprzedajesz? <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz jako procent (np. 50%), ułamek (np. 1/3) lub zostaw 1 dla całości.</small></label>
+                <input type="text" id="sell-fraction" value="1" placeholder="np. 0.5, 50%, 1/3, 23/41">
+            </div>
+            <div class="form-group"><label>Otrzymana dywidenda z tej paczki</label><input type="number" step="0.01" id="sell-div" value="0"></div>
+
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main);">Anuluj</button>
+                <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff;">Księguj Zysk</button>
+            </div>
+        </div>
+    </div>
+
+   <script>
         // Główny adres Twojego backendu na Renderze
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
 
@@ -1140,59 +358,35 @@
             return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
         }
 
-        // --- STAN STRONICOWANIA DLA MODUŁU DATABASE ---
-        let macroDataArray = [];
-        let currentMacroPage = 1;
-        const macroPageSize = 10;
+        // --- STANY STRONICOWANIA ---
+        let macroDataArray = []; let currentMacroPage = 1; const macroPageSize = 10;
+        let tickerDataArray = []; let currentTickerPage = 1; const tickerPageSize = 20;
+        let focusDataArray = []; let currentFocusPage = 1; const focusPageSize = 20; 
+        let formEntriesGlobal = []; 
+        let allTradesData = []; let filteredTradesData = []; let currentTradePage = 1; const tradePageSize = 20;
 
-        let tickerDataArray = [];
-        let currentTickerPage = 1;
-        const tickerPageSize = 20;
-
-        // --- STAN STRONICOWANIA DLA MODUŁU FOCUS ---
-        let focusDataArray = [];
-        let currentFocusPage = 1;
-        const focusPageSize = 20; 
-        let formEntriesGlobal = []; // Do listy rozwijanej
-
-        // --- NAWIGACJA SPA (Single Page Application) ---
+        // --- NAWIGACJA SPA ---
         function openModule(moduleId, moduleTitle) {
-            if (moduleId === 'focus-module') initFocusModule();
-            if (moduleId === 'tradeslist-module') initTradesModule(); // DODANO TO
             document.getElementById('dashboard').style.display = 'none';
-            const modules = document.querySelectorAll('.app-module');
-            modules.forEach(m => m.style.display = 'none');
+            document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
 
             document.getElementById(moduleId).style.display = 'block';
-
             document.getElementById('app-title').innerText = moduleTitle;
             document.getElementById('back-btn').style.display = 'flex';
             document.getElementById('spacer').style.display = 'none';
 
-            if (moduleId === 'database-module') {
-                loadDatabase();
-                loadMacroData();
-            }
-            if (moduleId === 'alerthistory-module') {
-                loadAlertHistory();
-            }
-            if (moduleId === 'dailybrief-module') {
-                loadDailyBriefs();
-            }
-            if (moduleId === 'form-module') {
-                initFormModule();
-            }
-            if (moduleId === 'focus-module') {
-                initFocusModule();
-            }
+            if (moduleId === 'database-module') { loadDatabase(); loadMacroData(); }
+            if (moduleId === 'alerthistory-module') loadAlertHistory();
+            if (moduleId === 'dailybrief-module') loadDailyBriefs();
+            if (moduleId === 'form-module') initFormModule();
+            if (moduleId === 'focus-module') initFocusModule();
+            if (moduleId === 'tradeslist-module') initTradesModule();
+            if (moduleId === 'summary-module') loadSummaryData();
         }
 
         function openDashboard() {
-            const modules = document.querySelectorAll('.app-module');
-            modules.forEach(m => m.style.display = 'none');
-
+            document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
             document.getElementById('dashboard').style.display = 'block';
-
             document.getElementById('app-title').innerHTML = 'Quant<span>Desk</span>';
             document.getElementById('back-btn').style.display = 'none';
             document.getElementById('spacer').style.display = 'block';
@@ -1202,464 +396,228 @@
         function loadMacroData() {
             const tbody = document.getElementById('macro-table-body');
             if (!tbody) return;
-
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Pobieranie historii makro z Supabase...</td></tr>';
 
             fetch(`${API_BASE_URL}/api/macro/history`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Serwer zwrócił błąd: ' + response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    macroDataArray = data || [];
-                    currentMacroPage = 1; 
-                    renderMacroTable();
-                })
-                .catch(error => {
-                    console.error('Błąd w loadMacroData:', error);
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc3545; font-weight: bold;">Błąd połączenia z API: ${error.message}</td></tr>`;
-                });
+                .then(r => r.json())
+                .then(data => { macroDataArray = data || []; currentMacroPage = 1; renderMacroTable(); })
+                .catch(e => { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#dc3545;">Błąd API</td></tr>`; });
         }
 
         function renderMacroTable() {
             const tbody = document.getElementById('macro-table-body');
-            if (!tbody) return;
-
             if (macroDataArray.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro w bazie.</td></tr>`;
-                document.getElementById('macro-prev-btn').disabled = true;
-                document.getElementById('macro-next-btn').disabled = true;
-                document.getElementById('macro-page-info').innerText = 'Strona 0 z 0';
                 return;
             }
-
             const totalPages = Math.ceil(macroDataArray.length / macroPageSize);
-            if (currentMacroPage > totalPages) currentMacroPage = totalPages;
-            if (currentMacroPage < 1) currentMacroPage = 1;
-
             const start = (currentMacroPage - 1) * macroPageSize;
-            const end = start + macroPageSize;
-            const pageData = macroDataArray.slice(start, end);
-
+            const pageData = macroDataArray.slice(start, start + macroPageSize);
             tbody.innerHTML = '';
             pageData.forEach(row => {
                 const tr = document.createElement('tr');
-                const date = row.date || '-';
-                const eurpln = row.eurpln !== undefined ? row.eurpln : (row.EURPLN !== undefined ? row.EURPLN : '-');
-                const usdpln = row.usdpln !== undefined ? row.usdpln : (row.USDPLN !== undefined ? row.USDPLN : '-');
-                const vix = row.vix !== undefined ? row.vix : (row.VIX !== undefined ? row.VIX : '-');
-                const sp500 = row.sp500 !== undefined ? row.sp500 : (row.SP500 !== undefined ? row.SP500 : '-');
-                const updated = row.updated_at || (row.created_at ? new Date(row.created_at).toLocaleTimeString('pl-PL') : '-');
-
                 tr.innerHTML = `
-                    <td class="macro-val-date">${date}</td>
-                    <td class="macro-val-currency">${eurpln}</td>
-                    <td class="macro-val-currency">${usdpln}</td>
-                    <td class="macro-val-vix">${vix}</td>
-                    <td style="font-weight: 500;">${sp500}</td>
-                    <td class="macro-val-time">${updated}</td>
+                    <td class="macro-val-date">${row.date || '-'}</td>
+                    <td class="macro-val-currency">${row.eurpln || '-'}</td>
+                    <td class="macro-val-currency">${row.usdpln || '-'}</td>
+                    <td class="macro-val-vix">${row.vix || '-'}</td>
+                    <td style="font-weight: 500;">${row.sp500 || '-'}</td>
+                    <td class="macro-val-time">${row.updated_at || '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
-
             document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`;
             document.getElementById('macro-prev-btn').disabled = (currentMacroPage === 1);
             document.getElementById('macro-next-btn').disabled = (currentMacroPage === totalPages);
         }
-
-        function changeMacroPage(direction) {
-            currentMacroPage += direction;
-            renderMacroTable();
-        }
+        function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
 
         async function forceMacroUpdate() {
-            const btn = document.querySelector('.btn-macro-update');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerText = 'Aktualizacja...';
-            }
             try {
-                const response = await fetch(`${API_BASE_URL}/api/macro/force`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    alert(result.message);
-                    loadMacroData(); 
-                } else {
-                    alert("Błąd serwera: " + result.message);
-                }
-            } catch (error) {
-                console.error("Błąd aktualizacji makro:", error);
-                alert("Błąd połączenia z serwerem.");
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerText = 'Wymuś aktualizację';
-                }
-            }
+                await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' });
+                alert("Zaktualizowano makro"); loadMacroData(); 
+            } catch (e) { alert("Błąd połączenia z serwerem."); }
         }
 
         async function loadDatabase() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/database`);
-                const data = await response.json();
-                tickerDataArray = data || [];
+                tickerDataArray = await response.json() || [];
                 renderMobileList();
-            } catch (error) {
-                console.error("Błąd bazy tickerów:", error);
-            }
+            } catch (e) {}
         }
 
         function renderMobileList() {
             const container = document.getElementById('db-list-container');
-            if (!container) return;
             container.innerHTML = '';
-            
-            if (tickerDataArray.length === 0) {
-                container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Baza jest pusta. Dodaj swój pierwszy ticker.</p>`;
-                document.getElementById('ticker-prev-btn').disabled = true;
-                document.getElementById('ticker-next-btn').disabled = true;
-                document.getElementById('ticker-page-info').innerText = 'Strona 0 z 0';
-                return;
-            }
-
+            if (tickerDataArray.length === 0) return;
             const totalPages = Math.ceil(tickerDataArray.length / tickerPageSize);
-            if (currentTickerPage > totalPages) currentTickerPage = totalPages;
-            if (currentTickerPage < 1) currentTickerPage = 1;
-
             const start = (currentTickerPage - 1) * tickerPageSize;
-            const end = start + tickerPageSize;
-            const pageData = tickerDataArray.slice(start, end);
+            const pageData = tickerDataArray.slice(start, start + tickerPageSize);
 
             pageData.forEach((item) => {
-                const tvLink = getTradingViewLink(item.ticker);
-                
-                // Formatyzacja daty z Supabase do czytelnej formy
-                const dateAddedStr = item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-';
-                
-                const card = `
+                const dateStr = item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-';
+                container.innerHTML += `
                     <div class="data-card">
-                        <div class="data-card-info">
-                            <h4>${item.ticker}</h4>
-                            <p>Dodano: ${dateAddedStr}</p>
-                        </div>
+                        <div class="data-card-info"><h4>${item.ticker}</h4><p>Dodano: ${dateStr}</p></div>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span class="price-tag">${item.price !== null ? item.price + ' $' : '...'}</span>
-                            <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: bold; border: 1px solid var(--accent); padding: 6px 10px; border-radius: 6px; background-color: rgba(201, 148, 0, 0.05);">
-                                📈 TV
-                            </a>
+                            <a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">📈 TV</a>
                             <button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button>
                         </div>
                     </div>
                 `;
-                container.innerHTML += card;
             });
-
             document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${totalPages}`;
             document.getElementById('ticker-prev-btn').disabled = (currentTickerPage === 1);
             document.getElementById('ticker-next-btn').disabled = (currentTickerPage === totalPages);
         }
-
-        function changeTickerPage(direction) {
-            currentTickerPage += direction;
-            renderMobileList();
-        }
-
+        function changeTickerPage(dir) { currentTickerPage += dir; renderMobileList(); }
         async function addTicker() {
-            const tickerInput = document.getElementById('new-ticker');
-            const ticker = tickerInput.value.trim().toUpperCase();
-            if (!ticker) return;
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/database/add`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticker: ticker })
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    tickerInput.value = '';
-                    loadDatabase();
-                } else {
-                    alert(result.message);
-                }
-            } catch (error) { console.error("Błąd:", error); }
+            const t = document.getElementById('new-ticker').value.trim().toUpperCase();
+            if (!t) return;
+            const res = await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) });
+            if (res.ok) { document.getElementById('new-ticker').value = ''; loadDatabase(); }
         }
-
-        async function removeTicker(ticker) {
-            if (!confirm(`Usunąć ${ticker}?`)) return;
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/database/delete`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticker: ticker })
-                });
-                if (response.ok) loadDatabase();
-            } catch (error) { console.error("Błąd:", error); }
+        async function removeTicker(t) {
+            if (!confirm(`Usunąć ${t}?`)) return;
+            const res = await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) });
+            if (res.ok) loadDatabase();
         }
 
         // --- LOGIKA MODUŁU ALERT HISTORY ---
         async function loadAlertHistory() {
-            const tbody = document.getElementById("alert-history-tbody");
-            if (!tbody) return;
-
-            // Zmieniono colspan na 9 z powodu dodania nowej kolumny Score
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">Ładowanie historii...</td></tr>';
-
             try {
                 const response = await fetch(`${API_BASE_URL}/api/alerts/history`);
                 const data = await response.json();
-
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #777;">Brak wywołanych alertów w bazie.</td></tr>`;
-                    return;
-                }
-
+                const tbody = document.getElementById("alert-history-tbody");
                 tbody.innerHTML = "";
-
                 data.forEach(item => {
-                    const row = document.createElement("tr");
-                    
-                    const dateStr = item.triggered_at ? new Date(item.triggered_at).toLocaleString('pl-PL') : 'Brak daty';
-                    const conditionText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
-                    const conditionColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
-                    
-                    const priorityBadge = item.priority === 1 
-                        ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' 
-                        : '<span style="color: var(--text-muted);">Normalny</span>';
-
-                    // Pobieranie i bezpieczne mapowanie wartości Score
-                    const scoreVal = item.score !== undefined && item.score !== null ? item.score : 0;
-
-                    // Zastosowanie sztywnego zaokrąglenia do 2 miejsc po przecinku (.toFixed(2))
-                    const targetPriceFormatted = item.target_price ? Number(item.target_price).toFixed(2) : '0.00';
-                    const dayLowFormatted = item.day_low ? Number(item.day_low).toFixed(2) : '0.00';
-                    const dayHighFormatted = item.day_high ? Number(item.day_high).toFixed(2) : '0.00';
-
-                    const tvLink = getTradingViewLink(item.ticker);
-
-                    row.innerHTML = `
-                        <td class="macro-val-date">${dateStr}</td>
-                        <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
-                        <td>${priorityBadge}</td>
-                        <td style="color: ${conditionColor}; font-weight: 500;">${conditionText}</td>
-                        <td style="font-weight: bold;">${targetPriceFormatted} $</td>
-                        <td style="font-size: 0.9em; color: #848e9c;">L: ${dayLowFormatted} | H: ${dayHighFormatted}</td>
-                        <td style="font-weight: bold; color: #a6e3a1;">${scoreVal}/5</td> <td>
-                            <a href="${tvLink}" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--bg-input); font-size: 0.85rem;">
-                                📈 Wykres
-                            </a>
-                        </td>
-                        <td>
-                            <button onclick="deleteAlert('${item.id}')" style="color: #f6465d; background: none; border: 1px solid #f6465d; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-weight: 600;">
-                                Usuń
-                            </button>
-                        </td>
+                    const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${new Date(item.triggered_at).toLocaleString('pl-PL')}</td>
+                            <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
+                            <td>${pb}</td>
+                            <td style="color: ${item.condition==='ABOVE'?'#0ecb81':'#f6465d'};">${item.condition==='ABOVE'?'Powyżej':'Poniżej'}</td>
+                            <td>${Number(item.target_price).toFixed(2)} $</td>
+                            <td>L: ${Number(item.day_low).toFixed(2)} | H: ${Number(item.day_high).toFixed(2)}</td>
+                            <td style="color: #a6e3a1; font-weight: bold;">${item.score || 0}/5</td>
+                            <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent);">📈 TV</a></td>
+                            <td><button onclick="deleteAlert('${item.id}')" style="color:#f6465d; background:none; border:1px solid #f6465d; padding:4px 8px; border-radius:4px;">Usuń</button></td>
+                        </tr>
                     `;
-                    tbody.appendChild(row);
                 });
-
-            } catch (error) {
-                console.error("Błąd podczas pobierania historii:", error);
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #f6465d;">Błąd ładowania danych z serwera.</td></tr>`;
-            }
+            } catch (error) {}
         }
-
         async function deleteAlert(id) {
-            if (!confirm("Czy na pewno chcesz usunąć ten alert z historii?")) return;
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id })
-                });
-                const result = await response.json();
-                if (result.status === 'success') loadAlertHistory(); 
-                else alert("Nie udało się usunąć: " + result.message);
-            } catch (error) { console.error("Błąd:", error); }
+            await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) });
+            loadAlertHistory(); 
         }
 
         // --- LOGIKA MODUŁU DAILYBRIEF ---
         async function loadDailyBriefs() {
-            const container = document.getElementById('dailybrief-carousel');
-            if (!container) return;
-            container.innerHTML = '<p style="text-align: center; color: var(--text-muted); width: 100%; padding: 20px;">Pobieranie analiz z Supabase...</p>';
-
             try {
                 const response = await fetch(`${API_BASE_URL}/api/blog/briefs`);
-                if (!response.ok) throw new Error('Błąd serwera');
                 const data = await response.json();
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); width: 100%; padding: 20px;">Brak zapisanych briefów w bazie.</p>';
-                    return;
-                }
+                const container = document.getElementById('dailybrief-carousel');
                 container.innerHTML = ''; 
                 data.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'brief-card';
-                    card.innerHTML = `
-                        <h4>${item.title}</h4>
-                        <div class="brief-text">${item.summary}</div>
-                        <div class="brief-card-footer">
-                            <a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a>
+                    container.innerHTML += `
+                        <div class="brief-card">
+                            <h4>${item.title}</h4>
+                            <div class="brief-text">${item.summary}</div>
+                            <div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div>
                         </div>
                     `;
-                    container.appendChild(card);
                 });
-            } catch (error) {
-                console.error("Błąd briefów:", error);
-                container.innerHTML = '<p style="text-align: center; color: var(--danger); width: 100%; padding: 20px;">Nie udało się załadować danych z bazy.</p>';
-            }
+            } catch (error) {}
         }
 
         // ==========================================
-        // LOGIKA MODUŁU FORM (ZAAWANSOWANA TABELA)
+        // LOGIKA MODUŁU FORM (ZAAWANSOWANA TABELA, FIBO, REASONS)
         // ==========================================
-        let formEntries = [];       
-        let filteredFormEntries = [];      
-        let formCurrentPage = 1;    
-        const formRowsPerPage = 6;  
-        let formSortKey = 'created_at'; 
-        let formSortDir = 'desc';   
-        let formFilterText = '';
+        let formEntries = []; let filteredFormEntries = []; let formCurrentPage = 1; const formRowsPerPage = 6; let formSortKey = 'created_at'; let formSortDir = 'desc'; let formFilterText = '';
 
         async function initFormModule() {
-            if(tickerDataArray.length === 0) {
-                await loadDatabase(); 
-            }
+            if(tickerDataArray.length === 0) await loadDatabase(); 
             const select = document.getElementById('form-ticker');
             select.innerHTML = '';
-            tickerDataArray.forEach(t => {
-                select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`;
-            });
+            tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; });
 
-            loadFormReasons();
+            loadFormReasons(); // PRZYWRÓCONE
             fetchFormEntries();
-            
-            const formEl = document.getElementById('trading-form');
-            formEl.removeEventListener('submit', submitAdvancedForm);
-            formEl.addEventListener('submit', submitAdvancedForm);
-            
-            updateFormTvLink();
+            document.getElementById('trading-form').onsubmit = submitAdvancedForm;
+            updateFormTvLink(); // PRZYWRÓCONE
         }
 
         async function fetchFormEntries() {
-            const tbody = document.getElementById('form-table-body');
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Pobieranie z bazy...</td></tr>';
             try {
                 const response = await fetch(`${API_BASE_URL}/api/form/entries`);
-                if (!response.ok) throw new Error('Błąd API');
                 const rawData = await response.json();
-                
-                formEntries = rawData.map(item => ({
-                    ...item,
-                    score: item.reasons ? item.reasons.length : 0
-                }));
-                
+                formEntries = rawData.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 }));
                 applyFormFilterAndSort(); 
-            } catch (error) {
-                console.error('Błąd pobierania form:', error);
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--danger);">Błąd pobierania danych.</td></tr>`;
-            }
+            } catch (error) {}
         }
 
-        function handleFormFilter(value) {
-            formFilterText = value.toLowerCase();
-            formCurrentPage = 1;
-            applyFormFilterAndSort();
-        }
-
+        function handleFormFilter(value) { formFilterText = value.toLowerCase(); formCurrentPage = 1; applyFormFilterAndSort(); }
         function handleFormSort(key) {
-            if (formSortKey === key) {
-                formSortDir = formSortDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                formSortKey = key;
-                formSortDir = 'asc';
-            }
-            updateFormSortIcons();
-            applyFormFilterAndSort();
+            formSortDir = (formSortKey === key && formSortDir === 'asc') ? 'desc' : 'asc';
+            formSortKey = key; updateFormSortIcons(); applyFormFilterAndSort();
         }
-
         function updateFormSortIcons() {
-            const columns = ['entry_id', 'ticker', 'direction', 'score', 'priority', 'mute'];
-            columns.forEach(col => {
+            ['entry_id', 'ticker', 'direction', 'score', 'priority', 'mute'].forEach(col => {
                 const icon = document.getElementById(`sort-icon-${col}`);
-                if (!icon) return;
-                icon.innerText = formSortKey === col ? (formSortDir === 'asc' ? ' ▲' : ' ▼') : ' ─';
+                if (icon) icon.innerText = formSortKey === col ? (formSortDir === 'asc' ? ' ▲' : ' ▼') : ' ─';
             });
         }
 
         function applyFormFilterAndSort() {
             filteredFormEntries = formEntries.filter(entry => {
-                const t = (entry.ticker || '').toLowerCase();
-                const d = (entry.direction || '').toLowerCase();
-                return t.includes(formFilterText) || d.includes(formFilterText);
-            });
-            
-            filteredFormEntries.sort((a, b) => {
-                let valA = a[formSortKey] || '';
-                let valB = b[formSortKey] || '';
-                
-                if (formSortKey === 'score' || formSortKey === 'priority' || formSortKey === 'mute') {
-                    return formSortDir === 'asc' ? valA - valB : valB - valA;
-                }
-                
+                return (entry.ticker || '').toLowerCase().includes(formFilterText) || (entry.direction || '').toLowerCase().includes(formFilterText);
+            }).sort((a, b) => {
+                let valA = a[formSortKey] || ''; let valB = b[formSortKey] || '';
+                if (['score', 'priority', 'mute'].includes(formSortKey)) return formSortDir === 'asc' ? valA - valB : valB - valA;
                 if (valA < valB) return formSortDir === 'asc' ? -1 : 1;
                 if (valA > valB) return formSortDir === 'asc' ? 1 : -1;
                 return 0;
             });
-            
             renderAdvancedFormTable();
         }
 
         function renderAdvancedFormTable() {
             const tbody = document.getElementById('form-table-body');
-            if (!tbody) return;
             tbody.innerHTML = '';
+            const itemsToDisplay = filteredFormEntries.slice((formCurrentPage - 1) * formRowsPerPage, formCurrentPage * formRowsPerPage);
             
-            const startIndex = (formCurrentPage - 1) * formRowsPerPage;
-            const endIndex = startIndex + formRowsPerPage;
-            const itemsToDisplay = filteredFormEntries.slice(startIndex, endIndex);
-            
-            if (itemsToDisplay.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding: 20px;">Brak wpisów.</td></tr>`;
-            } else {
-                itemsToDisplay.forEach(item => {
-                    const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
-                    const mod = isLong ? 1 : -1;
-                    const tp = parseFloat(item.take_profit);
-                    const entry = parseFloat(item.entry_point);
-                    const sl = parseFloat(item.stop_loss);
-                    
-                    let rr = 0;
-                    if(entry - sl !== 0) rr = ((tp - entry) * mod) / ((entry - sl) * mod);
+            itemsToDisplay.forEach(item => {
+                const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
+                const mod = isLong ? 1 : -1;
+                const entry = parseFloat(item.entry_point);
+                const sl = parseFloat(item.stop_loss);
+                const tp = parseFloat(item.take_profit);
+                let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
 
-                    const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
-                    const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
-                    const diff = (Math.abs(currentPrice - entry) / entry) * 100;
-                    
-                    let status = 'Obserwacja';
-                    let statusColor = '#848e9c';
-                    if(diff > 15) { status = 'Ignorowanie'; statusColor = '#f6465d'; }
-                    else if(diff > 10) { status = 'Czekanie'; statusColor = '#fcd535'; }
-                    else if(diff <= 10 && item.priority === 1) { status = 'Skupienie'; statusColor = '#0ecb81'; }
-                    
-                    const tvLink = getTradingViewLink(item.ticker);
+                const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
+                const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
+                const diff = (Math.abs(currentPrice - entry) / entry) * 100;
+                let status = diff > 15 ? 'Ignorowanie' : (diff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
+                let statusColor = diff > 15 ? '#f6465d' : (diff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
+                
+                const tvLink = getTradingViewLink(item.ticker);
+                const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
 
-                    const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
+                // PRZYWRÓCONE: Klikalne Mute i Priority wywołujące updateFormEntryField
+                const priorityBadge = item.priority === 1 
+                    ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` 
+                    : `<span style="color: var(--text-muted); cursor: pointer;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
 
-                    const priorityBadge = item.priority === 1 
-                        ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535; padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` 
-                        : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
+                const muteBadge = muteVal === 1
+                    ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>`
+                    : `<span style="color: var(--success); font-weight: bold; cursor: pointer;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
 
-                    const muteBadge = muteVal === 1
-                        ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>`
-                        : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
+                tbody.innerHTML += `
+                    <tr>
                         <td style="font-weight:bold;">${item.entry_id}</td>
                         <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
                         <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
@@ -1669,121 +627,55 @@
                         <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
                         <td>${rr.toFixed(2)}</td>
                         <td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
-                        <td><a href="${tvLink}" target="_blank" style="text-decoration:none;">📈 Link</a></td>
-                        <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="color: var(--danger); background: none; border: 1px solid var(--danger); padding: 3px 8px; border-radius: 4px; cursor: pointer;">Usuń</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-            
-            const totalPages = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
-            document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage} z ${totalPages}`;
-            document.getElementById('form-prev-page').disabled = (formCurrentPage === 1);
-            document.getElementById('form-next-page').disabled = (formCurrentPage === totalPages);
+                        <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a></td>
+                        <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`;
         }
-
-        function changeFormPage(direction) {
-            const totalPages = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
-            const targetPage = formCurrentPage + direction;
-            if (targetPage >= 1 && targetPage <= totalPages) {
-                formCurrentPage = targetPage;
-                renderAdvancedFormTable();
-            }
-        }
+        function changeFormPage(direction) { formCurrentPage += direction; renderAdvancedFormTable(); }
 
         async function submitAdvancedForm(e) {
             e.preventDefault();
             const data = {
-                ticker: document.getElementById('form-ticker').value,
-                direction: document.getElementById('form-direction').value,
-                priority: document.getElementById('form-priority').value,
-                start_zone: document.getElementById('form-start').value,
-                end_zone: document.getElementById('form-end').value,
-                entry_point: document.getElementById('form-entry').value,
+                ticker: document.getElementById('form-ticker').value, direction: document.getElementById('form-direction').value,
+                priority: document.getElementById('form-priority').value, start_zone: document.getElementById('form-start').value,
+                end_zone: document.getElementById('form-end').value, entry_point: document.getElementById('form-entry').value,
                 take_profit: document.getElementById('form-tp').value,
-                reasons: [
-                    document.getElementById('form-reason-1').value,
-                    document.getElementById('form-reason-2').value,
-                    document.getElementById('form-reason-3').value,
-                    document.getElementById('form-reason-4').value,
-                    document.getElementById('form-reason-5').value
-                ].filter(r => r.trim() !== '')
+                reasons: [document.getElementById('form-reason-1').value, document.getElementById('form-reason-2').value, document.getElementById('form-reason-3').value, document.getElementById('form-reason-4').value, document.getElementById('form-reason-5').value].filter(r => r.trim() !== '')
             };
-
-            if(!data.ticker || !data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) {
-                return alert('Uzupełnij wszystkie pola liczbowe!');
-            }
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/form/add`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-                if(res.ok) {
-                    alert('Dodano Setup do bazy!');
-                    document.getElementById('trading-form').reset();
-                    fetchFormEntries();
-                    loadFormReasons(); 
-                } else {
-                    const error = await res.json();
-                    alert("Błąd: " + error.message);
-                }
-            } catch(e) { console.error(e); }
+            if(!data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) return alert('Uzupełnij pola liczbowe!');
+            await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            document.getElementById('trading-form').reset(); fetchFormEntries(); loadFormReasons();
         }
-
+        
         async function deleteAdvancedFormEntry(id) {
-            if(!confirm('Usunąć ten wpis z bazy?')) return;
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/form/delete`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id: id})
-                });
-                if(response.ok) {
-                    fetchFormEntries();
-                } else {
-                    const err = await response.json();
-                    alert('Błąd usuwania: ' + err.message);
-                }
-            } catch(e) { console.error(e); }
+            if(!confirm('Usunąć?')) return;
+            await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) });
+            fetchFormEntries();
         }
 
+        // PRZYWRÓCONE W PEŁNI: FIBO, UPDATE FIELD I POWODY
         async function updateFormEntryField(entryId, field, newValue) {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/form/update`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ entry_id: entryId, field: field, value: newValue })
-                });
-                if(res.ok) {
-                    fetchFormEntries(); 
-                } else {
-                    const err = await res.json();
-                    alert('Błąd aktualizacji: ' + err.message);
-                }
-            } catch(e) { console.error(e); }
+            await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) });
+            fetchFormEntries(); 
         }
 
-        // --- ASYSTENT FIBO I POWODY (WYMAGANE DLA FORMULARZA) ---
         async function loadFormReasons() {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/form/reasons`);
                 const reasons = await res.json();
                 const datalist = document.getElementById('reasons-list');
                 datalist.innerHTML = '';
-                reasons.forEach(r => {
-                    datalist.innerHTML += `<option value="${r}">`;
-                });
-            } catch(e) { console.error(e); }
+                reasons.forEach(r => { datalist.innerHTML += `<option value="${r}">`; });
+            } catch(e) {}
         }
 
         function toggleFibo() {
             const drawer = document.getElementById('fibo-drawer');
             drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block';
-            if (drawer.style.display === 'block') {
-                updateFiboLabels();
-            }
+            if (drawer.style.display === 'block') updateFiboLabels();
         }
 
         function updateFiboLabels() {
@@ -1791,35 +683,18 @@
             const peak = parseFloat(document.getElementById('fibo-peak').value);
             const direction = document.getElementById('form-direction').value;
             const select = document.getElementById('fibo-level');
-            
             if (!select) return;
-            
             const levels = [1.272, 1.618, 2.000, 2.618];
             const currentSelected = select.value; 
-            
             select.innerHTML = ''; 
-            
             levels.forEach(lvl => {
                 let optionText = lvl.toFixed(3);
-                
                 if (!isNaN(start) && !isNaN(peak)) {
-                    let calculatedPrice = 0;
-                    if (direction === 'DBR' || direction === 'RBR') {
-                        calculatedPrice = peak + (peak - start) * lvl; 
-                    } else {
-                        calculatedPrice = peak - (start - peak) * lvl; 
-                    }
+                    let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * lvl : peak - (start - peak) * lvl; 
                     optionText += ` (cena: ${calculatedPrice.toFixed(2)})`;
                 }
-                
-                const opt = document.createElement('option');
-                opt.value = lvl.toString();
-                opt.textContent = optionText;
-                
-                if (lvl.toString() === currentSelected) {
-                    opt.selected = true;
-                }
-                
+                const opt = document.createElement('option'); opt.value = lvl.toString(); opt.textContent = optionText;
+                if (lvl.toString() === currentSelected) opt.selected = true;
                 select.appendChild(opt);
             });
         }
@@ -1829,16 +704,8 @@
             const peak = parseFloat(document.getElementById('fibo-peak').value);
             const level = parseFloat(document.getElementById('fibo-level').value);
             const direction = document.getElementById('form-direction').value;
-            
             if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
-            
-            let tp = 0;
-            if(direction === 'DBR' || direction === 'RBR') {
-                tp = peak + (peak - start) * level; 
-            } else {
-                tp = peak - (start - peak) * level; 
-            }
-            
+            const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * level : peak - (start - peak) * level; 
             document.getElementById('form-tp').value = tp.toFixed(2);
             toggleFibo();
         }
@@ -1846,438 +713,161 @@
         function updateFormTvLink() {
             const ticker = document.getElementById('form-ticker').value;
             const linkEl = document.getElementById('form-tv-link');
-            if (ticker) {
-                linkEl.href = getTradingViewLink(ticker);
-                linkEl.style.display = 'inline-block';
-            } else {
-                linkEl.style.display = 'none';
-            }
-        }
-        
-        // --- SERWISY (MANUALNE WYZWALANIE) ---
-        async function forceAlertsCheck() {
-            const out = document.getElementById('service-output');
-            out.style.display = 'block';
-            out.innerHTML = '⏳ Uruchamianie silnika sprawdzania alertów SMC...';
-            
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`);
-                const result = await res.json();
-                if(res.ok) {
-                    out.innerHTML = `✅ <strong>Skrypt wykonany pomyślnie.</strong><br>Aktywowane zlecenia: ${result.alerts_triggered || 0}`;
-                    if (document.getElementById('form-module').style.display === 'block') {
-                        fetchFormEntries();
-                    }
-                } else {
-                    out.innerHTML = `❌ Błąd serwera: ${result.message}`;
-                }
-            } catch(e) {
-                console.error(e);
-                out.innerHTML = `❌ Brak połączenia z backendem.`;
-            }
-        }
-
-        async function forceCronPricesUpdate() {
-            const out = document.getElementById('service-output');
-            out.style.display = 'block';
-            out.innerHTML = '⏳ Trwa pobieranie aktualnych kursów z Yahoo Finance...';
-            
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`);
-                const result = await res.json();
-                if(res.ok) {
-                    out.innerHTML = `✅ <strong>Baza cen zaktualizowana.</strong><br>Przetworzonych tickerów: ${result.updated_tickers || 0}`;
-                } else {
-                    out.innerHTML = `❌ Błąd: ${result.message}`;
-                }
-            } catch(e) {
-                console.error(e);
-                out.innerHTML = `❌ Błąd sieci.`;
-            }
+            if (ticker) { linkEl.href = getTradingViewLink(ticker); linkEl.style.display = 'inline-block'; }
         }
 
         // ==========================================
         // LOGIKA MODUŁU FOCUS
         // ==========================================
         async function initFocusModule() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/form/entries`);
-                formEntriesGlobal = await res.json();
-                const select = document.getElementById('focus-form-id');
-                select.innerHTML = '';
-                formEntriesGlobal.forEach(e => {
-                    select.innerHTML += `<option value="${e.entry_id}">${e.entry_id} (${e.ticker} - ${e.direction})</option>`;
-                });
-                onFocusIdChange();
-                fetchFocusEntries();
-            } catch(e) { console.error(e); }
-            
-            // Rejestracja eventu (używamy poprawnego zapisu)
-            const focusForm = document.getElementById('focus-form');
-            if (focusForm) {
-                focusForm.onsubmit = async function(event) {
-                    event.preventDefault();
-                    
-                    const data = {
-                        entry_id: document.getElementById('focus-form-id').value,
-                        ticker: document.getElementById('focus-ticker').value,
-                        direction: document.getElementById('focus-direction').value,
-                        candle_score: document.getElementById('focus-candle').value,
-                        volume_score: document.getElementById('focus-volume').value,
-                        gap_score: document.getElementById('focus-gap').value,
-                        calendar_score: document.getElementById('focus-calendar').value,
-                        cvd_score: document.getElementById('focus-cvd').value,
-                        vix_score: document.getElementById('focus-vix').value,
-                        index_score: document.getElementById('focus-index').value,
-                        htf_score: document.getElementById('focus-htf').value,
-                        deposit_total: document.getElementById('focus-deposit-total').value
-                    };
-
-                    try {
-                        const res = await fetch(`${API_BASE_URL}/api/focus/add`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify(data)
-                        });
-                        const resData = await res.json();
-                        if(res.ok) {
-                            alert('Analiza punktowa Focus zapisana!');
-                            fetchFocusEntries();
-                        } else {
-                            alert('Błąd: ' + resData.message);
-                        }
-                    } catch(err) { console.error(err); }
-                };
-            }
+            const res = await fetch(`${API_BASE_URL}/api/form/entries`); formEntriesGlobal = await res.json();
+            document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join('');
+            onFocusIdChange(); fetchFocusEntries();
         }
-
         function onFocusIdChange() {
-            const selectedId = document.getElementById('focus-form-id').value;
-            const entry = formEntriesGlobal.find(e => e.entry_id === selectedId);
-            if(entry) {
-                document.getElementById('focus-ticker').value = entry.ticker;
-                document.getElementById('focus-direction').value = entry.direction;
-            }
+            const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value);
+            if(entry) { document.getElementById('focus-ticker').value = entry.ticker; document.getElementById('focus-direction').value = entry.direction; }
         }
-
         async function autoCalculateSMC() {
-            const ticker = document.getElementById('focus-ticker').value;
-            const direction = document.getElementById('focus-direction').value;
-            if(!ticker) return alert('Najpierw wybierz prawidłowy Setup ID!');
-            
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ ticker, direction })
-                });
-                const automatic = await res.json();
-                
-                document.getElementById('focus-candle').value = automatic.candle_score;
-                document.getElementById('focus-volume').value = automatic.volume_score;
-                document.getElementById('focus-vix').value = automatic.vix_score;
-                document.getElementById('focus-index').value = automatic.index_score;
-                
-                alert('SMC przeliczone na podstawie danych Yahoo Finance intraday!');
-            } catch(e) { console.error(e); }
+            const t = document.getElementById('focus-ticker').value, d = document.getElementById('focus-direction').value;
+            const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:t, direction:d})});
+            const r = await res.json();
+            document.getElementById('focus-candle').value = r.candle_score; document.getElementById('focus-volume').value = r.volume_score; document.getElementById('focus-vix').value = r.vix_score; document.getElementById('focus-index').value = r.index_score;
         }
-
-        async function fetchFocusEntries() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/focus/entries`);
-                focusDataArray = await res.json();
-                currentFocusPage = 1;
-                renderFocusTable();
-            } catch(e) { console.error(e); }
+        async function fetchFocusEntries() { const r = await fetch(`${API_BASE_URL}/api/focus/entries`); focusDataArray = await r.json(); renderFocusTable(); }
+        function renderFocusTable() {
+            const tb = document.getElementById('focus-table-body');
+            tb.innerHTML = focusDataArray.slice((currentFocusPage-1)*focusPageSize, currentFocusPage*focusPageSize).map(i => `<tr><td style="color:#777;">#${i.id}</td><td>${new Date(i.created_at).toLocaleDateString()}</td><td>${i.entry_id}</td><td>${i.ticker}</td><td>${Number(i.points_total).toFixed(1)}/25</td><td>${(Number(i.final_ratio)*100).toFixed(0)}%</td><td>${Number(i.allocated_pct).toFixed(1)}%</td><td>${Number(i.allocated_cash).toFixed(2)} ${i.currency}</td><td><button class="btn-delete" onclick="deleteFocusEntry(${i.id})">Usuń</button></td></tr>`).join('');
+            document.getElementById('focus-page-info').innerText = `Str ${currentFocusPage}`;
         }
-
-function renderFocusTable() {
-            const tbody = document.getElementById('focus-table-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-
-            if (focusDataArray.length === 0) {
-                // Zmiana colspan na 9, żeby dopasować do nowej liczby kolumn
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding:20px;">Brak analiz Focus.</td></tr>`;
-                return;
-            }
-
-            const totalPages = Math.ceil(focusDataArray.length / focusPageSize) || 1;
-            const start = (currentFocusPage - 1) * focusPageSize;
-            const end = start + focusPageSize;
-            const displayed = focusDataArray.slice(start, end);
-
-            displayed.forEach(item => {
-                const tr = document.createElement('tr');
-                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-';
-                
-                tr.innerHTML = `
-                    <td style="color: var(--text-muted); font-size: 0.85em; font-weight: bold;">#${item.id}</td> <td>${dateStr}</td>
-                    <td style="font-weight:bold; color:var(--accent);">${item.entry_id}</td>
-                    <td style="font-weight:bold;">${item.ticker}</td>
-                    <td style="font-weight:bold; color:#a6e3a1;">${Number(item.points_total).toFixed(1)}/25</td>
-                    <td><strong>${(Number(item.final_ratio)*100).toFixed(0)}%</strong></td>
-                    <td style="color: var(--accent); font-weight:bold;">${Number(item.allocated_pct).toFixed(1)}%</td>
-                    <td style="font-weight:600; color:#0ecb81;">${Number(item.allocated_cash).toFixed(2)} ${item.currency}</td>
-                    <td><button class="btn-delete" onclick="deleteFocusEntry(${item.id})">Usuń</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            document.getElementById('focus-page-info').innerText = `Strona ${currentFocusPage} z ${totalPages}`;
-            document.getElementById('focus-prev-page').disabled = (currentFocusPage === 1);
-            document.getElementById('focus-next-page').disabled = (currentFocusPage === totalPages);
-        }
-
-        function changeFocusPage(direction) {
-            const totalPages = Math.ceil(focusDataArray.length / focusPageSize) || 1;
-            const target = currentFocusPage + direction;
-            if(target >= 1 && target <= totalPages) {
-                currentFocusPage = target;
-                renderFocusTable();
-            }
-        }
-
-        async function deleteFocusEntry(id) {
-            if(!confirm('Usunąć ten wpis z analizy Focus?')) return;
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/focus/delete`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id })
-                });
-                if(res.ok) fetchFocusEntries();
-            } catch(e) { console.error(e); }
-        }
+        function changeFocusPage(d) { currentFocusPage+=d; renderFocusTable(); }
+        async function deleteFocusEntry(id) { await fetch(`${API_BASE_URL}/api/focus/delete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); fetchFocusEntries(); }
+        async function submitFocusForm(e) { e.preventDefault(); const d = {entry_id:document.getElementById('focus-form-id').value, ticker:document.getElementById('focus-ticker').value, candle_score:document.getElementById('focus-candle').value, volume_score:document.getElementById('focus-volume').value, gap_score:document.getElementById('focus-gap').value, calendar_score:document.getElementById('focus-calendar').value, cvd_score:document.getElementById('focus-cvd').value, vix_score:document.getElementById('focus-vix').value, index_score:document.getElementById('focus-index').value, htf_score:document.getElementById('focus-htf').value}; await fetch(`${API_BASE_URL}/api/focus/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}); fetchFocusEntries(); }
 
         // ==========================================
-        // LOGIKA MODUŁU TRADES LIST
+        // LOGIKA MODUŁU TRADES LIST & SUMMARY
         // ==========================================
-        let tradesDataArray = [];
-        let currentTradePage = 1;
-        const tradePageSize = 20;
+        function switchSummaryTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active');
+        }
+        async function loadSummaryData() {
+            try {
+                const r = await fetch(`${API_BASE_URL}/api/portfolio/summary`); const d = await r.json();
+                document.getElementById('kpi-deposits').innerText = `${Number(d.total_deposits).toFixed(2)} $`; document.getElementById('kpi-pnl').innerText = `${Number(d.total_pnl).toFixed(2)} $`; document.getElementById('kpi-capital').innerText = `${Number(d.current_capital).toFixed(2)} $`; document.getElementById('kpi-allocated').innerText = `${Number(d.allocated_capital).toFixed(2)} $`; document.getElementById('kpi-available').innerText = `${Number(d.available_cash).toFixed(2)} $`;
+                const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); const deps = await rD.json();
+                document.getElementById('deposits-table-body').innerHTML = deps.map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString()}</td><td style="color:var(--success); font-weight:bold;">${Number(x.amount).toFixed(2)}$</td><td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td></tr>`).join('');
+            } catch(e) {}
+        }
+        async function addDeposit() { const a = document.getElementById('new-deposit-amount').value; await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:a})}); loadSummaryData(); }
+        async function deleteDeposit(id) { await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); loadSummaryData(); }
 
         async function initTradesModule() {
-            // Wypełnienie listy Focus IDs
             if(focusDataArray.length === 0) await fetchFocusEntries();
-            const select = document.getElementById('trade-focus-id');
-            select.innerHTML = '<option value="">Wybierz przeanalizowany Setup...</option>';
-            focusDataArray.forEach(f => {
-                select.innerHTML += `<option value="${f.id}">#${f.id} - ${f.ticker} (Zalecane: ${f.allocated_cash} ${f.currency})</option>`;
-            });
-
-            // Ustawienie dzisiejszej daty jako domyślnej
+            document.getElementById('trade-focus-id').innerHTML = '<option value="">Wybierz...</option>' + focusDataArray.map(f => `<option value="${f.id}">#${f.id} - ${f.ticker} (Max: ${f.allocated_cash} ${f.currency})</option>`).join('');
             document.getElementById('trade-buy-date').valueAsDate = new Date();
-            
             fetchTradesEntries();
         }
 
         async function onTradeFocusChange() {
-            const fId = document.getElementById('trade-focus-id').value;
-            const focus = focusDataArray.find(f => f.id == fId);
-            if(!focus) return;
-
-            // Pobieramy dane powiązanego z Focus wpisu Form (żeby ściągnąć TP, SL, Kierunek)
-            const formRes = await fetch(`${API_BASE_URL}/api/form/entries`);
-            const formDb = await formRes.json();
-            const form = formDb.find(frm => frm.entry_id === focus.entry_id);
-
-            document.getElementById('trade-ticker').value = focus.ticker;
-            document.getElementById('trade-form-id').value = focus.entry_id;
-            document.getElementById('trade-currency').value = focus.currency;
-            document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`;
-            document.getElementById('trade-score').value = focus.points_total;
-            
-            if(form) {
-                document.getElementById('trade-direction').value = form.direction;
-                document.getElementById('trade-tp').value = form.take_profit;
-                document.getElementById('trade-sl').value = form.stop_loss;
-            }
+            const focus = focusDataArray.find(f => f.id == document.getElementById('trade-focus-id').value); if(!focus) return;
+            const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); const form = formDb.find(frm => frm.entry_id === focus.entry_id);
+            document.getElementById('trade-ticker').value = focus.ticker; document.getElementById('trade-form-id').value = focus.entry_id; document.getElementById('trade-currency').value = focus.currency; document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; document.getElementById('trade-score').value = focus.points_total;
+            if(form) { document.getElementById('trade-direction').value = form.direction; document.getElementById('trade-tp').value = form.take_profit; document.getElementById('trade-sl').value = form.stop_loss; }
+            document.getElementById('trade-name').value = 'Wyszukiwanie...';
+            try { const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); document.getElementById('trade-name').value = n.name||''; } catch(e){}
         }
 
         async function submitTradeForm(e) {
             e.preventDefault();
-            const spent = parseFloat(document.getElementById('trade-spent').value);
-            const lev = parseInt(document.getElementById('trade-leverage').value);
-            const maxSpendStr = document.getElementById('trade-max-spend').value;
-            const maxSpend = parseFloat(maxSpendStr.split(" ")[0]);
-
-            if (spent * lev > maxSpend) {
-                alert(`⚠️ OSTRZEŻENIE! Twój wydatek bazowy * dźwignia (${spent * lev}) przekracza maksymalny wydatek zalecony z analizy Focus (${maxSpend}). Kontynuuję z zapisem, ale zbadaj zarządzanie ryzykiem!`);
-            }
-
-            const data = {
-                focus_id: document.getElementById('trade-focus-id').value,
-                form_id: document.getElementById('trade-form-id').value,
-                ticker: document.getElementById('trade-ticker').value,
-                direction: document.getElementById('trade-direction').value,
-                stock_name: document.getElementById('trade-name').value,
-                buy_date: document.getElementById('trade-buy-date').value,
-                buy_price: document.getElementById('trade-buy-price').value,
-                spent: spent,
-                leverage: lev,
-                currency: document.getElementById('trade-currency').value,
-                focus_score: document.getElementById('trade-score').value,
-                tp: document.getElementById('trade-tp').value,
-                sl: document.getElementById('trade-sl').value
-            };
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/trades/add`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-                if(res.ok) {
-                    alert('Transakcja pomyślnie dopisana do portfolio!');
-                    document.getElementById('trade-form').reset();
-                    fetchTradesEntries();
-                } else alert('Błąd dodawania transakcji.');
-            } catch(e) { console.error(e); }
+            const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: parseFloat(document.getElementById('trade-spent').value), leverage: parseInt(document.getElementById('trade-leverage').value), currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value };
+            await fetch(`${API_BASE_URL}/api/trades/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); fetchTradesEntries();
         }
 
         async function fetchTradesEntries() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
-                const allTrades = await res.json();
-                tradesDataArray = allTrades.filter(t => t.status === 'OPEN'); // Ten moduł pokazuje tylko Otwarte
-                
-                // Upewniamy się, że mamy dostęp do aktualnych cen
-                if(tickerDataArray.length === 0) await loadDatabase();
-                
-                renderTradesTable();
-            } catch(e) { console.error(e); }
+            allTradesData = await (await fetch(`${API_BASE_URL}/api/trades/entries`)).json();
+            if(tickerDataArray.length === 0) await loadDatabase();
+            handleTradesFilter();
+        }
+
+        function handleTradesFilter() {
+            const searchText = (document.getElementById('trade-search').value || '').toLowerCase();
+            const statusFilter = document.getElementById('trade-status-filter').value || 'OPEN';
+            filteredTradesData = allTradesData.filter(t => {
+                const textMatch = (t.ticker || '').toLowerCase().includes(searchText) || (t.stock_name || '').toLowerCase().includes(searchText);
+                const isClosed = (t.status === 'CLOSED' || t.sell_date);
+                let statusMatch = (statusFilter === 'ALL') ? true : (statusFilter === 'OPEN' ? !isClosed : isClosed);
+                return textMatch && statusMatch;
+            });
+            currentTradePage = 1; renderTradesTable();
         }
 
         function renderTradesTable() {
-            const tbody = document.getElementById('trades-table-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
+            const tb = document.getElementById('trades-table-body');
+            if (filteredTradesData.length === 0) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px;">Brak wpisów spełniających kryteria.</td></tr>`; return; }
 
-            if (tradesDataArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--text-muted);">Brak otwartych pozycji.</td></tr>`;
-                return;
-            }
+            tb.innerHTML = filteredTradesData.slice((currentTradePage-1)*tradePageSize, currentTradePage*tradePageSize).map(item => {
+                const isClosed = (item.status === 'CLOSED' || item.sell_date);
+                const mod = ['DBR','RBR'].includes(item.direction)?1:-1;
+                const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
+                const cp = isClosed ? item.sell_price : (tm&&tm.price?tm.price:item.buy_price);
+                const val = item.spent * item.leverage; const prof = val * (((cp - item.buy_price)/item.buy_price)*mod);
+                const usedFx = isClosed ? (item.sell_fx_rate || item.buy_fx_rate) : item.buy_fx_rate;
+                const profPln = prof * usedFx;
+                const rr = (item.buy_price-item.sl!==0) ? ((item.tp-item.buy_price)*mod)/((item.buy_price-item.sl)*mod) : 0;
+                let prog = 0; if(item.tp-item.buy_price!==0) prog = ((cp-item.buy_price)*mod)/((item.tp-item.buy_price)*mod);
+                let dsl = item.sl;
+                if(prog >= 1) dsl = item.tp; else if(prog >= 0.5) dsl = item.buy_price + ((item.tp - item.buy_price)*(prog - 0.2)*mod); 
+                let pd = prog*100; let pc = 'var(--success)';
+                if(pd<0){ pc='var(--danger)'; pd = (item.buy_price-item.sl!==0) ? Math.abs(((cp-item.buy_price)*mod)/((item.buy_price-item.sl)*mod))*100 : 0; }
+                if(pd>100) pd=100;
 
-            const start = (currentTradePage - 1) * tradePageSize;
-            const displayed = tradesDataArray.slice(start, start + tradePageSize);
+                const actionHtml = isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})" style="color:var(--accent); border-color:var(--accent); margin-bottom:4px;">Sprzedaj</button>`;
 
-            displayed.forEach(item => {
-                const isLong = ['DBR', 'RBR'].includes(item.direction);
-                const mod = isLong ? 1 : -1;
-                
-                // Znajdź obecną cenę z bazy Yahoo (lub użyj ceny kupna jeśli błąd/weekend)
-                const tickerMeta = tickerDataArray.find(t => t.ticker === item.ticker);
-                const currentPrice = tickerMeta && tickerMeta.price ? tickerMeta.price : item.buy_price;
-
-                const value = item.spent * item.leverage; // Wartość (Wydano * Dźwignia)
-                
-                // --- MATEMATYKA ZYSKÓW ---
-                const priceMovePct = ((currentPrice - item.buy_price) / item.buy_price) * mod;
-                const profit = value * priceMovePct;
-                const currentValue = value + profit;
-                
-                // Wartość PLN na żywo na podstawie kursu bazowego (przybliżenie dla Otwartych)
-                const spentPln = item.spent * item.buy_fx_rate;
-                const profitPln = profit * item.buy_fx_rate;
-
-                // --- MATEMATYKA R:R i DYNAMIC STOP LOSS ---
-                const entry = item.buy_price;
-                const tp = item.tp;
-                let sl = item.sl;
-                
-                let rr = 0;
-                if(entry - sl !== 0) rr = ((tp - entry) * mod) / ((entry - sl) * mod);
-
-                // Progres drogi do TP
-                let progress = 0;
-                if(tp - entry !== 0) progress = ((currentPrice - entry) * mod) / ((tp - entry) * mod);
-                
-                // Mechanika kroczącego SL z wytycznych
-                let dynamicSl = sl;
-                if (progress >= 1.0) dynamicSl = tp;
-                else if (progress >= 0.5) {
-                    if (isLong) dynamicSl = entry + ((tp - entry) * (progress - 0.2));
-                    else dynamicSl = entry - ((entry - tp) * (progress - 0.2));
-                }
-
-                // Ograniczenia wizualne dla Paska Progresu
-                let progDraw = progress * 100;
-                let progColor = 'var(--success)';
-                if (progDraw < 0) {
-                    progColor = 'var(--danger)';
-                    // Progres stratny względem SL
-                    if (entry - sl !== 0) progDraw = Math.abs(((currentPrice - entry) * mod) / ((entry - sl) * mod)) * 100;
-                    else progDraw = 0;
-                }
-                if (progDraw > 100) progDraw = 100;
-
-                const profColor = profit >= 0 ? '#0ecb81' : '#f6465d';
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
+                return `<tr>
                     <td style="font-size:0.85em; color:var(--text-muted);">${item.buy_date}<br><b style="color:#eaecef;">#${item.id}</b></td>
                     <td><strong style="color:var(--accent);">${item.ticker}</strong><br><small>${item.stock_name}</small></td>
-                    <td>${item.spent.toFixed(2)} ${item.currency}<br><small>Wart: ${value.toFixed(2)} (x${item.leverage})</small></td>
-                    <td>
-                        <span style="color:var(--text-muted);">WE:</span> ${entry.toFixed(2)}$<br>
-                        <span style="color:var(--accent);">TERAZ:</span> <b>${currentPrice.toFixed(2)}$</b>
-                    </td>
-                    <td>
-                        <span style="color:var(--text-muted);">R:R</span> <b>${rr.toFixed(1)}</b><br>
-                        <span style="color:var(--accent);">Trail:</span> <b style="color:#fcd535;">${dynamicSl.toFixed(2)}$</b>
-                    </td>
-                    <td style="color:${profColor}; font-weight:bold;">${profit > 0 ? '+':''}${profit.toFixed(2)} ${item.currency}</td>
-                    <td style="color:${profColor}; font-weight:bold;">${profitPln > 0 ? '+':''}${profitPln.toFixed(2)} PLN</td>
-                    <td>
-                        <div style="font-size:0.8em; margin-bottom:3px; display:flex; justify-content:space-between;">
-                            <span>${progress < 0 ? 'STRATA' : 'ZYSK'}</span><span>${(progress*100).toFixed(0)}%</span>
-                        </div>
-                        <div style="width:100%; background:var(--bg-input); height:8px; border-radius:4px; overflow:hidden;">
-                            <div style="width:${progDraw}%; background:${progColor}; height:100%;"></div>
-                        </div>
-                    </td>
-                    <td>
-                        <button class="btn-delete" onclick="openCloseModal(${item.id})" style="color:var(--accent); border-color:var(--accent); margin-bottom:4px;">Sprzedaj</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-            
-            document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage} z ${Math.ceil(tradesDataArray.length / tradePageSize) || 1}`;
+                    <td>${item.spent.toFixed(2)}${item.currency}<br><small>Wart: ${val.toFixed(2)}(x${item.leverage})</small></td>
+                    <td>WE: ${item.buy_price}$<br>${isClosed?'<span style="color:var(--text-muted);">OUT:</span>':'TR:'} <b>${cp}$</b><br>${isClosed?`<small>${item.sell_date}</small>`:''}</td>
+                    <td>R:R <b>${rr.toFixed(1)}</b><br><b style="color:#fcd535;">SL: ${dsl.toFixed(2)}$</b></td>
+                    <td style="color:${prof>=0?'#0ecb81':'#f6465d'};"><b>${prof.toFixed(2)} ${item.currency}</b></td>
+                    <td style="color:${prof>=0?'#0ecb81':'#f6465d'};"><b>${profPln.toFixed(2)} PLN</b></td>
+                    <td><div style="font-size:0.8em; display:flex; justify-content:space-between;"><span>${prog<0?'STRATA':'ZYSK'}</span><span>${(prog*100).toFixed(0)}%</span></div><div style="background:var(--bg-input); height:8px; border-radius:4px; overflow:hidden;"><div style="width:${pd}%; background:${pc}; height:100%;"></div></div></td>
+                    <td>${actionHtml}</td>
+                </tr>`;
+            }).join('');
+            document.getElementById('trade-page-info').innerText = `Str ${currentTradePage}`;
         }
+        function changeTradePage(d) { currentTradePage+=d; renderTradesTable(); }
 
-        function changeTradePage(d) {
-            const total = Math.ceil(tradesDataArray.length / tradePageSize) || 1;
-            if (currentTradePage + d >= 1 && currentTradePage + d <= total) {
-                currentTradePage += d;
-                renderTradesTable();
-            }
+        /* MODAL SPRZEDAŻY (KALKULATOR UŁAMKÓW) */
+        function openCloseModal(id) {
+            document.getElementById('sell-modal').style.display = 'flex'; document.getElementById('sell-trade-id').value = id;
+            document.getElementById('sell-date').valueAsDate = new Date(); document.getElementById('sell-price').value = '';
+            document.getElementById('sell-fraction').value = '1'; document.getElementById('sell-div').value = '0';
         }
-
-        // Proste symulowane okno do zamknięcia pozycji
-        async function openCloseModal(id) {
-            const price = prompt("Podaj cenę wyjścia z pozycji (Cena Sprzedaży):");
-            if(!price) return;
-            const date = prompt("Podaj datę zamknięcia (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-            if(!date) return;
-            const div = prompt("Otrzymana dywidenda (jeśli brak wpisz 0):", "0");
-            
+        function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
+        async function confirmSell() {
+            const id = document.getElementById('sell-trade-id').value; const price = parseFloat(document.getElementById('sell-price').value);
+            const date = document.getElementById('sell-date').value; const div = parseFloat(document.getElementById('sell-div').value);
+            const fracStr = document.getElementById('sell-fraction').value.trim();
+            if(!price || isNaN(price)) return alert('Podaj prawidłową cenę sprzedaży!');
+            let fraction = 1.0;
+            if(fracStr.includes('%')) fraction = parseFloat(fracStr.replace('%', '')) / 100.0;
+            else if(fracStr.includes('/')) { const p = fracStr.split('/'); fraction = parseFloat(p[0]) / parseFloat(p[1]); }
+            else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; }
+            if(isNaN(fraction) || fraction <= 0 || fraction > 1.0) return alert('Błędna wartość ilości sprzedaży! Użyj formatu np. 1, 0.5, 50% lub 1/3');
             try {
-                await fetch(`${API_BASE_URL}/api/trades/update`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        id: id, 
-                        updates: { 
-                            sell_price: parseFloat(price), 
-                            sell_date: date,
-                            dividend: parseFloat(div)
-                        } 
-                    })
-                });
-                alert("Pozycja pomyślnie zamknięta. Przeniesiono do modułu Summary (w budowie).");
-                fetchTradesEntries();
-            } catch(e) { console.error(e); }
+                const res = await fetch(`${API_BASE_URL}/api/trades/close`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, dividend: div }) });
+                if(res.ok) { alert(fraction < 0.99 ? 'Częściowo zamknięto pozycję!' : 'Pozycja zamknięta!'); closeSellModal(); fetchTradesEntries(); } 
+                else { const err = await res.json(); alert('Błąd: ' + err.message); }
+            } catch(e) {}
         }
+
+        /* INNE SERWISY */
+        async function forceAlertsCheck() { await fetch(`${API_BASE_URL}/api/cron/check-alerts`); alert("Alerty SMC sprawdzone."); }
+        async function forceCronPricesUpdate() { await fetch(`${API_BASE_URL}/api/cron/update-prices`); alert("Ceny w tle zaktualizowane."); loadDatabase(); }
     </script>
+</body>
+</html>
