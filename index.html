@@ -831,8 +831,24 @@
         </div>
     </section>
 
-    <section id="service-module" class="app-module">
-        <h2>Serwisy i Integracje</h2>
+<section id="service-module" class="app-module">
+        <h2>Serwisy i Integracje (Panel Admina)</h2>
+        <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">
+            Ręczne wymuszanie procesów asynchronicznych bez czekania na automatyczny interwał CRON.
+        </p>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;">
+                <span>🔔</span> Wymuś sprawdzenie alertów i zleceń (SMC)
+            </button>
+            
+            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;">
+                <span>📈</span> Wymuś globalną aktualizację cen z Yahoo (Tło)
+            </button>
+        </div>
+        
+        <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: var(--text-muted); display: none;">
+        </div>
     </section>
 
     <section id="technicalanalysis-module" class="app-module">
