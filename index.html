@@ -768,7 +768,7 @@
                     <table id="journal-table">
                         <thead>
                             <tr>
-                                <th>Data</th>
+                                <th>ID Focus</th> <th>Data</th>
                                 <th>ID Form</th>
                                 <th>Ticker</th>
                                 <th>Punkty</th>
@@ -1915,13 +1915,14 @@
             } catch(e) { console.error(e); }
         }
 
-        function renderFocusTable() {
+function renderFocusTable() {
             const tbody = document.getElementById('focus-table-body');
             if(!tbody) return;
             tbody.innerHTML = '';
 
             if (focusDataArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:20px;">Brak analiz Focus.</td></tr>`;
+                // Zmiana colspan na 9, żeby dopasować do nowej liczby kolumn
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding:20px;">Brak analiz Focus.</td></tr>`;
                 return;
             }
 
@@ -1935,7 +1936,7 @@
                 const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-';
                 
                 tr.innerHTML = `
-                    <td>${dateStr}</td>
+                    <td style="color: var(--text-muted); font-size: 0.85em; font-weight: bold;">#${item.id}</td> <td>${dateStr}</td>
                     <td style="font-weight:bold; color:var(--accent);">${item.entry_id}</td>
                     <td style="font-weight:bold;">${item.ticker}</td>
                     <td style="font-weight:bold; color:#a6e3a1;">${Number(item.points_total).toFixed(1)}/25</td>
