@@ -1075,6 +1075,12 @@
         let currentTickerPage = 1;
         const tickerPageSize = 20;
 
+        // --- STAN STRONICOWANIA DLA MODUŁU FOCUS ---
+        let focusDataArray = [];
+        let currentFocusPage = 1;
+        const focusPageSize = 20; 
+        let formEntriesGlobal = []; // Do listy rozwijanej
+
         // --- NAWIGACJA SPA (Single Page Application) ---
         function openModule(moduleId, moduleTitle) {
             document.getElementById('dashboard').style.display = 'none';
@@ -1099,6 +1105,9 @@
             }
             if (moduleId === 'form-module') {
                 initFormModule();
+            }
+            if (moduleId === 'focus-module') {
+                initFocusModule();
             }
         }
 
@@ -1315,7 +1324,6 @@
         }
 
         // --- LOGIKA MODUŁU ALERT HISTORY ---
-// --- LOGIKA MODUŁU ALERT HISTORY ---
         async function loadAlertHistory() {
             const tbody = document.getElementById("alert-history-tbody");
             if (!tbody) return;
@@ -1518,9 +1526,9 @@
                 let valA = a[formSortKey] || '';
                 let valB = b[formSortKey] || '';
                 
-if (formSortKey === 'score' || formSortKey === 'priority' || formSortKey === 'mute') {
-            return formSortDir === 'asc' ? valA - valB : valB - valA;
-        }
+                if (formSortKey === 'score' || formSortKey === 'priority' || formSortKey === 'mute') {
+                    return formSortDir === 'asc' ? valA - valB : valB - valA;
+                }
                 
                 if (valA < valB) return formSortDir === 'asc' ? -1 : 1;
                 if (valA > valB) return formSortDir === 'asc' ? 1 : -1;
@@ -1542,55 +1550,54 @@ if (formSortKey === 'score' || formSortKey === 'priority' || formSortKey === 'mu
             if (itemsToDisplay.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding: 20px;">Brak wpisów.</td></tr>`;
             } else {
-itemsToDisplay.forEach(item => {
-                const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
-                const mod = isLong ? 1 : -1;
-                const tp = parseFloat(item.take_profit);
-                const entry = parseFloat(item.entry_point);
-                const sl = parseFloat(item.stop_loss);
-                
-                let rr = 0;
-                if(entry - sl !== 0) rr = ((tp - entry) * mod) / ((entry - sl) * mod);
+                itemsToDisplay.forEach(item => {
+                    const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
+                    const mod = isLong ? 1 : -1;
+                    const tp = parseFloat(item.take_profit);
+                    const entry = parseFloat(item.entry_point);
+                    const sl = parseFloat(item.stop_loss);
+                    
+                    let rr = 0;
+                    if(entry - sl !== 0) rr = ((tp - entry) * mod) / ((entry - sl) * mod);
 
-                const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
-                const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
-                const diff = (Math.abs(currentPrice - entry) / entry) * 100;
-                
-                let status = 'Obserwacja';
-                let statusColor = '#848e9c';
-                if(diff > 15) { status = 'Ignorowanie'; statusColor = '#f6465d'; }
-                else if(diff > 10) { status = 'Czekanie'; statusColor = '#fcd535'; }
-                else if(diff <= 10 && item.priority === 1) { status = 'Skupienie'; statusColor = '#0ecb81'; }
-                
-                const tvLink = getTradingViewLink(item.ticker);
+                    const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
+                    const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
+                    const diff = (Math.abs(currentPrice - entry) / entry) * 100;
+                    
+                    let status = 'Obserwacja';
+                    let statusColor = '#848e9c';
+                    if(diff > 15) { status = 'Ignorowanie'; statusColor = '#f6465d'; }
+                    else if(diff > 10) { status = 'Czekanie'; statusColor = '#fcd535'; }
+                    else if(diff <= 10 && item.priority === 1) { status = 'Skupienie'; statusColor = '#0ecb81'; }
+                    
+                    const tvLink = getTradingViewLink(item.ticker);
 
-                // Mapowanie priorytetu na czytelną etykietę wizualną
-// Pobieranie wartości wyciszenia (zabezpieczenie jeśli jest stare, to domyślnie 1)
-                const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
+                    const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
 
-                // Interaktywne etykiety (Kliknięcie wysyła odwrotną wartość do bazy)
-                const priorityBadge = item.priority === 1 
-                    ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535; padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` 
-                    : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
+                    const priorityBadge = item.priority === 1 
+                        ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535; padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` 
+                        : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
 
-                const muteBadge = muteVal === 1
-                    ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>`
-                    : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
+                    const muteBadge = muteVal === 1
+                        ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>`
+                        : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success); padding-bottom: 2px;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="font-weight:bold;">${item.entry_id}</td>
-                    <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
-                    <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
-                    <td style="font-weight: 600;">${entry.toFixed(2)} $</td>
-                    <td>${priorityBadge}</td>  <td>${muteBadge}</td>      <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
-                    <td>${rr.toFixed(2)}</td>
-                    <td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
-                    <td><a href="${tvLink}" target="_blank" style="text-decoration:none;">📈 Link</a></td>
-                    <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="color: var(--danger); background: none; border: 1px solid var(--danger); padding: 3px 8px; border-radius: 4px; cursor: pointer;">Usuń</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight:bold;">${item.entry_id}</td>
+                        <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
+                        <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
+                        <td style="font-weight: 600;">${entry.toFixed(2)} $</td>
+                        <td>${priorityBadge}</td>
+                        <td>${muteBadge}</td>
+                        <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
+                        <td>${rr.toFixed(2)}</td>
+                        <td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
+                        <td><a href="${tvLink}" target="_blank" style="text-decoration:none;">📈 Link</a></td>
+                        <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="color: var(--danger); background: none; border: 1px solid var(--danger); padding: 3px 8px; border-radius: 4px; cursor: pointer;">Usuń</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             }
             
             const totalPages = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
@@ -1674,7 +1681,7 @@ itemsToDisplay.forEach(item => {
                     body: JSON.stringify({ entry_id: entryId, field: field, value: newValue })
                 });
                 if(res.ok) {
-                    fetchFormEntries(); // Ciche i szybkie odświeżenie tabeli po zmianie wartości
+                    fetchFormEntries(); 
                 } else {
                     const err = await res.json();
                     alert('Błąd aktualizacji: ' + err.message);
@@ -1770,7 +1777,8 @@ itemsToDisplay.forEach(item => {
                 linkEl.style.display = 'none';
             }
         }
-        // RĘCZNE WYWOŁANIE SPRAWDZANIA ALERTÓW
+        
+        // --- SERWISY (MANUALNE WYZWALANIE) ---
         async function forceAlertsCheck() {
             const out = document.getElementById('service-output');
             out.style.display = 'block';
@@ -1781,7 +1789,6 @@ itemsToDisplay.forEach(item => {
                 const result = await res.json();
                 if(res.ok) {
                     out.innerHTML = `✅ <strong>Skrypt wykonany pomyślnie.</strong><br>Aktywowane zlecenia: ${result.alerts_triggered || 0}`;
-                    // Odświeżamy moduł form na wypadek gdyby jakaś pozycja została wyciszona
                     if (document.getElementById('form-module').style.display === 'block') {
                         fetchFormEntries();
                     }
@@ -1794,7 +1801,6 @@ itemsToDisplay.forEach(item => {
             }
         }
 
-        // RĘCZNE WYWOŁANIE GLOBALNEJ AKTUALIZACJI CEN
         async function forceCronPricesUpdate() {
             const out = document.getElementById('service-output');
             out.style.display = 'block';
@@ -1813,5 +1819,157 @@ itemsToDisplay.forEach(item => {
                 out.innerHTML = `❌ Błąd sieci.`;
             }
         }
+
+        // ==========================================
+        // LOGIKA MODUŁU FOCUS
+        // ==========================================
+        async function initFocusModule() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/form/entries`);
+                formEntriesGlobal = await res.json();
+                const select = document.getElementById('focus-form-id');
+                select.innerHTML = '';
+                formEntriesGlobal.forEach(e => {
+                    select.innerHTML += `<option value="${e.entry_id}">${e.entry_id} (${e.ticker} - ${e.direction})</option>`;
+                });
+                onFocusIdChange();
+                fetchFocusEntries();
+            } catch(e) { console.error(e); }
+            
+            // Rejestracja eventu (używamy poprawnego zapisu)
+            const focusForm = document.getElementById('focus-form');
+            if (focusForm) {
+                focusForm.onsubmit = async function(event) {
+                    event.preventDefault();
+                    
+                    const data = {
+                        entry_id: document.getElementById('focus-form-id').value,
+                        ticker: document.getElementById('focus-ticker').value,
+                        direction: document.getElementById('focus-direction').value,
+                        candle_score: document.getElementById('focus-candle').value,
+                        volume_score: document.getElementById('focus-volume').value,
+                        gap_score: document.getElementById('focus-gap').value,
+                        calendar_score: document.getElementById('focus-calendar').value,
+                        cvd_score: document.getElementById('focus-cvd').value,
+                        vix_score: document.getElementById('focus-vix').value,
+                        index_score: document.getElementById('focus-index').value,
+                        htf_score: document.getElementById('focus-htf').value,
+                        deposit_total: document.getElementById('focus-deposit-total').value
+                    };
+
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/api/focus/add`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(data)
+                        });
+                        const resData = await res.json();
+                        if(res.ok) {
+                            alert('Analiza punktowa Focus zapisana!');
+                            fetchFocusEntries();
+                        } else {
+                            alert('Błąd: ' + resData.message);
+                        }
+                    } catch(err) { console.error(err); }
+                };
+            }
+        }
+
+        function onFocusIdChange() {
+            const selectedId = document.getElementById('focus-form-id').value;
+            const entry = formEntriesGlobal.find(e => e.entry_id === selectedId);
+            if(entry) {
+                document.getElementById('focus-ticker').value = entry.ticker;
+                document.getElementById('focus-direction').value = entry.direction;
+            }
+        }
+
+        async function autoCalculateSMC() {
+            const ticker = document.getElementById('focus-ticker').value;
+            const direction = document.getElementById('focus-direction').value;
+            if(!ticker) return alert('Najpierw wybierz prawidłowy Setup ID!');
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ticker, direction })
+                });
+                const automatic = await res.json();
+                
+                document.getElementById('focus-candle').value = automatic.candle_score;
+                document.getElementById('focus-volume').value = automatic.volume_score;
+                document.getElementById('focus-vix').value = automatic.vix_score;
+                document.getElementById('focus-index').value = automatic.index_score;
+                
+                alert('SMC przeliczone na podstawie danych Yahoo Finance intraday!');
+            } catch(e) { console.error(e); }
+        }
+
+        async function fetchFocusEntries() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/focus/entries`);
+                focusDataArray = await res.json();
+                currentFocusPage = 1;
+                renderFocusTable();
+            } catch(e) { console.error(e); }
+        }
+
+        function renderFocusTable() {
+            const tbody = document.getElementById('focus-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            if (focusDataArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:20px;">Brak analiz Focus.</td></tr>`;
+                return;
+            }
+
+            const totalPages = Math.ceil(focusDataArray.length / focusPageSize) || 1;
+            const start = (currentFocusPage - 1) * focusPageSize;
+            const end = start + focusPageSize;
+            const displayed = focusDataArray.slice(start, end);
+
+            displayed.forEach(item => {
+                const tr = document.createElement('tr');
+                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-';
+                
+                tr.innerHTML = `
+                    <td>${dateStr}</td>
+                    <td style="font-weight:bold; color:var(--accent);">${item.entry_id}</td>
+                    <td style="font-weight:bold;">${item.ticker}</td>
+                    <td style="font-weight:bold; color:#a6e3a1;">${Number(item.points_total).toFixed(1)}/25</td>
+                    <td><strong>${(Number(item.final_ratio)*100).toFixed(0)}%</strong></td>
+                    <td style="color: var(--accent); font-weight:bold;">${Number(item.allocated_pct).toFixed(1)}%</td>
+                    <td style="font-weight:600; color:#0ecb81;">${Number(item.allocated_cash).toFixed(2)} ${item.currency}</td>
+                    <td><button class="btn-delete" onclick="deleteFocusEntry(${item.id})">Usuń</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('focus-page-info').innerText = `Strona ${currentFocusPage} z ${totalPages}`;
+            document.getElementById('focus-prev-page').disabled = (currentFocusPage === 1);
+            document.getElementById('focus-next-page').disabled = (currentFocusPage === totalPages);
+        }
+
+        function changeFocusPage(direction) {
+            const totalPages = Math.ceil(focusDataArray.length / focusPageSize) || 1;
+            const target = currentFocusPage + direction;
+            if(target >= 1 && target <= totalPages) {
+                currentFocusPage = target;
+                renderFocusTable();
+            }
+        }
+
+        async function deleteFocusEntry(id) {
+            if(!confirm('Usunąć ten wpis z analizy Focus?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/focus/delete`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id })
+                });
+                if(res.ok) fetchFocusEntries();
+            } catch(e) { console.error(e); }
+        }
     </script>
-</html>
