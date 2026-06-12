@@ -777,7 +777,7 @@
 
             fetch(`${API_BASE_URL}/api/macro/history`)
                 .then(r => r.json())
-                .then(data => { macroDataArray = data || []; currentMacroPage = 1; renderMacroTable(); })
+                .then(data => { macroDataArray = Array.isArray(data) ? data : []; currentMacroPage = 1; renderMacroTable(); })
                 .catch(e => { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#dc3545;">Błąd API</td></tr>`; });
         }
 
@@ -825,7 +825,8 @@
         async function loadDatabase() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/database`);
-                tickerDataArray = await response.json() || [];
+                const dt = await response.json();
+                tickerDataArray = Array.isArray(dt) ? dt : [];
                 renderMobileList();
             } catch (e) {}
         }
@@ -865,25 +866,26 @@
         async function addTicker() {
             const t = document.getElementById('new-ticker').value.trim().toUpperCase();
             if (!t) return;
-            const res = await fetch(`${API_BASE_URL}/api/database/add`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ ticker: t }) 
-            });
-            if (res.ok) { 
-                document.getElementById('new-ticker').value = ''; 
-                loadDatabase(); 
-            }
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/database/add`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ ticker: t }) 
+                });
+                if (res.ok) { document.getElementById('new-ticker').value = ''; loadDatabase(); }
+            } catch (e) {}
         }
 
         async function removeTicker(t) {
             if (!confirm(`Usunąć ${t}?`)) return;
-            const res = await fetch(`${API_BASE_URL}/api/database/delete`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ ticker: t }) 
-            });
-            if (res.ok) loadDatabase();
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/database/delete`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ ticker: t }) 
+                });
+                if (res.ok) loadDatabase();
+            } catch (e) {}
         }
 
         // ==========================================
@@ -897,7 +899,8 @@
         async function loadAlertHistory() { 
             try { 
                 const r = await fetch(`${API_BASE_URL}/api/alerts/history`); 
-                allAlertsData = await r.json() || []; 
+                const data = await r.json(); 
+                allAlertsData = Array.isArray(data) ? data : [];
                 handleAlertsFilter();
             } catch(e){} 
         }
@@ -967,12 +970,12 @@
         }
 
         async function deleteAlert(id) { 
-            await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {
-                method:'POST', 
-                headers:{'Content-Type':'application/json'}, 
-                body:JSON.stringify({id})
-            }); 
-            loadAlertHistory(); 
+            try {
+                await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {
+                    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})
+                }); 
+                loadAlertHistory(); 
+            } catch(e) {}
         }
 
         // ==========================================
@@ -984,15 +987,17 @@
                 const data = await response.json();
                 const container = document.getElementById('dailybrief-carousel');
                 container.innerHTML = ''; 
-                data.forEach(item => {
-                    container.innerHTML += `
-                        <div class="brief-card">
-                            <h4>${item.title}</h4>
-                            <div class="brief-text">${item.summary}</div>
-                            <div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div>
-                        </div>
-                    `;
-                });
+                if(Array.isArray(data)) {
+                    data.forEach(item => {
+                        container.innerHTML += `
+                            <div class="brief-card">
+                                <h4>${item.title}</h4>
+                                <div class="brief-text">${item.summary}</div>
+                                <div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div>
+                            </div>
+                        `;
+                    });
+                }
             } catch (error) {}
         }
 
@@ -1017,9 +1022,9 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/form/entries`);
                 const rawData = await response.json();
-                formEntries = rawData.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 }));
+                formEntries = Array.isArray(rawData) ? rawData.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : [];
                 applyFormFilterAndSort(); 
-            } catch (error) {}
+            } catch (error) { formEntries = []; applyFormFilterAndSort(); }
         }
 
         function handleFormFilter(value) { 
@@ -1133,33 +1138,33 @@
                 return alert('Uzupełnij wszystkie pola liczbowe!');
             }
             
-            await fetch(`${API_BASE_URL}/api/form/add`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(data) 
-            });
-            document.getElementById('trading-form').reset(); 
-            fetchFormEntries(); 
-            loadFormReasons();
+            try {
+                await fetch(`${API_BASE_URL}/api/form/add`, { 
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) 
+                });
+                document.getElementById('trading-form').reset(); 
+                fetchFormEntries(); 
+                loadFormReasons();
+            } catch(err) {}
         }
         
         async function deleteAdvancedFormEntry(id) {
             if(!confirm('Usunąć?')) return;
-            await fetch(`${API_BASE_URL}/api/form/delete`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({id: id}) 
-            });
-            fetchFormEntries();
+            try {
+                await fetch(`${API_BASE_URL}/api/form/delete`, { 
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) 
+                });
+                fetchFormEntries();
+            } catch(e) {}
         }
 
         async function updateFormEntryField(entryId, field, newValue) {
-            await fetch(`${API_BASE_URL}/api/form/update`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) 
-            });
-            fetchFormEntries(); 
+            try {
+                await fetch(`${API_BASE_URL}/api/form/update`, { 
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) 
+                });
+                fetchFormEntries(); 
+            } catch(e){}
         }
 
         async function loadFormReasons() {
@@ -1168,7 +1173,9 @@
                 const reasons = await res.json();
                 const datalist = document.getElementById('reasons-list');
                 datalist.innerHTML = '';
-                reasons.forEach(r => { datalist.innerHTML += `<option value="${r}">`; });
+                if(Array.isArray(reasons)) {
+                    reasons.forEach(r => { datalist.innerHTML += `<option value="${r}">`; });
+                }
             } catch(e) {}
         }
 
@@ -1225,7 +1232,7 @@
         }
 
         // ==========================================
-        // NOWOŚĆ: LOGIKA MODUŁU FOCUSLIST
+        // 5. MODUŁ FOCUSLIST
         // ==========================================
         let filteredFocusListEntries = [];
         let currentFocusListPage = 1;
@@ -1333,14 +1340,16 @@
         }
 
         // ==========================================
-        // LOGIKA MODUŁU FOCUS
+        // 6. MODUŁ FOCUS
         // ==========================================
         async function initFocusModule() {
-            const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
-            formEntriesGlobal = await res.json();
-            document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join('');
-            onFocusIdChange(); 
-            fetchFocusEntries();
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
+                formEntriesGlobal = await res.json();
+                document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join('');
+                onFocusIdChange(); 
+                fetchFocusEntries();
+            } catch(e) {}
         }
 
         function onFocusIdChange() {
@@ -1356,9 +1365,7 @@
             const d = document.getElementById('focus-direction').value;
             try {
                 const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({ticker:t, direction:d})
+                    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d})
                 });
                 const r = await res.json();
                 document.getElementById('focus-candle').value = r.candle_score; 
@@ -1369,13 +1376,17 @@
         }
 
         async function fetchFocusEntries() { 
-            const r = await fetch(`${API_BASE_URL}/api/focus/entries`); 
-            focusDataArray = await r.json(); 
-            renderFocusTable(); 
+            try {
+                const r = await fetch(`${API_BASE_URL}/api/focus/entries`); 
+                const data = await r.json(); 
+                focusDataArray = Array.isArray(data) ? data : [];
+                renderFocusTable(); 
+            } catch(e) { focusDataArray = []; }
         }
 
         function renderFocusTable() {
             const tb = document.getElementById('focus-table-body');
+            if(focusDataArray.length === 0) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center;">Brak wpisów Focus</td></tr>`; return;}
             tb.innerHTML = focusDataArray.slice((currentFocusPage-1)*focusPageSize, currentFocusPage*focusPageSize).map(i => `
                 <tr>
                     <td style="color:#777;">#${i.id}</td>
@@ -1393,17 +1404,15 @@
         }
 
         function changeFocusPage(d) { 
-            currentFocusPage += d; 
-            renderFocusTable(); 
+            const total = Math.ceil(focusDataArray.length / focusPageSize) || 1;
+            if (currentFocusPage + d >= 1 && currentFocusPage + d <= total) { currentFocusPage += d; renderFocusTable(); }
         }
 
         async function deleteFocusEntry(id) { 
-            await fetch(`${API_BASE_URL}/api/focus/delete`,{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({id})
-            }); 
-            fetchFocusEntries(); 
+            try {
+                await fetch(`${API_BASE_URL}/api/focus/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); 
+                fetchFocusEntries(); 
+            } catch(e){}
         }
 
         async function submitFocusForm(e) { 
@@ -1420,228 +1429,15 @@
                 index_score:document.getElementById('focus-index').value, 
                 htf_score:document.getElementById('focus-htf').value
             }; 
-            await fetch(`${API_BASE_URL}/api/focus/add`,{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify(d)
-            }); 
-            fetchFocusEntries(); 
-        }
-
-        // ==========================================
-        // LOGIKA MODUŁU TRADES LIST & SUMMARY
-        // ==========================================
-        function switchSummaryTab(tab) {
-            document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active'));
-            event.currentTarget.classList.add('active'); 
-            document.getElementById('tab-'+tab).classList.add('active');
-            if(tab === 'dashboard' && summaryChartInstance) summaryChartInstance.update();
-        }
-
-        async function loadSummaryData() {
             try {
-                const r = await fetch(`${API_BASE_URL}/api/portfolio/summary`); 
-                const d = await r.json();
-                document.getElementById('kpi-deposits').innerText = `${Number(d.total_deposits).toFixed(2)} PLN`; 
-                document.getElementById('kpi-pnl').innerText = `${Number(d.total_pnl).toFixed(2)} PLN`; 
-                document.getElementById('kpi-capital').innerText = `${Number(d.current_capital).toFixed(2)} PLN`; 
-                document.getElementById('kpi-allocated').innerText = `${Number(d.allocated_capital).toFixed(2)} PLN`; 
-                document.getElementById('kpi-available').innerText = `${Number(d.available_cash).toFixed(2)} PLN`;
-                
-                const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); 
-                depositsDataArray = await rD.json() || [];
-                renderDepositsTable();
-                calculateAndRenderSummary();
+                await fetch(`${API_BASE_URL}/api/focus/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) }); 
+                fetchFocusEntries(); 
             } catch(e) {}
         }
 
-        function calculateAndRenderSummary() {
-            let totalDepositsPln = 0;
-            depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount));
-
-            let totalClosedPnlPln = 0;
-            let openInvestedPln = 0;
-            let openProfitPln = 0;
-            let openLevValuePln = 0;
-            
-            const currBreakdown = { PLN: 0, USD: 0, EUR: 0 };
-            const openGrouped = {};
-            const closedByMonth = {};
-            const closedByCurr = {};
-            const closedByLev = {};
-
-            allTradesData.forEach(trade => {
-                const s = calculateTradeStats(trade);
-                if (s.isClosed) {
-                    totalClosedPnlPln += s.profPln;
-                    
-                    const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak';
-                    if(!closedByMonth[month]) closedByMonth[month] = 0;
-                    closedByMonth[month] += s.profPln;
-
-                    if(!closedByCurr[trade.currency]) closedByCurr[trade.currency] = 0;
-                    closedByCurr[trade.currency] += s.profPln;
-
-                    const lev = trade.leverage.toString();
-                    if(!closedByLev[lev]) closedByLev[lev] = 0;
-                    closedByLev[lev] += s.profPln;
-
-                } else {
-                    openInvestedPln += s.spentPln;
-                    openProfitPln += s.profPln;
-                    openLevValuePln += s.valPln + s.profPln; 
-                    
-                    const valInCurr = trade.spent + s.prof;
-                    if(currBreakdown[trade.currency] !== undefined) currBreakdown[trade.currency] += valInCurr;
-
-                    if(!openGrouped[trade.ticker]) openGrouped[trade.ticker] = {inv:0, prof:0, valLev:0, curr: trade.currency};
-                    openGrouped[trade.ticker].inv += trade.spent;
-                    openGrouped[trade.ticker].prof += s.prof;
-                    openGrouped[trade.ticker].valLev += s.val + s.prof;
-                }
-            });
-
-            const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
-            const freeCashPln = currentCapitalPln - openInvestedPln;
-            const openPositionsValuePln = openInvestedPln + openProfitPln;
-            const totalPortfolioValuePln = freeCashPln + openPositionsValuePln;
-            
-            let roiPct = 0;
-            if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
-            
-            let levPct = 0;
-            if (totalPortfolioValuePln > 0) levPct = (openLevValuePln / totalPortfolioValuePln) * 100;
-
-            document.getElementById('s-dep').innerText = totalDepositsPln.toFixed(2) + ' PLN';
-            document.getElementById('s-pnl').innerText = totalClosedPnlPln.toFixed(2) + ' PLN';
-            document.getElementById('s-pnl').style.color = totalClosedPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            
-            document.getElementById('s-openpnl').innerText = openProfitPln.toFixed(2) + ' PLN';
-            document.getElementById('s-openpnl').style.color = openProfitPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            
-            document.getElementById('s-cash').innerText = freeCashPln.toFixed(2) + ' PLN';
-            document.getElementById('s-cash').style.color = freeCashPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            
-            document.getElementById('s-total').innerText = totalPortfolioValuePln.toFixed(2) + ' PLN';
-            
-            document.getElementById('s-roi').innerText = roiPct.toFixed(2) + ' %';
-            document.getElementById('s-roi').style.color = roiPct >= 0 ? 'var(--success)' : 'var(--danger)';
-
-            document.getElementById('s-levval').innerText = openLevValuePln.toFixed(2) + ' PLN';
-            document.getElementById('s-levpct').innerText = levPct.toFixed(2) + ' %';
-
-            document.getElementById('s-curr-breakdown').innerHTML = `
-                <tr><td>PLN</td><td style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr>
-                <tr><td>USD</td><td style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr>
-                <tr><td>EUR</td><td style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>
-            `;
-
-            drawSummaryChart(roiPct);
-
-            window.summaryOpenData = Object.keys(openGrouped).map(k => ({ ticker: k, ...openGrouped[k] }));
-            renderSummaryOpen();
-
-            const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML='';
-            Object.keys(closedByMonth).sort().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; });
-            
-            const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML='';
-            Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; });
-            
-            const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML='';
-            Object.keys(closedByLev).sort().forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; });
-        }
-
-        function renderSummaryOpen() {
-            const tb = document.getElementById('s-open-tbody');
-            const fCur = document.getElementById('s-open-cur-filter').value;
-            
-            let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur);
-            data.sort((a,b) => {
-                let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey];
-                if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
-                return summaryOpenSortDir==='asc' ? va-vb : vb-va;
-            });
-
-            if(data.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center;">Brak otwartych pozycji</td></tr>`; return; }
-            tb.innerHTML = data.map(i => `<tr>
-                <td style="font-weight:bold; color:var(--accent);">${i.ticker}</td>
-                <td>${i.inv.toFixed(2)} ${i.curr}</td>
-                <td style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td>
-                <td>${i.valLev.toFixed(2)} ${i.curr}</td>
-            </tr>`).join('');
-        }
-
-        function sortSummaryOpen(key) {
-            summaryOpenSortDir = (summaryOpenSortKey===key && summaryOpenSortDir==='desc') ? 'asc' : 'desc';
-            summaryOpenSortKey = key; renderSummaryOpen();
-        }
-
-        function renderDepositsTable() {
-            const tb = document.getElementById('deposits-table-body');
-            if(depositsDataArray.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;">Brak wpłat.</td></tr>'; return; }
-            tb.innerHTML = depositsDataArray.map(x => `<tr>
-                <td>${x.created_at}</td>
-                <td style="font-weight:bold;">${Number(x.amount).toFixed(2)} ${x.currency || 'PLN'}</td>
-                <td style="color:var(--text-muted);">${x.currency || 'PLN'}</td>
-                <td style="color:var(--success); font-weight:bold;">${Number(x.amount_pln||x.amount).toFixed(2)} PLN</td>
-                <td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td>
-            </tr>`).join('');
-        }
-
-        async function addDeposit(e) { 
-            e.preventDefault();
-            const amt = document.getElementById('dep-amt').value; 
-            const d = document.getElementById('dep-date').value; 
-            const cur = document.getElementById('dep-cur').value;
-            await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); 
-            loadSummaryData();
-            document.getElementById('dep-amt').value = '';
-        }
-
-        async function deleteDeposit(id) { 
-            if(!confirm("Na pewno usunąć? Saldo ulegnie zmianie.")) return;
-            await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); 
-            loadSummaryData(); 
-        }
-
-        function drawSummaryChart(roiPct) {
-            let sp500Change = 0;
-            if(macroDataArray.length > 1) {
-                const oldest = macroDataArray[macroDataArray.length-1].sp500;
-                const newest = macroDataArray[0].sp500;
-                if(oldest && newest) sp500Change = ((newest - oldest) / oldest) * 100;
-            }
-
-            const ctx = document.getElementById('roiChart').getContext('2d');
-            if(summaryChartInstance) summaryChartInstance.destroy();
-            summaryChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Twój Portfel (ROI %)', 'S&P 500 (Dla danych z bazy)'],
-                    datasets: [{
-                        label: '% Zmiany',
-                        data: [roiPct, sp500Change],
-                        backgroundColor: [
-                            roiPct >= 0 ? 'rgba(14, 203, 129, 0.7)' : 'rgba(246, 70, 93, 0.7)',
-                            'rgba(137, 180, 250, 0.7)'
-                        ],
-                        borderColor: [
-                            roiPct >= 0 ? '#0ecb81' : '#f6465d',
-                            '#89b4fa'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, grid: {color: '#313244'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4'} } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
+        // ==========================================
+        // 7. MODUŁ TRADES LIST
+        // ==========================================
         async function initTradesModule() {
             if(focusDataArray.length === 0) await fetchFocusEntries();
             document.getElementById('trade-focus-id').innerHTML = '<option value="">Wybierz...</option>' + focusDataArray.map(f => `<option value="${f.id}">#${f.id} - ${f.ticker} (Max: ${f.allocated_cash} ${f.currency})</option>`).join('');
@@ -1654,23 +1450,23 @@
             const focus = focusDataArray.find(f => f.id == fid); 
             if(!focus) return;
             
-            const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); 
-            const form = formDb.find(frm => frm.entry_id === focus.entry_id);
-            
-            document.getElementById('trade-ticker').value = focus.ticker; 
-            document.getElementById('trade-form-id').value = focus.entry_id; 
-            document.getElementById('trade-currency').value = focus.currency; 
-            document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; 
-            document.getElementById('trade-score').value = focus.points_total;
-            
-            if(form) { 
-                document.getElementById('trade-direction').value = form.direction; 
-                document.getElementById('trade-tp').value = form.take_profit; 
-                document.getElementById('trade-sl').value = form.stop_loss; 
-            }
-            
-            document.getElementById('trade-name').value = 'Wyszukiwanie...';
-            try { 
+            try {
+                const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); 
+                const form = formDb.find(frm => frm.entry_id === focus.entry_id);
+                
+                document.getElementById('trade-ticker').value = focus.ticker; 
+                document.getElementById('trade-form-id').value = focus.entry_id; 
+                document.getElementById('trade-currency').value = focus.currency; 
+                document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; 
+                document.getElementById('trade-score').value = focus.points_total;
+                
+                if(form) { 
+                    document.getElementById('trade-direction').value = form.direction; 
+                    document.getElementById('trade-tp').value = form.take_profit; 
+                    document.getElementById('trade-sl').value = form.stop_loss; 
+                }
+                
+                document.getElementById('trade-name').value = 'Wyszukiwanie...';
                 const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); 
                 document.getElementById('trade-name').value = n.name || ''; 
             } catch(e){}
@@ -1705,9 +1501,7 @@
             
             try {
                 const res = await fetch(`${API_BASE_URL}/api/trades/add`,{
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify(data)
+                    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
                 });
                 if(res.ok) {
                     alert('Transakcja pomyślnie dopisana do portfolio!');
@@ -1718,8 +1512,11 @@
         }
 
         async function fetchTradesEntries() {
-            const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
-            allTradesData = await res.json();
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
+                const data = await res.json();
+                allTradesData = Array.isArray(data) ? data : [];
+            } catch(e) { allTradesData = []; }
             if(tickerDataArray.length === 0) await loadDatabase();
             handleTradesFilter();
             if(document.getElementById('summary-module').style.display === 'block') loadSummaryData();
@@ -1840,11 +1637,257 @@
             } catch(e) { console.error(e); }
         }
 
+        // ==========================================
+        // 8. MODUŁ SUMMARY (DASHBOARDS)
+        // ==========================================
+        let summaryOpenSortKey = 'valLev';
+        let summaryOpenSortDir = 'desc';
+
+        function switchSummaryTab(tab) {
+            document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active'); 
+            document.getElementById('tab-'+tab).classList.add('active');
+            if(tab === 'dashboard' && summaryChartInstance) summaryChartInstance.update();
+        }
+
+        async function initSummaryModule() {
+            if(allTradesData.length === 0) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
+                    const data = await res.json();
+                    allTradesData = Array.isArray(data) ? data : [];
+                } catch(e) { allTradesData = []; }
+            }
+            if(tickerDataArray.length === 0) await loadDatabase();
+            if(macroDataArray.length === 0) {
+                try {
+                    const mRes = await fetch(`${API_BASE_URL}/api/macro/history`);
+                    macroDataArray = await mRes.json() || [];
+                } catch(e) {}
+            }
+            
+            try {
+                const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`);
+                const dData = await rD.json();
+                depositsDataArray = Array.isArray(dData) ? dData : [];
+                renderDepositsTable();
+                calculateAndRenderSummary();
+            } catch(e){ console.error(e); }
+        }
+
+        async function loadSummaryData() {
+            if(document.getElementById('summary-module').style.display === 'block') {
+                initSummaryModule();
+            }
+        }
+
+        function calculateAndRenderSummary() {
+            if (!Array.isArray(depositsDataArray)) depositsDataArray = [];
+            if (!Array.isArray(allTradesData)) allTradesData = [];
+
+            let totalDepositsPln = 0;
+            depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount || 0));
+
+            let totalClosedPnlPln = 0;
+            let openInvestedPln = 0;
+            let openProfitPln = 0;
+            let openLevValuePln = 0;
+            
+            const currBreakdown = { PLN: 0, USD: 0, EUR: 0 };
+            const openGrouped = {};
+            const closedByMonth = {};
+            const closedByCurr = {};
+            const closedByLev = {};
+
+            allTradesData.forEach(trade => {
+                const s = calculateTradeStats(trade);
+                if (s.isClosed) {
+                    totalClosedPnlPln += s.profPln;
+                    
+                    const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak';
+                    if(!closedByMonth[month]) closedByMonth[month] = 0;
+                    closedByMonth[month] += s.profPln;
+
+                    if(!closedByCurr[trade.currency]) closedByCurr[trade.currency] = 0;
+                    closedByCurr[trade.currency] += s.profPln;
+
+                    const lev = trade.leverage.toString();
+                    if(!closedByLev[lev]) closedByLev[lev] = 0;
+                    closedByLev[lev] += s.profPln;
+
+                } else {
+                    openInvestedPln += s.spentPln;
+                    openProfitPln += s.profPln;
+                    openLevValuePln += s.valPln + s.profPln; 
+                    
+                    const valInCurr = trade.spent + s.prof;
+                    if(currBreakdown[trade.currency] !== undefined) currBreakdown[trade.currency] += valInCurr;
+
+                    if(!openGrouped[trade.ticker]) openGrouped[trade.ticker] = {inv:0, prof:0, valLev:0, curr: trade.currency};
+                    openGrouped[trade.ticker].inv += trade.spent;
+                    openGrouped[trade.ticker].prof += s.prof;
+                    openGrouped[trade.ticker].valLev += s.val + s.prof;
+                }
+            });
+
+            const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
+            const freeCashPln = currentCapitalPln - openInvestedPln;
+            const openPositionsValuePln = openInvestedPln + openProfitPln;
+            const totalPortfolioValuePln = freeCashPln + openPositionsValuePln;
+            
+            let roiPct = 0;
+            if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
+            
+            let levPct = 0;
+            if (totalPortfolioValuePln > 0) levPct = (openLevValuePln / totalPortfolioValuePln) * 100;
+
+            document.getElementById('s-dep').innerText = totalDepositsPln.toFixed(2) + ' PLN';
+            document.getElementById('s-pnl').innerText = totalClosedPnlPln.toFixed(2) + ' PLN';
+            document.getElementById('s-pnl').style.color = totalClosedPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            
+            document.getElementById('s-openpnl').innerText = openProfitPln.toFixed(2) + ' PLN';
+            document.getElementById('s-openpnl').style.color = openProfitPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            
+            document.getElementById('s-cash').innerText = freeCashPln.toFixed(2) + ' PLN';
+            document.getElementById('s-cash').style.color = freeCashPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            
+            document.getElementById('s-total').innerText = totalPortfolioValuePln.toFixed(2) + ' PLN';
+            
+            document.getElementById('s-roi').innerText = roiPct.toFixed(2) + ' %';
+            document.getElementById('s-roi').style.color = roiPct >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            document.getElementById('s-levval').innerText = openLevValuePln.toFixed(2) + ' PLN';
+            document.getElementById('s-levpct').innerText = levPct.toFixed(2) + ' %';
+
+            document.getElementById('s-curr-breakdown').innerHTML = `
+                <tr><td>PLN</td><td style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr>
+                <tr><td>USD</td><td style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr>
+                <tr><td>EUR</td><td style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>
+            `;
+
+            drawSummaryChart(roiPct);
+
+            window.summaryOpenData = Object.keys(openGrouped).map(k => ({ ticker: k, ...openGrouped[k] }));
+            renderSummaryOpen();
+
+            const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML='';
+            Object.keys(closedByMonth).sort().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; });
+            
+            const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML='';
+            Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; });
+            
+            const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML='';
+            Object.keys(closedByLev).sort().forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; });
+        }
+
+        function renderSummaryOpen() {
+            const tb = document.getElementById('s-open-tbody');
+            const fCur = document.getElementById('s-open-cur-filter').value;
+            
+            let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur);
+            data.sort((a,b) => {
+                let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey];
+                if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+                return summaryOpenSortDir==='asc' ? va-vb : vb-va;
+            });
+
+            if(data.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; }
+            tb.innerHTML = data.map(i => `<tr>
+                <td style="font-weight:bold; color:var(--accent);">${i.ticker}</td>
+                <td>${i.inv.toFixed(2)} ${i.curr}</td>
+                <td style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td>
+                <td>${i.valLev.toFixed(2)} ${i.curr}</td>
+            </tr>`).join('');
+        }
+
+        function sortSummaryOpen(key) {
+            summaryOpenSortDir = (summaryOpenSortKey===key && summaryOpenSortDir==='desc') ? 'asc' : 'desc';
+            summaryOpenSortKey = key; renderSummaryOpen();
+        }
+
+        function renderDepositsTable() {
+            const tb = document.getElementById('deposits-table-body');
+            if(depositsDataArray.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak wpłat.</td></tr>'; return; }
+            tb.innerHTML = depositsDataArray.map(x => `<tr>
+                <td>${x.created_at}</td>
+                <td style="font-weight:bold;">${Number(x.amount).toFixed(2)} ${x.currency || 'PLN'}</td>
+                <td style="color:var(--text-muted);">${x.currency || 'PLN'}</td>
+                <td style="color:var(--success); font-weight:bold;">${Number(x.amount_pln||x.amount).toFixed(2)} PLN</td>
+                <td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td>
+            </tr>`).join('');
+        }
+
+        async function addDeposit(e) { 
+            e.preventDefault();
+            const amt = document.getElementById('dep-amt').value; 
+            const d = document.getElementById('dep-date').value; 
+            const cur = document.getElementById('dep-cur').value;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); 
+                if(!res.ok) {
+                    const err = await res.json();
+                    alert("Wystąpił błąd bazy danych przy dodawaniu wpłaty: " + (err.message || "Sprawdź strukturę kolumn w Supabase"));
+                } else {
+                    document.getElementById('dep-amt').value = '';
+                }
+            } catch(err) { alert("Błąd połączenia z serwerem."); }
+            initSummaryModule();
+        }
+
+        async function deleteDeposit(id) { 
+            if(!confirm("Na pewno usunąć? Saldo ulegnie zmianie.")) return;
+            try {
+                await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); 
+            } catch(e) {}
+            initSummaryModule(); 
+        }
+
+        function drawSummaryChart(roiPct) {
+            let sp500Change = 0;
+            if(macroDataArray.length > 1) {
+                const oldest = macroDataArray[macroDataArray.length-1].sp500;
+                const newest = macroDataArray[0].sp500;
+                if(oldest && newest) sp500Change = ((newest - oldest) / oldest) * 100;
+            }
+
+            const ctx = document.getElementById('roiChart').getContext('2d');
+            if(summaryChartInstance) summaryChartInstance.destroy();
+            summaryChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Twój Portfel (ROI %)', 'S&P 500 (Dla danych z bazy)'],
+                    datasets: [{
+                        label: '% Zmiany',
+                        data: [roiPct, sp500Change],
+                        backgroundColor: [
+                            roiPct >= 0 ? 'rgba(14, 203, 129, 0.7)' : 'rgba(246, 70, 93, 0.7)',
+                            'rgba(137, 180, 250, 0.7)'
+                        ],
+                        borderColor: [
+                            roiPct >= 0 ? '#0ecb81' : '#f6465d',
+                            '#89b4fa'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, grid: {color: '#313244'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4'} } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
         // --- SERVICE MODULE & DYWIDENDY ---
         async function loadServiceModule() {
             if(allTradesData.length === 0) { 
-                const res = await fetch(`${API_BASE_URL}/api/trades/entries`); 
-                allTradesData = await res.json(); 
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/trades/entries`); 
+                    const dt = await res.json(); 
+                    allTradesData = Array.isArray(dt) ? dt : [];
+                } catch(e) { allTradesData = []; }
             }
             const openTrades = allTradesData.filter(t => t.status === 'OPEN');
             const select = document.getElementById('div-trade-id');
@@ -1872,12 +1915,11 @@
                     document.getElementById('div-amount').value = ''; 
                     fetchTradesEntries(); 
                 } else {
-                    alert('Błąd zapisu.');
+                    alert('Błąd zapisu bazy danych.');
                 }
             } catch(err) {}
         }
 
-        /* INNE SERWISY */
         async function forceAlertsCheck() {
             const out = document.getElementById('service-output');
             out.style.display = 'block';
@@ -1931,7 +1973,6 @@
             document.getElementById('tab-' + tab).classList.add('active');
         }
 
-        // --- XABCD (HARMONIC PATTERNS) ---
         function calculateHarmonics(e) {
             e.preventDefault();
             const x = parseFloat(document.getElementById('ha-x').value);
@@ -1943,8 +1984,7 @@
             const ab = Math.abs(b - a);
             const bc = Math.abs(c - b);
 
-            // Kierunek
-            const isBullish = a > x; // M dołkowe (Bycza struktura)
+            const isBullish = a > x; 
             const dirMultiplier = isBullish ? -1 : 1;
 
             const bRetracement = ab / xa;
@@ -1952,7 +1992,6 @@
 
             let resultsHTML = '';
             
-            // Definicje formacji harmonicznych na podstawie tolerancji złożeń Fibo (tolerancja +/- 0.05)
             const patterns = [
                 { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 },
                 { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 },
@@ -1964,7 +2003,6 @@
             let foundMatch = false;
 
             patterns.forEach(pat => {
-                // Sprawdzenie czy zniesienie punktu B pokrywa się z wymaganiami formacji (tolerancja do 0.07, ponieważ rynki nie są idealne)
                 const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || 
                                  (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) ||
                                  (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618);
@@ -1975,7 +2013,6 @@
                     const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier);
                     const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier);
 
-                    // Średnia (punkt klastrowania, zwany PRZ - Potential Reversal Zone)
                     const przCenter = (dTargetByXA + dTargetByBC_Min) / 2;
 
                     resultsHTML += `
@@ -2002,7 +2039,6 @@
             document.getElementById('ha-results').innerHTML = resultsHTML;
         }
 
-        // --- FALE ELLIOTTA ---
         function calculateElliott(e) {
             e.preventDefault();
             const dir = document.getElementById('ew-direction').value;
@@ -2020,7 +2056,6 @@
             const lenW1 = Math.abs(w1 - x);
             const lenW3 = Math.abs(w3 - w2);
 
-            // Reguła 1: W2 nie może znieść więcej niż 100% W1 (Krytyczna)
             const w2RetracedW1 = isUp ? (w2 < x) : (w2 > x);
             if (w2RetracedW1) {
                 rulesLog += '❌ Fala 2 zniosła więcej niż 100% Fali 1. (Złamanie reguły Elliotta)<br>';
@@ -2029,15 +2064,13 @@
                 rulesLog += '✅ Fala 2 zatrzymała się nad/pod początkiem Fali 1. (+2 pkt)<br>';
             }
 
-            // Reguła 2: W3 nie może być najkrótsza z fal impulsowych (W1, W3) - zakładamy na razie dla 1 i 3
-            if (lenW3 <= lenW1 * 0.98) { // Dajemy 2% tolerancji
+            if (lenW3 <= lenW1 * 0.98) { 
                 rulesLog += '⚠️ Fala 3 jest krótsza od Fali 1. Pamiętaj, że Fala 5 nie będzie mogła być krótsza od Fali 3.<br>';
             } else {
                 score += 1;
                 rulesLog += '✅ Fala 3 jest dłuższa lub równa Fali 1. (+1 pkt)<br>';
             }
 
-            // Reguła 3: W4 nie wchodzi w obszar W1 (Krytyczna zasada overlap)
             const overlap = isUp ? (w4 <= w1) : (w4 >= w1);
             if (overlap) {
                 rulesLog += '❌ Fala 4 wkroczyła w terytorium Fali 1. (Złamanie standardowego impulsu - może być klin końńcowy)<br>';
@@ -2046,33 +2079,26 @@
                 rulesLog += '✅ Fala 4 nie zachodzi na Falę 1. Klasyczny impuls. (+2 pkt)<br>';
             }
 
-            // Podsumowanie punktacji
             const color = score === 5 ? 'var(--success)' : (score >= 3 ? '#fcd535' : 'var(--danger)');
             document.getElementById('ew-score-text').innerHTML = `<span style="color:${color}; font-weight:bold;">${score} / ${maxScore} Pkt</span>`;
             document.getElementById('ew-rules-list').innerHTML = rulesLog;
 
-            // PROJEKCJE NA PRZYSZŁOŚĆ
             if (score >= 2) {
                 document.getElementById('ew-projections').style.display = 'grid';
                 
-                // Fala 5 projekcje (W5 często równa się W1 lub 61.8% odległości między X a W3 przyłożone do W4)
                 const w1ToW3Dist = Math.abs(w3 - x);
                 const w5_target1 = isUp ? w4 + lenW1 : w4 - lenW1;
                 const w5_target2 = isUp ? w4 + (w1ToW3Dist * 0.618) : w4 - (w1ToW3Dist * 0.618);
                 const avgW5 = (w5_target1 + w5_target2) / 2;
                 document.getElementById('ew-p5').innerText = avgW5.toFixed(2) + ' $';
 
-                // Przewidywane korekty ABC od uśrednionej Fali 5
-                // Zazwyczaj fala A wraca do terytorium Fali 4
                 const targetA = w4;
                 document.getElementById('ew-pa').innerText = targetA.toFixed(2) + ' $';
 
-                // Fala B to często odbicie 50% - 61.8% z fali A
                 const distA = Math.abs(avgW5 - targetA);
                 const targetB = isUp ? targetA + (distA * 0.5) : targetA - (distA * 0.5);
                 document.getElementById('ew-pb').innerText = targetB.toFixed(2) + ' $';
 
-                // Fala C jest zazwyczaj symetryczna do A (odmierzona od punktu B)
                 const targetC = isUp ? targetB - distA : targetB + distA;
                 document.getElementById('ew-pc').innerText = targetC.toFixed(2) + ' $';
             } else {
@@ -2080,7 +2106,6 @@
             }
         }
 
-        // --- RGR / ORGR ---
         function calculateRGR(e) {
             e.preventDefault();
             const type = document.getElementById('rgr-type').value;
@@ -2091,7 +2116,7 @@
             const rs = parseFloat(document.getElementById('rgr-rs').value);
             let bp = parseFloat(document.getElementById('rgr-bp').value);
 
-            if(isNaN(bp)) bp = rn; // Domyślnie przebicie następuje na prawej szyi
+            if(isNaN(bp)) bp = rn;
 
             const isRGR = type === 'RGR';
             let isValid = true;
@@ -2122,7 +2147,6 @@
                 const neckAvg = (ln + rn) / 2;
                 const headHeight = Math.abs(h - neckAvg);
                 
-                // Zasięg (odłożony od punktu przebicia)
                 const target = isRGR ? bp - headHeight : bp + headHeight;
 
                 document.getElementById('rgr-angle').innerText = neckSlope === 0 ? "Płaski" : (neckSlope > 0 ? "Rosnący" : "Spadkowy");
