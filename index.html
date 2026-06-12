@@ -132,6 +132,24 @@
                     </div>
                     <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
                 </form>
+                
+                <button type="button" onclick="toggleFibo()" style="background: none; border: 1px solid var(--accent); color: var(--accent); margin-top: 15px; width: 100%; border-radius: 6px; padding: 8px; cursor: pointer;">📐 Otwórz Asystenta Fibo</button>
+                <div id="fibo-drawer" style="display:none; margin-top: 10px; padding: 15px; background: rgba(201,148,0,0.05); border: 1px solid var(--accent); border-radius: 8px;">
+                    <div class="form-row">
+                        <div class="form-group"><label>Początek impulsu</label><input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()"></div>
+                        <div class="form-group"><label>Szczyt impulsu</label><input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Zewnętrzne zniesienie (Cel)</label>
+                        <select id="fibo-level">
+                            <option value="1.272">1.272</option>
+                            <option value="1.618">1.618</option>
+                            <option value="2.000">2.000</option>
+                            <option value="2.618">2.618</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="applyFibo()" style="width:100%; background:var(--accent); color:#000; border-radius:6px; padding:8px; border:none; font-weight:bold; cursor:pointer;">Zastosuj do Take Profit</button>
+                </div>
             </div>
             
             <div class="journal-main">
@@ -293,8 +311,46 @@
     <section id="focuslist-module" class="app-module"><h2>Lista Obserwowanych (Focus List)</h2></section>
 
     <section id="alerthistory-module" class="app-module">
-        <div class="macro-header-container"><h3>Historia Wywołanych Alertów</h3></div>
-        <div class="table-responsive"><table class="macro-custom-table" style="width:100%;"><thead><tr><th>Data Wywołania</th><th>Ticker</th><th>Priorytet</th><th>Warunek</th><th>Cena Docelowa</th><th>L / H</th><th>Score</th><th>Link</th><th>Akcje</th></tr></thead><tbody id="alert-history-tbody"></tbody></table></div>
+        <div class="macro-header-container">
+            <h3>Historia Wywołanych Alertów</h3>
+        </div>
+        
+        <div class="table-controls" style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center;">
+            <input type="text" id="alert-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleAlertsFilter()" style="flex: 1; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+            <select id="alert-type-filter" onchange="handleAlertsFilter()" style="max-width: 200px; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                <option value="ALL">Wszystkie typy</option>
+                <option value="Wejście">Punkt wejścia</option>
+                <option value="Take Profit">Take Profit</option>
+                <option value="Stop Loss">Stop Loss</option>
+            </select>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="macro-custom-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>Data Wywołania</th>
+                        <th>Typ Alertu</th>
+                        <th>Ticker</th>
+                        <th>Priorytet</th>
+                        <th>Warunek</th>
+                        <th>Cena Docelowa</th>
+                        <th>Ekstrema Dnia (L/H)</th>
+                        <th>Wynik (Score)</th> 
+                        <th>Wykres TV</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="alert-history-tbody">
+                    <tr><td colspan="10" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination-container">
+            <button onclick="changeAlertPage(-1)" id="alert-prev-page" class="btn-pag">◀ Poprzednia</button>
+            <span id="alert-page-info">Strona 1 z 1</span>
+            <button onclick="changeAlertPage(1)" id="alert-next-page" class="btn-pag">Następna ▶</button>
+        </div>
     </section>
 
     <section id="dailybrief-module" class="app-module">
@@ -312,7 +368,6 @@
         <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:90%; max-width:400px; border:1px solid var(--border-color);">
             <h3 style="color:var(--accent); margin-bottom:15px;">Zamknięcie Pozycji (Kalkulator)</h3>
             <input type="hidden" id="sell-trade-id">
-
             <div class="form-group"><label>Data Sprzedaży</label><input type="date" id="sell-date"></div>
             <div class="form-group"><label>Cena Sprzedaży z platformy</label><input type="number" step="0.0001" id="sell-price" placeholder="np. 154.32"></div>
             <div class="form-group">
@@ -320,7 +375,6 @@
                 <input type="text" id="sell-fraction" value="1" placeholder="np. 0.5, 50%, 1/3, 23/41">
             </div>
             <div class="form-group"><label>Otrzymana dywidenda z tej paczki</label><input type="number" step="0.01" id="sell-div" value="0"></div>
-
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main);">Anuluj</button>
                 <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff;">Księguj Zysk</button>
@@ -328,7 +382,7 @@
         </div>
     </div>
 
-   <script>
+    <script>
         // Główny adres Twojego backendu na Renderze
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
 
@@ -338,23 +392,13 @@
             const cleanTicker = ticker.trim().toUpperCase();
             const LAYOUT_ID = 'k5llKflB'; 
             const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/';
-
-            if (cleanTicker.includes(':')) {
-                return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`;
-            }
-            
+            if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; }
             const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ'];
             const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA'];
-            
             let exchange = '';
-            if (nasdaqTickers.includes(cleanTicker)) {
-                exchange = 'NASDAQ:';
-            } else if (nyseTickers.includes(cleanTicker)) {
-                exchange = 'NYSE:';
-            } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) {
-                exchange = 'BINANCE:';
-            }
-            
+            if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } 
+            else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } 
+            else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; }
             return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
         }
 
@@ -369,7 +413,6 @@
         function openModule(moduleId, moduleTitle) {
             document.getElementById('dashboard').style.display = 'none';
             document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
-
             document.getElementById(moduleId).style.display = 'block';
             document.getElementById('app-title').innerText = moduleTitle;
             document.getElementById('back-btn').style.display = 'flex';
@@ -397,7 +440,6 @@
             const tbody = document.getElementById('macro-table-body');
             if (!tbody) return;
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Pobieranie historii makro z Supabase...</td></tr>';
-
             fetch(`${API_BASE_URL}/api/macro/history`)
                 .then(r => r.json())
                 .then(data => { macroDataArray = data || []; currentMacroPage = 1; renderMacroTable(); })
@@ -433,18 +475,13 @@
         function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
 
         async function forceMacroUpdate() {
-            try {
-                await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' });
-                alert("Zaktualizowano makro"); loadMacroData(); 
-            } catch (e) { alert("Błąd połączenia z serwerem."); }
+            try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } 
+            catch (e) { alert("Błąd połączenia z serwerem."); }
         }
 
         async function loadDatabase() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/database`);
-                tickerDataArray = await response.json() || [];
-                renderMobileList();
-            } catch (e) {}
+            try { const response = await fetch(`${API_BASE_URL}/api/database`); tickerDataArray = await response.json() || []; renderMobileList(); } 
+            catch (e) {}
         }
 
         function renderMobileList() {
@@ -485,33 +522,82 @@
             if (res.ok) loadDatabase();
         }
 
-        // --- LOGIKA MODUŁU ALERT HISTORY ---
-        async function loadAlertHistory() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/alerts/history`);
-                const data = await response.json();
-                const tbody = document.getElementById("alert-history-tbody");
-                tbody.innerHTML = "";
-                data.forEach(item => {
-                    const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>';
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${new Date(item.triggered_at).toLocaleString('pl-PL')}</td>
-                            <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
-                            <td>${pb}</td>
-                            <td style="color: ${item.condition==='ABOVE'?'#0ecb81':'#f6465d'};">${item.condition==='ABOVE'?'Powyżej':'Poniżej'}</td>
-                            <td>${Number(item.target_price).toFixed(2)} $</td>
-                            <td>L: ${Number(item.day_low).toFixed(2)} | H: ${Number(item.day_high).toFixed(2)}</td>
-                            <td style="color: #a6e3a1; font-weight: bold;">${item.score || 0}/5</td>
-                            <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent);">📈 TV</a></td>
-                            <td><button onclick="deleteAlert('${item.id}')" style="color:#f6465d; background:none; border:1px solid #f6465d; padding:4px 8px; border-radius:4px;">Usuń</button></td>
-                        </tr>
-                    `;
-                });
-            } catch (error) {}
+        // --- LOGIKA MODUŁU ALERT HISTORY (Z NOWYMI FILTRAMI I TYPEM) ---
+        let allAlertsData = []; let filteredAlertsData = []; let currentAlertPage = 1; const alertPageSize = 20;
+
+        async function loadAlertHistory() { 
+            try { 
+                const r = await fetch(`${API_BASE_URL}/api/alerts/history`); 
+                allAlertsData = await r.json() || []; 
+                handleAlertsFilter();
+            } catch(e){} 
         }
-        async function deleteAlert(id) {
-            await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) });
+
+        function handleAlertsFilter() {
+            const searchText = (document.getElementById('alert-search').value || '').toLowerCase();
+            const typeFilter = document.getElementById('alert-type-filter').value || 'ALL';
+
+            filteredAlertsData = allAlertsData.filter(a => {
+                const textMatch = (a.ticker || '').toLowerCase().includes(searchText);
+                const aType = a.alert_type || 'Wejście'; 
+                const typeMatch = (typeFilter === 'ALL') || (aType === typeFilter);
+                return textMatch && typeMatch;
+            });
+            currentAlertPage = 1;
+            renderAlertsTable();
+        }
+
+        function renderAlertsTable() {
+            const tbody = document.getElementById("alert-history-tbody");
+            if (!tbody) return;
+
+            if (filteredAlertsData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--text-muted);">Brak alertów spełniających kryteria.</td></tr>`;
+                document.getElementById('alert-page-info').innerText = 'Strona 0 z 0';
+                return;
+            }
+
+            const start = (currentAlertPage - 1) * alertPageSize;
+            const displayed = filteredAlertsData.slice(start, start + alertPageSize);
+            
+            tbody.innerHTML = "";
+            displayed.forEach(item => {
+                const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>';
+                const condColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
+                const condText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
+                
+                const aType = item.alert_type || 'Wejście';
+                let typeColor = '#89b4fa';
+                if(aType === 'Take Profit') typeColor = '#0ecb81';
+                if(aType === 'Stop Loss') typeColor = '#f6465d';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-size: 0.85em; color: var(--text-muted);">${new Date(item.triggered_at).toLocaleString('pl-PL')}</td>
+                        <td style="font-weight: bold; color: ${typeColor};">${aType}</td>
+                        <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
+                        <td>${pb}</td>
+                        <td style="color: ${condColor};">${condText}</td>
+                        <td style="font-weight: bold;">${Number(item.target_price).toFixed(2)} $</td>
+                        <td style="font-size: 0.9em; color: var(--text-muted);">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td>
+                        <td style="color: #a6e3a1; font-weight: bold;">${item.score || 0}/5</td>
+                        <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 TV</a></td>
+                        <td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${Math.ceil(filteredAlertsData.length/alertPageSize)||1}`;
+        }
+
+        function changeAlertPage(d) {
+            const total = Math.ceil(filteredAlertsData.length / alertPageSize) || 1;
+            if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) {
+                currentAlertPage += d; renderAlertsTable(); 
+            }
+        }
+
+        async function deleteAlert(id) { 
+            await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})}); 
             loadAlertHistory(); 
         }
 
@@ -545,10 +631,10 @@
             select.innerHTML = '';
             tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; });
 
-            loadFormReasons(); // PRZYWRÓCONE
+            loadFormReasons(); 
             fetchFormEntries();
             document.getElementById('trading-form').onsubmit = submitAdvancedForm;
-            updateFormTvLink(); // PRZYWRÓCONE
+            updateFormTvLink(); 
         }
 
         async function fetchFormEntries() {
@@ -607,14 +693,13 @@
                 const tvLink = getTradingViewLink(item.ticker);
                 const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
 
-                // PRZYWRÓCONE: Klikalne Mute i Priority wywołujące updateFormEntryField
                 const priorityBadge = item.priority === 1 
-                    ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` 
-                    : `<span style="color: var(--text-muted); cursor: pointer;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
+                    ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` 
+                    : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
 
                 const muteBadge = muteVal === 1
-                    ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>`
-                    : `<span style="color: var(--success); font-weight: bold; cursor: pointer;" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
+                    ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>`
+                    : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
 
                 tbody.innerHTML += `
                     <tr>
@@ -656,7 +741,6 @@
             fetchFormEntries();
         }
 
-        // PRZYWRÓCONE W PEŁNI: FIBO, UPDATE FIELD I POWODY
         async function updateFormEntryField(entryId, field, newValue) {
             await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) });
             fetchFormEntries(); 
@@ -771,7 +855,7 @@
         }
 
         async function onTradeFocusChange() {
-            const focus = focusDataArray.find(f => f.id == document.getElementById('trade-focus-id').value); if(!focus) return;
+            const fid = document.getElementById('trade-focus-id').value; const focus = focusDataArray.find(f => f.id == fid); if(!focus) return;
             const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); const form = formDb.find(frm => frm.entry_id === focus.entry_id);
             document.getElementById('trade-ticker').value = focus.ticker; document.getElementById('trade-form-id').value = focus.entry_id; document.getElementById('trade-currency').value = focus.currency; document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; document.getElementById('trade-score').value = focus.points_total;
             if(form) { document.getElementById('trade-direction').value = form.direction; document.getElementById('trade-tp').value = form.take_profit; document.getElementById('trade-sl').value = form.stop_loss; }
@@ -786,7 +870,8 @@
         }
 
         async function fetchTradesEntries() {
-            allTradesData = await (await fetch(`${API_BASE_URL}/api/trades/entries`)).json();
+            const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
+            allTradesData = await res.json();
             if(tickerDataArray.length === 0) await loadDatabase();
             handleTradesFilter();
         }
@@ -794,36 +879,59 @@
         function handleTradesFilter() {
             const searchText = (document.getElementById('trade-search').value || '').toLowerCase();
             const statusFilter = document.getElementById('trade-status-filter').value || 'OPEN';
+
             filteredTradesData = allTradesData.filter(t => {
-                const textMatch = (t.ticker || '').toLowerCase().includes(searchText) || (t.stock_name || '').toLowerCase().includes(searchText);
+                const textMatch = (t.ticker || '').toLowerCase().includes(searchText) || 
+                                  (t.stock_name || '').toLowerCase().includes(searchText);
+                
                 const isClosed = (t.status === 'CLOSED' || t.sell_date);
-                let statusMatch = (statusFilter === 'ALL') ? true : (statusFilter === 'OPEN' ? !isClosed : isClosed);
+                let statusMatch = true;
+                if (statusFilter === 'OPEN') statusMatch = !isClosed;
+                if (statusFilter === 'CLOSED') statusMatch = isClosed;
+
                 return textMatch && statusMatch;
             });
-            currentTradePage = 1; renderTradesTable();
+
+            currentTradePage = 1;
+            renderTradesTable();
         }
 
         function renderTradesTable() {
             const tb = document.getElementById('trades-table-body');
-            if (filteredTradesData.length === 0) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px;">Brak wpisów spełniających kryteria.</td></tr>`; return; }
+            
+            if (filteredTradesData.length === 0) {
+                tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów spełniających kryteria.</td></tr>`;
+                document.getElementById('trade-page-info').innerText = `Strona 0 z 0`;
+                return;
+            }
 
             tb.innerHTML = filteredTradesData.slice((currentTradePage-1)*tradePageSize, currentTradePage*tradePageSize).map(item => {
                 const isClosed = (item.status === 'CLOSED' || item.sell_date);
                 const mod = ['DBR','RBR'].includes(item.direction)?1:-1;
+                
                 const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
                 const cp = isClosed ? item.sell_price : (tm&&tm.price?tm.price:item.buy_price);
-                const val = item.spent * item.leverage; const prof = val * (((cp - item.buy_price)/item.buy_price)*mod);
+                
+                const val = item.spent * item.leverage; 
+                const prof = val * (((cp - item.buy_price)/item.buy_price)*mod);
+                
                 const usedFx = isClosed ? (item.sell_fx_rate || item.buy_fx_rate) : item.buy_fx_rate;
                 const profPln = prof * usedFx;
+                
                 const rr = (item.buy_price-item.sl!==0) ? ((item.tp-item.buy_price)*mod)/((item.buy_price-item.sl)*mod) : 0;
+                
                 let prog = 0; if(item.tp-item.buy_price!==0) prog = ((cp-item.buy_price)*mod)/((item.tp-item.buy_price)*mod);
+                
                 let dsl = item.sl;
                 if(prog >= 1) dsl = item.tp; else if(prog >= 0.5) dsl = item.buy_price + ((item.tp - item.buy_price)*(prog - 0.2)); 
+                
                 let pd = prog*100; let pc = 'var(--success)';
                 if(pd<0){ pc='var(--danger)'; pd = (item.buy_price-item.sl!==0) ? Math.abs(((cp-item.buy_price)*mod)/((item.buy_price-item.sl)*mod))*100 : 0; }
                 if(pd>100) pd=100;
 
-                const actionHtml = isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})" style="color:var(--accent); border-color:var(--accent); margin-bottom:4px;">Sprzedaj</button>`;
+                const actionHtml = isClosed 
+                    ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>`
+                    : `<button class="btn-delete" onclick="openCloseModal(${item.id})" style="color:var(--accent); border-color:var(--accent); margin-bottom:4px;">Sprzedaj</button>`;
 
                 return `<tr>
                     <td style="font-size:0.85em; color:var(--text-muted);">${item.buy_date}<br><b style="color:#eaecef;">#${item.id}</b></td>
@@ -837,37 +945,64 @@
                     <td>${actionHtml}</td>
                 </tr>`;
             }).join('');
-            document.getElementById('trade-page-info').innerText = `Str ${currentTradePage}`;
+            document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage} z ${Math.ceil(filteredTradesData.length / tradePageSize) || 1}`;
         }
-        function changeTradePage(d) { currentTradePage+=d; renderTradesTable(); }
+
+        function changeTradePage(d) { 
+            const total = Math.ceil(filteredTradesData.length / tradePageSize) || 1;
+            if (currentTradePage + d >= 1 && currentTradePage + d <= total) {
+                currentTradePage += d; 
+                renderTradesTable(); 
+            }
+        }
 
         /* MODAL SPRZEDAŻY (KALKULATOR UŁAMKÓW) */
         function openCloseModal(id) {
-            document.getElementById('sell-modal').style.display = 'flex'; document.getElementById('sell-trade-id').value = id;
-            document.getElementById('sell-date').valueAsDate = new Date(); document.getElementById('sell-price').value = '';
-            document.getElementById('sell-fraction').value = '1'; document.getElementById('sell-div').value = '0';
+            document.getElementById('sell-modal').style.display = 'flex';
+            document.getElementById('sell-trade-id').value = id;
+            document.getElementById('sell-date').valueAsDate = new Date();
+            document.getElementById('sell-price').value = '';
+            document.getElementById('sell-fraction').value = '1';
+            document.getElementById('sell-div').value = '0';
         }
         function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
+        
         async function confirmSell() {
-            const id = document.getElementById('sell-trade-id').value; const price = parseFloat(document.getElementById('sell-price').value);
-            const date = document.getElementById('sell-date').value; const div = parseFloat(document.getElementById('sell-div').value);
+            const id = document.getElementById('sell-trade-id').value;
+            const price = parseFloat(document.getElementById('sell-price').value);
+            const date = document.getElementById('sell-date').value;
+            const div = parseFloat(document.getElementById('sell-div').value);
             const fracStr = document.getElementById('sell-fraction').value.trim();
+
             if(!price || isNaN(price)) return alert('Podaj prawidłową cenę sprzedaży!');
+
             let fraction = 1.0;
-            if(fracStr.includes('%')) fraction = parseFloat(fracStr.replace('%', '')) / 100.0;
-            else if(fracStr.includes('/')) { const p = fracStr.split('/'); fraction = parseFloat(p[0]) / parseFloat(p[1]); }
-            else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; }
+            if(fracStr.includes('%')) {
+                fraction = parseFloat(fracStr.replace('%', '')) / 100.0;
+            } else if(fracStr.includes('/')) {
+                const parts = fracStr.split('/');
+                fraction = parseFloat(parts[0]) / parseFloat(parts[1]);
+            } else {
+                let parsed = parseFloat(fracStr);
+                if (parsed > 1.0) fraction = parsed / 100.0; 
+                else fraction = parsed;
+            }
+
             if(isNaN(fraction) || fraction <= 0 || fraction > 1.0) return alert('Błędna wartość ilości sprzedaży! Użyj formatu np. 1, 0.5, 50% lub 1/3');
+
             try {
-                const res = await fetch(`${API_BASE_URL}/api/trades/close`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, dividend: div }) });
-                if(res.ok) { alert(fraction < 0.99 ? 'Częściowo zamknięto pozycję!' : 'Pozycja zamknięta!'); closeSellModal(); fetchTradesEntries(); } 
-                else { const err = await res.json(); alert('Błąd: ' + err.message); }
-            } catch(e) {}
+                const res = await fetch(`${API_BASE_URL}/api/trades/close`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, dividend: div })
+                });
+                if(res.ok) {
+                    alert(fraction < 0.99 ? 'Częściowo zamknięto pozycję!' : 'Pozycja w pełni zamknięta!');
+                    closeSellModal(); fetchTradesEntries();
+                } else { const err = await res.json(); alert('Błąd: ' + err.message); }
+            } catch(e) { console.error(e); }
         }
 
         /* INNE SERWISY */
         async function forceAlertsCheck() { await fetch(`${API_BASE_URL}/api/cron/check-alerts`); alert("Alerty SMC sprawdzone."); }
         async function forceCronPricesUpdate() { await fetch(`${API_BASE_URL}/api/cron/update-prices`); alert("Ceny w tle zaktualizowane."); loadDatabase(); }
     </script>
-</body>
-</html>
