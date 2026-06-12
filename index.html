@@ -124,7 +124,7 @@
                     </div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01"></div>
                     <div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01"></div>
-<div class="form-group">
+                    <div class="form-group">
                         <label>Powody wejścia (Opcjonalne)</label>
                         <input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1...">
                         <input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2...">
@@ -331,8 +331,58 @@
         <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div>
     </section>
 
-    <section id="technicalanalysis-module" class="app-module"><h2>Analiza Techniczna & Elliott Wave</h2></section>
-    <section id="focuslist-module" class="app-module"><h2>Lista Obserwowanych (Focus List)</h2></section>
+    <section id="focuslist-module" class="app-module">
+        <div class="macro-header-container">
+            <h3>Lista Obserwowanych (Focus List)</h3>
+        </div>
+        
+        <div class="table-controls" style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
+            <select id="focuslist-status-filter" onchange="handleFocusListFilter()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                <option value="ALL">Wszystkie Statusy</option>
+                <option value="Skupienie">Skupienie</option>
+                <option value="Obserwacja">Obserwacja</option>
+            </select>
+            
+            <select id="focuslist-currency-filter" onchange="handleFocusListFilter()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                <option value="ALL">Wszystkie Waluty</option>
+                <option value="USD">USD</option>
+                <option value="PLN">PLN</option>
+                <option value="EUR">EUR</option>
+            </select>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="macro-custom-table" style="width:100%; font-size: 0.85em;">
+                <thead>
+                    <tr>
+                        <th>Data dodania</th>
+                        <th>Ticker</th>
+                        <th>Waluta</th>
+                        <th>Kierunek</th>
+                        <th>Wejście</th>
+                        <th>Prio.</th>
+                        <th>Mute</th>
+                        <th>Status</th>
+                        <th>R:R</th>
+                        <th>Powód 1</th>
+                        <th>Powód 2</th>
+                        <th>Powód 3</th>
+                        <th>Powód 4</th>
+                        <th>Powód 5</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="focuslist-table-body">
+                    <tr><td colspan="15" style="text-align:center;">Ładowanie...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination-container">
+            <button onclick="changeFocusListPage(-1)" id="focuslist-prev-page" class="btn-pag">◀ Poprzednia</button>
+            <span id="focuslist-page-info">Strona 1 z 1</span>
+            <button onclick="changeFocusListPage(1)" id="focuslist-next-page" class="btn-pag">Następna ▶</button>
+        </div>
+    </section>
 
     <section id="alerthistory-module" class="app-module">
         <div class="macro-header-container">
@@ -379,6 +429,8 @@
         <div class="macro-header-container"><h3>Wpisy Makro (AI Brief)</h3></div>
         <div class="brief-carousel-container" id="dailybrief-carousel"><p style="text-align:center; padding:20px;">Ładowanie...</p></div>
     </section>
+
+    <section id="technicalanalysis-module" class="app-module"><h2>Analiza Techniczna & Elliott Wave</h2></section>
 
     <nav class="bottom-nav">
         <button class="nav-item active" onclick="openDashboard()"><span>🏠</span>Home</button>
@@ -432,6 +484,15 @@
             return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
         }
 
+        // --- POMOCNICZA FUNKCJA: WALUTA Z TICKERA ---
+        function getCurrencyForFrontend(ticker) {
+            if (!ticker) return 'USD';
+            const t = ticker.toUpperCase();
+            if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN';
+            if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR';
+            return 'USD';
+        }
+
         // --- STANY STRONICOWANIA ---
         let macroDataArray = []; let currentMacroPage = 1; const macroPageSize = 10;
         let tickerDataArray = []; let currentTickerPage = 1; const tickerPageSize = 20;
@@ -457,6 +518,7 @@
             if (moduleId === 'tradeslist-module') initTradesModule();
             if (moduleId === 'summary-module') loadSummaryData();
             if (moduleId === 'service-module') loadServiceModule();
+            if (moduleId === 'focuslist-module') initFocusListModule();
         }
 
         function openDashboard() {
@@ -915,6 +977,114 @@
             if (ticker) { 
                 linkEl.href = getTradingViewLink(ticker); 
                 linkEl.style.display = 'inline-block'; 
+            }
+        }
+
+        // ==========================================
+        // NOWOŚĆ: LOGIKA MODUŁU FOCUSLIST
+        // ==========================================
+        let filteredFocusListEntries = [];
+        let currentFocusListPage = 1;
+        const focusListPageSize = 20;
+
+        async function initFocusListModule() {
+            if(tickerDataArray.length === 0) await loadDatabase();
+            await fetchFormEntries(); 
+            handleFocusListFilter();
+        }
+
+        function handleFocusListFilter() {
+            const sFilter = document.getElementById('focuslist-status-filter').value;
+            const cFilter = document.getElementById('focuslist-currency-filter').value;
+            
+            filteredFocusListEntries = [];
+            
+            formEntries.forEach(item => {
+                const entry = parseFloat(item.entry_point);
+                const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
+                const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
+                const diff = (Math.abs(currentPrice - entry) / entry) * 100;
+                
+                let status = '';
+                if (diff > 15) status = 'Ignorowanie';
+                else if (diff > 10) status = 'Czekanie';
+                else if (item.priority === 1) status = 'Skupienie';
+                else status = 'Obserwacja';
+                
+                // Ukrywamy Czekanie i Ignorowanie w FocusList
+                if (status !== 'Skupienie' && status !== 'Obserwacja') return;
+                if (sFilter !== 'ALL' && status !== sFilter) return;
+                
+                const currency = getCurrencyForFrontend(item.ticker);
+                if (cFilter !== 'ALL' && currency !== cFilter) return;
+                
+                filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: diff });
+            });
+            
+            filteredFocusListEntries.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+            currentFocusListPage = 1;
+            renderFocusListTable();
+        }
+
+        function renderFocusListTable() {
+            const tb = document.getElementById('focuslist-table-body');
+            if (!tb) return;
+            
+            if (filteredFocusListEntries.length === 0) {
+                tb.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów spełniających kryteria.</td></tr>`;
+                document.getElementById('focuslist-page-info').innerText = 'Strona 0 z 0';
+                return;
+            }
+
+            const start = (currentFocusListPage - 1) * focusListPageSize;
+            const pageData = filteredFocusListEntries.slice(start, start + focusListPageSize);
+            
+            tb.innerHTML = pageData.map(item => {
+                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-';
+                const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
+                const mod = isLong ? 1 : -1;
+                const entry = parseFloat(item.entry_point);
+                const sl = parseFloat(item.stop_loss);
+                const tp = parseFloat(item.take_profit);
+                let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
+                
+                let statusColor = item.calcStatus === 'Skupienie' ? '#0ecb81' : '#848e9c';
+                const pb = item.priority === 1 ? `<span style="color: #fcd535;">Wysoki</span>` : `<span style="color: var(--text-muted);">Norm</span>`;
+                const mb = item.mute === 1 ? `<span style="color: var(--danger);">🔕</span>` : `<span style="color: var(--success);">🔔</span>`;
+                
+                const r1 = (item.reasons && item.reasons[0]) ? item.reasons[0] : '-';
+                const r2 = (item.reasons && item.reasons[1]) ? item.reasons[1] : '-';
+                const r3 = (item.reasons && item.reasons[2]) ? item.reasons[2] : '-';
+                const r4 = (item.reasons && item.reasons[3]) ? item.reasons[3] : '-';
+                const r5 = (item.reasons && item.reasons[4]) ? item.reasons[4] : '-';
+
+                return `<tr>
+                    <td style="white-space: nowrap;">${dateStr}</td>
+                    <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
+                    <td style="font-weight:bold;">${item.calcCurrency}</td>
+                    <td>${item.direction}</td>
+                    <td style="font-weight: 600;">${entry.toFixed(2)}</td>
+                    <td>${pb}</td>
+                    <td>${mb}</td>
+                    <td style="color:${statusColor}; font-weight:bold;">${item.calcStatus} (${item.calcDiff.toFixed(1)}%)</td>
+                    <td>${rr.toFixed(2)}</td>
+                    <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r1}">${r1}</td>
+                    <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r2}">${r2}</td>
+                    <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r3}">${r3}</td>
+                    <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r4}">${r4}</td>
+                    <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r5}">${r5}</td>
+                    <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 TV</a></td>
+                </tr>`;
+            }).join('');
+            
+            document.getElementById('focuslist-page-info').innerText = `Strona ${currentFocusListPage} z ${Math.ceil(filteredFocusListEntries.length / focusListPageSize)}`;
+        }
+
+        function changeFocusListPage(d) {
+            const total = Math.ceil(filteredFocusListEntries.length / focusListPageSize) || 1;
+            if (currentFocusListPage + d >= 1 && currentFocusListPage + d <= total) {
+                currentFocusListPage += d;
+                renderFocusListTable();
             }
         }
 
