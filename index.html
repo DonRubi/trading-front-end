@@ -81,6 +81,7 @@
         .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 400; padding: 5px; }
         .nav-item.active { color: var(--accent); }
         
+        /* === PRIVACY MODE CSS === */
         body.privacy-active .sensitive { filter: blur(6px); user-select: none; opacity: 0.6; transition: filter 0.3s ease; pointer-events: none; }
     </style>
 </head>
@@ -141,6 +142,7 @@
                     </div>
                     <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
                 </form>
+                
                 <button type="button" onclick="toggleFibo()" style="background: none; border: 1px solid var(--accent); color: var(--accent); margin-top: 15px; width: 100%; border-radius: 6px; padding: 8px; cursor: pointer;">📐 Otwórz Asystenta Fibo</button>
                 <div id="fibo-drawer" style="display:none; margin-top: 10px; padding: 15px; background: rgba(201,148,0,0.05); border: 1px solid var(--accent); border-radius: 8px;">
                     <div class="form-row" style="display:flex; gap:10px;">
@@ -149,11 +151,17 @@
                     </div>
                     <div class="form-group">
                         <label>Zewnętrzne zniesienie (Cel)</label>
-                        <select id="fibo-level"><option value="1.272">1.272</option><option value="1.618">1.618</option><option value="2.000">2.000</option><option value="2.618">2.618</option></select>
+                        <select id="fibo-level">
+                            <option value="1.272">1.272</option>
+                            <option value="1.618">1.618</option>
+                            <option value="2.000">2.000</option>
+                            <option value="2.618">2.618</option>
+                        </select>
                     </div>
                     <button type="button" onclick="applyFibo()" style="width:100%; background:var(--accent); color:#000; border-radius:6px; padding:8px; border:none; font-weight:bold; cursor:pointer;">Zastosuj do Take Profit</button>
                 </div>
             </div>
+            
             <div class="journal-main">
                 <div class="table-controls"><input type="text" id="journal-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleFormFilter(this.value)"></div>
                 <div class="table-responsive">
@@ -399,8 +407,8 @@
         <div class="macro-header-container" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
             <h3>Panel Sentymentu (Makro)</h3>
             <div style="display:flex; gap:10px;">
-                <button class="btn-submit" style="width:auto; padding:8px 16px; background:#0284c7; color:#fff;" onclick="forceMacroYTDUpdate()">📥 Pobierz dane z całego roku (YTD)</button>
-                <button class="btn-submit" style="width:auto; padding:8px 16px;" onclick="forceMacroUpdate()">Wymuś aktualizację (Dzisiaj)</button>
+                <button class="btn-submit" style="width:auto; padding:8px 16px; background:#0284c7; color:#fff;" onclick="forceMacroYTDUpdate(event)">📥 Pobierz YTD</button>
+                <button class="btn-submit" style="width:auto; padding:8px 16px;" onclick="forceMacroUpdate()">Aktualizuj Dzisiaj</button>
             </div>
         </div>
         <div class="table-responsive"><table class="macro-custom-table" style="width:100%;"><thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&P 500</th><th>Odczyt</th></tr></thead><tbody id="macro-table-body"></tbody></table></div>
@@ -692,8 +700,471 @@
             isPrivacyMode = !isPrivacyMode;
             const btn = document.getElementById('privacy-btn');
             btn.innerText = isPrivacyMode ? '🙈' : '👁️';
-            if (isPrivacyMode) document.body.classList.add('privacy-active');
-            else document.body.classList.remove('privacy-active');
+            
+            if (isPrivacyMode) {
+                document.body.classList.add('privacy-active');
+            } else {
+                document.body.classList.remove('privacy-active');
+            }
+        }
+
+        function calculateTradeStats(item) {
+            try {
+                const isClosed = (item.status === 'CLOSED' || item.sell_date != null);
+                const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1;
+                const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
+                
+                const buyPrice = parseFloat(item.buy_price) || 0;
+                let cp = buyPrice;
+                if (isClosed && item.sell_price) {
+                    cp = parseFloat(item.sell_price);
+                } else if (tm && tm.price) {
+                    cp = parseFloat(tm.price);
+                }
+                
+                const spent = parseFloat(item.spent) || 0;
+                const lev = parseInt(item.leverage) || 1;
+                const val = spent * lev; 
+                const cfdCost = parseFloat(item.cfd_cost) || 0;
+                const div = parseFloat(item.dividend) || 0;
+                
+                let prof = 0;
+                if (buyPrice !== 0) {
+                    prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost;
+                }
+                
+                const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1));
+                const profPln = prof * usedFx;
+                const valPln = val * usedFx;
+                
+                const tp = parseFloat(item.tp) || 0;
+                const sl = parseFloat(item.sl) || 0;
+                
+                let rr = 0;
+                if (buyPrice - sl !== 0) {
+                    rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod);
+                }
+                
+                let prog = 0; 
+                if (tp - buyPrice !== 0) {
+                    prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod);
+                }
+                
+                let dsl = sl;
+                if (prog >= 1) dsl = tp; 
+                else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); 
+                
+                let pd = prog * 100; 
+                let pc = 'var(--success)';
+                if (pd < 0) { 
+                    pc = 'var(--danger)'; 
+                    if (buyPrice - sl !== 0) {
+                        pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100;
+                    } else {
+                        pd = 0;
+                    }
+                }
+                if (pd > 100) pd = 100;
+                
+                return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx };
+            } catch (error) {
+                console.error("Błąd kalkulacji dla", item.ticker, error);
+                return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 };
+            }
+        }
+
+        function getTradingViewLink(ticker) {
+            if (!ticker) return '#';
+            const cleanTicker = ticker.trim().toUpperCase();
+            const LAYOUT_ID = 'k5llKflB'; 
+            const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/';
+            if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; }
+            const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ'];
+            const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA'];
+            let exchange = '';
+            if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } 
+            else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } 
+            else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; }
+            return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
+        }
+
+        function getCurrencyForFrontend(ticker) {
+            if (!ticker) return 'USD';
+            const t = ticker.toUpperCase();
+            if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN';
+            if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR';
+            return 'USD';
+        }
+
+        let macroDataArray = []; let currentMacroPage = 1; const macroPageSize = 10;
+        let tickerDataArray = []; let currentTickerPage = 1; const tickerPageSize = 20;
+        let focusDataArray = []; let currentFocusPage = 1; const focusPageSize = 20; 
+        let formEntriesGlobal = []; 
+        let allTradesData = []; let filteredTradesData = []; let currentTradePage = 1; const tradePageSize = 20;
+        let depositsDataArray = [];
+        let summaryChartInstance = null;
+
+        function openModule(moduleId, moduleTitle) {
+            document.getElementById('dashboard').style.display = 'none';
+            document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
+            document.getElementById(moduleId).style.display = 'block';
+            document.getElementById('app-title').innerText = moduleTitle;
+            document.getElementById('back-btn').style.display = 'flex';
+            document.getElementById('spacer').style.display = 'none';
+
+            if (moduleId === 'database-module') { loadDatabase(); loadMacroData(); }
+            if (moduleId === 'alerthistory-module') loadAlertHistory();
+            if (moduleId === 'dailybrief-module') loadDailyBriefs();
+            if (moduleId === 'form-module') initFormModule();
+            if (moduleId === 'focus-module') initFocusModule();
+            if (moduleId === 'tradeslist-module') initTradesModule();
+            if (moduleId === 'summary-module') initSummaryModule();
+            if (moduleId === 'service-module') loadServiceModule();
+            if (moduleId === 'focuslist-module') initFocusListModule();
+        }
+
+        function openDashboard() {
+            document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('app-title').innerHTML = 'Quant<span>Desk</span>';
+            document.getElementById('back-btn').style.display = 'none';
+            document.getElementById('spacer').style.display = 'block';
+        }
+
+        function loadMacroData() {
+            const tbody = document.getElementById('macro-table-body');
+            if (!tbody) return;
+            fetch(`${API_BASE_URL}/api/macro/history`).then(r => r.json()).then(data => { macroDataArray = Array.isArray(data) ? data : []; currentMacroPage = 1; renderMacroTable(); }).catch(e => {});
+        }
+
+        function renderMacroTable() {
+            const tbody = document.getElementById('macro-table-body');
+            if (macroDataArray.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro w bazie.</td></tr>`; return; }
+            const totalPages = Math.ceil(macroDataArray.length / macroPageSize);
+            const start = (currentMacroPage - 1) * macroPageSize;
+            tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => `<tr><td class="macro-val-date">${row.date || '-'}</td><td class="macro-val-currency sensitive">${row.eurpln || '-'}</td><td class="macro-val-currency sensitive">${row.usdpln || '-'}</td><td class="macro-val-vix">${row.vix || '-'}</td><td style="font-weight: 500;" class="sensitive">${row.sp500 || '-'}</td><td class="macro-val-time">${row.updated_at || '-'}</td></tr>`).join('');
+            document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`;
+        }
+
+        function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
+        async function forceMacroUpdate() { try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } catch (e) { alert("Błąd połączenia z serwerem."); } }
+
+        async function forceMacroYTDUpdate() { 
+            if(typeof event !== 'undefined') {
+                const btn = event.currentTarget;
+                const originalText = btn.innerText;
+                btn.innerText = "⏳ Pobieram YTD...";
+                btn.disabled = true;
+                try { 
+                    const res = await fetch(`${API_BASE_URL}/api/macro/backfill-ytd`, { method: 'POST' }); 
+                    const data = await res.json();
+                    if(res.ok) {
+                        alert(data.message); 
+                        loadMacroData(); 
+                    } else {
+                        alert("Wystąpił błąd: " + data.message);
+                    }
+                } catch (e) { alert("Błąd połączenia z serwerem."); } 
+                finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            } else {
+                try { 
+                    await fetch(`${API_BASE_URL}/api/macro/backfill-ytd`, { method: 'POST' }); 
+                    loadMacroData(); 
+                } catch (e) {} 
+            }
+        }
+
+        async function loadDatabase() { try { const response = await fetch(`${API_BASE_URL}/api/database`); const dt = await response.json(); tickerDataArray = Array.isArray(dt) ? dt : []; renderMobileList(); } catch (e) {} }
+
+        function renderMobileList() {
+            const container = document.getElementById('db-list-container'); container.innerHTML = '';
+            if (tickerDataArray.length === 0) return;
+            const start = (currentTickerPage - 1) * tickerPageSize;
+            container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `<div class="data-card"><div class="data-card-info"><h4>${item.ticker}</h4><p>Dodano: ${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style="display: flex; align-items: center; gap: 10px;"><span class="price-tag sensitive">${item.price !== null ? item.price + ' $' : '...'}</span><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">📈 TV</a><button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button></div></div>`).join('');
+            document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${Math.ceil(tickerDataArray.length / tickerPageSize)}`;
+        }
+
+        function changeTickerPage(dir) { currentTickerPage += dir; renderMobileList(); }
+        async function addTicker() { const t = document.getElementById('new-ticker').value.trim().toUpperCase(); if (!t) return; try { const res = await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) { document.getElementById('new-ticker').value = ''; loadDatabase(); } } catch (e) {} }
+        async function removeTicker(t) { if (!confirm(`Usunąć ${t}?`)) return; try { const res = await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) loadDatabase(); } catch (e) {} }
+
+        let allAlertsData = []; let filteredAlertsData = []; let currentAlertPage = 1; const alertPageSize = 20;
+        async function loadAlertHistory() { try { const r = await fetch(`${API_BASE_URL}/api/alerts/history`); const data = await r.json(); allAlertsData = Array.isArray(data) ? data : []; handleAlertsFilter(); } catch(e){} }
+        function handleAlertsFilter() {
+            const searchText = (document.getElementById('alert-search').value || '').toLowerCase();
+            const typeFilter = document.getElementById('alert-type-filter').value || 'ALL';
+            filteredAlertsData = allAlertsData.filter(a => {
+                const textMatch = (a.ticker || '').toLowerCase().includes(searchText);
+                const aType = a.alert_type || 'Punkt wejścia'; 
+                const typeMatch = (typeFilter === 'ALL') || (aType === typeFilter);
+                return textMatch && typeMatch;
+            });
+            currentAlertPage = 1; renderAlertsTable();
+        }
+        function renderAlertsTable() {
+            const tbody = document.getElementById("alert-history-tbody");
+            if (filteredAlertsData.length === 0) { tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--text-muted);">Brak alertów.</td></tr>`; return; }
+            const start = (currentAlertPage - 1) * alertPageSize;
+            tbody.innerHTML = filteredAlertsData.slice(start, start + alertPageSize).map(item => {
+                const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>';
+                const aType = item.alert_type || 'Punkt wejścia';
+                let typeColor = '#89b4fa'; if(aType === 'Take Profit') typeColor = '#0ecb81'; if(aType === 'Stop Loss') typeColor = '#f6465d';
+                return `<tr>
+                    <td style="font-size: 0.85em; color: var(--text-muted);">${new Date(item.triggered_at).toLocaleString('pl-PL')}</td>
+                    <td style="font-weight: bold; color: ${typeColor};">${aType}</td>
+                    <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
+                    <td>${pb}</td><td style="color: ${item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d'};">${item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej'}</td>
+                    <td class="sensitive" style="font-weight: bold;">${Number(item.target_price).toFixed(2)} $</td>
+                    <td class="sensitive" style="font-size: 0.9em; color: var(--text-muted);">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td>
+                    <td style="color: #a6e3a1; font-weight: bold;">${item.score || 0}/5</td>
+                    <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 TV</a></td>
+                    <td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td>
+                </tr>`;
+            }).join('');
+            document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${Math.ceil(filteredAlertsData.length/alertPageSize)||1}`;
+        }
+        function changeAlertPage(d) { const total = Math.ceil(filteredAlertsData.length / alertPageSize) || 1; if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) { currentAlertPage += d; renderAlertsTable(); } }
+        async function deleteAlert(id) { try { await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); loadAlertHistory(); } catch(e) {} }
+
+        async function loadDailyBriefs() {
+            try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; 
+                if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); }
+            } catch (error) {}
+        }
+
+        // ==========================================
+        // SUMMARY MODULE
+        // ==========================================
+        let summaryOpenSortKey = 'valLev';
+        let summaryOpenSortDir = 'desc';
+
+        function switchSummaryTab(tab) {
+            document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active'); 
+            document.getElementById('tab-'+tab).classList.add('active');
+            if(tab === 'dashboard' && summaryChartInstance) summaryChartInstance.update();
+        }
+
+        async function initSummaryModule() {
+            if(allTradesData.length === 0) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
+                    const dt = await res.json();
+                    allTradesData = Array.isArray(dt) ? dt : [];
+                } catch(e) { allTradesData = []; }
+            }
+            if(tickerDataArray.length === 0) await loadDatabase();
+            if(macroDataArray.length === 0) {
+                try {
+                    const mRes = await fetch(`${API_BASE_URL}/api/macro/history`);
+                    macroDataArray = await mRes.json() || [];
+                } catch(e) {}
+            }
+            try {
+                const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`);
+                const dData = await rD.json();
+                depositsDataArray = Array.isArray(dData) ? dData : [];
+                renderDepositsTable();
+                calculateAndRenderSummary();
+            } catch(e){ console.error(e); }
+        }
+
+        async function loadSummaryData() {
+            if(document.getElementById('summary-module').style.display === 'block') {
+                initSummaryModule();
+            }
+        }
+
+        function calculateAndRenderSummary() {
+            if (!Array.isArray(depositsDataArray)) depositsDataArray = [];
+            if (!Array.isArray(allTradesData)) allTradesData = [];
+
+            let totalDepositsPln = 0;
+            depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount || 0));
+
+            let totalClosedPnlPln = 0;
+            let openInvestedPln = 0;
+            let openProfitPln = 0;
+            let openLevValuePln = 0;
+            
+            const currBreakdown = { PLN: 0, USD: 0, EUR: 0 };
+            const openGrouped = {};
+            const monthSet = new Set();
+
+            allTradesData.forEach(trade => {
+                try {
+                    const s = calculateTradeStats(trade);
+                    const curr = trade.currency || 'USD';
+                    if (s.isClosed) {
+                        totalClosedPnlPln += s.profPln;
+                        let month = 'Brak daty';
+                        if (trade.sell_date && trade.sell_date.length >= 7) {
+                            month = trade.sell_date.substring(0, 7);
+                        }
+                        monthSet.add(month);
+                    } else {
+                        openInvestedPln += s.spentPln;
+                        openProfitPln += s.profPln;
+                        openLevValuePln += s.valPln + s.profPln; 
+                        
+                        const spent = parseFloat(trade.spent) || 0;
+                        const valInCurr = spent + s.prof;
+                        if(currBreakdown[curr] !== undefined) currBreakdown[curr] += valInCurr;
+
+                        const ticker = trade.ticker || 'N/A';
+                        if(!openGrouped[ticker]) openGrouped[ticker] = {inv:0, prof:0, valLev:0, curr: curr};
+                        openGrouped[ticker].inv += spent;
+                        openGrouped[ticker].prof += s.prof;
+                        openGrouped[ticker].valLev += s.val + s.prof;
+                    }
+                } catch(err) { console.error("Błąd agregacji trade", trade, err); }
+            });
+
+            const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
+            const freeCashPln = currentCapitalPln - openInvestedPln;
+            const openPositionsValuePln = openInvestedPln + openProfitPln;
+            const totalPortfolioValuePln = freeCashPln + openPositionsValuePln;
+            
+            let roiPct = 0;
+            if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
+            
+            let levPct = 0;
+            if (totalPortfolioValuePln > 0) levPct = (openLevValuePln / totalPortfolioValuePln) * 100;
+
+            document.getElementById('s-dep').innerText = totalDepositsPln.toFixed(2) + ' PLN';
+            document.getElementById('s-pnl').innerText = totalClosedPnlPln.toFixed(2) + ' PLN';
+            document.getElementById('s-pnl').style.color = totalClosedPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            
+            document.getElementById('s-openpnl').innerText = openProfitPln.toFixed(2) + ' PLN';
+            document.getElementById('s-openpnl').style.color = openProfitPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            
+            document.getElementById('s-cash').innerText = freeCashPln.toFixed(2) + ' PLN';
+            document.getElementById('s-cash').style.color = freeCashPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            
+            document.getElementById('s-total').innerText = totalPortfolioValuePln.toFixed(2) + ' PLN';
+            
+            document.getElementById('s-roi').innerText = roiPct.toFixed(2) + ' %';
+            document.getElementById('s-roi').style.color = roiPct >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            document.getElementById('s-levval').innerText = openLevValuePln.toFixed(2) + ' PLN';
+            document.getElementById('s-levpct').innerText = levPct.toFixed(2) + ' %';
+
+            document.getElementById('s-curr-breakdown').innerHTML = `
+                <tr><td>PLN</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr>
+                <tr><td>USD</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr>
+                <tr><td>EUR</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>
+            `;
+
+            window.summaryOpenData = Object.keys(openGrouped).map(k => ({ ticker: k, ...openGrouped[k] }));
+            renderSummaryOpen();
+
+            const monthSelect = document.getElementById('s-cls-month-filter');
+            if (monthSelect) {
+                const currentMonthVal = monthSelect.value;
+                monthSelect.innerHTML = '<option value="ALL">Wszystkie Miesiące</option>';
+                Array.from(monthSet).sort().reverse().forEach(m => {
+                    monthSelect.innerHTML += `<option value="${m}">${m}</option>`;
+                });
+                if(Array.from(monthSet).includes(currentMonthVal)) monthSelect.value = currentMonthVal;
+            }
+
+            renderSummaryClosed();
+
+            // Automatyczny zapis ROI i rysowanie wykresu
+            fetch(`${API_BASE_URL}/api/portfolio/roi/save`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({roi_pct: roiPct})
+            }).then(() => { drawSummaryChart(); }).catch(e => { drawSummaryChart(); });
+        }
+
+        function renderSummaryClosed() {
+            const fMonth = document.getElementById('s-cls-month-filter').value;
+            const fCur = document.getElementById('s-cls-cur-filter').value;
+            const fLev = document.getElementById('s-cls-lev-filter').value;
+
+            const closedByMonth = {};
+            const closedByCurr = {};
+            const closedByLev = {};
+            let filteredPnlPln = 0;
+
+            allTradesData.forEach(trade => {
+                try {
+                    const s = calculateTradeStats(trade);
+                    if (!s.isClosed) return;
+
+                    const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty';
+                    const curr = trade.currency || 'USD';
+                    const lev = parseInt(trade.leverage) || 1;
+
+                    if (fMonth !== 'ALL' && month !== fMonth) return;
+                    if (fCur !== 'ALL' && curr !== fCur) return;
+                    if (fLev === '>1' && lev <= 1) return;
+                    if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return;
+
+                    filteredPnlPln += s.profPln;
+
+                    if(!closedByMonth[month]) closedByMonth[month] = 0;
+                    closedByMonth[month] += s.profPln;
+
+                    if(!closedByCurr[curr]) closedByCurr[curr] = 0;
+                    closedByCurr[curr] += s.profPln;
+
+                    if(!closedByLev[lev]) closedByLev[lev] = 0;
+                    closedByLev[lev] += s.profPln;
+                } catch(e) {}
+            });
+
+            const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML='';
+            Object.keys(closedByMonth).sort().reverse().forEach(k => { 
+                cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; 
+            });
+            if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
+            
+            const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML='';
+            Object.keys(closedByCurr).sort().forEach(k => { 
+                cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; 
+            });
+            if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
+            
+            const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML='';
+            Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { 
+                cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; 
+            });
+            if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
+
+            const totalEl = document.getElementById('s-cls-filtered-total');
+            if(totalEl) {
+                totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN';
+                totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            }
+        }
+
+        function renderSummaryOpen() {
+            const tb = document.getElementById('s-open-tbody');
+            const fCur = document.getElementById('s-open-cur-filter').value;
+            
+            let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur);
+            data.sort((a,b) => {
+                let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey];
+                if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+                return summaryOpenSortDir==='asc' ? va-vb : vb-va;
+            });
+
+            if(data.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; }
+            tb.innerHTML = data.map(i => `<tr>
+                <td style="font-weight:bold; color:var(--accent);">${i.ticker}</td>
+                <td class="sensitive">${i.inv.toFixed(2)} ${i.curr}</td>
+                <td class="sensitive" style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td>
+                <td class="sensitive">${i.valLev.toFixed(2)} ${i.curr}</td>
+            </tr>`).join('');
+        }
+
+        function sortSummaryOpen(key) {
+            summaryOpenSortDir = (summaryOpenSortKey===key && summaryOpenSortDir==='desc') ? 'asc' : 'desc';
+            summaryOpenSortKey = key; renderSummaryOpen();
         }
 
         function renderDepositsTable() {
@@ -711,13 +1182,67 @@
             </tr>`).join('');
         }
 
-        async function drawSummaryChart() {
+        async function addDeposit(e) { 
+            e.preventDefault();
+            const amt = document.getElementById('dep-amt').value; 
+            const d = document.getElementById('dep-date').value; 
+            const cur = document.getElementById('dep-cur').value;
             try {
-                const res = await fetch(`${API_BASE_URL}/api/portfolio/roi/history`);
-                const roiHistory = await res.json() || [];
-                
-                if (!Array.isArray(roiHistory) || roiHistory.length === 0) return;
+                const res = await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); 
+                if(!res.ok) {
+                    const err = await res.json();
+                    alert("Wystąpił błąd przy dodawaniu wpłaty: " + (err.message));
+                } else {
+                    document.getElementById('dep-amt').value = '';
+                }
+            } catch(err) { alert("Błąd połączenia z serwerem."); }
+            initSummaryModule();
+        }
 
+        async function deleteDeposit(id) { 
+            if(!confirm("Na pewno usunąć? Saldo ulegnie zmianie.")) return;
+            try {
+                await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); 
+            } catch(e) {}
+            initSummaryModule(); 
+        }
+
+        function drawSummaryChart() {
+            let sp500Change = 0;
+            if(macroDataArray.length > 1) {
+                const oldest = macroDataArray[macroDataArray.length-1].sp500;
+                const newest = macroDataArray[0].sp500;
+                if(oldest && newest) sp500Change = ((newest - oldest) / oldest) * 100;
+            }
+
+            const ctx = document.getElementById('roiChart').getContext('2d');
+            if(summaryChartInstance) summaryChartInstance.destroy();
+            
+            Chart.defaults.color = '#cdd6f4';
+            summaryChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Twój Portfel (ROI %)', 'S&P 500 (Dla danych z bazy)'],
+                    datasets: [{
+                        label: '% Zmiany',
+                        data: [0, sp500Change], // ROI pobierane osobno poniżej (dynamicznie)
+                        backgroundColor: [ 'rgba(14, 203, 129, 0.7)', 'rgba(137, 180, 250, 0.7)' ],
+                        borderColor: [ '#0ecb81', '#89b4fa' ],
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, grid: {color: '#313244'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4'} } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Asynchroniczne pobranie prawdziwej historii z bazy i narysowanie wykresu liniowego
+            fetch(`${API_BASE_URL}/api/portfolio/roi/history`).then(r => r.json()).then(roiHistory => {
+                if (!Array.isArray(roiHistory) || roiHistory.length === 0) return;
                 roiHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
 
                 const labels = [];
@@ -748,10 +1273,7 @@
                     sp500Dataset.push(sp500Pct);
                 });
 
-                const ctx = document.getElementById('roiChart').getContext('2d');
                 if(summaryChartInstance) summaryChartInstance.destroy();
-                
-                Chart.defaults.color = '#cdd6f4';
                 summaryChartInstance = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -794,200 +1316,124 @@
                         }
                     }
                 });
-            } catch (err) { console.error("Błąd wykresu", err); }
+            }).catch(e => console.error("Błąd ładowania danych wykresu", e));
         }
 
-        function calculateAndRenderSummary() {
-            if (!Array.isArray(depositsDataArray)) depositsDataArray = [];
-            if (!Array.isArray(allTradesData)) allTradesData = [];
+        // ==========================================
+        // INNE MODUŁY I SKRYPTY
+        // ==========================================
+        let formEntries = []; let filteredFormEntries = []; let formCurrentPage = 1; const formRowsPerPage = 6; let formSortKey = 'created_at'; let formSortDir = 'desc'; let formFilterText = '';
 
-            let totalDepositsPln = 0;
-            depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount || 0));
-
-            let totalClosedPnlPln = 0; let openInvestedPln = 0; let openProfitPln = 0; let openLevValuePln = 0;
-            const currBreakdown = { PLN: 0, USD: 0, EUR: 0 }; const openGrouped = {}; const monthSet = new Set();
-
-            allTradesData.forEach(trade => {
-                try {
-                    const s = calculateTradeStats(trade); const curr = trade.currency || 'USD';
-                    if (s.isClosed) {
-                        totalClosedPnlPln += s.profPln;
-                        let month = 'Brak daty'; if (trade.sell_date && trade.sell_date.length >= 7) month = trade.sell_date.substring(0, 7);
-                        monthSet.add(month);
-                    } else {
-                        openInvestedPln += s.spentPln; openProfitPln += s.profPln; openLevValuePln += s.valPln + s.profPln; 
-                        const spent = parseFloat(trade.spent) || 0; const valInCurr = spent + s.prof;
-                        if(currBreakdown[curr] !== undefined) currBreakdown[curr] += valInCurr;
-                        const ticker = trade.ticker || 'N/A';
-                        if(!openGrouped[ticker]) openGrouped[ticker] = {inv:0, prof:0, valLev:0, curr: curr};
-                        openGrouped[ticker].inv += spent; openGrouped[ticker].prof += s.prof; openGrouped[ticker].valLev += s.val + s.prof;
-                    }
-                } catch(err) { console.error(err); }
-            });
-
-            const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
-            const freeCashPln = currentCapitalPln - openInvestedPln;
-            const openPositionsValuePln = openInvestedPln + openProfitPln;
-            const totalPortfolioValuePln = freeCashPln + openPositionsValuePln;
-            
-            let roiPct = 0; if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
-            let levPct = 0; if (totalPortfolioValuePln > 0) levPct = (openLevValuePln / totalPortfolioValuePln) * 100;
-
-            document.getElementById('s-dep').innerText = totalDepositsPln.toFixed(2) + ' PLN';
-            document.getElementById('s-pnl').innerText = totalClosedPnlPln.toFixed(2) + ' PLN';
-            document.getElementById('s-pnl').style.color = totalClosedPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            document.getElementById('s-openpnl').innerText = openProfitPln.toFixed(2) + ' PLN';
-            document.getElementById('s-openpnl').style.color = openProfitPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            document.getElementById('s-cash').innerText = freeCashPln.toFixed(2) + ' PLN';
-            document.getElementById('s-cash').style.color = freeCashPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            document.getElementById('s-total').innerText = totalPortfolioValuePln.toFixed(2) + ' PLN';
-            document.getElementById('s-roi').innerText = roiPct.toFixed(2) + ' %';
-            document.getElementById('s-roi').style.color = roiPct >= 0 ? 'var(--success)' : 'var(--danger)';
-            document.getElementById('s-levval').innerText = openLevValuePln.toFixed(2) + ' PLN';
-            document.getElementById('s-levpct').innerText = levPct.toFixed(2) + ' %';
-
-            document.getElementById('s-curr-breakdown').innerHTML = `
-                <tr><td>PLN</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr>
-                <tr><td>USD</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr>
-                <tr><td>EUR</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>
-            `;
-
-            window.summaryOpenData = Object.keys(openGrouped).map(k => ({ ticker: k, ...openGrouped[k] }));
-            renderSummaryOpen();
-
-            const monthSelect = document.getElementById('s-cls-month-filter');
-            if (monthSelect) {
-                const currentMonthVal = monthSelect.value; monthSelect.innerHTML = '<option value="ALL">Wszystkie Miesiące</option>';
-                Array.from(monthSet).sort().reverse().forEach(m => { monthSelect.innerHTML += `<option value="${m}">${m}</option>`; });
-                if(Array.from(monthSet).includes(currentMonthVal)) monthSelect.value = currentMonthVal;
-            }
-
-            renderSummaryClosed();
-
-            // Automatyczny zapis ROI i rysowanie wykresu
-            fetch(`${API_BASE_URL}/api/portfolio/roi/save`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({roi_pct: roiPct})
-            }).then(() => { drawSummaryChart(); }).catch(e => { drawSummaryChart(); });
+        async function initFormModule() {
+            if(tickerDataArray.length === 0) await loadDatabase(); 
+            const select = document.getElementById('form-ticker'); select.innerHTML = ''; tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; });
+            loadFormReasons(); fetchFormEntries(); document.getElementById('trading-form').onsubmit = submitAdvancedForm; updateFormTvLink(); 
         }
 
-        // --- Zabezpieczenia Kalkulatorów i Tickerów ---
-        function calculateTradeStats(item) {
+        async function fetchFormEntries() {
             try {
-                const isClosed = (item.status === 'CLOSED' || item.sell_date != null);
-                const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1;
-                const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
-                const buyPrice = parseFloat(item.buy_price) || 0;
-                let cp = buyPrice; if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } else if (tm && tm.price) { cp = parseFloat(tm.price); }
-                const spent = parseFloat(item.spent) || 0; const lev = parseInt(item.leverage) || 1; const val = spent * lev; 
-                const cfdCost = parseFloat(item.cfd_cost) || 0; const div = parseFloat(item.dividend) || 0;
-                let prof = 0; if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; }
-                const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1));
-                const profPln = prof * usedFx; const valPln = val * usedFx;
-                const tp = parseFloat(item.tp) || 0; const sl = parseFloat(item.sl) || 0;
-                let rr = 0; if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); }
-                let prog = 0; if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); }
-                let dsl = sl; if (prog >= 1) dsl = tp; else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); 
-                let pd = prog * 100; let pc = 'var(--success)';
-                if (pd < 0) { pc = 'var(--danger)'; if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } else { pd = 0; } }
-                if (pd > 100) pd = 100;
-                return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx };
-            } catch (error) { return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; }
+                const response = await fetch(`${API_BASE_URL}/api/form/entries`);
+                const rawData = await response.json();
+                formEntries = Array.isArray(rawData) ? rawData.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : [];
+                applyFormFilterAndSort(); 
+            } catch (error) { formEntries = []; applyFormFilterAndSort(); }
         }
 
-        // --- SKRÓCONY RESZTA WIDOKÓW (Działających poprawnie wcześniej) ---
-        function renderSummaryClosed() {
-            const fMonth = document.getElementById('s-cls-month-filter').value; const fCur = document.getElementById('s-cls-cur-filter').value; const fLev = document.getElementById('s-cls-lev-filter').value;
-            const closedByMonth = {}; const closedByCurr = {}; const closedByLev = {}; let filteredPnlPln = 0;
-            allTradesData.forEach(trade => {
-                try {
-                    const s = calculateTradeStats(trade); if (!s.isClosed) return;
-                    const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty'; const curr = trade.currency || 'USD'; const lev = parseInt(trade.leverage) || 1;
-                    if (fMonth !== 'ALL' && month !== fMonth) return; if (fCur !== 'ALL' && curr !== fCur) return; if (fLev === '>1' && lev <= 1) return; if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return;
-                    filteredPnlPln += s.profPln;
-                    if(!closedByMonth[month]) closedByMonth[month] = 0; closedByMonth[month] += s.profPln;
-                    if(!closedByCurr[curr]) closedByCurr[curr] = 0; closedByCurr[curr] += s.profPln;
-                    if(!closedByLev[lev]) closedByLev[lev] = 0; closedByLev[lev] += s.profPln;
-                } catch(e) {}
-            });
-            const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML=''; Object.keys(closedByMonth).sort().reverse().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
-            const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML=''; Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
-            const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML=''; Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
-            const totalEl = document.getElementById('s-cls-filtered-total'); if(totalEl) { totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN'; totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)'; }
-        }
-
-        function renderSummaryOpen() {
-            const tb = document.getElementById('s-open-tbody'); const fCur = document.getElementById('s-open-cur-filter').value;
-            let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur);
-            data.sort((a,b) => { let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey]; if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); } return summaryOpenSortDir==='asc' ? va-vb : vb-va; });
-            if(data.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; }
-            tb.innerHTML = data.map(i => `<tr><td style="font-weight:bold; color:var(--accent);">${i.ticker}</td><td class="sensitive">${i.inv.toFixed(2)} ${i.curr}</td><td class="sensitive" style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td><td class="sensitive">${i.valLev.toFixed(2)} ${i.curr}</td></tr>`).join('');
-        }
-        function sortSummaryOpen(key) { summaryOpenSortDir = (summaryOpenSortKey===key && summaryOpenSortDir==='desc') ? 'asc' : 'desc'; summaryOpenSortKey = key; renderSummaryOpen(); }
-
-        // Fetching API Functions
-        async function loadSummaryData() { if(document.getElementById('summary-module').style.display === 'block') { initSummaryModule(); } }
-        async function initSummaryModule() {
-            if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); const dt = await res.json(); allTradesData = Array.isArray(dt) ? dt : []; } catch(e) { allTradesData = []; } }
-            if(tickerDataArray.length === 0) await loadDatabase();
-            if(macroDataArray.length === 0) { try { const mRes = await fetch(`${API_BASE_URL}/api/macro/history`); macroDataArray = await mRes.json() || []; } catch(e) {} }
-            try { const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); const dData = await rD.json(); depositsDataArray = Array.isArray(dData) ? dData : []; renderDepositsTable(); calculateAndRenderSummary(); } catch(e){ console.error(e); }
-        }
-
-        function getTradingViewLink(ticker) { if (!ticker) return '#'; const cleanTicker = ticker.trim().toUpperCase(); const LAYOUT_ID = 'k5llKflB'; const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/'; if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; } const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ']; const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA']; let exchange = ''; if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; } return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`; }
-        function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = ticker.toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
-        
-        async function loadDatabase() { try { const response = await fetch(`${API_BASE_URL}/api/database`); const dt = await response.json(); tickerDataArray = Array.isArray(dt) ? dt : []; renderMobileList(); } catch (e) {} }
-        function renderMobileList() { const container = document.getElementById('db-list-container'); container.innerHTML = ''; if (tickerDataArray.length === 0) return; const start = (currentTickerPage - 1) * tickerPageSize; container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `<div class="data-card"><div class="data-card-info"><h4>${item.ticker}</h4><p>Dodano: ${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style="display: flex; align-items: center; gap: 10px;"><span class="price-tag sensitive">${item.price !== null ? item.price + ' $' : '...'}</span><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">📈 TV</a><button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button></div></div>`).join(''); document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${Math.ceil(tickerDataArray.length / tickerPageSize)}`; }
-        function changeTickerPage(dir) { currentTickerPage += dir; renderMobileList(); }
-        async function addTicker() { const t = document.getElementById('new-ticker').value.trim().toUpperCase(); if (!t) return; try { const res = await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) { document.getElementById('new-ticker').value = ''; loadDatabase(); } } catch (e) {} }
-        async function removeTicker(t) { if (!confirm(`Usunąć ${t}?`)) return; try { const res = await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) loadDatabase(); } catch (e) {} }
-        function loadMacroData() { const tbody = document.getElementById('macro-table-body'); if (!tbody) return; fetch(`${API_BASE_URL}/api/macro/history`).then(r => r.json()).then(data => { macroDataArray = Array.isArray(data) ? data : []; currentMacroPage = 1; renderMacroTable(); }).catch(e => {}); }
-        function renderMacroTable() { const tbody = document.getElementById('macro-table-body'); if (macroDataArray.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro w bazie.</td></tr>`; return; } const totalPages = Math.ceil(macroDataArray.length / macroPageSize); const start = (currentMacroPage - 1) * macroPageSize; tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => `<tr><td class="macro-val-date">${row.date || '-'}</td><td class="macro-val-currency sensitive">${row.eurpln || '-'}</td><td class="macro-val-currency sensitive">${row.usdpln || '-'}</td><td class="macro-val-vix">${row.vix || '-'}</td><td style="font-weight: 500;" class="sensitive">${row.sp500 || '-'}</td><td class="macro-val-time">${row.updated_at || '-'}</td></tr>`).join(''); document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`; }
-        function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
-        async function forceMacroUpdate() { try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } catch (e) { alert("Błąd połączenia z serwerem."); } }
-        async function forceMacroYTDUpdate() { const btn = event.currentTarget; const originalText = btn.innerText; btn.innerText = "⏳ Pobieram YTD (to potrwa 10-20s)..."; btn.disabled = true; try { const res = await fetch(`${API_BASE_URL}/api/macro/backfill-ytd`, { method: 'POST' }); const data = await res.json(); if(res.ok) { alert(data.message); loadMacroData(); } else { alert("Wystąpił błąd: " + data.message); } } catch (e) { alert("Błąd połączenia z serwerem."); } finally { btn.innerText = originalText; btn.disabled = false; } }
-
-        async function addDeposit(e) { e.preventDefault(); const amt = document.getElementById('dep-amt').value; const d = document.getElementById('dep-date').value; const cur = document.getElementById('dep-cur').value; try { const res = await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); if(!res.ok) { const err = await res.json(); alert("Wystąpił błąd przy dodawaniu wpłaty: " + (err.message)); } else { document.getElementById('dep-amt').value = ''; } } catch(err) { alert("Błąd połączenia z serwerem."); } initSummaryModule(); }
-        async function deleteDeposit(id) { if(!confirm("Na pewno usunąć? Saldo ulegnie zmianie.")) return; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); } catch(e) {} initSummaryModule(); }
-        
-        async function loadAlertHistory() { try { const r = await fetch(`${API_BASE_URL}/api/alerts/history`); const data = await r.json(); allAlertsData = Array.isArray(data) ? data : []; handleAlertsFilter(); } catch(e){} }
-        function handleAlertsFilter() { const searchText = (document.getElementById('alert-search').value || '').toLowerCase(); const typeFilter = document.getElementById('alert-type-filter').value || 'ALL'; filteredAlertsData = allAlertsData.filter(a => { const textMatch = (a.ticker || '').toLowerCase().includes(searchText); const aType = a.alert_type || 'Punkt wejścia'; const typeMatch = (typeFilter === 'ALL') || (aType === typeFilter); return textMatch && typeMatch; }); currentAlertPage = 1; renderAlertsTable(); }
-        function renderAlertsTable() { const tbody = document.getElementById("alert-history-tbody"); if (filteredAlertsData.length === 0) { tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--text-muted);">Brak alertów.</td></tr>`; return; } const start = (currentAlertPage - 1) * alertPageSize; tbody.innerHTML = filteredAlertsData.slice(start, start + alertPageSize).map(item => { const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>'; const aType = item.alert_type || 'Punkt wejścia'; let typeColor = '#89b4fa'; if(aType === 'Take Profit') typeColor = '#0ecb81'; if(aType === 'Stop Loss') typeColor = '#f6465d'; return `<tr> <td style="font-size: 0.85em; color: var(--text-muted);">${new Date(item.triggered_at).toLocaleString('pl-PL')}</td> <td style="font-weight: bold; color: ${typeColor};">${aType}</td> <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td> <td>${pb}</td><td style="color: ${item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d'};">${item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej'}</td> <td class="sensitive" style="font-weight: bold;">${Number(item.target_price).toFixed(2)} $</td> <td class="sensitive" style="font-size: 0.9em; color: var(--text-muted);">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td> <td style="color: #a6e3a1; font-weight: bold;">${item.score || 0}/5</td> <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 TV</a></td> <td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td> </tr>`; }).join(''); document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${Math.ceil(filteredAlertsData.length/alertPageSize)||1}`; }
-        function changeAlertPage(d) { const total = Math.ceil(filteredAlertsData.length / alertPageSize) || 1; if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) { currentAlertPage += d; renderAlertsTable(); } }
-        async function deleteAlert(id) { try { await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); loadAlertHistory(); } catch(e) {} }
-        
-        async function loadDailyBriefs() { try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); } } catch (error) {} }
-
-        async function initFormModule() { if(tickerDataArray.length === 0) await loadDatabase(); const select = document.getElementById('form-ticker'); select.innerHTML = ''; tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); loadFormReasons(); fetchFormEntries(); document.getElementById('trading-form').onsubmit = submitAdvancedForm; updateFormTvLink(); }
-        async function fetchFormEntries() { try { const response = await fetch(`${API_BASE_URL}/api/form/entries`); const rawData = await response.json(); formEntries = Array.isArray(rawData) ? rawData.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : []; applyFormFilterAndSort(); } catch (error) { formEntries = []; applyFormFilterAndSort(); } }
         function handleFormFilter(value) { formFilterText = value.toLowerCase(); formCurrentPage = 1; applyFormFilterAndSort(); }
         function handleFormSort(key) { formSortDir = (formSortKey === key && formSortDir === 'asc') ? 'desc' : 'asc'; formSortKey = key; updateFormSortIcons(); applyFormFilterAndSort(); }
         function updateFormSortIcons() { ['entry_id', 'ticker', 'direction', 'score', 'priority', 'mute'].forEach(col => { const icon = document.getElementById(`sort-icon-${col}`); if (icon) icon.innerText = formSortKey === col ? (formSortDir === 'asc' ? ' ▲' : ' ▼') : ' ─'; }); }
-        function applyFormFilterAndSort() { filteredFormEntries = formEntries.filter(entry => (entry.ticker || '').toLowerCase().includes(formFilterText) || (entry.direction || '').toLowerCase().includes(formFilterText)).sort((a, b) => { let valA = a[formSortKey] || ''; let valB = b[formSortKey] || ''; if (['score', 'priority', 'mute'].includes(formSortKey)) return formSortDir === 'asc' ? valA - valB : valB - valA; if (valA < valB) return formSortDir === 'asc' ? -1 : 1; if (valA > valB) return formSortDir === 'asc' ? 1 : -1; return 0; }); renderAdvancedFormTable(); }
-        function renderAdvancedFormTable() { const tbody = document.getElementById('form-table-body'); tbody.innerHTML = ''; const itemsToDisplay = filteredFormEntries.slice((formCurrentPage - 1) * formRowsPerPage, formCurrentPage * formRowsPerPage); itemsToDisplay.forEach(item => { const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); const mod = isLong ? 1 : -1; const entry = parseFloat(item.entry_point); const sl = parseFloat(item.stop_loss); const tp = parseFloat(item.take_profit); let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0; const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; const diff = (Math.abs(currentPrice - entry) / entry) * 100; let status = diff > 15 ? 'Ignorowanie' : (diff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja')); let statusColor = diff > 15 ? '#f6465d' : (diff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c')); const tvLink = getTradingViewLink(item.ticker); const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1; const priorityBadge = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`; const muteBadge = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`; tbody.innerHTML += `<tr><td style="font-weight:bold;">${item.entry_id}</td><td style="font-weight:bold; color:var(--accent);">${item.ticker}</td><td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td><td class="sensitive" style="font-weight: 600;">${entry.toFixed(2)} $</td><td>${priorityBadge}</td><td>${muteBadge}</td><td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td><td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td><td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a></td><td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td></tr>`; }); document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`; }
+
+        function applyFormFilterAndSort() {
+            filteredFormEntries = formEntries.filter(entry => (entry.ticker || '').toLowerCase().includes(formFilterText) || (entry.direction || '').toLowerCase().includes(formFilterText)).sort((a, b) => {
+                let valA = a[formSortKey] || ''; let valB = b[formSortKey] || '';
+                if (['score', 'priority', 'mute'].includes(formSortKey)) return formSortDir === 'asc' ? valA - valB : valB - valA;
+                if (valA < valB) return formSortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return formSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+            renderAdvancedFormTable();
+        }
+
+        function renderAdvancedFormTable() {
+            const tbody = document.getElementById('form-table-body'); tbody.innerHTML = '';
+            const itemsToDisplay = filteredFormEntries.slice((formCurrentPage - 1) * formRowsPerPage, formCurrentPage * formRowsPerPage);
+            itemsToDisplay.forEach(item => {
+                const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); const mod = isLong ? 1 : -1;
+                const entry = parseFloat(item.entry_point); const sl = parseFloat(item.stop_loss); const tp = parseFloat(item.take_profit);
+                let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
+                const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
+                const diff = (Math.abs(currentPrice - entry) / entry) * 100;
+                let status = diff > 15 ? 'Ignorowanie' : (diff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
+                let statusColor = diff > 15 ? '#f6465d' : (diff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
+                const tvLink = getTradingViewLink(item.ticker); const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
+                const priorityBadge = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
+                const muteBadge = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
+
+                tbody.innerHTML += `<tr>
+                    <td style="font-weight:bold;">${item.entry_id}</td>
+                    <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
+                    <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
+                    <td class="sensitive" style="font-weight: 600;">${entry.toFixed(2)} $</td>
+                    <td>${priorityBadge}</td><td>${muteBadge}</td>
+                    <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
+                    <td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
+                    <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a></td>
+                    <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
+                </tr>`;
+            });
+            document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`;
+        }
+
         function changeFormPage(direction) { formCurrentPage += direction; renderAdvancedFormTable(); }
-        async function submitAdvancedForm(e) { e.preventDefault(); const data = { ticker: document.getElementById('form-ticker').value, direction: document.getElementById('form-direction').value, priority: document.getElementById('form-priority').value, start_zone: document.getElementById('form-start').value, end_zone: document.getElementById('form-end').value, entry_point: document.getElementById('form-entry').value, take_profit: document.getElementById('form-tp').value, reasons: [document.getElementById('form-reason-1')?.value || '', document.getElementById('form-reason-2')?.value || '', document.getElementById('form-reason-3')?.value || '', document.getElementById('form-reason-4')?.value || '', document.getElementById('form-reason-5')?.value || ''].filter(r => r.trim() !== '') }; if(!data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) return alert('Uzupełnij wszystkie pola liczbowe!'); try { await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); document.getElementById('trading-form').reset(); fetchFormEntries(); loadFormReasons(); } catch(err) {} }
+
+        async function submitAdvancedForm(e) {
+            e.preventDefault();
+            const data = { ticker: document.getElementById('form-ticker').value, direction: document.getElementById('form-direction').value, priority: document.getElementById('form-priority').value, start_zone: document.getElementById('form-start').value, end_zone: document.getElementById('form-end').value, entry_point: document.getElementById('form-entry').value, take_profit: document.getElementById('form-tp').value, reasons: [document.getElementById('form-reason-1')?.value || '', document.getElementById('form-reason-2')?.value || '', document.getElementById('form-reason-3')?.value || '', document.getElementById('form-reason-4')?.value || '', document.getElementById('form-reason-5')?.value || ''].filter(r => r.trim() !== '') };
+            if(!data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) return alert('Uzupełnij wszystkie pola liczbowe!');
+            try { await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); document.getElementById('trading-form').reset(); fetchFormEntries(); loadFormReasons(); } catch(err) {}
+        }
+        
         async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(); } catch(e) {} }
         async function updateFormEntryField(entryId, field, newValue) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) }); fetchFormEntries(); } catch(e){} }
         async function loadFormReasons() { try { const res = await fetch(`${API_BASE_URL}/api/form/reasons`); const reasons = await res.json(); const datalist = document.getElementById('reasons-list'); datalist.innerHTML = ''; if(Array.isArray(reasons)) { reasons.forEach(r => { datalist.innerHTML += `<option value="${r}">`; }); } } catch(e) {} }
+
         function toggleFibo() { const drawer = document.getElementById('fibo-drawer'); drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; if (drawer.style.display === 'block') updateFiboLabels(); }
-        function updateFiboLabels() { const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const direction = document.getElementById('form-direction').value; const select = document.getElementById('fibo-level'); if (!select) return; const levels = [1.272, 1.618, 2.000, 2.618]; const currentSelected = select.value; select.innerHTML = ''; levels.forEach(lvl => { let optionText = lvl.toFixed(3); if (!isNaN(start) && !isNaN(peak)) { let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * lvl : peak - (start - peak) * lvl; optionText += ` (cena: ${calculatedPrice.toFixed(2)})`; } const opt = document.createElement('option'); opt.value = lvl.toString(); opt.textContent = optionText; if (lvl.toString() === currentSelected) opt.selected = true; select.appendChild(opt); }); }
-        function applyFibo() { const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const level = parseFloat(document.getElementById('fibo-level').value); const direction = document.getElementById('form-direction').value; if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.'); const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * level : peak - (start - peak) * level; document.getElementById('form-tp').value = tp.toFixed(2); toggleFibo(); }
+        function updateFiboLabels() {
+            const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const direction = document.getElementById('form-direction').value; const select = document.getElementById('fibo-level');
+            if (!select) return; const levels = [1.272, 1.618, 2.000, 2.618]; const currentSelected = select.value; select.innerHTML = ''; 
+            levels.forEach(lvl => {
+                let optionText = lvl.toFixed(3);
+                if (!isNaN(start) && !isNaN(peak)) { let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * lvl : peak - (start - peak) * lvl; optionText += ` (cena: ${calculatedPrice.toFixed(2)})`; }
+                const opt = document.createElement('option'); opt.value = lvl.toString(); opt.textContent = optionText; if (lvl.toString() === currentSelected) opt.selected = true; select.appendChild(opt);
+            });
+        }
+
+        function applyFibo() {
+            const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const level = parseFloat(document.getElementById('fibo-level').value); const direction = document.getElementById('form-direction').value;
+            if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
+            const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * level : peak - (start - peak) * level; document.getElementById('form-tp').value = tp.toFixed(2); toggleFibo();
+        }
         function updateFormTvLink() { const ticker = document.getElementById('form-ticker').value; const linkEl = document.getElementById('form-tv-link'); if (ticker) { linkEl.href = getTradingViewLink(ticker); linkEl.style.display = 'inline-block'; } }
 
+        let filteredFocusListEntries = []; let currentFocusListPage = 1; const focusListPageSize = 20;
+
         async function initFocusListModule() { if(tickerDataArray.length === 0) await loadDatabase(); await fetchFormEntries(); handleFocusListFilter(); }
+
         function handleFocusListFilter() {
             const sFilter = document.getElementById('focuslist-status-filter').value; const cFilter = document.getElementById('focuslist-currency-filter').value;
             filteredFocusListEntries = [];
             formEntries.forEach(item => {
                 const entry = parseFloat(item.entry_point); const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; const diff = (Math.abs(currentPrice - entry) / entry) * 100;
                 let status = ''; if (diff > 15) status = 'Ignorowanie'; else if (diff > 10) status = 'Czekanie'; else if (item.priority === 1) status = 'Skupienie'; else status = 'Obserwacja';
-                if (status !== 'Skupienie' && status !== 'Obserwacja') return; if (sFilter !== 'ALL' && status !== sFilter) return;
-                const currency = getCurrencyForFrontend(item.ticker); if (cFilter !== 'ALL' && currency !== cFilter) return;
+                if (status !== 'Skupienie' && status !== 'Obserwacja') return;
+                if (sFilter !== 'ALL' && status !== sFilter) return;
+                const currency = getCurrencyForFrontend(item.ticker);
+                if (cFilter !== 'ALL' && currency !== cFilter) return;
                 filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: diff });
             });
             filteredFocusListEntries.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); currentFocusListPage = 1; renderFocusListTable();
         }
+
         function renderFocusListTable() {
             const tb = document.getElementById('focuslist-table-body'); if (!tb) return;
             if (filteredFocusListEntries.length === 0) { tb.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów.</td></tr>`; document.getElementById('focuslist-page-info').innerText = 'Strona 0 z 0'; return; }
