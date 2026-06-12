@@ -6,6 +6,7 @@
     <title>Quant Desk v8</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* === UI OPTIMIZATIONS (DESKTOP + MOBILE) === */
         :root {
             --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef;
             --text-muted: #848e9c; --accent: #c99400; --accent-hover: #fcd535; --danger: #f6465d;
@@ -13,6 +14,7 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { height: 8px; width: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg-main); }
         ::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 4px; }
@@ -23,12 +25,14 @@
         header h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
         header h1 span { color: var(--accent); }
         
+        /* Opcje Header (Privacy) */
         .header-actions { display: flex; align-items: center; gap: 15px; }
         .back-btn, .privacy-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .back-btn { color: var(--accent); font-size: 1rem; display: none; gap: 5px; font-weight: bold; }
         .privacy-btn { font-size: 1.3rem; filter: grayscale(1); transition: 0.2s; }
         .privacy-btn:hover { filter: grayscale(0); transform: scale(1.1); }
 
+        /* Szeroki Layout do 1500px na 25" monitorach */
         .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 15px; }
         @media (min-width: 768px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); max-width: 1500px; margin: 0 auto; } }
         @media (min-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(5, 1fr); } }
@@ -53,16 +57,23 @@
         .btn-submit { width: 100%; padding: 10px; background: #89b4fa; color: #11111b; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
         .btn-submit:hover { background: #b4befe; }
         
+        /* Optymalizacja Tabel dla Androida */
+        .table-controls { margin-bottom: 12px; }
+        #journal-search { width: 100%; max-width: 350px; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4; }
         .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--border-color); }
         #journal-table, .macro-custom-table { width: 100%; border-collapse: collapse; background: #1e1e2e; min-width: 800px; }
         #journal-table th, #journal-table td, .macro-custom-table th, .macro-custom-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #313244; font-size: 14px; white-space: nowrap; }
         #journal-table th, .macro-custom-table th { background: #313244; color: #cdd6f4; cursor: pointer; user-select: none; position: sticky; top: 0; z-index: 10; }
         #journal-table th:hover, .macro-custom-table th:hover { background: #45475a; }
-        @media (max-width: 768px) { #journal-table th, #journal-table td, .macro-custom-table th, .macro-custom-table td { padding: 8px 10px; font-size: 13px; } }
+        @media (max-width: 768px) {
+            #journal-table th, #journal-table td, .macro-custom-table th, .macro-custom-table td { padding: 8px 10px; font-size: 13px; }
+        }
 
         .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 5px; }
         .btn-pag { padding: 6px 14px; background: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .btn-pag:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-delete-journal { background: #f38ba8; color: #11111b; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .btn-delete-journal:hover { background: #eba0ac; }
         .btn-delete { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 5px 10px; font-size: 0.85rem; border-radius: 4px; cursor: pointer; font-weight:bold; }
         .btn-delete:active { background-color: var(--danger); color: #fff; }
         
@@ -81,8 +92,24 @@
         .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 400; padding: 5px; }
         .nav-item.active { color: var(--accent); }
         
+        .brief-carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding: 10px 5px 20px 5px; scrollbar-width: none; }
+        .brief-carousel-container::-webkit-scrollbar { display: none; }
+        .brief-card { flex: 0 0 100%; scroll-snap-align: start; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+        @media (min-width: 768px) { .brief-card { flex: 0 0 calc(50% - 8px); } }
+        .brief-card h4 { font-size: 1.15rem; color: var(--accent); line-height: 1.4; font-weight: 600; }
+        .brief-text { font-size: 0.95rem; line-height: 1.6; color: var(--text-main); white-space: pre-line; overflow-y: auto; max-height: 340px; padding-right: 5px; }
+        .brief-card-footer { margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 12px; text-align: right; }
+        .brief-link { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+        .brief-link:hover { color: var(--accent-hover); }
+
         /* === PRIVACY MODE CSS === */
-        body.privacy-active .sensitive { filter: blur(6px); user-select: none; opacity: 0.6; transition: filter 0.3s ease; pointer-events: none; }
+        body.privacy-active .sensitive {
+            filter: blur(6px);
+            user-select: none;
+            opacity: 0.6;
+            transition: filter 0.3s ease;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -691,8 +718,7 @@
             </div>
         </div>
     </div>
-
-    <script>
+<script>
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
         let isPrivacyMode = false;
 
@@ -853,7 +879,7 @@
             if(typeof event !== 'undefined') {
                 const btn = event.currentTarget;
                 const originalText = btn.innerText;
-                btn.innerText = "⏳ Pobieram YTD...";
+                btn.innerText = "⏳ Pobieram YTD (to potrwa 10-20s)...";
                 btn.disabled = true;
                 try { 
                     const res = await fetch(`${API_BASE_URL}/api/macro/backfill-ytd`, { method: 'POST' }); 
@@ -1207,42 +1233,13 @@
             initSummaryModule(); 
         }
 
-        function drawSummaryChart() {
-            let sp500Change = 0;
-            if(macroDataArray.length > 1) {
-                const oldest = macroDataArray[macroDataArray.length-1].sp500;
-                const newest = macroDataArray[0].sp500;
-                if(oldest && newest) sp500Change = ((newest - oldest) / oldest) * 100;
-            }
-
-            const ctx = document.getElementById('roiChart').getContext('2d');
-            if(summaryChartInstance) summaryChartInstance.destroy();
-            
-            Chart.defaults.color = '#cdd6f4';
-            summaryChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Twój Portfel (ROI %)', 'S&P 500 (Dla danych z bazy)'],
-                    datasets: [{
-                        label: '% Zmiany',
-                        data: [0, sp500Change], // ROI pobierane osobno poniżej (dynamicznie)
-                        backgroundColor: [ 'rgba(14, 203, 129, 0.7)', 'rgba(137, 180, 250, 0.7)' ],
-                        borderColor: [ '#0ecb81', '#89b4fa' ],
-                        borderWidth: 1,
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, grid: {color: '#313244'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4'} } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-
-            // Asynchroniczne pobranie prawdziwej historii z bazy i narysowanie wykresu liniowego
-            fetch(`${API_BASE_URL}/api/portfolio/roi/history`).then(r => r.json()).then(roiHistory => {
+        async function drawSummaryChart() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/portfolio/roi/history`);
+                const roiHistory = await res.json() || [];
+                
                 if (!Array.isArray(roiHistory) || roiHistory.length === 0) return;
+
                 roiHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
 
                 const labels = [];
@@ -1273,7 +1270,10 @@
                     sp500Dataset.push(sp500Pct);
                 });
 
+                const ctx = document.getElementById('roiChart').getContext('2d');
                 if(summaryChartInstance) summaryChartInstance.destroy();
+                
+                Chart.defaults.color = '#cdd6f4';
                 summaryChartInstance = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -1305,18 +1305,35 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
                         scales: { 
-                            y: { grid: {color: 'rgba(255,255,255,0.05)'}, ticks: {color: '#cdd6f4'} }, 
-                            x: { grid: {display: false}, ticks: {color: '#cdd6f4', maxTicksLimit: 10} } 
+                            y: { 
+                                grid: {color: 'rgba(255,255,255,0.05)'}, 
+                                ticks: {color: '#cdd6f4'} 
+                            }, 
+                            x: { 
+                                grid: {display: false}, 
+                                ticks: {color: '#cdd6f4', maxTicksLimit: 10} 
+                            } 
                         },
                         plugins: { 
                             legend: { display: true, position: 'top', labels: {color: '#cdd6f4'} },
-                            tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + c.parsed.y.toFixed(2) + '%'; } } }
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+                                    }
+                                }
+                            }
                         }
                     }
                 });
-            }).catch(e => console.error("Błąd ładowania danych wykresu", e));
+            } catch (err) {
+                console.error("Błąd rysowania wykresu", err);
+            }
         }
 
         // ==========================================
