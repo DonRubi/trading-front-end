@@ -3,90 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quant Desk v5</title>
+    <title>Quant Desk v7</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .journal-container { display: grid; grid-template-columns: 300px 1fr; gap: 24px; margin-top: 15px; align-items: start; }
-        @media (max-width: 1024px) { .journal-container { grid-template-columns: 1fr; } }
-        .journal-sidebar { background: #1e1e2e; padding: 20px; border-radius: 8px; border: 1px solid #313244; }
-        .form-group { margin-bottom: 14px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 13px; color: #cdd6f4; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border-radius: 6px; background: #11111b; border: 1px solid #45475a; color: #cdd6f4; box-sizing: border-box; font-family: inherit; font-size: 14px; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #89b4fa; }
-        .btn-submit { width: 100%; padding: 10px; background: #89b4fa; color: #11111b; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        .btn-submit:hover { background: #b4befe; }
-        .table-controls { margin-bottom: 12px; }
-        #journal-search { width: 100%; max-width: 350px; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4; }
-        .table-responsive { overflow-x: auto; }
-        #journal-table, .macro-custom-table { width: 100%; border-collapse: collapse; background: #1e1e2e; border-radius: 8px; overflow: hidden; min-width: 800px; }
-        #journal-table th, #journal-table td, .macro-custom-table th, .macro-custom-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #313244; font-size: 14px; }
-        #journal-table th, .macro-custom-table th { background: #313244; color: #cdd6f4; cursor: pointer; user-select: none; }
-        #journal-table th:hover, .macro-custom-table th:hover { background: #45475a; }
-        .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 5px; }
-        .btn-pag { padding: 6px 14px; background: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .btn-pag:disabled { opacity: 0.3; cursor: not-allowed; }
-        .btn-delete-journal { background: #f38ba8; color: #11111b; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .btn-delete-journal:hover { background: #eba0ac; }
-        .brief-carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding: 10px 5px 20px 5px; scrollbar-width: none; }
-        .brief-carousel-container::-webkit-scrollbar { display: none; }
-        .brief-card { flex: 0 0 100%; scroll-snap-align: start; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
-        @media (min-width: 768px) { .brief-card { flex: 0 0 calc(50% - 8px); } }
-        .brief-card h4 { font-size: 1.15rem; color: var(--accent); line-height: 1.4; font-weight: 600; }
-        .brief-text { font-size: 0.95rem; line-height: 1.6; color: var(--text-main); white-space: pre-line; overflow-y: auto; max-height: 340px; padding-right: 5px; }
-        .brief-card-footer { margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 12px; text-align: right; }
-        .brief-link { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
-        .brief-link:hover { color: var(--accent-hover); }
-        
+        /* === UI OPTIMIZATIONS (DESKTOP + MOBILE) === */
         :root {
             --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef;
             --text-muted: #848e9c; --accent: #c99400; --accent-hover: #fcd535; --danger: #f6465d;
             --success: #0ecb81; --border-color: #2b3139;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        ::-webkit-scrollbar { height: 8px; width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-main); }
+        ::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
         body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 70px; }
         header { background-color: var(--bg-card); padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
         header h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
         header h1 span { color: var(--accent); }
-        .back-btn { background: none; border: none; color: var(--accent); font-size: 1rem; display: none; cursor: pointer; align-items: center; gap: 5px; }
+        
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .back-btn, .privacy-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .back-btn { color: var(--accent); font-size: 1rem; display: none; gap: 5px; font-weight: bold; }
+        .privacy-btn { font-size: 1.3rem; filter: grayscale(1); transition: 0.2s; }
+        .privacy-btn:hover { filter: grayscale(0); transform: scale(1.1); }
+
         .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 15px; }
-        @media (min-width: 768px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); max-width: 1200px; margin: 0 auto; } }
+        @media (min-width: 768px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); max-width: 1500px; margin: 0 auto; } }
+        @media (min-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(5, 1fr); } }
+        
         .menu-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: transform 0.2s, border-color 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
         .menu-card:active { transform: scale(0.95); background-color: #20242c; }
         .menu-card .icon { font-size: 1.8rem; }
         .menu-card h3 { font-size: 0.95rem; font-weight: 500; }
-        .app-module { display: none; padding: 15px; animation: fadeIn 0.3s ease-in-out; max-width: 1000px; margin: 0 auto; }
+        
+        .app-module { display: none; padding: 15px; animation: fadeIn 0.3s ease-in-out; max-width: 1500px; margin: 0 auto; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
-        input[type="text"], input[type="number"], select { background-color: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); padding: 12px; font-size: 1rem; outline: none; }
-        input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: var(--accent); }
-        button { background-color: var(--accent); color: #000; border: none; border-radius: 8px; padding: 12px 20px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background-color 0.2s; }
-        button:active { background-color: var(--accent-hover); }
-        .data-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .price-tag { font-weight: 700; font-size: 1.05rem; color: var(--success); }
-        .btn-delete { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; }
+        
+        .journal-container { display: grid; grid-template-columns: 320px 1fr; gap: 24px; margin-top: 15px; align-items: start; }
+        @media (max-width: 1024px) { .journal-container { grid-template-columns: 1fr; } }
+        .journal-sidebar { background: #1e1e2e; padding: 20px; border-radius: 8px; border: 1px solid #313244; }
+        
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 13px; color: #cdd6f4; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border-radius: 6px; background: #11111b; border: 1px solid #45475a; color: #cdd6f4; box-sizing: border-box; font-family: inherit; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #89b4fa; }
+        
+        .btn-submit { width: 100%; padding: 10px; background: #89b4fa; color: #11111b; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .btn-submit:hover { background: #b4befe; }
+        
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--border-color); }
+        #journal-table, .macro-custom-table { width: 100%; border-collapse: collapse; background: #1e1e2e; min-width: 800px; }
+        #journal-table th, #journal-table td, .macro-custom-table th, .macro-custom-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #313244; font-size: 14px; white-space: nowrap; }
+        #journal-table th, .macro-custom-table th { background: #313244; color: #cdd6f4; cursor: pointer; user-select: none; position: sticky; top: 0; z-index: 10; }
+        #journal-table th:hover, .macro-custom-table th:hover { background: #45475a; }
+        @media (max-width: 768px) { #journal-table th, #journal-table td, .macro-custom-table th, .macro-custom-table td { padding: 8px 10px; font-size: 13px; } }
+
+        .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 5px; }
+        .btn-pag { padding: 6px 14px; background: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-pag:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-delete { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 5px 10px; font-size: 0.85rem; border-radius: 4px; cursor: pointer; font-weight:bold; }
         .btn-delete:active { background-color: var(--danger); color: #fff; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; }
-        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 400; padding: 5px; }
-        .nav-item.active { color: var(--accent); }
-        .form-row { display: flex; flex-wrap: wrap; gap: 10px; }
-        .form-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 5px; }
-        .tabs { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; overflow-x:auto;}
+        
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .kpi-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .kpi-card h4 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+        .kpi-card .value { font-size: 1.4rem; font-weight: bold; color: var(--text-main); }
+        
+        .tabs { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; overflow-x:auto; padding-bottom: 5px; }
         .tab-btn { background: none; border: none; padding: 10px 20px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: bold; font-size: 1rem; white-space:nowrap; }
         .tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
         .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
         .tab-content.active { display: block; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .kpi-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-        .kpi-card h4 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
-        .kpi-card .value { font-size: 1.4rem; font-weight: bold; color: var(--text-main); }
+        
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; }
+        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 400; padding: 5px; }
+        .nav-item.active { color: var(--accent); }
+        
+        /* === PRIVACY MODE CSS === */
+        body.privacy-active .sensitive { filter: blur(6px); user-select: none; opacity: 0.6; transition: filter 0.3s ease; pointer-events: none; }
     </style>
 </head>
 <body>
 
     <header>
-        <button class="back-btn" id="back-btn" onclick="openDashboard()">← Powrót</button>
-        <h1 id="app-title">Quant<span>Desk</span></h1>
-        <div style="width: 24px;" id="spacer"></div>
+        <div class="header-actions">
+            <button class="back-btn" id="back-btn" onclick="openDashboard()">← Powrót</button>
+            <h1 id="app-title">Quant<span>Desk</span></h1>
+        </div>
+        <button class="privacy-btn" id="privacy-btn" onclick="togglePrivacy()" title="Tryb ukrycia danych">👁️</button>
     </header>
 
     <main id="dashboard">
@@ -109,19 +116,19 @@
         <div class="journal-container">
             <div class="journal-sidebar">
                 <form id="trading-form">
-                    <div class="form-row">
-                        <div class="form-group">
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;">
                             <label style="display: flex; justify-content: space-between;">Ticker <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label>
                             <select id="form-ticker" onchange="updateFormTvLink()"></select>
                         </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div>
-                        <div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div>
+                        <div class="form-group" style="flex:1;"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div>
-                        <div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div>
+                        <div class="form-group" style="flex:1;"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div>
                     </div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01"></div>
                     <div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01"></div>
@@ -139,9 +146,9 @@
                 
                 <button type="button" onclick="toggleFibo()" style="background: none; border: 1px solid var(--accent); color: var(--accent); margin-top: 15px; width: 100%; border-radius: 6px; padding: 8px; cursor: pointer;">📐 Otwórz Asystenta Fibo</button>
                 <div id="fibo-drawer" style="display:none; margin-top: 10px; padding: 15px; background: rgba(201,148,0,0.05); border: 1px solid var(--accent); border-radius: 8px;">
-                    <div class="form-row">
-                        <div class="form-group"><label>Początek impulsu</label><input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()"></div>
-                        <div class="form-group"><label>Szczyt impulsu</label><input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()"></div>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;"><label>Początek impulsu</label><input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()"></div>
+                        <div class="form-group" style="flex:1;"><label>Szczyt impulsu</label><input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()"></div>
                     </div>
                     <div class="form-group">
                         <label>Zewnętrzne zniesienie (Cel)</label>
@@ -175,29 +182,29 @@
             <div class="journal-sidebar">
                 <form id="focus-form" onsubmit="submitFocusForm(event)">
                     <div class="form-group"><label>Wybierz ID Form</label><select id="focus-form-id" onchange="onFocusIdChange()"></select></div>
-                    <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
-                        <div class="form-group"><label>Wybrany Ticker</label><input type="text" id="focus-ticker" readonly style="opacity:0.7;"></div>
-                        <div class="form-group"><label>Kierunek</label><input type="text" id="focus-direction" readonly style="opacity:0.7;"></div>
+                    <div class="form-row" style="display:flex; gap:10px; background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
+                        <div class="form-group" style="flex:1;"><label>Wybrany Ticker</label><input type="text" id="focus-ticker" readonly style="opacity:0.7;"></div>
+                        <div class="form-group" style="flex:1;"><label>Kierunek</label><input type="text" id="focus-direction" readonly style="opacity:0.7;"></div>
                     </div>
                     <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC()" style="background: #0284c7; color:#fff; padding: 6px 12px; font-size: 0.8rem;">🤖 Automatyzuj SMC (Yahoo)</button></div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5"></div>
-                        <div class="form-group"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5"></div>
+                        <div class="form-group" style="flex:1;"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Luka Sesyjna</label><select id="focus-gap"><option value="1">1.0 (Pełne domknięcie/Zgodna)</option><option value="0.5">0.5 (Neutralna)</option><option value="0">0.0 (Brak luki/Negatywna)</option></select>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Luka Sesyjna</label><select id="focus-gap"><option value="1">1.0 (Domknięcie/Zgodna)</option><option value="0.5">0.5 (Neutralna)</option><option value="0">0.0 (Brak luki/Negatywna)</option></select>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="flex:1;">
                             <label>Kalendarz (Raporty)</label><select id="focus-calendar"><option value="1">1.0 (Bezpiecznie > 30 dni)</option><option value="0.5">0.5 (Blisko < 30 dni)</option><option value="0">0.0 (Ryzyko < 20 dni)</option></select>
                         </div>
                     </div>
                     <div class="form-group">
                         <label>CVD Order Flow [0-3]</label><select id="focus-cvd"><option value="3">3.0 - Silna absorpcja</option><option value="2">2.0 - Zgodny trend delty z ceną</option><option value="1">1.0 - Słaba delta / Churn</option><option value="0">0.0 - Negatywne uderzenia</option></select>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>VIX Sentyment [0-2]</label><input type="number" id="focus-vix" step="0.5" min="0" max="2" value="1"></div>
-                        <div class="form-group"><label>Indeks (Siła) [0-2]</label><input type="number" id="focus-index" step="1" min="0" max="2" value="0"></div>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;"><label>VIX Sentyment [0-2]</label><input type="number" id="focus-vix" step="0.5" min="0" max="2" value="1"></div>
+                        <div class="form-group" style="flex:1;"><label>Indeks (Siła) [0-2]</label><input type="number" id="focus-index" step="1" min="0" max="2" value="0"></div>
                     </div>
                     <div class="form-group"><label>HTF Market Structure [0-1]</label><select id="focus-htf"><option value="1">1.0 - Zgodny z trendem wyższego rzędu</option><option value="0">0.0 - Pod prąd trendu</option></select></div>
                     <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">💾 Zapisz Analizę</button>
@@ -221,21 +228,21 @@
             <div class="journal-sidebar">
                 <form id="trade-form" onsubmit="submitTradeForm(event)">
                     <div class="form-group"><label>Powiązane z ID Focus</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Wybierz przeanalizowany Setup...</option></select></div>
-                    <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);">
-                        <div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div>
-                        <div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div>
-                        <div class="form-group"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div>
-                        <div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div>
-                        <div class="form-group"><label>Max Wydatek</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div>
+                    <div class="form-row" style="display:flex; gap:5px; flex-wrap:wrap; background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);">
+                        <div class="form-group" style="min-width:60px;"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div>
+                        <div class="form-group" style="min-width:60px;"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div>
+                        <div class="form-group" style="min-width:60px;"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div>
+                        <div class="form-group" style="min-width:60px;"><label>Waluta</label><input type="text" id="trade-currency" readonly></div>
+                        <div class="form-group" style="min-width:60px;"><label>Max Wyd.</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div>
                     </div>
                     <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div>
-                        <div class="form-group"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div>
+                        <div class="form-group" style="flex:1;"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Wydano gotówki</label><input type="number" step="1" id="trade-spent" required></div>
-                        <div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="1" min="1" id="trade-leverage" value="1" required></div>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;"><label>Wydano gotówki</label><input type="number" step="1" id="trade-spent" required></div>
+                        <div class="form-group" style="flex:1;"><label>Dźwignia (1=Akcje)</label><input type="number" step="1" min="1" id="trade-leverage" value="1" required></div>
                     </div>
                     <input type="hidden" id="trade-tp"><input type="hidden" id="trade-sl"><input type="hidden" id="trade-score">
                     <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">🛒 Zarejestruj Transakcję</button>
@@ -266,7 +273,7 @@
         <div class="macro-header-container"><h3>Podsumowanie Portfela</h3></div>
         
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchSummaryTab('dashboard')">Bieżące saldo</button>
+            <button class="tab-btn active" onclick="switchSummaryTab('dashboard')">Bieżące saldo (Wykres Liniowy)</button>
             <button class="tab-btn" onclick="switchSummaryTab('deposits')">Historia depozytu</button>
             <button class="tab-btn" onclick="switchSummaryTab('open')">Podsumowanie otwartych</button>
             <button class="tab-btn" onclick="switchSummaryTab('closed')">Podsumowanie zamkniętych</button>
@@ -274,21 +281,21 @@
 
         <div id="tab-dashboard" class="tab-content active">
             <div class="kpi-grid">
-                <div class="kpi-card"><h4>Suma Depozytów</h4><div class="value" id="s-dep">0.00 PLN</div></div>
-                <div class="kpi-card"><h4>Zysk Zamknięty (PnL)</h4><div class="value" id="s-pnl" style="color:var(--success);">0.00 PLN</div></div>
-                <div class="kpi-card"><h4>Obecny Zysk (Otwarte)</h4><div class="value" id="s-openpnl" style="color:var(--accent);">0.00 PLN</div></div>
-                <div class="kpi-card"><h4>Wolna Gotówka</h4><div class="value" id="s-cash" style="color:var(--success);">0.00 PLN</div></div>
-                <div class="kpi-card"><h4>Wartość Portfela</h4><div class="value" id="s-total">0.00 PLN</div></div>
-                <div class="kpi-card"><h4>Stopa Zwrotu (ROI)</h4><div class="value" id="s-roi" style="color:var(--success);">0.00 %</div></div>
+                <div class="kpi-card"><h4>Suma Depozytów</h4><div class="value sensitive" id="s-dep">0.00 PLN</div></div>
+                <div class="kpi-card"><h4>Zysk Zamknięty (PnL)</h4><div class="value sensitive" id="s-pnl" style="color:var(--success);">0.00 PLN</div></div>
+                <div class="kpi-card"><h4>Obecny Zysk (Otwarte)</h4><div class="value sensitive" id="s-openpnl" style="color:var(--accent);">0.00 PLN</div></div>
+                <div class="kpi-card"><h4>Wolna Gotówka</h4><div class="value sensitive" id="s-cash" style="color:var(--success);">0.00 PLN</div></div>
+                <div class="kpi-card"><h4>Wartość Portfela</h4><div class="value sensitive" id="s-total">0.00 PLN</div></div>
+                <div class="kpi-card"><h4>Obecna Stopa Zwrotu (ROI)</h4><div class="value sensitive" id="s-roi" style="color:var(--success);">0.00 %</div></div>
             </div>
             
             <div class="kpi-grid" style="margin-top: 15px;">
-                <div class="kpi-card"><h4>Wartość Pozycji (Dźwignia)</h4><div class="value" id="s-levval">0.00 PLN</div></div>
-                <div class="kpi-card"><h4>Zalewarowanie Konta</h4><div class="value" id="s-levpct" style="color:#fcd535;">0.00 %</div></div>
+                <div class="kpi-card"><h4>Wartość Pozycji (Dźwignia)</h4><div class="value sensitive" id="s-levval">0.00 PLN</div></div>
+                <div class="kpi-card"><h4>Zalewarowanie Konta</h4><div class="value sensitive" id="s-levpct" style="color:#fcd535;">0.00 %</div></div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
-                <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 20px;">
+                <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;">
                     <h4 style="color: var(--accent); margin-bottom: 15px;">Wartość Otwartych (Zainwestowano + Zysk)</h4>
                     <table class="macro-custom-table">
                         <thead><tr><th>Waluta</th><th>Wartość</th></tr></thead>
@@ -297,7 +304,7 @@
                 </div>
                 
                 <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Wykres: ROI % Portfela vs S&P 500 (Baza YTD)</h4>
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Wykres Liniowy: Historia ROI % Portfela vs S&P 500</h4>
                     <div style="position: relative; height: 250px; width: 100%;">
                         <canvas id="roiChart"></canvas>
                     </div>
@@ -307,11 +314,11 @@
 
         <div id="tab-deposits" class="tab-content">
             <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
-                <form onsubmit="addDeposit(event)" style="display: flex; gap: 10px; align-items: flex-end; max-width: 600px; margin-bottom: 20px;">
-                    <div class="form-group" style="margin-bottom:0;"><label>Data</label><input type="date" id="dep-date" required></div>
-                    <div class="form-group" style="margin-bottom:0;"><label>Kwota (na minus = wypłata)</label><input type="number" step="0.01" id="dep-amt" required></div>
-                    <div class="form-group" style="margin-bottom:0;"><label>Waluta</label><select id="dep-cur"><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
-                    <button type="submit" style="background: var(--success); color:#fff; padding: 10px 15px;">Księguj</button>
+                <form onsubmit="addDeposit(event)" style="display: flex; gap: 10px; flex-wrap:wrap; align-items: flex-end; max-width: 600px; margin-bottom: 20px;">
+                    <div class="form-group" style="margin-bottom:0; flex:1; min-width:120px;"><label>Data</label><input type="date" id="dep-date" required></div>
+                    <div class="form-group" style="margin-bottom:0; flex:1; min-width:120px;"><label>Kwota (na minus = wypłata)</label><input type="number" step="0.01" id="dep-amt" required></div>
+                    <div class="form-group" style="margin-bottom:0; flex:1; min-width:120px;"><label>Waluta</label><select id="dep-cur"><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+                    <button type="submit" style="background: var(--success); color:#fff; padding: 10px 15px; height: 40px;">Księguj</button>
                 </form>
                 
                 <div class="table-responsive">
@@ -367,26 +374,26 @@
                 </select>
                 <div style="background: #313244; padding: 8px 15px; border-radius: 6px; border: 1px solid #45475a; display: flex; align-items: center; gap: 10px;">
                     <span style="font-size: 13px; color: var(--text-muted);">Filtrowany Zysk:</span>
-                    <span id="s-cls-filtered-total" style="font-weight: bold; font-size: 15px;">0.00 PLN</span>
+                    <span id="s-cls-filtered-total" class="sensitive" style="font-weight: bold; font-size: 15px;">0.00 PLN</span>
                 </div>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;">
                     <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Miesiąca (W PLN)</h4>
                     <table class="macro-custom-table">
                         <thead><tr><th>Miesiąc Zamknięcia</th><th>Suma Profit PLN</th></tr></thead>
                         <tbody id="s-cls-month"></tbody>
                     </table>
                 </div>
-                <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;">
                     <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Waluty Bazy</h4>
                     <table class="macro-custom-table">
                         <thead><tr><th>Waluta Zleceń</th><th>Suma Profit PLN</th></tr></thead>
                         <tbody id="s-cls-curr"></tbody>
                     </table>
                 </div>
-                <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;">
                     <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Dźwigni</h4>
                     <table class="macro-custom-table">
                         <thead><tr><th>Poziom Dźwigni</th><th>Suma Profit PLN</th></tr></thead>
@@ -398,7 +405,13 @@
     </section>
 
     <section id="database-module" class="app-module">
-        <div class="macro-header-container"><h3>Panel Sentymentu (Makro)</h3><button class="btn-submit" style="width:auto; padding:8px 16px;" onclick="forceMacroUpdate()">Wymuś aktualizację</button></div>
+        <div class="macro-header-container" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <h3>Panel Sentymentu (Makro)</h3>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-submit" style="width:auto; padding:8px 16px; background:#0284c7; color:#fff;" onclick="forceMacroYTDUpdate()">📥 Pobierz dane z całego roku (YTD)</button>
+                <button class="btn-submit" style="width:auto; padding:8px 16px;" onclick="forceMacroUpdate()">Wymuś aktualizację (Dzisiaj)</button>
+            </div>
+        </div>
         <div class="table-responsive"><table class="macro-custom-table" style="width:100%;"><thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&P 500</th><th>Odczyt</th></tr></thead><tbody id="macro-table-body"></tbody></table></div>
         <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><span id="macro-page-info">Strona 1 z 1</span><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div>
         <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
@@ -421,9 +434,9 @@
                             <option value="">Ładowanie pozycji...</option>
                         </select>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Data wpłaty</label><input type="date" id="div-date" required></div>
-                        <div class="form-group"><label>Kwota (w walucie)</label><input type="number" step="0.01" id="div-amount" required></div>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;"><label>Data wpłaty</label><input type="date" id="div-date" required></div>
+                        <div class="form-group" style="flex:1;"><label>Kwota (w walucie)</label><input type="number" step="0.01" id="div-amount" required></div>
                     </div>
                     <button type="submit" style="width: 100%; background: var(--success); color: #fff; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">Zapisz Dywidendę</button>
                 </form>
@@ -544,13 +557,13 @@
                 <div class="journal-sidebar">
                     <h4 style="color: var(--accent); margin-bottom: 15px;">Kalkulator XABCD</h4>
                     <form onsubmit="calculateHarmonics(event)">
-                        <div class="form-row">
-                            <div class="form-group"><label>Punkt X</label><input type="number" step="0.01" id="ha-x" required></div>
-                            <div class="form-group"><label>Punkt A</label><input type="number" step="0.01" id="ha-a" required></div>
+                        <div class="form-row" style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1;"><label>Punkt X</label><input type="number" step="0.01" id="ha-x" required></div>
+                            <div class="form-group" style="flex:1;"><label>Punkt A</label><input type="number" step="0.01" id="ha-a" required></div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Punkt B</label><input type="number" step="0.01" id="ha-b" required></div>
-                            <div class="form-group"><label>Punkt C</label><input type="number" step="0.01" id="ha-c" required></div>
+                        <div class="form-row" style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1;"><label>Punkt B</label><input type="number" step="0.01" id="ha-b" required></div>
+                            <div class="form-group" style="flex:1;"><label>Punkt C</label><input type="number" step="0.01" id="ha-c" required></div>
                         </div>
                         <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Wylicz Punkt D i Formację</button>
                     </form>
@@ -576,13 +589,13 @@
                                 <option value="DOWN">Spadkowy (Impuls Bessa)</option>
                             </select>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Punkt X (Start)</label><input type="number" step="0.01" id="ew-x" required></div>
-                            <div class="form-group"><label>Fala 1 (Koniec)</label><input type="number" step="0.01" id="ew-1" required></div>
+                        <div class="form-row" style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1;"><label>Punkt X (Start)</label><input type="number" step="0.01" id="ew-x" required></div>
+                            <div class="form-group" style="flex:1;"><label>Fala 1 (Koniec)</label><input type="number" step="0.01" id="ew-1" required></div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Fala 2 (Koniec)</label><input type="number" step="0.01" id="ew-2" required></div>
-                            <div class="form-group"><label>Fala 3 (Koniec)</label><input type="number" step="0.01" id="ew-3" required></div>
+                        <div class="form-row" style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1;"><label>Fala 2 (Koniec)</label><input type="number" step="0.01" id="ew-2" required></div>
+                            <div class="form-group" style="flex:1;"><label>Fala 3 (Koniec)</label><input type="number" step="0.01" id="ew-3" required></div>
                         </div>
                         <div class="form-group"><label>Fala 4 (Koniec)</label><input type="number" step="0.01" id="ew-4" required></div>
                         <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Sprawdź i Wyznacz Zasięgi</button>
@@ -615,14 +628,14 @@
                                 <option value="ORGR">oRGR (Wzrostowa / Odwrócona)</option>
                             </select>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Lewe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-ls" required></div>
-                            <div class="form-group"><label>Lewa Linia Szyi</label><input type="number" step="0.01" id="rgr-ln" required></div>
+                        <div class="form-row" style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1;"><label>Lewe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-ls" required></div>
+                            <div class="form-group" style="flex:1;"><label>Lewa Linia Szyi</label><input type="number" step="0.01" id="rgr-ln" required></div>
                         </div>
                         <div class="form-group"><label>Głowa (Szczyt absolutny)</label><input type="number" step="0.01" id="rgr-h" required></div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Prawa Linia Szyi</label><input type="number" step="0.01" id="rgr-rn" required></div>
-                            <div class="form-group"><label>Prawe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-rs" required></div>
+                        <div class="form-row" style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1;"><label>Prawa Linia Szyi</label><input type="number" step="0.01" id="rgr-rn" required></div>
+                            <div class="form-group" style="flex:1;"><label>Prawe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-rs" required></div>
                         </div>
                         <div class="form-group">
                             <label>Punkt Przebicia Szyi (Opcjonalny)</label>
@@ -682,8 +695,20 @@
 
     <script>
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
+        let isPrivacyMode = false;
 
-        // --- FUNKCJA ZABEZPIECZAJĄCA OBLICZENIA DLA SUMMARY I TRADESLIST ---
+        function togglePrivacy() {
+            isPrivacyMode = !isPrivacyMode;
+            const btn = document.getElementById('privacy-btn');
+            btn.innerText = isPrivacyMode ? '🙈' : '👁️';
+            
+            if (isPrivacyMode) {
+                document.body.classList.add('privacy-active');
+            } else {
+                document.body.classList.remove('privacy-active');
+            }
+        }
+
         function calculateTradeStats(item) {
             try {
                 const isClosed = (item.status === 'CLOSED' || item.sell_date != null);
@@ -815,17 +840,36 @@
 
         function renderMacroTable() {
             const tbody = document.getElementById('macro-table-body');
-            if (macroDataArray.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro w bazie.</td></tr>`; return; }
+            if (macroDataArray.length === 0) { tbody.innerHTML = `<tr><td colspan=\"6\" style=\"text-align: center; padding: 20px; color: #777;\">Brak wpisów makro w bazie.</td></tr>`; return; }
             const totalPages = Math.ceil(macroDataArray.length / macroPageSize);
             const start = (currentMacroPage - 1) * macroPageSize;
-            tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => `<tr><td class="macro-val-date">${row.date || '-'}</td><td class="macro-val-currency">${row.eurpln || '-'}</td><td class="macro-val-currency">${row.usdpln || '-'}</td><td class="macro-val-vix">${row.vix || '-'}</td><td style="font-weight: 500;">${row.sp500 || '-'}</td><td class="macro-val-time">${row.updated_at || '-'}</td></tr>`).join('');
+            tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => `<tr><td class=\"macro-val-date\">${row.date || '-'}</td><td class=\"macro-val-currency sensitive\">${row.eurpln || '-'}</td><td class=\"macro-val-currency sensitive\">${row.usdpln || '-'}</td><td class=\"macro-val-vix\">${row.vix || '-'}</td><td style=\"font-weight: 500;\" class=\"sensitive\">${row.sp500 || '-'}</td><td class=\"macro-val-time\">${row.updated_at || '-'}</td></tr>`).join('');
             document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`;
-            document.getElementById('macro-prev-btn').disabled = (currentMacroPage === 1);
-            document.getElementById('macro-next-btn').disabled = (currentMacroPage === totalPages);
         }
 
         function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
         async function forceMacroUpdate() { try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } catch (e) { alert("Błąd połączenia z serwerem."); } }
+
+        async function forceMacroYTDUpdate() { 
+            const btn = event.currentTarget;
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ Pobieram YTD (to potrwa 10-20s)...";
+            btn.disabled = true;
+            try { 
+                const res = await fetch(`${API_BASE_URL}/api/macro/backfill-ytd`, { method: 'POST' }); 
+                const data = await res.json();
+                if(res.ok) {
+                    alert(data.message); 
+                    loadMacroData(); 
+                } else {
+                    alert("Wystąpił błąd: " + data.message);
+                }
+            } catch (e) { alert("Błąd połączenia z serwerem."); } 
+            finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
 
         async function loadDatabase() { try { const response = await fetch(`${API_BASE_URL}/api/database`); const dt = await response.json(); tickerDataArray = Array.isArray(dt) ? dt : []; renderMobileList(); } catch (e) {} }
 
@@ -833,7 +877,7 @@
             const container = document.getElementById('db-list-container'); container.innerHTML = '';
             if (tickerDataArray.length === 0) return;
             const start = (currentTickerPage - 1) * tickerPageSize;
-            container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `<div class="data-card"><div class="data-card-info"><h4>${item.ticker}</h4><p>Dodano: ${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style="display: flex; align-items: center; gap: 10px;"><span class="price-tag">${item.price !== null ? item.price + ' $' : '...'}</span><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">📈 TV</a><button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button></div></div>`).join('');
+            container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `<div class=\"data-card\"><div class=\"data-card-info\"><h4>${item.ticker}</h4><p>Dodano: ${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style=\"display: flex; align-items: center; gap: 10px;\"><span class=\"price-tag sensitive\">${item.price !== null ? item.price + ' $' : '...'}</span><a href=\"${getTradingViewLink(item.ticker)}\" target=\"_blank\" style=\"color:var(--accent); text-decoration:none; font-weight:bold;\">📈 TV</a><button class=\"btn-delete\" onclick=\"removeTicker('${item.ticker}')\">Usuń</button></div></div>`).join('');
             document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${Math.ceil(tickerDataArray.length / tickerPageSize)}`;
         }
 
@@ -842,9 +886,7 @@
         async function removeTicker(t) { if (!confirm(`Usunąć ${t}?`)) return; try { const res = await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) loadDatabase(); } catch (e) {} }
 
         let allAlertsData = []; let filteredAlertsData = []; let currentAlertPage = 1; const alertPageSize = 20;
-
         async function loadAlertHistory() { try { const r = await fetch(`${API_BASE_URL}/api/alerts/history`); const data = await r.json(); allAlertsData = Array.isArray(data) ? data : []; handleAlertsFilter(); } catch(e){} }
-
         function handleAlertsFilter() {
             const searchText = (document.getElementById('alert-search').value || '').toLowerCase();
             const typeFilter = document.getElementById('alert-type-filter').value || 'ALL';
@@ -856,36 +898,34 @@
             });
             currentAlertPage = 1; renderAlertsTable();
         }
-
         function renderAlertsTable() {
             const tbody = document.getElementById("alert-history-tbody");
-            if (filteredAlertsData.length === 0) { tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--text-muted);">Brak alertów.</td></tr>`; return; }
+            if (filteredAlertsData.length === 0) { tbody.innerHTML = `<tr><td colspan=\"10\" style=\"text-align: center; padding: 20px; color: var(--text-muted);\">Brak alertów.</td></tr>`; return; }
             const start = (currentAlertPage - 1) * alertPageSize;
             tbody.innerHTML = filteredAlertsData.slice(start, start + alertPageSize).map(item => {
-                const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>';
+                const pb = item.priority === 1 ? '<span style=\"color: #fcd535; font-weight: bold;\">⚡ Wysoki</span>' : '<span style=\"color: var(--text-muted);\">Normalny</span>';
                 const aType = item.alert_type || 'Punkt wejścia';
                 let typeColor = '#89b4fa'; if(aType === 'Take Profit') typeColor = '#0ecb81'; if(aType === 'Stop Loss') typeColor = '#f6465d';
                 return `<tr>
-                    <td style="font-size: 0.85em; color: var(--text-muted);">${new Date(item.triggered_at).toLocaleString('pl-PL')}</td>
-                    <td style="font-weight: bold; color: ${typeColor};">${aType}</td>
-                    <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
-                    <td>${pb}</td><td style="color: ${item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d'};">${item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej'}</td>
-                    <td style="font-weight: bold;">${Number(item.target_price).toFixed(2)} $</td>
-                    <td style="font-size: 0.9em; color: var(--text-muted);">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td>
-                    <td style="color: #a6e3a1; font-weight: bold;">${item.score || 0}/5</td>
-                    <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 TV</a></td>
-                    <td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td>
+                    <td style=\"font-size: 0.85em; color: var(--text-muted);\">${new Date(item.triggered_at).toLocaleString('pl-PL')}</td>
+                    <td style=\"font-weight: bold; color: ${typeColor};\">${aType}</td>
+                    <td style=\"font-weight: bold; color: var(--accent);\">${item.ticker}</td>
+                    <td>${pb}</td><td style=\"color: ${item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d'};\">${item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej'}</td>
+                    <td class=\"sensitive\" style=\"font-weight: bold;\">${Number(item.target_price).toFixed(2)} $</td>
+                    <td class=\"sensitive\" style=\"font-size: 0.9em; color: var(--text-muted);\">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td>
+                    <td style=\"color: #a6e3a1; font-weight: bold;\">${item.score || 0}/5</td>
+                    <td><a href=\"${getTradingViewLink(item.ticker)}\" target=\"_blank\" style=\"color:var(--accent); text-decoration:none;\">📈 TV</a></td>
+                    <td><button onclick=\"deleteAlert('${item.id}')\" class=\"btn-delete\" style=\"padding:4px 8px;\">Usuń</button></td>
                 </tr>`;
             }).join('');
             document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${Math.ceil(filteredAlertsData.length/alertPageSize)||1}`;
         }
-
         function changeAlertPage(d) { const total = Math.ceil(filteredAlertsData.length / alertPageSize) || 1; if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) { currentAlertPage += d; renderAlertsTable(); } }
         async function deleteAlert(id) { try { await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); loadAlertHistory(); } catch(e) {} }
 
         async function loadDailyBriefs() {
             try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; 
-                if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); }
+                if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class=\"brief-card\"><h4>${item.title}</h4><div class=\"brief-text\">${item.summary}</div><div class=\"brief-card-footer\"><a href=\"${item.url}\" target=\"_blank\" class=\"brief-link\">Oryginalny wpis 🔗</a></div></div>`; }); }
             } catch (error) {}
         }
 
@@ -918,7 +958,6 @@
                     macroDataArray = await mRes.json() || [];
                 } catch(e) {}
             }
-            
             try {
                 const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`);
                 const dData = await rD.json();
@@ -956,13 +995,11 @@
                     const curr = trade.currency || 'USD';
                     if (s.isClosed) {
                         totalClosedPnlPln += s.profPln;
-                        
                         let month = 'Brak daty';
                         if (trade.sell_date && trade.sell_date.length >= 7) {
                             month = trade.sell_date.substring(0, 7);
                         }
                         monthSet.add(month);
-
                     } else {
                         openInvestedPln += s.spentPln;
                         openProfitPln += s.profPln;
@@ -978,9 +1015,7 @@
                         openGrouped[ticker].prof += s.prof;
                         openGrouped[ticker].valLev += s.val + s.prof;
                     }
-                } catch(err) {
-                    console.error("Błąd agregacji trade", trade, err);
-                }
+                } catch(err) { console.error("Błąd agregacji trade", trade, err); }
             });
 
             const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
@@ -1013,12 +1048,10 @@
             document.getElementById('s-levpct').innerText = levPct.toFixed(2) + ' %';
 
             document.getElementById('s-curr-breakdown').innerHTML = `
-                <tr><td>PLN</td><td style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr>
-                <tr><td>USD</td><td style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr>
-                <tr><td>EUR</td><td style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>
+                <tr><td>PLN</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr>
+                <tr><td>USD</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr>
+                <tr><td>EUR</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>
             `;
-
-            drawSummaryChart(roiPct);
 
             window.summaryOpenData = Object.keys(openGrouped).map(k => ({ ticker: k, ...openGrouped[k] }));
             renderSummaryOpen();
@@ -1030,12 +1063,22 @@
                 Array.from(monthSet).sort().reverse().forEach(m => {
                     monthSelect.innerHTML += `<option value="${m}">${m}</option>`;
                 });
-                if(Array.from(monthSet).includes(currentMonthVal)) {
-                    monthSelect.value = currentMonthVal;
-                }
+                if(Array.from(monthSet).includes(currentMonthVal)) monthSelect.value = currentMonthVal;
             }
 
             renderSummaryClosed();
+
+            // WYWOŁANIE ZAPISU I RYSOWANIE WYKRESU LINIOWEGO
+            fetch(`${API_BASE_URL}/api/portfolio/roi/save`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({roi_pct: roiPct})
+            }).then(() => {
+                drawSummaryChart();
+            }).catch(e => {
+                console.error("Nie udało się zapisać ROI", e);
+                drawSummaryChart(); // I tak narysuj, nawet jeśli nie zapisał dzisiejszego.
+            });
         }
 
         function renderSummaryClosed() {
@@ -1077,19 +1120,19 @@
 
             const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML='';
             Object.keys(closedByMonth).sort().reverse().forEach(k => { 
-                cMonth.innerHTML += `<tr><td>${k}</td><td style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; 
+                cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; 
             });
             if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
             
             const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML='';
             Object.keys(closedByCurr).sort().forEach(k => { 
-                cCurr.innerHTML += `<tr><td>${k}</td><td style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; 
+                cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; 
             });
             if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
             
             const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML='';
             Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { 
-                cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; 
+                cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; 
             });
             if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
 
@@ -1111,12 +1154,12 @@
                 return summaryOpenSortDir==='asc' ? va-vb : vb-va;
             });
 
-            if(data.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; }
+            if(data.length === 0) { tb.innerHTML = `<tr><td colspan=\"4\" style=\"text-align:center; padding: 20px; color:var(--text-muted);\">Brak otwartych pozycji</td></tr>`; return; }
             tb.innerHTML = data.map(i => `<tr>
-                <td style="font-weight:bold; color:var(--accent);">${i.ticker}</td>
-                <td>${i.inv.toFixed(2)} ${i.curr}</td>
-                <td style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td>
-                <td>${i.valLev.toFixed(2)} ${i.curr}</td>
+                <td style=\"font-weight:bold; color:var(--accent);\">${i.ticker}</td>
+                <td class=\"sensitive\">${i.inv.toFixed(2)} ${i.curr}</td>
+                <td class=\"sensitive\" style=\"color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;\">${i.prof.toFixed(2)} ${i.curr}</td>
+                <td class=\"sensitive\">${i.valLev.toFixed(2)} ${i.curr}</td>
             </tr>`).join('');
         }
 
@@ -1128,15 +1171,15 @@
         function renderDepositsTable() {
             const tb = document.getElementById('s-dep-table');
             if(!depositsDataArray || depositsDataArray.length === 0) { 
-                tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak wpłat.</td></tr>'; 
+                tb.innerHTML = '<tr><td colspan=\"5\" style=\"text-align:center; padding: 20px; color:var(--text-muted);\">Brak wpłat.</td></tr>'; 
                 return; 
             }
             tb.innerHTML = depositsDataArray.map(x => `<tr>
                 <td>${x.deposit_date || x.created_at ? (x.deposit_date || x.created_at).split('T')[0] : '-'}</td>
-                <td style="font-weight:bold;">${Number(x.amount || 0).toFixed(2)} ${x.currency || 'PLN'}</td>
-                <td style="color:var(--text-muted);">${x.currency || 'PLN'}</td>
-                <td style="color:var(--success); font-weight:bold;">${Number(x.amount_pln || x.amount || 0).toFixed(2)} PLN</td>
-                <td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td>
+                <td class=\"sensitive\" style=\"font-weight:bold;\">${Number(x.amount || 0).toFixed(2)} ${x.currency || 'PLN'}</td>
+                <td style=\"color:var(--text-muted);\">${x.currency || 'PLN'}</td>
+                <td class=\"sensitive\" style=\"color:var(--success); font-weight:bold;\">${Number(x.amount_pln || x.amount || 0).toFixed(2)} PLN</td>
+                <td><button class=\"btn-delete\" onclick=\"deleteDeposit(${x.id})\">Usuń</button></td>
             </tr>`).join('');
         }
 
@@ -1165,41 +1208,111 @@
             initSummaryModule(); 
         }
 
-        function drawSummaryChart(roiPct) {
-            let sp500Change = 0;
-            if(macroDataArray.length > 1) {
-                const oldest = macroDataArray[macroDataArray.length-1].sp500;
-                const newest = macroDataArray[0].sp500;
-                if(oldest && newest) sp500Change = ((newest - oldest) / oldest) * 100;
-            }
+        async function drawSummaryChart() {
+            try {
+                // Pobieramy całą historię ROI z bazy danych
+                const res = await fetch(`${API_BASE_URL}/api/portfolio/roi/history`);
+                const roiHistory = await res.json() || [];
+                
+                if (!Array.isArray(roiHistory) || roiHistory.length === 0) return;
 
-            const ctx = document.getElementById('roiChart').getContext('2d');
-            if(summaryChartInstance) summaryChartInstance.destroy();
-            summaryChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Twój Portfel (ROI %)', 'S&P 500 (Dla danych z bazy)'],
-                    datasets: [{
-                        label: '% Zmiany',
-                        data: [roiPct, sp500Change],
-                        backgroundColor: [
-                            roiPct >= 0 ? 'rgba(14, 203, 129, 0.7)' : 'rgba(246, 70, 93, 0.7)',
-                            'rgba(137, 180, 250, 0.7)'
-                        ],
-                        borderColor: [
-                            roiPct >= 0 ? '#0ecb81' : '#f6465d',
-                            '#89b4fa'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, grid: {color: '#313244'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4'} } },
-                    plugins: { legend: { display: false } }
+                // Sortujemy od najstarszej do najnowszej daty
+                roiHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                const labels = [];
+                const roiDataset = [];
+                const sp500Dataset = [];
+
+                // Szukamy bazowej wartości SP500, by liczyć od niej % zmiany
+                let baselineSp500 = null;
+                const firstDate = roiHistory[0].date;
+                const baselineMacro = macroDataArray.find(m => m.date === firstDate) || macroDataArray[macroDataArray.length - 1];
+                if (baselineMacro && baselineMacro.sp500) {
+                    baselineSp500 = parseFloat(baselineMacro.sp500);
                 }
-            });
+
+                // Generowanie danych punkt po punkcie
+                roiHistory.forEach(entry => {
+                    labels.push(entry.date);
+                    roiDataset.push(entry.roi_pct);
+
+                    let sp500Pct = 0;
+                    if (baselineSp500) {
+                        const macroDay = macroDataArray.find(m => m.date === entry.date);
+                        if (macroDay && macroDay.sp500) {
+                            const currentSp500 = parseFloat(macroDay.sp500);
+                            sp500Pct = ((currentSp500 - baselineSp500) / baselineSp500) * 100;
+                        } else {
+                            sp500Pct = sp500Dataset.length > 0 ? sp500Dataset[sp500Dataset.length - 1] : 0;
+                        }
+                    }
+                    sp500Dataset.push(sp500Pct);
+                });
+
+                const ctx = document.getElementById('roiChart').getContext('2d');
+                if(summaryChartInstance) summaryChartInstance.destroy();
+                
+                Chart.defaults.color = '#cdd6f4';
+                summaryChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Twój Portfel (ROI %)',
+                                data: roiDataset,
+                                borderColor: '#0ecb81',
+                                backgroundColor: 'rgba(14, 203, 129, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 3,
+                                pointBackgroundColor: '#0ecb81'
+                            },
+                            {
+                                label: 'S&P 500 (%)',
+                                data: sp500Dataset,
+                                borderColor: '#89b4fa',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                tension: 0.3,
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        scales: { 
+                            y: { 
+                                grid: {color: 'rgba(255,255,255,0.05)'}, 
+                                ticks: {color: '#cdd6f4'} 
+                            }, 
+                            x: { 
+                                grid: {display: false}, 
+                                ticks: {color: '#cdd6f4', maxTicksLimit: 10} 
+                            } 
+                        },
+                        plugins: { 
+                            legend: { display: true, position: 'top', labels: {color: '#cdd6f4'} },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error("Błąd rysowania wykresu", err);
+            }
         }
 
         // ==========================================
@@ -1209,7 +1322,7 @@
 
         async function initFormModule() {
             if(tickerDataArray.length === 0) await loadDatabase(); 
-            const select = document.getElementById('form-ticker'); select.innerHTML = ''; tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; });
+            const select = document.getElementById('form-ticker'); select.innerHTML = ''; tickerDataArray.forEach(t => { select.innerHTML += `<option value=\"${t.ticker}\">${t.ticker}</option>`; });
             loadFormReasons(); fetchFormEntries(); document.getElementById('trading-form').onsubmit = submitAdvancedForm; updateFormTvLink(); 
         }
 
@@ -1249,19 +1362,19 @@
                 let status = diff > 15 ? 'Ignorowanie' : (diff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
                 let statusColor = diff > 15 ? '#f6465d' : (diff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
                 const tvLink = getTradingViewLink(item.ticker); const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
-                const priorityBadge = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
-                const muteBadge = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
+                const priorityBadge = item.priority === 1 ? `<span style=\"color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;\" onclick=\"updateFormEntryField('${item.entry_id}', 'priority', 0)\">⚡ Wysoki (1)</span>` : `<span style=\"color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);\" onclick=\"updateFormEntryField('${item.entry_id}', 'priority', 1)\">Normalny (0)</span>`;
+                const muteBadge = muteVal === 1 ? `<span style=\"color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);\" onclick=\"updateFormEntryField('${item.entry_id}', 'mute', 0)\">🔕 Tak (1)</span>` : `<span style=\"color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);\" onclick=\"updateFormEntryField('${item.entry_id}', 'mute', 1)\">🔔 Nie (0)</span>`;
 
                 tbody.innerHTML += `<tr>
-                    <td style="font-weight:bold;">${item.entry_id}</td>
-                    <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
-                    <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
-                    <td style="font-weight: 600;">${entry.toFixed(2)} $</td>
+                    <td style=\"font-weight:bold;\">${item.entry_id}</td>
+                    <td style=\"font-weight:bold; color:var(--accent);\">${item.ticker}</td>
+                    <td><span style=\"font-size:0.85em; color:var(--text-muted);\">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
+                    <td class=\"sensitive\" style=\"font-weight: 600;\">${entry.toFixed(2)} $</td>
                     <td>${priorityBadge}</td><td>${muteBadge}</td>
-                    <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
-                    <td>${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
-                    <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a></td>
-                    <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
+                    <td style=\"color:${statusColor}; font-weight:bold;\">${status} (${diff.toFixed(1)}%)</td>
+                    <td class=\"sensitive\">${rr.toFixed(2)}</td><td style=\"font-weight:bold; color:#a6e3a1;\">${item.score}/5</td>
+                    <td><a href=\"${tvLink}\" target=\"_blank\" style=\"text-decoration:none; color:var(--accent);\">📈 Link</a></td>
+                    <td><button class=\"btn-delete\" onclick=\"deleteAdvancedFormEntry('${item.entry_id}')\" style=\"padding: 3px 8px;\">Usuń</button></td>
                 </tr>`;
             });
             document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`;
@@ -1278,7 +1391,7 @@
         
         async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(); } catch(e) {} }
         async function updateFormEntryField(entryId, field, newValue) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) }); fetchFormEntries(); } catch(e){} }
-        async function loadFormReasons() { try { const res = await fetch(`${API_BASE_URL}/api/form/reasons`); const reasons = await res.json(); const datalist = document.getElementById('reasons-list'); datalist.innerHTML = ''; if(Array.isArray(reasons)) { reasons.forEach(r => { datalist.innerHTML += `<option value="${r}">`; }); } } catch(e) {} }
+        async function loadFormReasons() { try { const res = await fetch(`${API_BASE_URL}/api/form/reasons`); const reasons = await res.json(); const datalist = document.getElementById('reasons-list'); datalist.innerHTML = ''; if(Array.isArray(reasons)) { reasons.forEach(r => { datalist.innerHTML += `<option value=\"${r}\">`; }); } } catch(e) {} }
 
         function toggleFibo() { const drawer = document.getElementById('fibo-drawer'); drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; if (drawer.style.display === 'block') updateFiboLabels(); }
         function updateFiboLabels() {
@@ -1319,37 +1432,37 @@
 
         function renderFocusListTable() {
             const tb = document.getElementById('focuslist-table-body'); if (!tb) return;
-            if (filteredFocusListEntries.length === 0) { tb.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów.</td></tr>`; document.getElementById('focuslist-page-info').innerText = 'Strona 0 z 0'; return; }
+            if (filteredFocusListEntries.length === 0) { tb.innerHTML = `<tr><td colspan=\"15\" style=\"text-align:center; padding:20px; color:var(--text-muted);\">Brak wpisów.</td></tr>`; document.getElementById('focuslist-page-info').innerText = 'Strona 0 z 0'; return; }
             const start = (currentFocusListPage - 1) * focusListPageSize; const pageData = filteredFocusListEntries.slice(start, start + focusListPageSize);
             tb.innerHTML = pageData.map(item => {
                 const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-';
                 const mod = (item.direction === 'DBR' || item.direction === 'RBR') ? 1 : -1;
                 const entry = parseFloat(item.entry_point); const sl = parseFloat(item.stop_loss); const tp = parseFloat(item.take_profit); let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
                 let statusColor = item.calcStatus === 'Skupienie' ? '#0ecb81' : '#848e9c';
-                const pb = item.priority === 1 ? `<span style="color: #fcd535;">Wysoki</span>` : `<span style="color: var(--text-muted);">Norm</span>`;
-                const mb = item.mute === 1 ? `<span style="color: var(--danger);">🔕</span>` : `<span style="color: var(--success);">🔔</span>`;
+                const pb = item.priority === 1 ? `<span style=\"color: #fcd535;\">Wysoki</span>` : `<span style=\"color: var(--text-muted);\">Norm</span>`;
+                const mb = item.mute === 1 ? `<span style=\"color: var(--danger);\">🔕</span>` : `<span style=\"color: var(--success);\">🔔</span>`;
                 const r1 = (item.reasons && item.reasons[0]) ? item.reasons[0] : '-'; const r2 = (item.reasons && item.reasons[1]) ? item.reasons[1] : '-'; const r3 = (item.reasons && item.reasons[2]) ? item.reasons[2] : '-'; const r4 = (item.reasons && item.reasons[3]) ? item.reasons[3] : '-'; const r5 = (item.reasons && item.reasons[4]) ? item.reasons[4] : '-';
-                return `<tr><td style="white-space: nowrap;">${dateStr}</td><td style="font-weight:bold; color:var(--accent);">${item.ticker}</td><td style="font-weight:bold;">${item.calcCurrency}</td><td>${item.direction}</td><td style="font-weight: 600;">${entry.toFixed(2)}</td><td>${pb}</td><td>${mb}</td><td style="color:${statusColor}; font-weight:bold;">${item.calcStatus} (${item.calcDiff.toFixed(1)}%)</td><td>${rr.toFixed(2)}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r1}">${r1}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r2}">${r2}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r3}">${r3}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r4}">${r4}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r5}">${r5}</td><td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 TV</a></td></tr>`;
+                return `<tr><td style=\"white-space: nowrap;\">${dateStr}</td><td style=\"font-weight:bold; color:var(--accent);\">${item.ticker}</td><td style=\"font-weight:bold;\">${item.calcCurrency}</td><td>${item.direction}</td><td class=\"sensitive\" style=\"font-weight: 600;\">${entry.toFixed(2)}</td><td>${pb}</td><td>${mb}</td><td style=\"color:${statusColor}; font-weight:bold;\">${item.calcStatus} (${item.calcDiff.toFixed(1)}%)</td><td class=\"sensitive\">${rr.toFixed(2)}</td><td style=\"font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\" title=\"${r1}\">${r1}</td><td style=\"font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\" title=\"${r2}\">${r2}</td><td style=\"font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\" title=\"${r3}\">${r3}</td><td style=\"font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\" title=\"${r4}\">${r4}</td><td style=\"font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\" title=\"${r5}\">${r5}</td><td><a href=\"${getTradingViewLink(item.ticker)}\" target=\"_blank\" style=\"text-decoration:none; color:var(--accent);\">📈 TV</a></td></tr>`;
             }).join('');
             document.getElementById('focuslist-page-info').innerText = `Strona ${currentFocusListPage} z ${Math.ceil(filteredFocusListEntries.length / focusListPageSize)}`;
         }
         function changeFocusListPage(d) { const total = Math.ceil(filteredFocusListEntries.length / focusListPageSize) || 1; if (currentFocusListPage + d >= 1 && currentFocusListPage + d <= total) { currentFocusListPage += d; renderFocusListTable(); } }
 
-        async function initFocusModule() { try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); formEntriesGlobal = await res.json(); document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join(''); onFocusIdChange(); fetchFocusEntries(); } catch(e) {} }
+        async function initFocusModule() { try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); formEntriesGlobal = await res.json(); document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value=\"${e.entry_id}\">${e.entry_id} (${e.ticker})</option>`).join(''); onFocusIdChange(); fetchFocusEntries(); } catch(e) {} }
         function onFocusIdChange() { const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value); if(entry) { document.getElementById('focus-ticker').value = entry.ticker; document.getElementById('focus-direction').value = entry.direction; } }
         async function autoCalculateSMC() { const t = document.getElementById('focus-ticker').value; const d = document.getElementById('focus-direction').value; try { const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d}) }); const r = await res.json(); document.getElementById('focus-candle').value = r.candle_score; document.getElementById('focus-volume').value = r.volume_score; document.getElementById('focus-vix').value = r.vix_score; document.getElementById('focus-index').value = r.index_score; } catch(e) { console.error(e); } }
         async function fetchFocusEntries() { try { const r = await fetch(`${API_BASE_URL}/api/focus/entries`); const data = await r.json(); focusDataArray = Array.isArray(data) ? data : []; renderFocusTable(); } catch(e) { focusDataArray = []; } }
-        function renderFocusTable() { const tb = document.getElementById('focus-table-body'); if(focusDataArray.length === 0) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center;">Brak wpisów Focus</td></tr>`; return;} tb.innerHTML = focusDataArray.slice((currentFocusPage-1)*focusPageSize, currentFocusPage*focusPageSize).map(i => `<tr><td style="color:#777;">#${i.id}</td><td>${new Date(i.created_at).toLocaleDateString()}</td><td>${i.entry_id}</td><td>${i.ticker}</td><td>${Number(i.points_total).toFixed(1)}/25</td><td>${(Number(i.final_ratio)*100).toFixed(0)}%</td><td>${Number(i.allocated_pct).toFixed(1)}%</td><td>${Number(i.allocated_cash).toFixed(2)} ${i.currency}</td><td><button class="btn-delete" onclick="deleteFocusEntry(${i.id})">Usuń</button></td></tr>`).join(''); document.getElementById('focus-page-info').innerText = `Str ${currentFocusPage}`; }
+        function renderFocusTable() { const tb = document.getElementById('focus-table-body'); if(focusDataArray.length === 0) { tb.innerHTML = `<tr><td colspan=\"9\" style=\"text-align:center;\">Brak wpisów Focus</td></tr>`; return;} tb.innerHTML = focusDataArray.slice((currentFocusPage-1)*focusPageSize, currentFocusPage*focusPageSize).map(i => `<tr><td style=\"color:#777;\">#${i.id}</td><td>${new Date(i.created_at).toLocaleDateString()}</td><td>${i.entry_id}</td><td>${i.ticker}</td><td>${Number(i.points_total).toFixed(1)}/25</td><td>${(Number(i.final_ratio)*100).toFixed(0)}%</td><td class=\"sensitive\">${Number(i.allocated_pct).toFixed(1)}%</td><td class=\"sensitive\">${Number(i.allocated_cash).toFixed(2)} ${i.currency}</td><td><button class=\"btn-delete\" onclick=\"deleteFocusEntry(${i.id})\">Usuń</button></td></tr>`).join(''); document.getElementById('focus-page-info').innerText = `Str ${currentFocusPage}`; }
         function changeFocusPage(d) { const total = Math.ceil(focusDataArray.length / focusPageSize) || 1; if (currentFocusPage + d >= 1 && currentFocusPage + d <= total) { currentFocusPage += d; renderFocusTable(); } }
         async function deleteFocusEntry(id) { try { await fetch(`${API_BASE_URL}/api/focus/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); fetchFocusEntries(); } catch(e){} }
         async function submitFocusForm(e) { e.preventDefault(); const d = { entry_id:document.getElementById('focus-form-id').value, ticker:document.getElementById('focus-ticker').value, candle_score:document.getElementById('focus-candle').value, volume_score:document.getElementById('focus-volume').value, gap_score:document.getElementById('focus-gap').value, calendar_score:document.getElementById('focus-calendar').value, cvd_score:document.getElementById('focus-cvd').value, vix_score:document.getElementById('focus-vix').value, index_score:document.getElementById('focus-index').value, htf_score:document.getElementById('focus-htf').value }; try { await fetch(`${API_BASE_URL}/api/focus/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) }); fetchFocusEntries(); } catch(e) {} }
 
-        async function initTradesModule() { if(focusDataArray.length === 0) await fetchFocusEntries(); document.getElementById('trade-focus-id').innerHTML = '<option value="">Wybierz...</option>' + focusDataArray.map(f => `<option value="${f.id}">#${f.id} - ${f.ticker} (Max: ${f.allocated_cash} ${f.currency})</option>`).join(''); document.getElementById('trade-buy-date').valueAsDate = new Date(); fetchTradesEntries(); }
+        async function initTradesModule() { if(focusDataArray.length === 0) await fetchFocusEntries(); document.getElementById('trade-focus-id').innerHTML = '<option value=\"\">Wybierz...</option>' + focusDataArray.map(f => `<option value=\"${f.id}\">#${f.id} - ${f.ticker} (Max: ${f.allocated_cash} ${f.currency})</option>`).join(''); document.getElementById('trade-buy-date').valueAsDate = new Date(); fetchTradesEntries(); }
         async function onTradeFocusChange() { const fid = document.getElementById('trade-focus-id').value; const focus = focusDataArray.find(f => f.id == fid); if(!focus) return; try { const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); const form = formDb.find(frm => frm.entry_id === focus.entry_id); document.getElementById('trade-ticker').value = focus.ticker; document.getElementById('trade-form-id').value = focus.entry_id; document.getElementById('trade-currency').value = focus.currency; document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; document.getElementById('trade-score').value = focus.points_total; if(form) { document.getElementById('trade-direction').value = form.direction; document.getElementById('trade-tp').value = form.take_profit; document.getElementById('trade-sl').value = form.stop_loss; } document.getElementById('trade-name').value = 'Wyszukiwanie...'; const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); document.getElementById('trade-name').value = n.name || ''; } catch(e){} }
         async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: spent, leverage: lev, currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(); } else alert('Błąd.'); } catch(e) { console.error(e); } }
         async function fetchTradesEntries() { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); const data = await res.json(); allTradesData = Array.isArray(data) ? data : []; } catch(e) { allTradesData = []; } if(tickerDataArray.length === 0) await loadDatabase(); handleTradesFilter(); if(document.getElementById('summary-module').style.display === 'block') loadSummaryData(); }
         function handleTradesFilter() { const searchText = (document.getElementById('trade-search').value || '').toLowerCase(); const statusFilter = document.getElementById('trade-status-filter').value || 'OPEN'; filteredTradesData = allTradesData.filter(t => { const textMatch = (t.ticker || '').toLowerCase().includes(searchText) || (t.stock_name || '').toLowerCase().includes(searchText); const isClosed = (t.status === 'CLOSED' || t.sell_date); let statusMatch = true; if (statusFilter === 'OPEN') statusMatch = !isClosed; if (statusFilter === 'CLOSED') statusMatch = isClosed; return textMatch && statusMatch; }); currentTradePage = 1; renderTradesTable(); }
-        function renderTradesTable() { const tb = document.getElementById('trades-table-body'); if (filteredTradesData.length === 0) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów spełniających kryteria.</td></tr>`; document.getElementById('trade-page-info').innerText = `Strona 0 z 0`; return; } tb.innerHTML = filteredTradesData.slice((currentTradePage-1)*tradePageSize, currentTradePage*tradePageSize).map(item => { const s = calculateTradeStats(item); const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})" style="color:var(--accent); border-color:var(--accent); margin-bottom:4px;">Sprzedaj</button>`; const divHtml = (item.dividend && item.dividend > 0) ? `<br><small style="color:var(--accent);">+ ${Number(item.dividend).toFixed(2)} div.</small>` : ''; const cfdHtml = (item.cfd_cost && item.cfd_cost > 0) ? `<br><small style="color:var(--danger);">- ${Number(item.cfd_cost).toFixed(2)} cvd</small>` : ''; return `<tr><td style="font-size:0.85em; color:var(--text-muted);">${item.buy_date}<br><b style="color:#eaecef;">#${item.id}</b></td><td><strong style="color:var(--accent);">${item.ticker}</strong><br><small>${item.stock_name}</small></td><td>${item.spent.toFixed(2)}${item.currency}<br><small>Wart: ${s.val.toFixed(2)}(x${item.leverage})</small></td><td>WE: ${item.buy_price}$<br>${s.isClosed?'<span style="color:var(--text-muted);">OUT:</span>':'TR:'} <b>${s.cp}$</b><br>${s.isClosed?`<small>${item.sell_date}</small>`:''}</td><td>R:R <b>${s.rr.toFixed(1)}</b><br><b style="color:#fcd535;">SL: ${s.dsl.toFixed(2)}$</b></td><td style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.prof.toFixed(2)} ${item.currency}</b>${divHtml}${cfdHtml}</td><td style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.profPln.toFixed(2)} PLN</b></td><td><div style="font-size:0.8em; display:flex; justify-content:space-between;"><span>${s.prog<0?'STRATA':'ZYSK'}</span><span>${(s.prog*100).toFixed(0)}%</span></div><div style="background:var(--bg-input); height:8px; border-radius:4px; overflow:hidden;"><div style="width:${s.pd}%; background:${s.pc}; height:100%;"></div></div></td><td>${actionHtml}</td></tr>`; }).join(''); document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage} z ${Math.ceil(filteredTradesData.length / tradePageSize) || 1}`; }
+        function renderTradesTable() { const tb = document.getElementById('trades-table-body'); if (filteredTradesData.length === 0) { tb.innerHTML = `<tr><td colspan=\"9\" style=\"text-align:center; padding:20px; color:var(--text-muted);\">Brak wpisów spełniających kryteria.</td></tr>`; document.getElementById('trade-page-info').innerText = `Strona 0 z 0`; return; } tb.innerHTML = filteredTradesData.slice((currentTradePage-1)*tradePageSize, currentTradePage*tradePageSize).map(item => { const s = calculateTradeStats(item); const actionHtml = s.isClosed ? `<span style=\"color:var(--text-muted); font-weight:bold;\">ZAMKNIĘTA</span>` : `<button class=\"btn-delete\" onclick=\"openCloseModal(${item.id})\" style=\"color:var(--accent); border-color:var(--accent); margin-bottom:4px;\">Sprzedaj</button>`; const divHtml = (item.dividend && item.dividend > 0) ? `<br><small style=\"color:var(--accent);\">+ ${Number(item.dividend).toFixed(2)} div.</small>` : ''; const cfdHtml = (item.cfd_cost && item.cfd_cost > 0) ? `<br><small style=\"color:var(--danger);\">- ${Number(item.cfd_cost).toFixed(2)} cvd</small>` : ''; return `<tr><td style=\"font-size:0.85em; color:var(--text-muted);\">${item.buy_date}<br><b style=\"color:#eaecef;\">#${item.id}</b></td><td><strong style=\"color:var(--accent);\">${item.ticker}</strong><br><small>${item.stock_name}</small></td><td class=\"sensitive\">${item.spent.toFixed(2)}${item.currency}<br><small>Wart: ${s.val.toFixed(2)}(x${item.leverage})</small></td><td class=\"sensitive\">WE: ${item.buy_price}$<br>${s.isClosed?'<span style=\"color:var(--text-muted);\">OUT:</span>':'TR:'} <b>${s.cp}$</b><br>${s.isClosed?`<small>${item.sell_date}</small>`:''}</td><td class=\"sensitive\">R:R <b>${s.rr.toFixed(1)}</b><br><b style=\"color:#fcd535;\">SL: ${s.dsl.toFixed(2)}$</b></td><td class=\"sensitive\" style=\"color:${s.prof>=0?'#0ecb81':'#f6465d'};\"><b>${s.prof.toFixed(2)} ${item.currency}</b>${divHtml}${cfdHtml}</td><td class=\"sensitive\" style=\"color:${s.prof>=0?'#0ecb81':'#f6465d'};\"><b>${s.profPln.toFixed(2)} PLN</b></td><td><div style=\"font-size:0.8em; display:flex; justify-content:space-between;\"><span>${s.prog<0?'STRATA':'ZYSK'}</span><span>${(s.prog*100).toFixed(0)}%</span></div><div style=\"background:var(--bg-input); height:8px; border-radius:4px; overflow:hidden;\"><div style=\"width:${s.pd}%; background:${s.pc}; height:100%;\"></div></div></td><td>${actionHtml}</td></tr>`; }).join(''); document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage} z ${Math.ceil(filteredTradesData.length / tradePageSize) || 1}`; }
         function changeTradePage(d) { const total = Math.ceil(filteredTradesData.length / tradePageSize) || 1; if (currentTradePage + d >= 1 && currentTradePage + d <= total) { currentTradePage += d; renderTradesTable(); } }
         function openCloseModal(id) { document.getElementById('sell-modal').style.display = 'flex'; document.getElementById('sell-trade-id').value = id; document.getElementById('sell-date').valueAsDate = new Date(); document.getElementById('sell-price').value = ''; document.getElementById('sell-fraction').value = '1'; const trade = allTradesData.find(t => t.id === id); if(trade && trade.leverage > 1) { document.getElementById('sell-cfd-group').style.display = 'block'; document.getElementById('sell-cfd-cost').value = '0'; } else { document.getElementById('sell-cfd-group').style.display = 'none'; document.getElementById('sell-cfd-cost').value = '0'; } }
         function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
@@ -1361,7 +1474,7 @@
         async function forceCronPricesUpdate() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Trwa pobieranie aktualnych kursów z Yahoo Finance...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`); const result = await res.json(); if(res.ok) { out.innerHTML = `✅ <strong>Baza cen zaktualizowana.</strong><br>Przetworzonych tickerów: ${result.updated_tickers || 0}`; } else { out.innerHTML = `❌ Błąd: ${result.message}`; } } catch(e) { console.error(e); out.innerHTML = `❌ Błąd sieci.`; } }
 
         function switchTechTab(tab) { document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-' + tab).classList.add('active'); }
-        function calculateHarmonics(e) { e.preventDefault(); const x = parseFloat(document.getElementById('ha-x').value); const a = parseFloat(document.getElementById('ha-a').value); const b = parseFloat(document.getElementById('ha-b').value); const c = parseFloat(document.getElementById('ha-c').value); const xa = Math.abs(a - x); const ab = Math.abs(b - a); const bc = Math.abs(c - b); const isBullish = a > x; const dirMultiplier = isBullish ? -1 : 1; const bRetracement = ab / xa; const cRetracement = bc / ab; let resultsHTML = ''; const patterns = [ { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 }, { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Butterfly', bTarget: 0.786, dRetXa: 1.272, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Crab', bTarget: 0.50, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 }, { name: 'Deep Crab', bTarget: 0.886, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 } ]; let foundMatch = false; patterns.forEach(pat => { const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) || (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618); if(isBMatch) { foundMatch = true; const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier); const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier); const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier); resultsHTML += ` <div class="kpi-card" style="border-color: var(--accent);"> <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4> <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;"> Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br> Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB </div> <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}$</b></div> <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)}$ - ${dTargetByBC_Max.toFixed(2)}$</b></div> <div class="value" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)}$ do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}$</div> </div> `; } }); if(!foundMatch) { resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;"> Obecna struktura (B zniósł ${(bRetracement).toFixed(3)} XA, C zniósł ${(cRetracement).toFixed(3)} AB) nie mieści się w standardowych tolerancjach formacji Harmonicznych. To może być zwykła trójfalowa korekta. </div>`; } document.getElementById('ha-results').innerHTML = resultsHTML; }
+        function calculateHarmonics(e) { e.preventDefault(); const x = parseFloat(document.getElementById('ha-x').value); const a = parseFloat(document.getElementById('ha-a').value); const b = parseFloat(document.getElementById('ha-b').value); const c = parseFloat(document.getElementById('ha-c').value); const xa = Math.abs(a - x); const ab = Math.abs(b - a); const bc = Math.abs(c - b); const isBullish = a > x; const dirMultiplier = isBullish ? -1 : 1; const bRetracement = ab / xa; const cRetracement = bc / ab; let resultsHTML = ''; const patterns = [ { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 }, { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Butterfly', bTarget: 0.786, dRetXa: 1.272, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Crab', bTarget: 0.50, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 }, { name: 'Deep Crab', bTarget: 0.886, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 } ]; let foundMatch = false; patterns.forEach(pat => { const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) || (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618); if(isBMatch) { foundMatch = true; const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier); const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier); const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier); resultsHTML += ` <div class="kpi-card" style="border-color: var(--accent);"> <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4> <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;"> Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br> Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB </div> <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}$</b></div> <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)}$ - ${dTargetByBC_Max.toFixed(2)}$</b></div> <div class="value sensitive" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)}$ do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}$</div> </div> `; } }); if(!foundMatch) { resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;"> Obecna struktura (B zniósł ${(bRetracement).toFixed(3)} XA, C zniósł ${(cRetracement).toFixed(3)} AB) nie mieści się w standardowych tolerancjach formacji Harmonicznych. To może być zwykła trójfalowa korekta. </div>`; } document.getElementById('ha-results').innerHTML = resultsHTML; }
         function calculateElliott(e) { e.preventDefault(); const dir = document.getElementById('ew-direction').value; const x = parseFloat(document.getElementById('ew-x').value); const w1 = parseFloat(document.getElementById('ew-1').value); const w2 = parseFloat(document.getElementById('ew-2').value); const w3 = parseFloat(document.getElementById('ew-3').value); const w4 = parseFloat(document.getElementById('ew-4').value); const isUp = dir === 'UP'; let score = 0; let maxScore = 5; let rulesLog = ''; const lenW1 = Math.abs(w1 - x); const lenW3 = Math.abs(w3 - w2); const w2RetracedW1 = isUp ? (w2 < x) : (w2 > x); if (w2RetracedW1) { rulesLog += '❌ Fala 2 zniosła więcej niż 100% Fali 1. (Złamanie reguły Elliotta)<br>'; } else { score += 2; rulesLog += '✅ Fala 2 zatrzymała się nad/pod początkiem Fali 1. (+2 pkt)<br>'; } if (lenW3 <= lenW1 * 0.98) { rulesLog += '⚠️ Fala 3 jest krótsza od Fali 1. Pamiętaj, że Fala 5 nie będzie mogła być krótsza od Fali 3.<br>'; } else { score += 1; rulesLog += '✅ Fala 3 jest dłuższa lub równa Fali 1. (+1 pkt)<br>'; } const overlap = isUp ? (w4 <= w1) : (w4 >= w1); if (overlap) { rulesLog += '❌ Fala 4 wkroczyła w terytorium Fali 1. (Złamanie standardowego impulsu - może być klin końńcowy)<br>'; } else { score += 2; rulesLog += '✅ Fala 4 nie zachodzi na Falę 1. Klasyczny impuls. (+2 pkt)<br>'; } const color = score === 5 ? 'var(--success)' : (score >= 3 ? '#fcd535' : 'var(--danger)'); document.getElementById('ew-score-text').innerHTML = `<span style="color:${color}; font-weight:bold;">${score} / ${maxScore} Pkt</span>`; document.getElementById('ew-rules-list').innerHTML = rulesLog; if (score >= 2) { document.getElementById('ew-projections').style.display = 'grid'; const w1ToW3Dist = Math.abs(w3 - x); const w5_target1 = isUp ? w4 + lenW1 : w4 - lenW1; const w5_target2 = isUp ? w4 + (w1ToW3Dist * 0.618) : w4 - (w1ToW3Dist * 0.618); const avgW5 = (w5_target1 + w5_target2) / 2; document.getElementById('ew-p5').innerText = avgW5.toFixed(2) + ' $'; const targetA = w4; document.getElementById('ew-pa').innerText = targetA.toFixed(2) + ' $'; const distA = Math.abs(avgW5 - targetA); const targetB = isUp ? targetA + (distA * 0.5) : targetA - (distA * 0.5); document.getElementById('ew-pb').innerText = targetB.toFixed(2) + ' $'; const targetC = isUp ? targetB - distA : targetB + distA; document.getElementById('ew-pc').innerText = targetC.toFixed(2) + ' $'; } else { document.getElementById('ew-projections').style.display = 'none'; } }
         function calculateRGR(e) { e.preventDefault(); const type = document.getElementById('rgr-type').value; const ls = parseFloat(document.getElementById('rgr-ls').value); const ln = parseFloat(document.getElementById('rgr-ln').value); const h = parseFloat(document.getElementById('rgr-h').value); const rn = parseFloat(document.getElementById('rgr-rn').value); const rs = parseFloat(document.getElementById('rgr-rs').value); let bp = parseFloat(document.getElementById('rgr-bp').value); if(isNaN(bp)) bp = rn; const isRGR = type === 'RGR'; let isValid = true; let reason = ''; if (isRGR) { if (h <= ls || h <= rs) { isValid = false; reason += '❌ Głowa RGR musi być wyżej niż ramiona.<br>'; } else reason += '✅ Głowa ukształtowana prawidłowo (wyżej).<br>'; } else { if (h >= ls || h >= rs) { isValid = false; reason += '❌ Głowa oRGR musi być niżej (być dołkiem) względem ramion.<br>'; } else reason += '✅ Głowa ukształtowana prawidłowo (niżej).<br>'; } const shoulderDiff = Math.abs(ls - rs) / ls * 100; if (shoulderDiff > 15) { reason += `⚠️ Uwaga: Prawe ramię znacznie różni się wysokością od lewego (${shoulderDiff.toFixed(1)}%).<br>`; } else { reason += '✅ Ramiona na zbieżnym, akceptowalnym poziomie.<br>'; } const neckSlope = isRGR ? (rn - ln) : (ln - rn); const neckStatus = neckSlope > 0 ? (isRGR ? 'Kąt Spadkowy (Słaby/Sygnał opóźniony)' : 'Kąt Wzrostowy (Silny sygnał)') : (isRGR ? 'Kąt Wzrostowy (Silny)' : 'Kąt Spadkowy (Słaby)'); if (isValid) { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--success);">Prawidłowy model</span>`; document.getElementById('rgr-targets').style.display = 'grid'; const neckAvg = (ln + rn) / 2; const headHeight = Math.abs(h - neckAvg); const target = isRGR ? bp - headHeight : bp + headHeight; document.getElementById('rgr-angle').innerText = neckSlope === 0 ? "Płaski" : (neckSlope > 0 ? "Rosnący" : "Spadkowy"); document.getElementById('rgr-height').innerText = headHeight.toFixed(2) + ' $'; document.getElementById('rgr-target').innerText = target.toFixed(2) + ' $'; } else { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--danger);">Złamane reguły</span>`; document.getElementById('rgr-targets').style.display = 'none'; } document.getElementById('rgr-valid-desc').innerHTML = reason; }
 
