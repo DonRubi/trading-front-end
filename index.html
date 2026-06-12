@@ -641,7 +641,6 @@
         <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:90%; max-width:400px; border:1px solid var(--border-color);">
             <h3 style="color:var(--accent); margin-bottom:15px;">Zamknięcie Pozycji (Kalkulator)</h3>
             <input type="hidden" id="sell-trade-id">
-            
             <div class="form-group"><label>Data Sprzedaży</label><input type="date" id="sell-date"></div>
             <div class="form-group"><label>Cena Sprzedaży z platformy</label><input type="number" step="0.0001" id="sell-price" placeholder="np. 154.32"></div>
             
@@ -654,7 +653,6 @@
                 <label style="color:var(--success);">Ile % pozycji sprzedajesz? <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz jako procent (np. 50%), ułamek (np. 1/3) lub zostaw 1 dla całości.</small></label>
                 <input type="text" id="sell-fraction" value="1" placeholder="np. 0.5, 50%, 1/3, 23/41">
             </div>
-            
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:10px; border-radius:6px; cursor:pointer;">Anuluj</button>
                 <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">Księguj Zysk</button>
@@ -665,6 +663,38 @@
     <script>
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
 
+        // --- FUNKCJA ZABEZPIECZAJĄCA OBLICZENIA DLA SUMMARY I TRADESLIST ---
+        function calculateTradeStats(item) {
+            const isClosed = (item.status === 'CLOSED' || item.sell_date);
+            const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1;
+            const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
+            const cp = isClosed ? item.sell_price : (tm && tm.price ? tm.price : item.buy_price);
+            const val = item.spent * item.leverage; 
+            const cfdCost = item.cfd_cost || 0;
+            const prof = (val * (((cp - item.buy_price) / item.buy_price) * mod)) + (item.dividend || 0) - cfdCost;
+            const usedFx = isClosed ? (item.sell_fx_rate || item.buy_fx_rate) : item.buy_fx_rate;
+            const profPln = prof * usedFx;
+            const valPln = val * usedFx;
+            const rr = (item.buy_price - item.sl !== 0) ? ((item.tp - item.buy_price) * mod) / ((item.buy_price - item.sl) * mod) : 0;
+            
+            let prog = 0; 
+            if (item.tp - item.buy_price !== 0) prog = ((cp - item.buy_price) * mod) / ((item.tp - item.buy_price) * mod);
+            
+            let dsl = item.sl;
+            if (prog >= 1) dsl = item.tp; 
+            else if (prog >= 0.5) dsl = item.buy_price + ((item.tp - item.buy_price) * (prog - 0.2)); 
+            
+            let pd = prog * 100; 
+            let pc = 'var(--success)';
+            if (pd < 0) { 
+                pc = 'var(--danger)'; 
+                pd = (item.buy_price - item.sl !== 0) ? Math.abs(((cp - item.buy_price) * mod) / ((item.buy_price - item.sl) * mod)) * 100 : 0; 
+            }
+            if (pd > 100) pd = 100;
+            
+            return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: item.spent * usedFx };
+        }
+
         // --- POMOCNICZA FUNKCJA GENEROWANIA LINKÓW TRADINGVIEW ---
         function getTradingViewLink(ticker) {
             if (!ticker) return '#';
@@ -672,13 +702,21 @@
             const LAYOUT_ID = 'k5llKflB'; 
             const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/';
 
-            if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; }
+            if (cleanTicker.includes(':')) {
+                return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`;
+            }
+            
             const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ'];
             const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA'];
+            
             let exchange = '';
-            if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } 
-            else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } 
-            else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; }
+            if (nasdaqTickers.includes(cleanTicker)) {
+                exchange = 'NASDAQ:';
+            } else if (nyseTickers.includes(cleanTicker)) {
+                exchange = 'NYSE:';
+            } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) {
+                exchange = 'BINANCE:';
+            }
             
             return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
         }
@@ -771,22 +809,32 @@
             document.getElementById('macro-next-btn').disabled = (currentMacroPage === totalPages);
         }
 
-        function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
+        function changeMacroPage(dir) { 
+            currentMacroPage += dir; 
+            renderMacroTable(); 
+        }
 
         async function forceMacroUpdate() {
-            try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } 
-            catch (e) { alert("Błąd połączenia z serwerem."); }
+            try {
+                await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' });
+                alert("Zaktualizowano makro"); 
+                loadMacroData(); 
+            } catch (e) { alert("Błąd połączenia z serwerem."); }
         }
 
         async function loadDatabase() {
-            try { const response = await fetch(`${API_BASE_URL}/api/database`); tickerDataArray = await response.json() || []; renderMobileList(); } 
-            catch (e) {}
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/database`);
+                tickerDataArray = await response.json() || [];
+                renderMobileList();
+            } catch (e) {}
         }
 
         function renderMobileList() {
             const container = document.getElementById('db-list-container');
             container.innerHTML = '';
             if (tickerDataArray.length === 0) return;
+            
             const totalPages = Math.ceil(tickerDataArray.length / tickerPageSize);
             const start = (currentTickerPage - 1) * tickerPageSize;
             const pageData = tickerDataArray.slice(start, start + tickerPageSize);
@@ -809,25 +857,42 @@
             document.getElementById('ticker-next-btn').disabled = (currentTickerPage === totalPages);
         }
 
-        function changeTickerPage(dir) { currentTickerPage += dir; renderMobileList(); }
+        function changeTickerPage(dir) { 
+            currentTickerPage += dir; 
+            renderMobileList(); 
+        }
 
         async function addTicker() {
             const t = document.getElementById('new-ticker').value.trim().toUpperCase();
             if (!t) return;
-            const res = await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) });
-            if (res.ok) { document.getElementById('new-ticker').value = ''; loadDatabase(); }
+            const res = await fetch(`${API_BASE_URL}/api/database/add`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ ticker: t }) 
+            });
+            if (res.ok) { 
+                document.getElementById('new-ticker').value = ''; 
+                loadDatabase(); 
+            }
         }
 
         async function removeTicker(t) {
             if (!confirm(`Usunąć ${t}?`)) return;
-            const res = await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) });
+            const res = await fetch(`${API_BASE_URL}/api/database/delete`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ ticker: t }) 
+            });
             if (res.ok) loadDatabase();
         }
 
         // ==========================================
         // 2. MODUŁ ALERT HISTORY
         // ==========================================
-        let allAlertsData = []; let filteredAlertsData = []; let currentAlertPage = 1; const alertPageSize = 20;
+        let allAlertsData = []; 
+        let filteredAlertsData = []; 
+        let currentAlertPage = 1; 
+        const alertPageSize = 20;
 
         async function loadAlertHistory() { 
             try { 
@@ -869,6 +934,7 @@
                 const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>';
                 const condColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
                 const condText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
+                
                 const aType = item.alert_type || 'Punkt wejścia';
                 let typeColor = '#89b4fa';
                 if(aType === 'Take Profit') typeColor = '#0ecb81';
@@ -894,11 +960,18 @@
 
         function changeAlertPage(d) {
             const total = Math.ceil(filteredAlertsData.length / alertPageSize) || 1;
-            if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) { currentAlertPage += d; renderAlertsTable(); }
+            if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) {
+                currentAlertPage += d; 
+                renderAlertsTable(); 
+            }
         }
 
         async function deleteAlert(id) { 
-            await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); 
+            await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({id})
+            }); 
             loadAlertHistory(); 
         }
 
@@ -949,8 +1022,19 @@
             } catch (error) {}
         }
 
-        function handleFormFilter(value) { formFilterText = value.toLowerCase(); formCurrentPage = 1; applyFormFilterAndSort(); }
-        function handleFormSort(key) { formSortDir = (formSortKey === key && formSortDir === 'asc') ? 'desc' : 'asc'; formSortKey = key; updateFormSortIcons(); applyFormFilterAndSort(); }
+        function handleFormFilter(value) { 
+            formFilterText = value.toLowerCase(); 
+            formCurrentPage = 1; 
+            applyFormFilterAndSort(); 
+        }
+
+        function handleFormSort(key) {
+            formSortDir = (formSortKey === key && formSortDir === 'asc') ? 'desc' : 'asc';
+            formSortKey = key; 
+            updateFormSortIcons(); 
+            applyFormFilterAndSort();
+        }
+
         function updateFormSortIcons() {
             ['entry_id', 'ticker', 'direction', 'score', 'priority', 'mute'].forEach(col => {
                 const icon = document.getElementById(`sort-icon-${col}`);
@@ -1021,7 +1105,10 @@
             document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`;
         }
 
-        function changeFormPage(direction) { formCurrentPage += direction; renderAdvancedFormTable(); }
+        function changeFormPage(direction) { 
+            formCurrentPage += direction; 
+            renderAdvancedFormTable(); 
+        }
 
         async function submitAdvancedForm(e) {
             e.preventDefault();
@@ -1041,19 +1128,37 @@
                     document.getElementById('form-reason-5')?.value || ''
                 ].filter(r => r.trim() !== '')
             };
-            if(!data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) { return alert('Uzupełnij wszystkie pola liczbowe!'); }
-            await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            document.getElementById('trading-form').reset(); fetchFormEntries(); loadFormReasons();
+            
+            if(!data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) {
+                return alert('Uzupełnij wszystkie pola liczbowe!');
+            }
+            
+            await fetch(`${API_BASE_URL}/api/form/add`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(data) 
+            });
+            document.getElementById('trading-form').reset(); 
+            fetchFormEntries(); 
+            loadFormReasons();
         }
         
         async function deleteAdvancedFormEntry(id) {
             if(!confirm('Usunąć?')) return;
-            await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) });
+            await fetch(`${API_BASE_URL}/api/form/delete`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({id: id}) 
+            });
             fetchFormEntries();
         }
 
         async function updateFormEntryField(entryId, field, newValue) {
-            await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) });
+            await fetch(`${API_BASE_URL}/api/form/update`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) 
+            });
             fetchFormEntries(); 
         }
 
@@ -1078,17 +1183,21 @@
             const peak = parseFloat(document.getElementById('fibo-peak').value);
             const direction = document.getElementById('form-direction').value;
             const select = document.getElementById('fibo-level');
+            
             if (!select) return;
             const levels = [1.272, 1.618, 2.000, 2.618];
             const currentSelected = select.value; 
             select.innerHTML = ''; 
+            
             levels.forEach(lvl => {
                 let optionText = lvl.toFixed(3);
                 if (!isNaN(start) && !isNaN(peak)) {
                     let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * lvl : peak - (start - peak) * lvl; 
                     optionText += ` (cena: ${calculatedPrice.toFixed(2)})`;
                 }
-                const opt = document.createElement('option'); opt.value = lvl.toString(); opt.textContent = optionText;
+                const opt = document.createElement('option'); 
+                opt.value = lvl.toString(); 
+                opt.textContent = optionText;
                 if (lvl.toString() === currentSelected) opt.selected = true;
                 select.appendChild(opt);
             });
@@ -1099,6 +1208,7 @@
             const peak = parseFloat(document.getElementById('fibo-peak').value);
             const level = parseFloat(document.getElementById('fibo-level').value);
             const direction = document.getElementById('form-direction').value;
+            
             if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
             const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * level : peak - (start - peak) * level; 
             document.getElementById('form-tp').value = tp.toFixed(2);
@@ -1108,11 +1218,14 @@
         function updateFormTvLink() {
             const ticker = document.getElementById('form-ticker').value;
             const linkEl = document.getElementById('form-tv-link');
-            if (ticker) { linkEl.href = getTradingViewLink(ticker); linkEl.style.display = 'inline-block'; }
+            if (ticker) { 
+                linkEl.href = getTradingViewLink(ticker); 
+                linkEl.style.display = 'inline-block'; 
+            }
         }
 
         // ==========================================
-        // 5. MODUŁ FOCUSLIST (WYKORZYSTUJE DANE Z FORMA)
+        // NOWOŚĆ: LOGIKA MODUŁU FOCUSLIST
         // ==========================================
         let filteredFocusListEntries = [];
         let currentFocusListPage = 1;
@@ -1207,16 +1320,20 @@
                     <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 TV</a></td>
                 </tr>`;
             }).join('');
+            
             document.getElementById('focuslist-page-info').innerText = `Strona ${currentFocusListPage} z ${Math.ceil(filteredFocusListEntries.length / focusListPageSize)}`;
         }
 
         function changeFocusListPage(d) {
             const total = Math.ceil(filteredFocusListEntries.length / focusListPageSize) || 1;
-            if (currentFocusListPage + d >= 1 && currentFocusListPage + d <= total) { currentFocusListPage += d; renderFocusListTable(); }
+            if (currentFocusListPage + d >= 1 && currentFocusListPage + d <= total) {
+                currentFocusListPage += d;
+                renderFocusListTable();
+            }
         }
 
         // ==========================================
-        // 6. MODUŁ FOCUS
+        // LOGIKA MODUŁU FOCUS
         // ==========================================
         async function initFocusModule() {
             const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
@@ -1228,20 +1345,34 @@
 
         function onFocusIdChange() {
             const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value);
-            if(entry) { document.getElementById('focus-ticker').value = entry.ticker; document.getElementById('focus-direction').value = entry.direction; }
+            if(entry) { 
+                document.getElementById('focus-ticker').value = entry.ticker; 
+                document.getElementById('focus-direction').value = entry.direction; 
+            }
         }
 
         async function autoCalculateSMC() {
-            const t = document.getElementById('focus-ticker').value; const d = document.getElementById('focus-direction').value;
+            const t = document.getElementById('focus-ticker').value;
+            const d = document.getElementById('focus-direction').value;
             try {
-                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d}) });
+                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({ticker:t, direction:d})
+                });
                 const r = await res.json();
-                document.getElementById('focus-candle').value = r.candle_score; document.getElementById('focus-volume').value = r.volume_score; 
-                document.getElementById('focus-vix').value = r.vix_score; document.getElementById('focus-index').value = r.index_score;
-            } catch(e) {}
+                document.getElementById('focus-candle').value = r.candle_score; 
+                document.getElementById('focus-volume').value = r.volume_score; 
+                document.getElementById('focus-vix').value = r.vix_score; 
+                document.getElementById('focus-index').value = r.index_score;
+            } catch(e) { console.error(e); }
         }
 
-        async function fetchFocusEntries() { const r = await fetch(`${API_BASE_URL}/api/focus/entries`); focusDataArray = await r.json(); renderFocusTable(); }
+        async function fetchFocusEntries() { 
+            const r = await fetch(`${API_BASE_URL}/api/focus/entries`); 
+            focusDataArray = await r.json(); 
+            renderFocusTable(); 
+        }
 
         function renderFocusTable() {
             const tb = document.getElementById('focus-table-body');
@@ -1261,212 +1392,73 @@
             document.getElementById('focus-page-info').innerText = `Str ${currentFocusPage}`;
         }
 
-        function changeFocusPage(d) { currentFocusPage += d; renderFocusTable(); }
+        function changeFocusPage(d) { 
+            currentFocusPage += d; 
+            renderFocusTable(); 
+        }
 
         async function deleteFocusEntry(id) { 
-            await fetch(`${API_BASE_URL}/api/focus/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); 
+            await fetch(`${API_BASE_URL}/api/focus/delete`,{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({id})
+            }); 
             fetchFocusEntries(); 
         }
 
         async function submitFocusForm(e) { 
             e.preventDefault(); 
             const d = {
-                entry_id:document.getElementById('focus-form-id').value, ticker:document.getElementById('focus-ticker').value, 
-                candle_score:document.getElementById('focus-candle').value, volume_score:document.getElementById('focus-volume').value, 
-                gap_score:document.getElementById('focus-gap').value, calendar_score:document.getElementById('focus-calendar').value, 
-                cvd_score:document.getElementById('focus-cvd').value, vix_score:document.getElementById('focus-vix').value, 
-                index_score:document.getElementById('focus-index').value, htf_score:document.getElementById('focus-htf').value
+                entry_id:document.getElementById('focus-form-id').value, 
+                ticker:document.getElementById('focus-ticker').value, 
+                candle_score:document.getElementById('focus-candle').value, 
+                volume_score:document.getElementById('focus-volume').value, 
+                gap_score:document.getElementById('focus-gap').value, 
+                calendar_score:document.getElementById('focus-calendar').value, 
+                cvd_score:document.getElementById('focus-cvd').value, 
+                vix_score:document.getElementById('focus-vix').value, 
+                index_score:document.getElementById('focus-index').value, 
+                htf_score:document.getElementById('focus-htf').value
             }; 
-            await fetch(`${API_BASE_URL}/api/focus/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) }); 
+            await fetch(`${API_BASE_URL}/api/focus/add`,{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify(d)
+            }); 
             fetchFocusEntries(); 
         }
 
         // ==========================================
-        // 7. MODUŁ TRADES LIST
+        // LOGIKA MODUŁU TRADES LIST & SUMMARY
         // ==========================================
-        function calculateTradeStats(item) {
-            const isClosed = (item.status === 'CLOSED' || item.sell_date);
-            const mod = ['DBR','RBR'].includes(item.direction)?1:-1;
-            const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
-            const cp = isClosed ? item.sell_price : (tm&&tm.price?tm.price:item.buy_price);
-            const val = item.spent * item.leverage; 
-            const cfdCost = item.cfd_cost || 0;
-            const prof = (val * (((cp - item.buy_price)/item.buy_price)*mod)) + (item.dividend || 0) - cfdCost;
-            const usedFx = isClosed ? (item.sell_fx_rate || item.buy_fx_rate) : item.buy_fx_rate;
-            const profPln = prof * usedFx;
-            const valPln = val * usedFx;
-            const rr = (item.buy_price-item.sl!==0) ? ((item.tp-item.buy_price)*mod)/((item.buy_price-item.sl)*mod) : 0;
-            let prog = 0; if(item.tp-item.buy_price!==0) prog = ((cp-item.buy_price)*mod)/((item.tp-item.buy_price)*mod);
-            let dsl = item.sl;
-            if(prog >= 1) dsl = item.tp; else if(prog >= 0.5) dsl = item.buy_price + ((item.tp - item.buy_price)*(prog - 0.2)); 
-            let pd = prog*100; let pc = 'var(--success)';
-            if(pd<0){ pc='var(--danger)'; pd = (item.buy_price-item.sl!==0) ? Math.abs(((cp-item.buy_price)*mod)/((item.buy_price-item.sl)*mod))*100 : 0; }
-            if(pd>100) pd=100;
-            
-            return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: item.spent * usedFx };
-        }
-
-        async function initTradesModule() {
-            if(focusDataArray.length === 0) await fetchFocusEntries();
-            document.getElementById('trade-focus-id').innerHTML = '<option value="">Wybierz...</option>' + focusDataArray.map(f => `<option value="${f.id}">#${f.id} - ${f.ticker} (Max: ${f.allocated_cash} ${f.currency})</option>`).join('');
-            document.getElementById('trade-buy-date').valueAsDate = new Date();
-            fetchTradesEntries();
-        }
-
-        async function onTradeFocusChange() {
-            const fid = document.getElementById('trade-focus-id').value; 
-            const focus = focusDataArray.find(f => f.id == fid); 
-            if(!focus) return;
-            const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); 
-            const form = formDb.find(frm => frm.entry_id === focus.entry_id);
-            document.getElementById('trade-ticker').value = focus.ticker; document.getElementById('trade-form-id').value = focus.entry_id; document.getElementById('trade-currency').value = focus.currency; document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; document.getElementById('trade-score').value = focus.points_total;
-            if(form) { document.getElementById('trade-direction').value = form.direction; document.getElementById('trade-tp').value = form.take_profit; document.getElementById('trade-sl').value = form.stop_loss; }
-            document.getElementById('trade-name').value = 'Wyszukiwanie...';
-            try { const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); document.getElementById('trade-name').value = n.name || ''; } catch(e){}
-        }
-
-        async function submitTradeForm(e) {
-            e.preventDefault();
-            const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value);
-            const maxSpend = parseFloat(document.getElementById('trade-max-spend').value.split(" ")[0]);
-            if (spent * lev > maxSpend) alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia (${spent * lev}) przekracza maksymalny wydatek zalecony (${maxSpend})!`);
-
-            const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: spent, leverage: lev, currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value };
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-                if(res.ok) { alert('Transakcja dodana!'); document.getElementById('trade-form').reset(); fetchTradesEntries(); } else alert('Błąd dodawania transakcji.');
-            } catch(e) {}
-        }
-
-        async function fetchTradesEntries() {
-            allTradesData = await (await fetch(`${API_BASE_URL}/api/trades/entries`)).json();
-            if(tickerDataArray.length === 0) await loadDatabase();
-            handleTradesFilter();
-            if(document.getElementById('summary-module').style.display === 'block') loadSummaryData();
-        }
-
-        function handleTradesFilter() {
-            const searchText = (document.getElementById('trade-search').value || '').toLowerCase();
-            const statusFilter = document.getElementById('trade-status-filter').value || 'OPEN';
-            filteredTradesData = allTradesData.filter(t => {
-                const textMatch = (t.ticker || '').toLowerCase().includes(searchText) || (t.stock_name || '').toLowerCase().includes(searchText);
-                const isClosed = (t.status === 'CLOSED' || t.sell_date);
-                let statusMatch = true;
-                if (statusFilter === 'OPEN') statusMatch = !isClosed;
-                if (statusFilter === 'CLOSED') statusMatch = isClosed;
-                return textMatch && statusMatch;
-            });
-            currentTradePage = 1; renderTradesTable();
-        }
-
-        function renderTradesTable() {
-            const tb = document.getElementById('trades-table-body');
-            if (filteredTradesData.length === 0) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px;">Brak wpisów.</td></tr>`; return; }
-
-            tb.innerHTML = filteredTradesData.slice((currentTradePage-1)*tradePageSize, currentTradePage*tradePageSize).map(item => {
-                const s = calculateTradeStats(item);
-                const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})" style="color:var(--accent); border-color:var(--accent); margin-bottom:4px;">Sprzedaj</button>`;
-                const divHtml = (item.dividend && item.dividend > 0) ? `<br><small style="color:var(--accent);">+ ${Number(item.dividend).toFixed(2)} div.</small>` : '';
-                const cfdHtml = (item.cfd_cost && item.cfd_cost > 0) ? `<br><small style="color:var(--danger);">- ${Number(item.cfd_cost).toFixed(2)} cvd</small>` : '';
-
-                return `<tr>
-                    <td style="font-size:0.85em; color:var(--text-muted);">${item.buy_date}<br><b style="color:#eaecef;">#${item.id}</b></td>
-                    <td><strong style="color:var(--accent);">${item.ticker}</strong><br><small>${item.stock_name}</small></td>
-                    <td>${item.spent.toFixed(2)}${item.currency}<br><small>Wart: ${s.val.toFixed(2)}(x${item.leverage})</small></td>
-                    <td>WE: ${item.buy_price}$<br>${s.isClosed?'<span style="color:var(--text-muted);">OUT:</span>':'TR:'} <b>${s.cp}$</b><br>${s.isClosed?`<small>${item.sell_date}</small>`:''}</td>
-                    <td>R:R <b>${s.rr.toFixed(1)}</b><br><b style="color:#fcd535;">SL: ${s.dsl.toFixed(2)}$</b></td>
-                    <td style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.prof.toFixed(2)} ${item.currency}</b>${divHtml}${cfdHtml}</td>
-                    <td style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.profPln.toFixed(2)} PLN</b></td>
-                    <td><div style="font-size:0.8em; display:flex; justify-content:space-between;"><span>${s.prog<0?'STRATA':'ZYSK'}</span><span>${(s.prog*100).toFixed(0)}%</span></div><div style="background:var(--bg-input); height:8px; border-radius:4px; overflow:hidden;"><div style="width:${s.pd}%; background:${s.pc}; height:100%;"></div></div></td>
-                    <td>${actionHtml}</td>
-                </tr>`;
-            }).join('');
-            document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage}`;
-        }
-        function changeTradePage(d) { currentTradePage+=d; renderTradesTable(); }
-
-        function openCloseModal(id) {
-            document.getElementById('sell-modal').style.display = 'flex';
-            document.getElementById('sell-trade-id').value = id;
-            document.getElementById('sell-date').valueAsDate = new Date();
-            document.getElementById('sell-price').value = '';
-            document.getElementById('sell-fraction').value = '1';
-            
-            const trade = allTradesData.find(t => t.id === id);
-            if(trade && trade.leverage > 1) {
-                document.getElementById('sell-cfd-group').style.display = 'block';
-                document.getElementById('sell-cfd-cost').value = '0';
-            } else {
-                document.getElementById('sell-cfd-group').style.display = 'none';
-                document.getElementById('sell-cfd-cost').value = '0';
-            }
-        }
-        function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
-        
-        async function confirmSell() {
-            const id = document.getElementById('sell-trade-id').value;
-            const price = parseFloat(document.getElementById('sell-price').value);
-            const date = document.getElementById('sell-date').value;
-            const cfdCost = parseFloat(document.getElementById('sell-cfd-cost').value) || 0;
-            const fracStr = document.getElementById('sell-fraction').value.trim();
-
-            if(!price || isNaN(price)) return alert('Podaj prawidłową cenę sprzedaży!');
-
-            let fraction = 1.0;
-            if(fracStr.includes('%')) fraction = parseFloat(fracStr.replace('%', '')) / 100.0;
-            else if(fracStr.includes('/')) { const parts = fracStr.split('/'); fraction = parseFloat(parts[0]) / parseFloat(parts[1]); } 
-            else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; }
-
-            if(isNaN(fraction) || fraction <= 0 || fraction > 1.0) return alert('Błędna wartość sprzedaży!');
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/trades/close`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost })
-                });
-                if(res.ok) { alert('Zaksięgowano!'); closeSellModal(); fetchTradesEntries(); } 
-                else { const err = await res.json(); alert('Błąd: ' + err.message); }
-            } catch(e) {}
-        }
-
-        // ==========================================
-        // 8. MODUŁ SUMMARY (DASHBOARDS)
-        // ==========================================
-        let summaryOpenSortKey = 'valLev';
-        let summaryOpenSortDir = 'desc';
-
         function switchSummaryTab(tab) {
             document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active'));
-            event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active');
+            event.currentTarget.classList.add('active'); 
+            document.getElementById('tab-'+tab).classList.add('active');
             if(tab === 'dashboard' && summaryChartInstance) summaryChartInstance.update();
         }
 
-        async function initSummaryModule() {
-            if(allTradesData.length === 0) {
-                allTradesData = await (await fetch(`${API_BASE_URL}/api/trades/entries`)).json();
-            }
-            if(tickerDataArray.length === 0) await loadDatabase();
-            if(macroDataArray.length === 0) {
-                macroDataArray = await (await fetch(`${API_BASE_URL}/api/macro/history`)).json() || [];
-            }
-            
+        async function loadSummaryData() {
             try {
-                depositsDataArray = await (await fetch(`${API_BASE_URL}/api/portfolio/deposits`)).json() || [];
+                const r = await fetch(`${API_BASE_URL}/api/portfolio/summary`); 
+                const d = await r.json();
+                document.getElementById('kpi-deposits').innerText = `${Number(d.total_deposits).toFixed(2)} PLN`; 
+                document.getElementById('kpi-pnl').innerText = `${Number(d.total_pnl).toFixed(2)} PLN`; 
+                document.getElementById('kpi-capital').innerText = `${Number(d.current_capital).toFixed(2)} PLN`; 
+                document.getElementById('kpi-allocated').innerText = `${Number(d.allocated_capital).toFixed(2)} PLN`; 
+                document.getElementById('kpi-available').innerText = `${Number(d.available_cash).toFixed(2)} PLN`;
+                
+                const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); 
+                depositsDataArray = await rD.json() || [];
                 renderDepositsTable();
                 calculateAndRenderSummary();
-            } catch(e){}
-        }
-
-        async function loadSummaryData() {
-            if(document.getElementById('summary-module').style.display === 'block') {
-                initSummaryModule();
-            }
+            } catch(e) {}
         }
 
         function calculateAndRenderSummary() {
             let totalDepositsPln = 0;
-            depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || 0));
+            depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount));
 
             let totalClosedPnlPln = 0;
             let openInvestedPln = 0;
@@ -1484,7 +1476,7 @@
                 if (s.isClosed) {
                     totalClosedPnlPln += s.profPln;
                     
-                    const month = trade.sell_date.substring(0, 7);
+                    const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak';
                     if(!closedByMonth[month]) closedByMonth[month] = 0;
                     closedByMonth[month] += s.profPln;
 
@@ -1498,9 +1490,8 @@
                 } else {
                     openInvestedPln += s.spentPln;
                     openProfitPln += s.profPln;
-                    openLevValuePln += s.valPln + s.profPln; // wartość zyskowna na dźwigni
+                    openLevValuePln += s.valPln + s.profPln; 
                     
-                    // Do breakdown (Realna wartość to zainwestowana baza + wypracowany zysk walutowy)
                     const valInCurr = trade.spent + s.prof;
                     if(currBreakdown[trade.currency] !== undefined) currBreakdown[trade.currency] += valInCurr;
 
@@ -1522,7 +1513,6 @@
             let levPct = 0;
             if (totalPortfolioValuePln > 0) levPct = (openLevValuePln / totalPortfolioValuePln) * 100;
 
-            // Render Dashboard KPI
             document.getElementById('s-dep').innerText = totalDepositsPln.toFixed(2) + ' PLN';
             document.getElementById('s-pnl').innerText = totalClosedPnlPln.toFixed(2) + ' PLN';
             document.getElementById('s-pnl').style.color = totalClosedPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
@@ -1541,21 +1531,17 @@
             document.getElementById('s-levval').innerText = openLevValuePln.toFixed(2) + ' PLN';
             document.getElementById('s-levpct').innerText = levPct.toFixed(2) + ' %';
 
-            // Currency Breakdown
             document.getElementById('s-curr-breakdown').innerHTML = `
                 <tr><td>PLN</td><td style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr>
                 <tr><td>USD</td><td style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr>
                 <tr><td>EUR</td><td style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>
             `;
 
-            // Draw Chart
             drawSummaryChart(roiPct);
 
-            // Render Tab: Open
             window.summaryOpenData = Object.keys(openGrouped).map(k => ({ ticker: k, ...openGrouped[k] }));
             renderSummaryOpen();
 
-            // Render Tab: Closed
             const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML='';
             Object.keys(closedByMonth).sort().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; });
             
@@ -1609,19 +1595,18 @@
             const d = document.getElementById('dep-date').value; 
             const cur = document.getElementById('dep-cur').value;
             await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); 
-            initSummaryModule();
+            loadSummaryData();
             document.getElementById('dep-amt').value = '';
         }
 
         async function deleteDeposit(id) { 
             if(!confirm("Na pewno usunąć? Saldo ulegnie zmianie.")) return;
             await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); 
-            initSummaryModule(); 
+            loadSummaryData(); 
         }
 
         function drawSummaryChart(roiPct) {
             let sp500Change = 0;
-            // Bardzo proste wyliczenie zmiany S&P500 na podstawie bazy makro (Najstarszy wpis vs Najnowszy)
             if(macroDataArray.length > 1) {
                 const oldest = macroDataArray[macroDataArray.length-1].sp500;
                 const newest = macroDataArray[0].sp500;
@@ -1657,43 +1642,317 @@
             });
         }
 
-        // --- SERVICE (DYWIDENDY & CRON) ---
+        async function initTradesModule() {
+            if(focusDataArray.length === 0) await fetchFocusEntries();
+            document.getElementById('trade-focus-id').innerHTML = '<option value="">Wybierz...</option>' + focusDataArray.map(f => `<option value="${f.id}">#${f.id} - ${f.ticker} (Max: ${f.allocated_cash} ${f.currency})</option>`).join('');
+            document.getElementById('trade-buy-date').valueAsDate = new Date();
+            fetchTradesEntries();
+        }
+
+        async function onTradeFocusChange() {
+            const fid = document.getElementById('trade-focus-id').value; 
+            const focus = focusDataArray.find(f => f.id == fid); 
+            if(!focus) return;
+            
+            const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); 
+            const form = formDb.find(frm => frm.entry_id === focus.entry_id);
+            
+            document.getElementById('trade-ticker').value = focus.ticker; 
+            document.getElementById('trade-form-id').value = focus.entry_id; 
+            document.getElementById('trade-currency').value = focus.currency; 
+            document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; 
+            document.getElementById('trade-score').value = focus.points_total;
+            
+            if(form) { 
+                document.getElementById('trade-direction').value = form.direction; 
+                document.getElementById('trade-tp').value = form.take_profit; 
+                document.getElementById('trade-sl').value = form.stop_loss; 
+            }
+            
+            document.getElementById('trade-name').value = 'Wyszukiwanie...';
+            try { 
+                const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); 
+                document.getElementById('trade-name').value = n.name || ''; 
+            } catch(e){}
+        }
+
+        async function submitTradeForm(e) {
+            e.preventDefault();
+            const spent = parseFloat(document.getElementById('trade-spent').value);
+            const lev = parseInt(document.getElementById('trade-leverage').value);
+            const maxSpendStr = document.getElementById('trade-max-spend').value;
+            const maxSpend = parseFloat(maxSpendStr.split(" ")[0]);
+
+            if (spent * lev > maxSpend) {
+                alert(`⚠️ OSTRZEŻENIE! Twój wydatek bazowy * dźwignia (${spent * lev}) przekracza maksymalny wydatek zalecony z analizy Focus (${maxSpend}). Kontynuuję z zapisem, ale zbadaj zarządzanie ryzykiem!`);
+            }
+
+            const data = { 
+                focus_id: document.getElementById('trade-focus-id').value, 
+                form_id: document.getElementById('trade-form-id').value, 
+                ticker: document.getElementById('trade-ticker').value, 
+                direction: document.getElementById('trade-direction').value, 
+                stock_name: document.getElementById('trade-name').value, 
+                buy_date: document.getElementById('trade-buy-date').value, 
+                buy_price: document.getElementById('trade-buy-price').value, 
+                spent: spent, 
+                leverage: lev, 
+                currency: document.getElementById('trade-currency').value, 
+                focus_score: document.getElementById('trade-score').value, 
+                tp: document.getElementById('trade-tp').value, 
+                sl: document.getElementById('trade-sl').value 
+            };
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/add`,{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify(data)
+                });
+                if(res.ok) {
+                    alert('Transakcja pomyślnie dopisana do portfolio!');
+                    document.getElementById('trade-form').reset();
+                    fetchTradesEntries();
+                } else alert('Błąd dodawania transakcji.');
+            } catch(e) { console.error(e); }
+        }
+
+        async function fetchTradesEntries() {
+            const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
+            allTradesData = await res.json();
+            if(tickerDataArray.length === 0) await loadDatabase();
+            handleTradesFilter();
+            if(document.getElementById('summary-module').style.display === 'block') loadSummaryData();
+        }
+
+        function handleTradesFilter() {
+            const searchText = (document.getElementById('trade-search').value || '').toLowerCase();
+            const statusFilter = document.getElementById('trade-status-filter').value || 'OPEN';
+
+            filteredTradesData = allTradesData.filter(t => {
+                const textMatch = (t.ticker || '').toLowerCase().includes(searchText) || 
+                                  (t.stock_name || '').toLowerCase().includes(searchText);
+                
+                const isClosed = (t.status === 'CLOSED' || t.sell_date);
+                let statusMatch = true;
+                if (statusFilter === 'OPEN') statusMatch = !isClosed;
+                if (statusFilter === 'CLOSED') statusMatch = isClosed;
+
+                return textMatch && statusMatch;
+            });
+
+            currentTradePage = 1;
+            renderTradesTable();
+        }
+
+        function renderTradesTable() {
+            const tb = document.getElementById('trades-table-body');
+            
+            if (filteredTradesData.length === 0) {
+                tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów spełniających kryteria.</td></tr>`;
+                document.getElementById('trade-page-info').innerText = `Strona 0 z 0`;
+                return;
+            }
+
+            tb.innerHTML = filteredTradesData.slice((currentTradePage-1)*tradePageSize, currentTradePage*tradePageSize).map(item => {
+                const s = calculateTradeStats(item);
+                const actionHtml = s.isClosed 
+                    ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>`
+                    : `<button class="btn-delete" onclick="openCloseModal(${item.id})" style="color:var(--accent); border-color:var(--accent); margin-bottom:4px;">Sprzedaj</button>`;
+
+                const divHtml = (item.dividend && item.dividend > 0) ? `<br><small style="color:var(--accent);">+ ${Number(item.dividend).toFixed(2)} div.</small>` : '';
+                const cfdHtml = (item.cfd_cost && item.cfd_cost > 0) ? `<br><small style="color:var(--danger);">- ${Number(item.cfd_cost).toFixed(2)} cvd</small>` : '';
+
+                return `<tr>
+                    <td style="font-size:0.85em; color:var(--text-muted);">${item.buy_date}<br><b style="color:#eaecef;">#${item.id}</b></td>
+                    <td><strong style="color:var(--accent);">${item.ticker}</strong><br><small>${item.stock_name}</small></td>
+                    <td>${item.spent.toFixed(2)}${item.currency}<br><small>Wart: ${s.val.toFixed(2)}(x${item.leverage})</small></td>
+                    <td>WE: ${item.buy_price}$<br>${s.isClosed?'<span style="color:var(--text-muted);">OUT:</span>':'TR:'} <b>${s.cp}$</b><br>${s.isClosed?`<small>${item.sell_date}</small>`:''}</td>
+                    <td>R:R <b>${s.rr.toFixed(1)}</b><br><b style="color:#fcd535;">SL: ${s.dsl.toFixed(2)}$</b></td>
+                    <td style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.prof.toFixed(2)} ${item.currency}</b>${divHtml}${cfdHtml}</td>
+                    <td style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.profPln.toFixed(2)} PLN</b></td>
+                    <td><div style="font-size:0.8em; display:flex; justify-content:space-between;"><span>${s.prog<0?'STRATA':'ZYSK'}</span><span>${(s.prog*100).toFixed(0)}%</span></div><div style="background:var(--bg-input); height:8px; border-radius:4px; overflow:hidden;"><div style="width:${s.pd}%; background:${s.pc}; height:100%;"></div></div></td>
+                    <td>${actionHtml}</td>
+                </tr>`;
+            }).join('');
+            document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage} z ${Math.ceil(filteredTradesData.length / tradePageSize) || 1}`;
+        }
+
+        function changeTradePage(d) { 
+            const total = Math.ceil(filteredTradesData.length / tradePageSize) || 1;
+            if (currentTradePage + d >= 1 && currentTradePage + d <= total) {
+                currentTradePage += d; 
+                renderTradesTable(); 
+            }
+        }
+
+        function openCloseModal(id) {
+            document.getElementById('sell-modal').style.display = 'flex';
+            document.getElementById('sell-trade-id').value = id;
+            document.getElementById('sell-date').valueAsDate = new Date();
+            document.getElementById('sell-price').value = '';
+            document.getElementById('sell-fraction').value = '1';
+            
+            const trade = allTradesData.find(t => t.id === id);
+            if(trade && trade.leverage > 1) {
+                document.getElementById('sell-cfd-group').style.display = 'block';
+                document.getElementById('sell-cfd-cost').value = '0';
+            } else {
+                document.getElementById('sell-cfd-group').style.display = 'none';
+                document.getElementById('sell-cfd-cost').value = '0';
+            }
+        }
+
+        function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
+        
+        async function confirmSell() {
+            const id = document.getElementById('sell-trade-id').value;
+            const price = parseFloat(document.getElementById('sell-price').value);
+            const date = document.getElementById('sell-date').value;
+            const cfdCost = parseFloat(document.getElementById('sell-cfd-cost').value) || 0;
+            const fracStr = document.getElementById('sell-fraction').value.trim();
+
+            if(!price || isNaN(price)) return alert('Podaj prawidłową cenę sprzedaży!');
+
+            let fraction = 1.0;
+            if(fracStr.includes('%')) {
+                fraction = parseFloat(fracStr.replace('%', '')) / 100.0;
+            } else if(fracStr.includes('/')) {
+                const parts = fracStr.split('/');
+                fraction = parseFloat(parts[0]) / parseFloat(parts[1]);
+            } else {
+                let parsed = parseFloat(fracStr);
+                if (parsed > 1.0) fraction = parsed / 100.0; 
+                else fraction = parsed;
+            }
+
+            if(isNaN(fraction) || fraction <= 0 || fraction > 1.0) return alert('Błędna wartość ilości sprzedaży! Użyj formatu np. 1, 0.5, 50% lub 1/3');
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/close`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost })
+                });
+                if(res.ok) {
+                    alert(fraction < 0.99 ? 'Częściowo zamknięto pozycję!' : 'Pozycja w pełni zamknięta!');
+                    closeSellModal(); fetchTradesEntries();
+                } else { const err = await res.json(); alert('Błąd: ' + err.message); }
+            } catch(e) { console.error(e); }
+        }
+
+        // --- SERVICE MODULE & DYWIDENDY ---
         async function loadServiceModule() {
-            if(allTradesData.length === 0) { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); allTradesData = await res.json(); }
+            if(allTradesData.length === 0) { 
+                const res = await fetch(`${API_BASE_URL}/api/trades/entries`); 
+                allTradesData = await res.json(); 
+            }
             const openTrades = allTradesData.filter(t => t.status === 'OPEN');
             const select = document.getElementById('div-trade-id');
             select.innerHTML = '<option value="">Wybierz otwartą pozycję...</option>';
-            openTrades.forEach(t => { select.innerHTML += `<option value="${t.id}">ID: #${t.id} | ${t.ticker} (${t.direction})</option>`; });
+            openTrades.forEach(t => { 
+                select.innerHTML += `<option value="${t.id}">ID: #${t.id} | ${t.ticker} (${t.direction})</option>`; 
+            });
             document.getElementById('div-date').valueAsDate = new Date();
         }
 
         async function addDividend(e) {
             e.preventDefault();
-            const tid = document.getElementById('div-trade-id').value; const date = document.getElementById('div-date').value; const amt = document.getElementById('div-amount').value;
+            const tid = document.getElementById('div-trade-id').value;
+            const date = document.getElementById('div-date').value;
+            const amt = document.getElementById('div-amount').value;
             if(!tid || !date || !amt) return;
+            
             try {
-                const res = await fetch(`${API_BASE_URL}/api/trades/dividend/add`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({trade_id: parseInt(tid), dividend_date: date, amount: parseFloat(amt)}) });
-                if(res.ok) { alert('Dodano dywidendę do otwartej pozycji!'); document.getElementById('div-amount').value = ''; fetchTradesEntries(); } else alert('Błąd zapisu.');
+                const res = await fetch(`${API_BASE_URL}/api/trades/dividend/add`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({trade_id: parseInt(tid), dividend_date: date, amount: parseFloat(amt)})
+                });
+                if(res.ok) { 
+                    alert('Dodano dywidendę do otwartej pozycji!'); 
+                    document.getElementById('div-amount').value = ''; 
+                    fetchTradesEntries(); 
+                } else {
+                    alert('Błąd zapisu.');
+                }
             } catch(err) {}
         }
-        async function forceAlertsCheck() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Uruchamianie silnika sprawdzania alertów SMC...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`); const result = await res.json(); if(res.ok) { out.innerHTML = `✅ <strong>Skrypt wykonany.</strong><br>Aktywowane: ${result.alerts_triggered || 0}`; } else { out.innerHTML = `❌ Błąd serwera: ${result.message}`; } } catch(e) { out.innerHTML = `❌ Brak połączenia z backendem.`; } }
-        async function forceCronPricesUpdate() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Trwa pobieranie aktualnych kursów z Yahoo...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`); const result = await res.json(); if(res.ok) { out.innerHTML = `✅ <strong>Baza zaktualizowana.</strong><br>Przetworzono: ${result.updated_tickers || 0}`; } else { out.innerHTML = `❌ Błąd: ${result.message}`; } } catch(e) { out.innerHTML = `❌ Błąd sieci.`; } }
 
-        // --- ZAAWANSOWANA ANALIZA TECHNICZNA (FIBO, RGR, ELLIOTT) ---
-        function switchTechTab(tab) {
-            document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active'));
-            event.currentTarget.classList.add('active'); document.getElementById('tab-' + tab).classList.add('active');
+        /* INNE SERWISY */
+        async function forceAlertsCheck() {
+            const out = document.getElementById('service-output');
+            out.style.display = 'block';
+            out.innerHTML = '⏳ Uruchamianie silnika sprawdzania alertów SMC...';
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`);
+                const result = await res.json();
+                if(res.ok) {
+                    out.innerHTML = `✅ <strong>Skrypt wykonany pomyślnie.</strong><br>Aktywowane zlecenia: ${result.alerts_triggered || 0}`;
+                    if (document.getElementById('form-module').style.display === 'block') {
+                        fetchFormEntries();
+                    }
+                } else {
+                    out.innerHTML = `❌ Błąd serwera: ${result.message}`;
+                }
+            } catch(e) {
+                console.error(e);
+                out.innerHTML = `❌ Brak połączenia z backendem.`;
+            }
         }
 
+        async function forceCronPricesUpdate() {
+            const out = document.getElementById('service-output');
+            out.style.display = 'block';
+            out.innerHTML = '⏳ Trwa pobieranie aktualnych kursów z Yahoo Finance...';
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`);
+                const result = await res.json();
+                if(res.ok) {
+                    out.innerHTML = `✅ <strong>Baza cen zaktualizowana.</strong><br>Przetworzonych tickerów: ${result.updated_tickers || 0}`;
+                } else {
+                    out.innerHTML = `❌ Błąd: ${result.message}`;
+                }
+            } catch(e) {
+                console.error(e);
+                out.innerHTML = `❌ Błąd sieci.`;
+            }
+        }
+
+        // ==========================================
+        // LOGIKA MODUŁU TECH. ANALYSIS
+        // ==========================================
+        function switchTechTab(tab) {
+            const tabs = ['harmonics', 'elliott', 'rgr'];
+            document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        // --- XABCD (HARMONIC PATTERNS) ---
         function calculateHarmonics(e) {
             e.preventDefault();
-            const x = parseFloat(document.getElementById('ha-x').value); const a = parseFloat(document.getElementById('ha-a').value); const b = parseFloat(document.getElementById('ha-b').value); const c = parseFloat(document.getElementById('ha-c').value);
-            const xa = Math.abs(a - x); const ab = Math.abs(b - a); const bc = Math.abs(c - b);
-            const isBullish = a > x; const dirMultiplier = isBullish ? -1 : 1;
-            const bRetracement = ab / xa; const cRetracement = bc / ab;
+            const x = parseFloat(document.getElementById('ha-x').value);
+            const a = parseFloat(document.getElementById('ha-a').value);
+            const b = parseFloat(document.getElementById('ha-b').value);
+            const c = parseFloat(document.getElementById('ha-c').value);
+
+            const xa = Math.abs(a - x);
+            const ab = Math.abs(b - a);
+            const bc = Math.abs(c - b);
+
+            // Kierunek
+            const isBullish = a > x; // M dołkowe (Bycza struktura)
+            const dirMultiplier = isBullish ? -1 : 1;
+
+            const bRetracement = ab / xa;
+            const cRetracement = bc / ab;
 
             let resultsHTML = '';
+            
+            // Definicje formacji harmonicznych na podstawie tolerancji złożeń Fibo (tolerancja +/- 0.05)
             const patterns = [
                 { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 },
                 { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 },
@@ -1703,67 +1962,177 @@
             ];
 
             let foundMatch = false;
+
             patterns.forEach(pat => {
-                const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) || (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618);
+                // Sprawdzenie czy zniesienie punktu B pokrywa się z wymaganiami formacji (tolerancja do 0.07, ponieważ rynki nie są idealne)
+                const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || 
+                                 (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) ||
+                                 (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618);
+                
                 if(isBMatch) {
                     foundMatch = true;
-                    const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier); const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier); const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier);
-                    resultsHTML += `<div class="kpi-card" style="border-color: var(--accent);"><h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4><div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;">Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br>Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB</div><div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}$</b></div><div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)}$ - ${dTargetByBC_Max.toFixed(2)}$</b></div><div class="value" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)}$ do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}$</div></div>`;
+                    const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier);
+                    const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier);
+                    const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier);
+
+                    // Średnia (punkt klastrowania, zwany PRZ - Potential Reversal Zone)
+                    const przCenter = (dTargetByXA + dTargetByBC_Min) / 2;
+
+                    resultsHTML += `
+                        <div class="kpi-card" style="border-color: var(--accent);">
+                            <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4>
+                            <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;">
+                                Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br>
+                                Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB
+                            </div>
+                            <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}$</b></div>
+                            <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)}$ - ${dTargetByBC_Max.toFixed(2)}$</b></div>
+                            <div class="value" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)}$ do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}$</div>
+                        </div>
+                    `;
                 }
             });
-            if(!foundMatch) resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;">Obecna struktura (B zniósł ${(bRetracement).toFixed(3)} XA) nie mieści się w standardowych tolerancjach formacji.</div>`;
+
+            if(!foundMatch) {
+                resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;">
+                    Obecna struktura (B zniósł ${(bRetracement).toFixed(3)} XA, C zniósł ${(cRetracement).toFixed(3)} AB) nie mieści się w standardowych tolerancjach formacji Harmonicznych. To może być zwykła trójfalowa korekta.
+                </div>`;
+            }
+
             document.getElementById('ha-results').innerHTML = resultsHTML;
         }
 
+        // --- FALE ELLIOTTA ---
         function calculateElliott(e) {
             e.preventDefault();
-            const isUp = document.getElementById('ew-direction').value === 'UP';
-            const x = parseFloat(document.getElementById('ew-x').value); const w1 = parseFloat(document.getElementById('ew-1').value); const w2 = parseFloat(document.getElementById('ew-2').value); const w3 = parseFloat(document.getElementById('ew-3').value); const w4 = parseFloat(document.getElementById('ew-4').value);
-            let score = 0; let rulesLog = '';
-            const lenW1 = Math.abs(w1 - x); const lenW3 = Math.abs(w3 - w2);
-            
-            if (isUp ? (w2 < x) : (w2 > x)) rulesLog += '❌ Fala 2 zniosła więcej niż 100% Fali 1.<br>'; else { score += 2; rulesLog += '✅ Fala 2 zatrzymała się nad/pod początkiem Fali 1. (+2 pkt)<br>'; }
-            if (lenW3 <= lenW1 * 0.98) rulesLog += '⚠️ Fala 3 jest krótsza od Fali 1.<br>'; else { score += 1; rulesLog += '✅ Fala 3 jest dłuższa lub równa Fali 1. (+1 pkt)<br>'; }
-            if (isUp ? (w4 <= w1) : (w4 >= w1)) rulesLog += '❌ Fala 4 wkroczyła w terytorium Fali 1.<br>'; else { score += 2; rulesLog += '✅ Fala 4 nie zachodzi na Falę 1. (+2 pkt)<br>'; }
+            const dir = document.getElementById('ew-direction').value;
+            const x = parseFloat(document.getElementById('ew-x').value);
+            const w1 = parseFloat(document.getElementById('ew-1').value);
+            const w2 = parseFloat(document.getElementById('ew-2').value);
+            const w3 = parseFloat(document.getElementById('ew-3').value);
+            const w4 = parseFloat(document.getElementById('ew-4').value);
 
-            document.getElementById('ew-score-text').innerHTML = `<span style="color:${score === 5 ? 'var(--success)' : (score >= 3 ? '#fcd535' : 'var(--danger)')}; font-weight:bold;">${score} / 5 Pkt</span>`;
+            const isUp = dir === 'UP';
+            let score = 0;
+            let maxScore = 5;
+            let rulesLog = '';
+
+            const lenW1 = Math.abs(w1 - x);
+            const lenW3 = Math.abs(w3 - w2);
+
+            // Reguła 1: W2 nie może znieść więcej niż 100% W1 (Krytyczna)
+            const w2RetracedW1 = isUp ? (w2 < x) : (w2 > x);
+            if (w2RetracedW1) {
+                rulesLog += '❌ Fala 2 zniosła więcej niż 100% Fali 1. (Złamanie reguły Elliotta)<br>';
+            } else {
+                score += 2;
+                rulesLog += '✅ Fala 2 zatrzymała się nad/pod początkiem Fali 1. (+2 pkt)<br>';
+            }
+
+            // Reguła 2: W3 nie może być najkrótsza z fal impulsowych (W1, W3) - zakładamy na razie dla 1 i 3
+            if (lenW3 <= lenW1 * 0.98) { // Dajemy 2% tolerancji
+                rulesLog += '⚠️ Fala 3 jest krótsza od Fali 1. Pamiętaj, że Fala 5 nie będzie mogła być krótsza od Fali 3.<br>';
+            } else {
+                score += 1;
+                rulesLog += '✅ Fala 3 jest dłuższa lub równa Fali 1. (+1 pkt)<br>';
+            }
+
+            // Reguła 3: W4 nie wchodzi w obszar W1 (Krytyczna zasada overlap)
+            const overlap = isUp ? (w4 <= w1) : (w4 >= w1);
+            if (overlap) {
+                rulesLog += '❌ Fala 4 wkroczyła w terytorium Fali 1. (Złamanie standardowego impulsu - może być klin końńcowy)<br>';
+            } else {
+                score += 2;
+                rulesLog += '✅ Fala 4 nie zachodzi na Falę 1. Klasyczny impuls. (+2 pkt)<br>';
+            }
+
+            // Podsumowanie punktacji
+            const color = score === 5 ? 'var(--success)' : (score >= 3 ? '#fcd535' : 'var(--danger)');
+            document.getElementById('ew-score-text').innerHTML = `<span style="color:${color}; font-weight:bold;">${score} / ${maxScore} Pkt</span>`;
             document.getElementById('ew-rules-list').innerHTML = rulesLog;
 
+            // PROJEKCJE NA PRZYSZŁOŚĆ
             if (score >= 2) {
                 document.getElementById('ew-projections').style.display = 'grid';
-                const w5_target1 = isUp ? w4 + lenW1 : w4 - lenW1; const w5_target2 = isUp ? w4 + (Math.abs(w3 - x) * 0.618) : w4 - (Math.abs(w3 - x) * 0.618);
+                
+                // Fala 5 projekcje (W5 często równa się W1 lub 61.8% odległości między X a W3 przyłożone do W4)
+                const w1ToW3Dist = Math.abs(w3 - x);
+                const w5_target1 = isUp ? w4 + lenW1 : w4 - lenW1;
+                const w5_target2 = isUp ? w4 + (w1ToW3Dist * 0.618) : w4 - (w1ToW3Dist * 0.618);
                 const avgW5 = (w5_target1 + w5_target2) / 2;
                 document.getElementById('ew-p5').innerText = avgW5.toFixed(2) + ' $';
-                document.getElementById('ew-pa').innerText = w4.toFixed(2) + ' $';
-                const targetB = isUp ? w4 + (Math.abs(avgW5 - w4) * 0.5) : w4 - (Math.abs(avgW5 - w4) * 0.5);
+
+                // Przewidywane korekty ABC od uśrednionej Fali 5
+                // Zazwyczaj fala A wraca do terytorium Fali 4
+                const targetA = w4;
+                document.getElementById('ew-pa').innerText = targetA.toFixed(2) + ' $';
+
+                // Fala B to często odbicie 50% - 61.8% z fali A
+                const distA = Math.abs(avgW5 - targetA);
+                const targetB = isUp ? targetA + (distA * 0.5) : targetA - (distA * 0.5);
                 document.getElementById('ew-pb').innerText = targetB.toFixed(2) + ' $';
-                document.getElementById('ew-pc').innerText = (isUp ? targetB - Math.abs(avgW5 - w4) : targetB + Math.abs(avgW5 - w4)).toFixed(2) + ' $';
-            } else document.getElementById('ew-projections').style.display = 'none';
+
+                // Fala C jest zazwyczaj symetryczna do A (odmierzona od punktu B)
+                const targetC = isUp ? targetB - distA : targetB + distA;
+                document.getElementById('ew-pc').innerText = targetC.toFixed(2) + ' $';
+            } else {
+                document.getElementById('ew-projections').style.display = 'none';
+            }
         }
 
+        // --- RGR / ORGR ---
         function calculateRGR(e) {
             e.preventDefault();
-            const isRGR = document.getElementById('rgr-type').value === 'RGR';
-            const ls = parseFloat(document.getElementById('rgr-ls').value); const ln = parseFloat(document.getElementById('rgr-ln').value); const h = parseFloat(document.getElementById('rgr-h').value); const rn = parseFloat(document.getElementById('rgr-rn').value); const rs = parseFloat(document.getElementById('rgr-rs').value);
-            let bp = parseFloat(document.getElementById('rgr-bp').value); if(isNaN(bp)) bp = rn;
-            let isValid = true; let reason = '';
+            const type = document.getElementById('rgr-type').value;
+            const ls = parseFloat(document.getElementById('rgr-ls').value);
+            const ln = parseFloat(document.getElementById('rgr-ln').value);
+            const h = parseFloat(document.getElementById('rgr-h').value);
+            const rn = parseFloat(document.getElementById('rgr-rn').value);
+            const rs = parseFloat(document.getElementById('rgr-rs').value);
+            let bp = parseFloat(document.getElementById('rgr-bp').value);
 
-            if (isRGR) { if (h <= ls || h <= rs) { isValid = false; reason += '❌ Głowa RGR musi być wyżej niż ramiona.<br>'; } else reason += '✅ Głowa wyżej od ramion.<br>'; } 
-            else { if (h >= ls || h >= rs) { isValid = false; reason += '❌ Głowa oRGR musi być niżej (dołkiem).<br>'; } else reason += '✅ Głowa ukształtowana prawidłowo (niżej).<br>'; }
+            if(isNaN(bp)) bp = rn; // Domyślnie przebicie następuje na prawej szyi
 
-            if (Math.abs(ls - rs) / ls * 100 > 15) reason += `⚠️ Uwaga: Asymetria ramion.<br>`; else reason += '✅ Ramiona na zbieżnym poziomie.<br>';
+            const isRGR = type === 'RGR';
+            let isValid = true;
+            let reason = '';
 
+            if (isRGR) {
+                if (h <= ls || h <= rs) { isValid = false; reason += '❌ Głowa RGR musi być wyżej niż ramiona.<br>'; }
+                else reason += '✅ Głowa ukształtowana prawidłowo (wyżej).<br>';
+            } else {
+                if (h >= ls || h >= rs) { isValid = false; reason += '❌ Głowa oRGR musi być niżej (być dołkiem) względem ramion.<br>'; }
+                else reason += '✅ Głowa ukształtowana prawidłowo (niżej).<br>';
+            }
+
+            const shoulderDiff = Math.abs(ls - rs) / ls * 100;
+            if (shoulderDiff > 15) {
+                reason += `⚠️ Uwaga: Prawe ramię znacznie różni się wysokością od lewego (${shoulderDiff.toFixed(1)}%).<br>`;
+            } else {
+                reason += '✅ Ramiona na zbieżnym, akceptowalnym poziomie.<br>';
+            }
+
+            const neckSlope = isRGR ? (rn - ln) : (ln - rn);
+            const neckStatus = neckSlope > 0 ? (isRGR ? 'Kąt Spadkowy (Słaby/Sygnał opóźniony)' : 'Kąt Wzrostowy (Silny sygnał)') : (isRGR ? 'Kąt Wzrostowy (Silny)' : 'Kąt Spadkowy (Słaby)');
+            
             if (isValid) {
                 document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--success);">Prawidłowy model</span>`;
                 document.getElementById('rgr-targets').style.display = 'grid';
-                const headHeight = Math.abs(h - ((ln + rn) / 2));
-                document.getElementById('rgr-angle').innerText = (isRGR ? (rn - ln) : (ln - rn)) === 0 ? "Płaski" : ((isRGR ? (rn - ln) : (ln - rn)) > 0 ? "Rosnący" : "Spadkowy");
+                
+                const neckAvg = (ln + rn) / 2;
+                const headHeight = Math.abs(h - neckAvg);
+                
+                // Zasięg (odłożony od punktu przebicia)
+                const target = isRGR ? bp - headHeight : bp + headHeight;
+
+                document.getElementById('rgr-angle').innerText = neckSlope === 0 ? "Płaski" : (neckSlope > 0 ? "Rosnący" : "Spadkowy");
                 document.getElementById('rgr-height').innerText = headHeight.toFixed(2) + ' $';
-                document.getElementById('rgr-target').innerText = (isRGR ? bp - headHeight : bp + headHeight).toFixed(2) + ' $';
+                document.getElementById('rgr-target').innerText = target.toFixed(2) + ' $';
             } else {
                 document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--danger);">Złamane reguły</span>`;
                 document.getElementById('rgr-targets').style.display = 'none';
             }
+
             document.getElementById('rgr-valid-desc').innerHTML = reason;
         }
 
