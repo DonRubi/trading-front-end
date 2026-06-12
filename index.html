@@ -815,11 +815,11 @@
                 entry_point: document.getElementById('form-entry').value,
                 take_profit: document.getElementById('form-tp').value,
                 reasons: [
-                    document.getElementById('form-reason-1').value, 
-                    document.getElementById('form-reason-2').value, 
-                    document.getElementById('form-reason-3').value, 
-                    document.getElementById('form-reason-4').value, 
-                    document.getElementById('form-reason-5').value
+                    document.getElementById('form-reason-1')?.value || '', 
+                    document.getElementById('form-reason-2')?.value || '', 
+                    document.getElementById('form-reason-3')?.value || '', 
+                    document.getElementById('form-reason-4')?.value || '', 
+                    document.getElementById('form-reason-5')?.value || ''
                 ].filter(r => r.trim() !== '')
             };
             
