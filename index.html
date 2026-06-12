@@ -1020,8 +1020,9 @@
             summaryOpenSortKey = key; renderSummaryOpen();
         }
 
-        function renderDepositsTable() {
-            const tb = document.getElementById('deposits-table-body');
+    function renderDepositsTable() {
+            // TUTAJ JEST POPRAWKA: 'deposits-table-body' zmienione na 's-dep-table'
+            const tb = document.getElementById('s-dep-table');
             if(!depositsDataArray || depositsDataArray.length === 0) { 
                 tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak wpłat.</td></tr>'; 
                 return; 
