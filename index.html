@@ -430,7 +430,126 @@
         <div class="brief-carousel-container" id="dailybrief-carousel"><p style="text-align:center; padding:20px;">Ładowanie...</p></div>
     </section>
 
-    <section id="technicalanalysis-module" class="app-module"><h2>Analiza Techniczna & Elliott Wave</h2></section>
+    <section id="technicalanalysis-module" class="app-module">
+        <div class="macro-header-container">
+            <h3>Zaawansowana Analiza Techniczna</h3>
+        </div>
+        
+        <div class="tabs" style="margin-bottom: 20px;">
+            <button class="tab-btn active" onclick="switchTechTab('harmonics')">Formacje XABCD</button>
+            <button class="tab-btn" onclick="switchTechTab('elliott')">Fale Elliotta</button>
+            <button class="tab-btn" onclick="switchTechTab('rgr')">RGR / oRGR</button>
+        </div>
+
+        <div id="tab-harmonics" class="tab-content active">
+            <div class="journal-container">
+                <div class="journal-sidebar">
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Kalkulator XABCD</h4>
+                    <form onsubmit="calculateHarmonics(event)">
+                        <div class="form-row">
+                            <div class="form-group"><label>Punkt X</label><input type="number" step="0.01" id="ha-x" required></div>
+                            <div class="form-group"><label>Punkt A</label><input type="number" step="0.01" id="ha-a" required></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Punkt B</label><input type="number" step="0.01" id="ha-b" required></div>
+                            <div class="form-group"><label>Punkt C</label><input type="number" step="0.01" id="ha-c" required></div>
+                        </div>
+                        <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Wylicz Punkt D i Formację</button>
+                    </form>
+                </div>
+                <div class="journal-main">
+                    <h4 style="margin-bottom: 15px;">Wynik analizy struktury:</h4>
+                    <div id="ha-results" class="kpi-grid">
+                        <div style="grid-column: 1 / -1; color: var(--text-muted); text-align: center; padding: 30px;">Wprowadź punkty X, A, B, C po lewej stronie, aby system rozpoznał strukturę.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-elliott" class="tab-content">
+            <div class="journal-container">
+                <div class="journal-sidebar">
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Walidator Fal Elliotta</h4>
+                    <form onsubmit="calculateElliott(event)">
+                        <div class="form-group">
+                            <label>Kierunek cyklu</label>
+                            <select id="ew-direction">
+                                <option value="UP">Wzrostowy (Impuls Hossa)</option>
+                                <option value="DOWN">Spadkowy (Impuls Bessa)</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Punkt X (Start)</label><input type="number" step="0.01" id="ew-x" required></div>
+                            <div class="form-group"><label>Fala 1 (Koniec)</label><input type="number" step="0.01" id="ew-1" required></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Fala 2 (Koniec)</label><input type="number" step="0.01" id="ew-2" required></div>
+                            <div class="form-group"><label>Fala 3 (Koniec)</label><input type="number" step="0.01" id="ew-3" required></div>
+                        </div>
+                        <div class="form-group"><label>Fala 4 (Koniec)</label><input type="number" step="0.01" id="ew-4" required></div>
+                        
+                        <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Sprawdź i Wyznacz Zasięgi</button>
+                    </form>
+                </div>
+                <div class="journal-main">
+                    <div id="ew-score-container" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 10px;">Ocena Zgodności: <span id="ew-score-text" style="color:var(--text-muted);">Brak danych</span></h3>
+                        <div id="ew-rules-list" style="font-size: 0.9em; line-height: 1.6; color: var(--text-muted);">
+                            Oczekuję na wprowadzenie punktów fal 1-4...
+                        </div>
+                    </div>
+                    <div class="kpi-grid" id="ew-projections" style="display:none;">
+                        <div class="kpi-card"><h4>Projekcja Fali 5</h4><div class="value" id="ew-p5" style="color:var(--success);">-</div></div>
+                        <div class="kpi-card"><h4>Korekta A</h4><div class="value" id="ew-pa" style="color:var(--danger);">-</div></div>
+                        <div class="kpi-card"><h4>Korekta B</h4><div class="value" id="ew-pb" style="color:#89b4fa;">-</div></div>
+                        <div class="kpi-card"><h4>Korekta C</h4><div class="value" id="ew-pc" style="color:var(--danger);">-</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-rgr" class="tab-content">
+            <div class="journal-container">
+                <div class="journal-sidebar">
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Model RGR / oRGR</h4>
+                    <form onsubmit="calculateRGR(event)">
+                        <div class="form-group">
+                            <label>Typ Formacji</label>
+                            <select id="rgr-type">
+                                <option value="RGR">RGR (Spadkowa / Głowa z Ramionami)</option>
+                                <option value="ORGR">oRGR (Wzrostowa / Odwrócona)</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Lewe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-ls" required></div>
+                            <div class="form-group"><label>Lewa Linia Szyi</label><input type="number" step="0.01" id="rgr-ln" required></div>
+                        </div>
+                        <div class="form-group"><label>Głowa (Szczyt absolutny)</label><input type="number" step="0.01" id="rgr-h" required></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Prawa Linia Szyi</label><input type="number" step="0.01" id="rgr-rn" required></div>
+                            <div class="form-group"><label>Prawe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-rs" required></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Punkt Przebicia Szyi (Opcjonalny)</label>
+                            <input type="number" step="0.01" id="rgr-bp" placeholder="Domyślnie=Prawa Linia Szyi">
+                        </div>
+                        <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Zbadaj Formację</button>
+                    </form>
+                </div>
+                <div class="journal-main">
+                    <div id="rgr-validation" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 10px;">Zgodność z modelem: <span id="rgr-valid-text" style="color:var(--text-muted);">Brak danych</span></h3>
+                        <p id="rgr-valid-desc" style="color: var(--text-muted); font-size: 0.9em;"></p>
+                    </div>
+                    <div class="kpi-grid" id="rgr-targets" style="display:none;">
+                        <div class="kpi-card"><h4>Kąt Linii Szyi</h4><div class="value" id="rgr-angle" style="color:#89b4fa;">-</div></div>
+                        <div class="kpi-card"><h4>Wysokość Głowy</h4><div class="value" id="rgr-height" style="color:var(--text-main);">-</div></div>
+                        <div class="kpi-card"><h4>Zasięg Docelowy (TP)</h4><div class="value" id="rgr-target" style="color:var(--accent);">-</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <nav class="bottom-nav">
         <button class="nav-item active" onclick="openDashboard()"><span>🏠</span>Home</button>
@@ -1523,6 +1642,223 @@
                 console.error(e);
                 out.innerHTML = `❌ Błąd sieci.`;
             }
+        }
+
+        // ==========================================
+        // LOGIKA MODUŁU TECH. ANALYSIS
+        // ==========================================
+        function switchTechTab(tab) {
+            const tabs = ['harmonics', 'elliott', 'rgr'];
+            document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        // --- XABCD (HARMONIC PATTERNS) ---
+        function calculateHarmonics(e) {
+            e.preventDefault();
+            const x = parseFloat(document.getElementById('ha-x').value);
+            const a = parseFloat(document.getElementById('ha-a').value);
+            const b = parseFloat(document.getElementById('ha-b').value);
+            const c = parseFloat(document.getElementById('ha-c').value);
+
+            const xa = Math.abs(a - x);
+            const ab = Math.abs(b - a);
+            const bc = Math.abs(c - b);
+
+            // Kierunek
+            const isBullish = a > x; // M dołkowe (Bycza struktura)
+            const dirMultiplier = isBullish ? -1 : 1;
+
+            const bRetracement = ab / xa;
+            const cRetracement = bc / ab;
+
+            let resultsHTML = '';
+            
+            // Definicje formacji harmonicznych na podstawie tolerancji złożeń Fibo (tolerancja +/- 0.05)
+            const patterns = [
+                { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 },
+                { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 },
+                { name: 'Butterfly', bTarget: 0.786, dRetXa: 1.272, dExtBcMin: 1.618, dExtBcMax: 2.618 },
+                { name: 'Crab', bTarget: 0.50, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 },
+                { name: 'Deep Crab', bTarget: 0.886, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 }
+            ];
+
+            let foundMatch = false;
+
+            patterns.forEach(pat => {
+                // Sprawdzenie czy zniesienie punktu B pokrywa się z wymaganiami formacji (tolerancja do 0.07, ponieważ rynki nie są idealne)
+                const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || 
+                                 (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) ||
+                                 (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618);
+                
+                if(isBMatch) {
+                    foundMatch = true;
+                    const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier);
+                    const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier);
+                    const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier);
+
+                    // Średnia (punkt klastrowania, zwany PRZ - Potential Reversal Zone)
+                    const przCenter = (dTargetByXA + dTargetByBC_Min) / 2;
+
+                    resultsHTML += `
+                        <div class="kpi-card" style="border-color: var(--accent);">
+                            <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4>
+                            <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;">
+                                Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br>
+                                Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB
+                            </div>
+                            <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}$</b></div>
+                            <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)}$ - ${dTargetByBC_Max.toFixed(2)}$</b></div>
+                            <div class="value" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)}$ do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}$</div>
+                        </div>
+                    `;
+                }
+            });
+
+            if(!foundMatch) {
+                resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;">
+                    Obecna struktura (B zniósł ${(bRetracement).toFixed(3)} XA, C zniósł ${(cRetracement).toFixed(3)} AB) nie mieści się w standardowych tolerancjach formacji Harmonicznych. To może być zwykła trójfalowa korekta.
+                </div>`;
+            }
+
+            document.getElementById('ha-results').innerHTML = resultsHTML;
+        }
+
+        // --- FALE ELLIOTTA ---
+        function calculateElliott(e) {
+            e.preventDefault();
+            const dir = document.getElementById('ew-direction').value;
+            const x = parseFloat(document.getElementById('ew-x').value);
+            const w1 = parseFloat(document.getElementById('ew-1').value);
+            const w2 = parseFloat(document.getElementById('ew-2').value);
+            const w3 = parseFloat(document.getElementById('ew-3').value);
+            const w4 = parseFloat(document.getElementById('ew-4').value);
+
+            const isUp = dir === 'UP';
+            let score = 0;
+            let maxScore = 5;
+            let rulesLog = '';
+
+            const lenW1 = Math.abs(w1 - x);
+            const lenW3 = Math.abs(w3 - w2);
+
+            // Reguła 1: W2 nie może znieść więcej niż 100% W1 (Krytyczna)
+            const w2RetracedW1 = isUp ? (w2 < x) : (w2 > x);
+            if (w2RetracedW1) {
+                rulesLog += '❌ Fala 2 zniosła więcej niż 100% Fali 1. (Złamanie reguły Elliotta)<br>';
+            } else {
+                score += 2;
+                rulesLog += '✅ Fala 2 zatrzymała się nad/pod początkiem Fali 1. (+2 pkt)<br>';
+            }
+
+            // Reguła 2: W3 nie może być najkrótsza z fal impulsowych (W1, W3) - zakładamy na razie dla 1 i 3
+            if (lenW3 <= lenW1 * 0.98) { // Dajemy 2% tolerancji
+                rulesLog += '⚠️ Fala 3 jest krótsza od Fali 1. Pamiętaj, że Fala 5 nie będzie mogła być krótsza od Fali 3.<br>';
+            } else {
+                score += 1;
+                rulesLog += '✅ Fala 3 jest dłuższa lub równa Fali 1. (+1 pkt)<br>';
+            }
+
+            // Reguła 3: W4 nie wchodzi w obszar W1 (Krytyczna zasada overlap)
+            const overlap = isUp ? (w4 <= w1) : (w4 >= w1);
+            if (overlap) {
+                rulesLog += '❌ Fala 4 wkroczyła w terytorium Fali 1. (Złamanie standardowego impulsu - może być klin końńcowy)<br>';
+            } else {
+                score += 2;
+                rulesLog += '✅ Fala 4 nie zachodzi na Falę 1. Klasyczny impuls. (+2 pkt)<br>';
+            }
+
+            // Podsumowanie punktacji
+            const color = score === 5 ? 'var(--success)' : (score >= 3 ? '#fcd535' : 'var(--danger)');
+            document.getElementById('ew-score-text').innerHTML = `<span style="color:${color}; font-weight:bold;">${score} / ${maxScore} Pkt</span>`;
+            document.getElementById('ew-rules-list').innerHTML = rulesLog;
+
+            // PROJEKCJE NA PRZYSZŁOŚĆ
+            if (score >= 2) {
+                document.getElementById('ew-projections').style.display = 'grid';
+                
+                // Fala 5 projekcje (W5 często równa się W1 lub 61.8% odległości między X a W3 przyłożone do W4)
+                const w1ToW3Dist = Math.abs(w3 - x);
+                const w5_target1 = isUp ? w4 + lenW1 : w4 - lenW1;
+                const w5_target2 = isUp ? w4 + (w1ToW3Dist * 0.618) : w4 - (w1ToW3Dist * 0.618);
+                const avgW5 = (w5_target1 + w5_target2) / 2;
+                document.getElementById('ew-p5').innerText = avgW5.toFixed(2) + ' $';
+
+                // Przewidywane korekty ABC od uśrednionej Fali 5
+                // Zazwyczaj fala A wraca do terytorium Fali 4
+                const targetA = w4;
+                document.getElementById('ew-pa').innerText = targetA.toFixed(2) + ' $';
+
+                // Fala B to często odbicie 50% - 61.8% z fali A
+                const distA = Math.abs(avgW5 - targetA);
+                const targetB = isUp ? targetA + (distA * 0.5) : targetA - (distA * 0.5);
+                document.getElementById('ew-pb').innerText = targetB.toFixed(2) + ' $';
+
+                // Fala C jest zazwyczaj symetryczna do A (odmierzona od punktu B)
+                const targetC = isUp ? targetB - distA : targetB + distA;
+                document.getElementById('ew-pc').innerText = targetC.toFixed(2) + ' $';
+            } else {
+                document.getElementById('ew-projections').style.display = 'none';
+            }
+        }
+
+        // --- RGR / ORGR ---
+        function calculateRGR(e) {
+            e.preventDefault();
+            const type = document.getElementById('rgr-type').value;
+            const ls = parseFloat(document.getElementById('rgr-ls').value);
+            const ln = parseFloat(document.getElementById('rgr-ln').value);
+            const h = parseFloat(document.getElementById('rgr-h').value);
+            const rn = parseFloat(document.getElementById('rgr-rn').value);
+            const rs = parseFloat(document.getElementById('rgr-rs').value);
+            let bp = parseFloat(document.getElementById('rgr-bp').value);
+
+            if(isNaN(bp)) bp = rn; // Domyślnie przebicie następuje na prawej szyi
+
+            const isRGR = type === 'RGR';
+            let isValid = true;
+            let reason = '';
+
+            if (isRGR) {
+                if (h <= ls || h <= rs) { isValid = false; reason += '❌ Głowa RGR musi być wyżej niż ramiona.<br>'; }
+                else reason += '✅ Głowa ukształtowana prawidłowo (wyżej).<br>';
+            } else {
+                if (h >= ls || h >= rs) { isValid = false; reason += '❌ Głowa oRGR musi być niżej (być dołkiem) względem ramion.<br>'; }
+                else reason += '✅ Głowa ukształtowana prawidłowo (niżej).<br>';
+            }
+
+            const shoulderDiff = Math.abs(ls - rs) / ls * 100;
+            if (shoulderDiff > 15) {
+                reason += `⚠️ Uwaga: Prawe ramię znacznie różni się wysokością od lewego (${shoulderDiff.toFixed(1)}%).<br>`;
+            } else {
+                reason += '✅ Ramiona na zbieżnym, akceptowalnym poziomie.<br>';
+            }
+
+            const neckSlope = isRGR ? (rn - ln) : (ln - rn);
+            const neckStatus = neckSlope > 0 ? (isRGR ? 'Kąt Spadkowy (Słaby/Sygnał opóźniony)' : 'Kąt Wzrostowy (Silny sygnał)') : (isRGR ? 'Kąt Wzrostowy (Silny)' : 'Kąt Spadkowy (Słaby)');
+            
+            if (isValid) {
+                document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--success);">Prawidłowy model</span>`;
+                document.getElementById('rgr-targets').style.display = 'grid';
+                
+                const neckAvg = (ln + rn) / 2;
+                const headHeight = Math.abs(h - neckAvg);
+                
+                // Zasięg (odłożony od punktu przebicia)
+                const target = isRGR ? bp - headHeight : bp + headHeight;
+
+                document.getElementById('rgr-angle').innerText = neckSlope === 0 ? "Płaski" : (neckSlope > 0 ? "Rosnący" : "Spadkowy");
+                document.getElementById('rgr-height').innerText = headHeight.toFixed(2) + ' $';
+                document.getElementById('rgr-target').innerText = target.toFixed(2) + ' $';
+            } else {
+                document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--danger);">Złamane reguły</span>`;
+                document.getElementById('rgr-targets').style.display = 'none';
+            }
+
+            document.getElementById('rgr-valid-desc').innerHTML = reason;
         }
     </script>
 </body>
