@@ -346,6 +346,31 @@
         </div>
 
         <div id="tab-closed" class="tab-content">
+            <div class="table-controls" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <select id="s-cls-month-filter" onchange="renderSummaryClosed()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                    <option value="ALL">Wszystkie Miesiące</option>
+                </select>
+                <select id="s-cls-cur-filter" onchange="renderSummaryClosed()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                    <option value="ALL">Wszystkie Waluty</option>
+                    <option value="PLN">PLN</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                </select>
+                <select id="s-cls-lev-filter" onchange="renderSummaryClosed()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                    <option value="ALL">Wszystkie Dźwignie</option>
+                    <option value="1">Akcje (x1)</option>
+                    <option value=">1">Z dźwignią (>1)</option>
+                    <option value="2">Dźwignia x2</option>
+                    <option value="3">Dźwignia x3</option>
+                    <option value="5">Dźwignia x5</option>
+                    <option value="10">Dźwignia x10</option>
+                </select>
+                <div style="background: #313244; padding: 8px 15px; border-radius: 6px; border: 1px solid #45475a; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 13px; color: var(--text-muted);">Filtrowany Zysk:</span>
+                    <span id="s-cls-filtered-total" style="font-weight: bold; font-size: 15px;">0.00 PLN</span>
+                </div>
+            </div>
+
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
                 <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
                     <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Miesiąca (W PLN)</h4>
@@ -632,6 +657,29 @@
         <button class="nav-item" onclick="openModule('database-module', 'Baza')"><span>🗄️</span>Baza</button>
     </nav>
 
+    <div id="sell-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:90%; max-width:400px; border:1px solid var(--border-color);">
+            <h3 style="color:var(--accent); margin-bottom:15px;">Zamknięcie Pozycji (Kalkulator)</h3>
+            <input type="hidden" id="sell-trade-id">
+            <div class="form-group"><label>Data Sprzedaży</label><input type="date" id="sell-date"></div>
+            <div class="form-group"><label>Cena Sprzedaży z platformy</label><input type="number" step="0.0001" id="sell-price" placeholder="np. 154.32"></div>
+            
+            <div class="form-group" id="sell-cfd-group" style="display:none; border: 1px dashed var(--danger); padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                <label style="color:var(--danger);">Koszt Prowadzenia CVD/CFD <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz wartość jaka została pobrana w walucie rozliczeniowej. Zostanie odjęta od zysku (Profitu).</small></label>
+                <input type="number" step="0.01" id="sell-cfd-cost" value="0">
+            </div>
+
+            <div class="form-group">
+                <label style="color:var(--success);">Ile % pozycji sprzedajesz? <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz jako procent (np. 50%), ułamek (np. 1/3) lub zostaw 1 dla całości.</small></label>
+                <input type="text" id="sell-fraction" value="1" placeholder="np. 0.5, 50%, 1/3, 23/41">
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:10px; border-radius:6px; cursor:pointer;">Anuluj</button>
+                <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">Księguj Zysk</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
 
@@ -900,9 +948,7 @@
             
             const currBreakdown = { PLN: 0, USD: 0, EUR: 0 };
             const openGrouped = {};
-            const closedByMonth = {};
-            const closedByCurr = {};
-            const closedByLev = {};
+            const monthSet = new Set();
 
             allTradesData.forEach(trade => {
                 try {
@@ -915,15 +961,7 @@
                         if (trade.sell_date && trade.sell_date.length >= 7) {
                             month = trade.sell_date.substring(0, 7);
                         }
-                        if(!closedByMonth[month]) closedByMonth[month] = 0;
-                        closedByMonth[month] += s.profPln;
-
-                        if(!closedByCurr[curr]) closedByCurr[curr] = 0;
-                        closedByCurr[curr] += s.profPln;
-
-                        const lev = (trade.leverage || 1).toString();
-                        if(!closedByLev[lev]) closedByLev[lev] = 0;
-                        closedByLev[lev] += s.profPln;
+                        monthSet.add(month);
 
                     } else {
                         openInvestedPln += s.spentPln;
@@ -985,14 +1023,81 @@
             window.summaryOpenData = Object.keys(openGrouped).map(k => ({ ticker: k, ...openGrouped[k] }));
             renderSummaryOpen();
 
+            const monthSelect = document.getElementById('s-cls-month-filter');
+            if (monthSelect) {
+                const currentMonthVal = monthSelect.value;
+                monthSelect.innerHTML = '<option value="ALL">Wszystkie Miesiące</option>';
+                Array.from(monthSet).sort().reverse().forEach(m => {
+                    monthSelect.innerHTML += `<option value="${m}">${m}</option>`;
+                });
+                if(Array.from(monthSet).includes(currentMonthVal)) {
+                    monthSelect.value = currentMonthVal;
+                }
+            }
+
+            renderSummaryClosed();
+        }
+
+        function renderSummaryClosed() {
+            const fMonth = document.getElementById('s-cls-month-filter').value;
+            const fCur = document.getElementById('s-cls-cur-filter').value;
+            const fLev = document.getElementById('s-cls-lev-filter').value;
+
+            const closedByMonth = {};
+            const closedByCurr = {};
+            const closedByLev = {};
+            let filteredPnlPln = 0;
+
+            allTradesData.forEach(trade => {
+                try {
+                    const s = calculateTradeStats(trade);
+                    if (!s.isClosed) return;
+
+                    const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty';
+                    const curr = trade.currency || 'USD';
+                    const lev = parseInt(trade.leverage) || 1;
+
+                    if (fMonth !== 'ALL' && month !== fMonth) return;
+                    if (fCur !== 'ALL' && curr !== fCur) return;
+                    if (fLev === '>1' && lev <= 1) return;
+                    if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return;
+
+                    filteredPnlPln += s.profPln;
+
+                    if(!closedByMonth[month]) closedByMonth[month] = 0;
+                    closedByMonth[month] += s.profPln;
+
+                    if(!closedByCurr[curr]) closedByCurr[curr] = 0;
+                    closedByCurr[curr] += s.profPln;
+
+                    if(!closedByLev[lev]) closedByLev[lev] = 0;
+                    closedByLev[lev] += s.profPln;
+                } catch(e) {}
+            });
+
             const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML='';
-            Object.keys(closedByMonth).sort().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; });
+            Object.keys(closedByMonth).sort().reverse().forEach(k => { 
+                cMonth.innerHTML += `<tr><td>${k}</td><td style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; 
+            });
+            if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
             
             const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML='';
-            Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; });
+            Object.keys(closedByCurr).sort().forEach(k => { 
+                cCurr.innerHTML += `<tr><td>${k}</td><td style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; 
+            });
+            if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
             
             const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML='';
-            Object.keys(closedByLev).sort().forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; });
+            Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { 
+                cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; 
+            });
+            if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
+
+            const totalEl = document.getElementById('s-cls-filtered-total');
+            if(totalEl) {
+                totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN';
+                totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            }
         }
 
         function renderSummaryOpen() {
@@ -1020,8 +1125,7 @@
             summaryOpenSortKey = key; renderSummaryOpen();
         }
 
-    function renderDepositsTable() {
-            // TUTAJ JEST POPRAWKA: 'deposits-table-body' zmienione na 's-dep-table'
+        function renderDepositsTable() {
             const tb = document.getElementById('s-dep-table');
             if(!depositsDataArray || depositsDataArray.length === 0) { 
                 tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak wpłat.</td></tr>'; 
