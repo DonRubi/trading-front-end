@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quant Desk v3</title>
+    <title>Quant Desk v4</title>
     <style>
         .journal-container { display: grid; grid-template-columns: 300px 1fr; gap: 24px; margin-top: 15px; align-items: start; }
         @media (max-width: 1024px) { .journal-container { grid-template-columns: 1fr; } }
@@ -35,7 +35,6 @@
         .brief-card-footer { margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 12px; text-align: right; }
         .brief-link { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
         .brief-link:hover { color: var(--accent-hover); }
-        .carousel-nav-hints { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; }
         
         :root {
             --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef;
@@ -300,9 +299,30 @@
 
     <section id="service-module" class="app-module">
         <h2>Panel Admina (Service)</h2>
-        <div style="display: flex; flex-direction: column; gap: 12px; max-width:400px; margin-top:20px;">
-            <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff;">🔔 Wymuś sprawdzenie alertów (SMC)</button>
-            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff;">📈 Wymuś aktualizację cen tickerów</button>
+        
+        <div class="dashboard-grid" style="grid-template-columns: 1fr; max-width: 600px; margin: 0; padding: 0;">
+            <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+                <h4 style="color: var(--accent); margin-bottom: 15px;">💰 Rejestracja Dywidendy</h4>
+                <form onsubmit="addDividend(event)">
+                    <div class="form-group">
+                        <label>Wybierz otwartą pozycję (ID - Ticker)</label>
+                        <select id="div-trade-id" required style="background: var(--bg-input);">
+                            <option value="">Ładowanie pozycji...</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Data wpłaty</label><input type="date" id="div-date" required></div>
+                        <div class="form-group"><label>Kwota (w walucie)</label><input type="number" step="0.01" id="div-amount" required></div>
+                    </div>
+                    <button type="submit" style="width: 100%; background: var(--success); color: #fff; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">Zapisz Dywidendę</button>
+                </form>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; max-width:400px; margin-top:10px;">
+            <h4 style="margin-bottom: 5px;">Ręczne wywołania (CRON)</h4>
+            <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🔔 Wymuś sprawdzenie alertów (SMC)</button>
+            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen tickerów</button>
         </div>
         <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div>
     </section>
@@ -314,17 +334,15 @@
         <div class="macro-header-container">
             <h3>Historia Wywołanych Alertów</h3>
         </div>
-        
         <div class="table-controls" style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center;">
             <input type="text" id="alert-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleAlertsFilter()" style="flex: 1; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
             <select id="alert-type-filter" onchange="handleAlertsFilter()" style="max-width: 200px; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
                 <option value="ALL">Wszystkie typy</option>
-                <option value="Wejście">Punkt wejścia</option>
+                <option value="Punkt wejścia">Punkt wejścia</option>
                 <option value="Take Profit">Take Profit</option>
                 <option value="Stop Loss">Stop Loss</option>
             </select>
         </div>
-        
         <div class="table-responsive">
             <table class="macro-custom-table" style="width:100%;">
                 <thead>
@@ -374,16 +392,14 @@
                 <label style="color:var(--success);">Ile % pozycji sprzedajesz? <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz jako procent (np. 50%), ułamek (np. 1/3) lub zostaw 1 dla całości.</small></label>
                 <input type="text" id="sell-fraction" value="1" placeholder="np. 0.5, 50%, 1/3, 23/41">
             </div>
-            <div class="form-group"><label>Otrzymana dywidenda z tej paczki</label><input type="number" step="0.01" id="sell-div" value="0"></div>
             <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main);">Anuluj</button>
-                <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff;">Księguj Zysk</button>
+                <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:10px; border-radius:6px; cursor:pointer;">Anuluj</button>
+                <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">Księguj Zysk</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Główny adres Twojego backendu na Renderze
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
 
         // --- POMOCNICZA FUNKCJA GENEROWANIA LINKÓW TRADINGVIEW ---
@@ -392,13 +408,23 @@
             const cleanTicker = ticker.trim().toUpperCase();
             const LAYOUT_ID = 'k5llKflB'; 
             const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/';
-            if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; }
+
+            if (cleanTicker.includes(':')) {
+                return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`;
+            }
+            
             const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ'];
             const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA'];
+            
             let exchange = '';
-            if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } 
-            else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } 
-            else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; }
+            if (nasdaqTickers.includes(cleanTicker)) {
+                exchange = 'NASDAQ:';
+            } else if (nyseTickers.includes(cleanTicker)) {
+                exchange = 'NYSE:';
+            } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) {
+                exchange = 'BINANCE:';
+            }
+            
             return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
         }
 
@@ -413,6 +439,7 @@
         function openModule(moduleId, moduleTitle) {
             document.getElementById('dashboard').style.display = 'none';
             document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
+
             document.getElementById(moduleId).style.display = 'block';
             document.getElementById('app-title').innerText = moduleTitle;
             document.getElementById('back-btn').style.display = 'flex';
@@ -425,6 +452,7 @@
             if (moduleId === 'focus-module') initFocusModule();
             if (moduleId === 'tradeslist-module') initTradesModule();
             if (moduleId === 'summary-module') loadSummaryData();
+            if (moduleId === 'service-module') loadServiceModule();
         }
 
         function openDashboard() {
@@ -440,6 +468,7 @@
             const tbody = document.getElementById('macro-table-body');
             if (!tbody) return;
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Pobieranie historii makro z Supabase...</td></tr>';
+
             fetch(`${API_BASE_URL}/api/macro/history`)
                 .then(r => r.json())
                 .then(data => { macroDataArray = data || []; currentMacroPage = 1; renderMacroTable(); })
@@ -455,6 +484,7 @@
             const totalPages = Math.ceil(macroDataArray.length / macroPageSize);
             const start = (currentMacroPage - 1) * macroPageSize;
             const pageData = macroDataArray.slice(start, start + macroPageSize);
+            
             tbody.innerHTML = '';
             pageData.forEach(row => {
                 const tr = document.createElement('tr');
@@ -472,22 +502,33 @@
             document.getElementById('macro-prev-btn').disabled = (currentMacroPage === 1);
             document.getElementById('macro-next-btn').disabled = (currentMacroPage === totalPages);
         }
-        function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
+
+        function changeMacroPage(dir) { 
+            currentMacroPage += dir; 
+            renderMacroTable(); 
+        }
 
         async function forceMacroUpdate() {
-            try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } 
-            catch (e) { alert("Błąd połączenia z serwerem."); }
+            try {
+                await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' });
+                alert("Zaktualizowano makro"); 
+                loadMacroData(); 
+            } catch (e) { alert("Błąd połączenia z serwerem."); }
         }
 
         async function loadDatabase() {
-            try { const response = await fetch(`${API_BASE_URL}/api/database`); tickerDataArray = await response.json() || []; renderMobileList(); } 
-            catch (e) {}
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/database`);
+                tickerDataArray = await response.json() || [];
+                renderMobileList();
+            } catch (e) {}
         }
 
         function renderMobileList() {
             const container = document.getElementById('db-list-container');
             container.innerHTML = '';
             if (tickerDataArray.length === 0) return;
+            
             const totalPages = Math.ceil(tickerDataArray.length / tickerPageSize);
             const start = (currentTickerPage - 1) * tickerPageSize;
             const pageData = tickerDataArray.slice(start, start + tickerPageSize);
@@ -509,21 +550,41 @@
             document.getElementById('ticker-prev-btn').disabled = (currentTickerPage === 1);
             document.getElementById('ticker-next-btn').disabled = (currentTickerPage === totalPages);
         }
-        function changeTickerPage(dir) { currentTickerPage += dir; renderMobileList(); }
+
+        function changeTickerPage(dir) { 
+            currentTickerPage += dir; 
+            renderMobileList(); 
+        }
+
         async function addTicker() {
             const t = document.getElementById('new-ticker').value.trim().toUpperCase();
             if (!t) return;
-            const res = await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) });
-            if (res.ok) { document.getElementById('new-ticker').value = ''; loadDatabase(); }
+            const res = await fetch(`${API_BASE_URL}/api/database/add`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ ticker: t }) 
+            });
+            if (res.ok) { 
+                document.getElementById('new-ticker').value = ''; 
+                loadDatabase(); 
+            }
         }
+
         async function removeTicker(t) {
             if (!confirm(`Usunąć ${t}?`)) return;
-            const res = await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) });
+            const res = await fetch(`${API_BASE_URL}/api/database/delete`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ ticker: t }) 
+            });
             if (res.ok) loadDatabase();
         }
 
-        // --- LOGIKA MODUŁU ALERT HISTORY (Z NOWYMI FILTRAMI I TYPEM) ---
-        let allAlertsData = []; let filteredAlertsData = []; let currentAlertPage = 1; const alertPageSize = 20;
+        // --- LOGIKA MODUŁU ALERT HISTORY ---
+        let allAlertsData = []; 
+        let filteredAlertsData = []; 
+        let currentAlertPage = 1; 
+        const alertPageSize = 20;
 
         async function loadAlertHistory() { 
             try { 
@@ -539,7 +600,7 @@
 
             filteredAlertsData = allAlertsData.filter(a => {
                 const textMatch = (a.ticker || '').toLowerCase().includes(searchText);
-                const aType = a.alert_type || 'Wejście'; 
+                const aType = a.alert_type || 'Punkt wejścia'; 
                 const typeMatch = (typeFilter === 'ALL') || (aType === typeFilter);
                 return textMatch && typeMatch;
             });
@@ -566,7 +627,7 @@
                 const condColor = item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d';
                 const condText = item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej';
                 
-                const aType = item.alert_type || 'Wejście';
+                const aType = item.alert_type || 'Punkt wejścia';
                 let typeColor = '#89b4fa';
                 if(aType === 'Take Profit') typeColor = '#0ecb81';
                 if(aType === 'Stop Loss') typeColor = '#f6465d';
@@ -592,12 +653,17 @@
         function changeAlertPage(d) {
             const total = Math.ceil(filteredAlertsData.length / alertPageSize) || 1;
             if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) {
-                currentAlertPage += d; renderAlertsTable(); 
+                currentAlertPage += d; 
+                renderAlertsTable(); 
             }
         }
 
         async function deleteAlert(id) { 
-            await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})}); 
+            await fetch(`${API_BASE_URL}/api/alerts/history/delete`, {
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({id})
+            }); 
             loadAlertHistory(); 
         }
 
@@ -646,11 +712,19 @@
             } catch (error) {}
         }
 
-        function handleFormFilter(value) { formFilterText = value.toLowerCase(); formCurrentPage = 1; applyFormFilterAndSort(); }
+        function handleFormFilter(value) { 
+            formFilterText = value.toLowerCase(); 
+            formCurrentPage = 1; 
+            applyFormFilterAndSort(); 
+        }
+
         function handleFormSort(key) {
             formSortDir = (formSortKey === key && formSortDir === 'asc') ? 'desc' : 'asc';
-            formSortKey = key; updateFormSortIcons(); applyFormFilterAndSort();
+            formSortKey = key; 
+            updateFormSortIcons(); 
+            applyFormFilterAndSort();
         }
+
         function updateFormSortIcons() {
             ['entry_id', 'ticker', 'direction', 'score', 'priority', 'mute'].forEach(col => {
                 const icon = document.getElementById(`sort-icon-${col}`);
@@ -687,6 +761,7 @@
                 const tickerData = tickerDataArray.find(t => t.ticker === item.ticker);
                 const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
                 const diff = (Math.abs(currentPrice - entry) / entry) * 100;
+                
                 let status = diff > 15 ? 'Ignorowanie' : (diff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
                 let statusColor = diff > 15 ? '#f6465d' : (diff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
                 
@@ -719,30 +794,61 @@
             });
             document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`;
         }
-        function changeFormPage(direction) { formCurrentPage += direction; renderAdvancedFormTable(); }
+
+        function changeFormPage(direction) { 
+            formCurrentPage += direction; 
+            renderAdvancedFormTable(); 
+        }
 
         async function submitAdvancedForm(e) {
             e.preventDefault();
             const data = {
-                ticker: document.getElementById('form-ticker').value, direction: document.getElementById('form-direction').value,
-                priority: document.getElementById('form-priority').value, start_zone: document.getElementById('form-start').value,
-                end_zone: document.getElementById('form-end').value, entry_point: document.getElementById('form-entry').value,
+                ticker: document.getElementById('form-ticker').value, 
+                direction: document.getElementById('form-direction').value,
+                priority: document.getElementById('form-priority').value, 
+                start_zone: document.getElementById('form-start').value,
+                end_zone: document.getElementById('form-end').value, 
+                entry_point: document.getElementById('form-entry').value,
                 take_profit: document.getElementById('form-tp').value,
-                reasons: [document.getElementById('form-reason-1').value, document.getElementById('form-reason-2').value, document.getElementById('form-reason-3').value, document.getElementById('form-reason-4').value, document.getElementById('form-reason-5').value].filter(r => r.trim() !== '')
+                reasons: [
+                    document.getElementById('form-reason-1').value, 
+                    document.getElementById('form-reason-2').value, 
+                    document.getElementById('form-reason-3').value, 
+                    document.getElementById('form-reason-4').value, 
+                    document.getElementById('form-reason-5').value
+                ].filter(r => r.trim() !== '')
             };
-            if(!data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) return alert('Uzupełnij pola liczbowe!');
-            await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            document.getElementById('trading-form').reset(); fetchFormEntries(); loadFormReasons();
+            
+            if(!data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) {
+                return alert('Uzupełnij wszystkie pola liczbowe!');
+            }
+            
+            await fetch(`${API_BASE_URL}/api/form/add`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(data) 
+            });
+            document.getElementById('trading-form').reset(); 
+            fetchFormEntries(); 
+            loadFormReasons();
         }
         
         async function deleteAdvancedFormEntry(id) {
             if(!confirm('Usunąć?')) return;
-            await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) });
+            await fetch(`${API_BASE_URL}/api/form/delete`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({id: id}) 
+            });
             fetchFormEntries();
         }
 
         async function updateFormEntryField(entryId, field, newValue) {
-            await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) });
+            await fetch(`${API_BASE_URL}/api/form/update`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) 
+            });
             fetchFormEntries(); 
         }
 
@@ -767,17 +873,21 @@
             const peak = parseFloat(document.getElementById('fibo-peak').value);
             const direction = document.getElementById('form-direction').value;
             const select = document.getElementById('fibo-level');
+            
             if (!select) return;
             const levels = [1.272, 1.618, 2.000, 2.618];
             const currentSelected = select.value; 
             select.innerHTML = ''; 
+            
             levels.forEach(lvl => {
                 let optionText = lvl.toFixed(3);
                 if (!isNaN(start) && !isNaN(peak)) {
                     let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * lvl : peak - (start - peak) * lvl; 
                     optionText += ` (cena: ${calculatedPrice.toFixed(2)})`;
                 }
-                const opt = document.createElement('option'); opt.value = lvl.toString(); opt.textContent = optionText;
+                const opt = document.createElement('option'); 
+                opt.value = lvl.toString(); 
+                opt.textContent = optionText;
                 if (lvl.toString() === currentSelected) opt.selected = true;
                 select.appendChild(opt);
             });
@@ -788,6 +898,7 @@
             const peak = parseFloat(document.getElementById('fibo-peak').value);
             const level = parseFloat(document.getElementById('fibo-level').value);
             const direction = document.getElementById('form-direction').value;
+            
             if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
             const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * level : peak - (start - peak) * level; 
             document.getElementById('form-tp').value = tp.toFixed(2);
@@ -797,36 +908,107 @@
         function updateFormTvLink() {
             const ticker = document.getElementById('form-ticker').value;
             const linkEl = document.getElementById('form-tv-link');
-            if (ticker) { linkEl.href = getTradingViewLink(ticker); linkEl.style.display = 'inline-block'; }
+            if (ticker) { 
+                linkEl.href = getTradingViewLink(ticker); 
+                linkEl.style.display = 'inline-block'; 
+            }
         }
 
         // ==========================================
         // LOGIKA MODUŁU FOCUS
         // ==========================================
         async function initFocusModule() {
-            const res = await fetch(`${API_BASE_URL}/api/form/entries`); formEntriesGlobal = await res.json();
+            const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
+            formEntriesGlobal = await res.json();
             document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join('');
-            onFocusIdChange(); fetchFocusEntries();
+            onFocusIdChange(); 
+            fetchFocusEntries();
         }
+
         function onFocusIdChange() {
             const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value);
-            if(entry) { document.getElementById('focus-ticker').value = entry.ticker; document.getElementById('focus-direction').value = entry.direction; }
+            if(entry) { 
+                document.getElementById('focus-ticker').value = entry.ticker; 
+                document.getElementById('focus-direction').value = entry.direction; 
+            }
         }
+
         async function autoCalculateSMC() {
-            const t = document.getElementById('focus-ticker').value, d = document.getElementById('focus-direction').value;
-            const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:t, direction:d})});
-            const r = await res.json();
-            document.getElementById('focus-candle').value = r.candle_score; document.getElementById('focus-volume').value = r.volume_score; document.getElementById('focus-vix').value = r.vix_score; document.getElementById('focus-index').value = r.index_score;
+            const t = document.getElementById('focus-ticker').value;
+            const d = document.getElementById('focus-direction').value;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({ticker:t, direction:d})
+                });
+                const r = await res.json();
+                document.getElementById('focus-candle').value = r.candle_score; 
+                document.getElementById('focus-volume').value = r.volume_score; 
+                document.getElementById('focus-vix').value = r.vix_score; 
+                document.getElementById('focus-index').value = r.index_score;
+            } catch(e) { console.error(e); }
         }
-        async function fetchFocusEntries() { const r = await fetch(`${API_BASE_URL}/api/focus/entries`); focusDataArray = await r.json(); renderFocusTable(); }
+
+        async function fetchFocusEntries() { 
+            const r = await fetch(`${API_BASE_URL}/api/focus/entries`); 
+            focusDataArray = await r.json(); 
+            renderFocusTable(); 
+        }
+
         function renderFocusTable() {
             const tb = document.getElementById('focus-table-body');
-            tb.innerHTML = focusDataArray.slice((currentFocusPage-1)*focusPageSize, currentFocusPage*focusPageSize).map(i => `<tr><td style="color:#777;">#${i.id}</td><td>${new Date(i.created_at).toLocaleDateString()}</td><td>${i.entry_id}</td><td>${i.ticker}</td><td>${Number(i.points_total).toFixed(1)}/25</td><td>${(Number(i.final_ratio)*100).toFixed(0)}%</td><td>${Number(i.allocated_pct).toFixed(1)}%</td><td>${Number(i.allocated_cash).toFixed(2)} ${i.currency}</td><td><button class="btn-delete" onclick="deleteFocusEntry(${i.id})">Usuń</button></td></tr>`).join('');
+            tb.innerHTML = focusDataArray.slice((currentFocusPage-1)*focusPageSize, currentFocusPage*focusPageSize).map(i => `
+                <tr>
+                    <td style="color:#777;">#${i.id}</td>
+                    <td>${new Date(i.created_at).toLocaleDateString()}</td>
+                    <td>${i.entry_id}</td>
+                    <td>${i.ticker}</td>
+                    <td>${Number(i.points_total).toFixed(1)}/25</td>
+                    <td>${(Number(i.final_ratio)*100).toFixed(0)}%</td>
+                    <td>${Number(i.allocated_pct).toFixed(1)}%</td>
+                    <td>${Number(i.allocated_cash).toFixed(2)} ${i.currency}</td>
+                    <td><button class="btn-delete" onclick="deleteFocusEntry(${i.id})">Usuń</button></td>
+                </tr>
+            `).join('');
             document.getElementById('focus-page-info').innerText = `Str ${currentFocusPage}`;
         }
-        function changeFocusPage(d) { currentFocusPage+=d; renderFocusTable(); }
-        async function deleteFocusEntry(id) { await fetch(`${API_BASE_URL}/api/focus/delete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); fetchFocusEntries(); }
-        async function submitFocusForm(e) { e.preventDefault(); const d = {entry_id:document.getElementById('focus-form-id').value, ticker:document.getElementById('focus-ticker').value, candle_score:document.getElementById('focus-candle').value, volume_score:document.getElementById('focus-volume').value, gap_score:document.getElementById('focus-gap').value, calendar_score:document.getElementById('focus-calendar').value, cvd_score:document.getElementById('focus-cvd').value, vix_score:document.getElementById('focus-vix').value, index_score:document.getElementById('focus-index').value, htf_score:document.getElementById('focus-htf').value}; await fetch(`${API_BASE_URL}/api/focus/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}); fetchFocusEntries(); }
+
+        function changeFocusPage(d) { 
+            currentFocusPage += d; 
+            renderFocusTable(); 
+        }
+
+        async function deleteFocusEntry(id) { 
+            await fetch(`${API_BASE_URL}/api/focus/delete`,{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({id})
+            }); 
+            fetchFocusEntries(); 
+        }
+
+        async function submitFocusForm(e) { 
+            e.preventDefault(); 
+            const d = {
+                entry_id:document.getElementById('focus-form-id').value, 
+                ticker:document.getElementById('focus-ticker').value, 
+                candle_score:document.getElementById('focus-candle').value, 
+                volume_score:document.getElementById('focus-volume').value, 
+                gap_score:document.getElementById('focus-gap').value, 
+                calendar_score:document.getElementById('focus-calendar').value, 
+                cvd_score:document.getElementById('focus-cvd').value, 
+                vix_score:document.getElementById('focus-vix').value, 
+                index_score:document.getElementById('focus-index').value, 
+                htf_score:document.getElementById('focus-htf').value
+            }; 
+            await fetch(`${API_BASE_URL}/api/focus/add`,{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify(d)
+            }); 
+            fetchFocusEntries(); 
+        }
 
         // ==========================================
         // LOGIKA MODUŁU TRADES LIST & SUMMARY
@@ -834,18 +1016,50 @@
         function switchSummaryTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active');
+            event.currentTarget.classList.add('active'); 
+            document.getElementById('tab-'+tab).classList.add('active');
         }
+
         async function loadSummaryData() {
             try {
-                const r = await fetch(`${API_BASE_URL}/api/portfolio/summary`); const d = await r.json();
-                document.getElementById('kpi-deposits').innerText = `${Number(d.total_deposits).toFixed(2)} $`; document.getElementById('kpi-pnl').innerText = `${Number(d.total_pnl).toFixed(2)} $`; document.getElementById('kpi-capital').innerText = `${Number(d.current_capital).toFixed(2)} $`; document.getElementById('kpi-allocated').innerText = `${Number(d.allocated_capital).toFixed(2)} $`; document.getElementById('kpi-available').innerText = `${Number(d.available_cash).toFixed(2)} $`;
-                const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); const deps = await rD.json();
-                document.getElementById('deposits-table-body').innerHTML = deps.map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString()}</td><td style="color:var(--success); font-weight:bold;">${Number(x.amount).toFixed(2)}$</td><td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td></tr>`).join('');
+                const r = await fetch(`${API_BASE_URL}/api/portfolio/summary`); 
+                const d = await r.json();
+                document.getElementById('kpi-deposits').innerText = `${Number(d.total_deposits).toFixed(2)} $`; 
+                document.getElementById('kpi-pnl').innerText = `${Number(d.total_pnl).toFixed(2)} $`; 
+                document.getElementById('kpi-capital').innerText = `${Number(d.current_capital).toFixed(2)} $`; 
+                document.getElementById('kpi-allocated').innerText = `${Number(d.allocated_capital).toFixed(2)} $`; 
+                document.getElementById('kpi-available').innerText = `${Number(d.available_cash).toFixed(2)} $`;
+                
+                const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); 
+                const deps = await rD.json();
+                document.getElementById('deposits-table-body').innerHTML = deps.map(x => `
+                    <tr>
+                        <td>${new Date(x.created_at).toLocaleDateString()}</td>
+                        <td style="color:var(--success); font-weight:bold;">${Number(x.amount).toFixed(2)}$</td>
+                        <td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td>
+                    </tr>
+                `).join('');
             } catch(e) {}
         }
-        async function addDeposit() { const a = document.getElementById('new-deposit-amount').value; await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:a})}); loadSummaryData(); }
-        async function deleteDeposit(id) { await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); loadSummaryData(); }
+
+        async function addDeposit() { 
+            const a = document.getElementById('new-deposit-amount').value; 
+            await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({amount:a})
+            }); 
+            loadSummaryData(); 
+        }
+
+        async function deleteDeposit(id) { 
+            await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({id})
+            }); 
+            loadSummaryData(); 
+        }
 
         async function initTradesModule() {
             if(focusDataArray.length === 0) await fetchFocusEntries();
@@ -855,18 +1069,71 @@
         }
 
         async function onTradeFocusChange() {
-            const fid = document.getElementById('trade-focus-id').value; const focus = focusDataArray.find(f => f.id == fid); if(!focus) return;
-            const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); const form = formDb.find(frm => frm.entry_id === focus.entry_id);
-            document.getElementById('trade-ticker').value = focus.ticker; document.getElementById('trade-form-id').value = focus.entry_id; document.getElementById('trade-currency').value = focus.currency; document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; document.getElementById('trade-score').value = focus.points_total;
-            if(form) { document.getElementById('trade-direction').value = form.direction; document.getElementById('trade-tp').value = form.take_profit; document.getElementById('trade-sl').value = form.stop_loss; }
+            const fid = document.getElementById('trade-focus-id').value; 
+            const focus = focusDataArray.find(f => f.id == fid); 
+            if(!focus) return;
+            
+            const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); 
+            const form = formDb.find(frm => frm.entry_id === focus.entry_id);
+            
+            document.getElementById('trade-ticker').value = focus.ticker; 
+            document.getElementById('trade-form-id').value = focus.entry_id; 
+            document.getElementById('trade-currency').value = focus.currency; 
+            document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; 
+            document.getElementById('trade-score').value = focus.points_total;
+            
+            if(form) { 
+                document.getElementById('trade-direction').value = form.direction; 
+                document.getElementById('trade-tp').value = form.take_profit; 
+                document.getElementById('trade-sl').value = form.stop_loss; 
+            }
+            
             document.getElementById('trade-name').value = 'Wyszukiwanie...';
-            try { const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); document.getElementById('trade-name').value = n.name||''; } catch(e){}
+            try { 
+                const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); 
+                document.getElementById('trade-name').value = n.name || ''; 
+            } catch(e){}
         }
 
         async function submitTradeForm(e) {
             e.preventDefault();
-            const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: parseFloat(document.getElementById('trade-spent').value), leverage: parseInt(document.getElementById('trade-leverage').value), currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value };
-            await fetch(`${API_BASE_URL}/api/trades/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); fetchTradesEntries();
+            const spent = parseFloat(document.getElementById('trade-spent').value);
+            const lev = parseInt(document.getElementById('trade-leverage').value);
+            const maxSpendStr = document.getElementById('trade-max-spend').value;
+            const maxSpend = parseFloat(maxSpendStr.split(" ")[0]);
+
+            if (spent * lev > maxSpend) {
+                alert(`⚠️ OSTRZEŻENIE! Twój wydatek bazowy * dźwignia (${spent * lev}) przekracza maksymalny wydatek zalecony z analizy Focus (${maxSpend}). Kontynuuję z zapisem, ale zbadaj zarządzanie ryzykiem!`);
+            }
+
+            const data = { 
+                focus_id: document.getElementById('trade-focus-id').value, 
+                form_id: document.getElementById('trade-form-id').value, 
+                ticker: document.getElementById('trade-ticker').value, 
+                direction: document.getElementById('trade-direction').value, 
+                stock_name: document.getElementById('trade-name').value, 
+                buy_date: document.getElementById('trade-buy-date').value, 
+                buy_price: document.getElementById('trade-buy-price').value, 
+                spent: spent, 
+                leverage: lev, 
+                currency: document.getElementById('trade-currency').value, 
+                focus_score: document.getElementById('trade-score').value, 
+                tp: document.getElementById('trade-tp').value, 
+                sl: document.getElementById('trade-sl').value 
+            };
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/add`,{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify(data)
+                });
+                if(res.ok) {
+                    alert('Transakcja pomyślnie dopisana do portfolio!');
+                    document.getElementById('trade-form').reset();
+                    fetchTradesEntries();
+                } else alert('Błąd dodawania transakcji.');
+            } catch(e) { console.error(e); }
         }
 
         async function fetchTradesEntries() {
@@ -913,14 +1180,16 @@
                 const cp = isClosed ? item.sell_price : (tm&&tm.price?tm.price:item.buy_price);
                 
                 const val = item.spent * item.leverage; 
-                const prof = val * (((cp - item.buy_price)/item.buy_price)*mod);
+                
+                const prof = (val * (((cp - item.buy_price)/item.buy_price)*mod)) + (item.dividend || 0);
                 
                 const usedFx = isClosed ? (item.sell_fx_rate || item.buy_fx_rate) : item.buy_fx_rate;
                 const profPln = prof * usedFx;
                 
                 const rr = (item.buy_price-item.sl!==0) ? ((item.tp-item.buy_price)*mod)/((item.buy_price-item.sl)*mod) : 0;
                 
-                let prog = 0; if(item.tp-item.buy_price!==0) prog = ((cp-item.buy_price)*mod)/((item.tp-item.buy_price)*mod);
+                let prog = 0; 
+                if(item.tp-item.buy_price!==0) prog = ((cp-item.buy_price)*mod)/((item.tp-item.buy_price)*mod);
                 
                 let dsl = item.sl;
                 if(prog >= 1) dsl = item.tp; else if(prog >= 0.5) dsl = item.buy_price + ((item.tp - item.buy_price)*(prog - 0.2)); 
@@ -933,13 +1202,15 @@
                     ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>`
                     : `<button class="btn-delete" onclick="openCloseModal(${item.id})" style="color:var(--accent); border-color:var(--accent); margin-bottom:4px;">Sprzedaj</button>`;
 
+                const divHtml = (item.dividend && item.dividend > 0) ? `<br><small style="color:var(--accent);">+ ${Number(item.dividend).toFixed(2)} div.</small>` : '';
+
                 return `<tr>
                     <td style="font-size:0.85em; color:var(--text-muted);">${item.buy_date}<br><b style="color:#eaecef;">#${item.id}</b></td>
                     <td><strong style="color:var(--accent);">${item.ticker}</strong><br><small>${item.stock_name}</small></td>
                     <td>${item.spent.toFixed(2)}${item.currency}<br><small>Wart: ${val.toFixed(2)}(x${item.leverage})</small></td>
                     <td>WE: ${item.buy_price}$<br>${isClosed?'<span style="color:var(--text-muted);">OUT:</span>':'TR:'} <b>${cp}$</b><br>${isClosed?`<small>${item.sell_date}</small>`:''}</td>
                     <td>R:R <b>${rr.toFixed(1)}</b><br><b style="color:#fcd535;">SL: ${dsl.toFixed(2)}$</b></td>
-                    <td style="color:${prof>=0?'#0ecb81':'#f6465d'};"><b>${prof.toFixed(2)} ${item.currency}</b></td>
+                    <td style="color:${prof>=0?'#0ecb81':'#f6465d'};"><b>${prof.toFixed(2)} ${item.currency}</b>${divHtml}</td>
                     <td style="color:${prof>=0?'#0ecb81':'#f6465d'};"><b>${profPln.toFixed(2)} PLN</b></td>
                     <td><div style="font-size:0.8em; display:flex; justify-content:space-between;"><span>${prog<0?'STRATA':'ZYSK'}</span><span>${(prog*100).toFixed(0)}%</span></div><div style="background:var(--bg-input); height:8px; border-radius:4px; overflow:hidden;"><div style="width:${pd}%; background:${pc}; height:100%;"></div></div></td>
                     <td>${actionHtml}</td>
@@ -963,15 +1234,14 @@
             document.getElementById('sell-date').valueAsDate = new Date();
             document.getElementById('sell-price').value = '';
             document.getElementById('sell-fraction').value = '1';
-            document.getElementById('sell-div').value = '0';
         }
+
         function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
         
         async function confirmSell() {
             const id = document.getElementById('sell-trade-id').value;
             const price = parseFloat(document.getElementById('sell-price').value);
             const date = document.getElementById('sell-date').value;
-            const div = parseFloat(document.getElementById('sell-div').value);
             const fracStr = document.getElementById('sell-fraction').value.trim();
 
             if(!price || isNaN(price)) return alert('Podaj prawidłową cenę sprzedaży!');
@@ -993,7 +1263,7 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/api/trades/close`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, dividend: div })
+                    body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date })
                 });
                 if(res.ok) {
                     alert(fraction < 0.99 ? 'Częściowo zamknięto pozycję!' : 'Pozycja w pełni zamknięta!');
@@ -1002,7 +1272,84 @@
             } catch(e) { console.error(e); }
         }
 
+        // --- SERVICE MODULE & DYWIDENDY ---
+        async function loadServiceModule() {
+            if(allTradesData.length === 0) { 
+                const res = await fetch(`${API_BASE_URL}/api/trades/entries`); 
+                allTradesData = await res.json(); 
+            }
+            const openTrades = allTradesData.filter(t => t.status === 'OPEN');
+            const select = document.getElementById('div-trade-id');
+            select.innerHTML = '<option value="">Wybierz otwartą pozycję...</option>';
+            openTrades.forEach(t => { 
+                select.innerHTML += `<option value="${t.id}">ID: #${t.id} | ${t.ticker} (${t.direction})</option>`; 
+            });
+            document.getElementById('div-date').valueAsDate = new Date();
+        }
+
+        async function addDividend(e) {
+            e.preventDefault();
+            const tid = document.getElementById('div-trade-id').value;
+            const date = document.getElementById('div-date').value;
+            const amt = document.getElementById('div-amount').value;
+            if(!tid || !date || !amt) return;
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/dividend/add`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({trade_id: parseInt(tid), dividend_date: date, amount: parseFloat(amt)})
+                });
+                if(res.ok) { 
+                    alert('Dodano dywidendę do otwartej pozycji!'); 
+                    document.getElementById('div-amount').value = ''; 
+                    fetchTradesEntries(); 
+                } else {
+                    alert('Błąd zapisu.');
+                }
+            } catch(err) {}
+        }
+
         /* INNE SERWISY */
-        async function forceAlertsCheck() { await fetch(`${API_BASE_URL}/api/cron/check-alerts`); alert("Alerty SMC sprawdzone."); }
-        async function forceCronPricesUpdate() { await fetch(`${API_BASE_URL}/api/cron/update-prices`); alert("Ceny w tle zaktualizowane."); loadDatabase(); }
+        async function forceAlertsCheck() {
+            const out = document.getElementById('service-output');
+            out.style.display = 'block';
+            out.innerHTML = '⏳ Uruchamianie silnika sprawdzania alertów SMC...';
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`);
+                const result = await res.json();
+                if(res.ok) {
+                    out.innerHTML = `✅ <strong>Skrypt wykonany pomyślnie.</strong><br>Aktywowane zlecenia: ${result.alerts_triggered || 0}`;
+                    if (document.getElementById('form-module').style.display === 'block') {
+                        fetchFormEntries();
+                    }
+                } else {
+                    out.innerHTML = `❌ Błąd serwera: ${result.message}`;
+                }
+            } catch(e) {
+                console.error(e);
+                out.innerHTML = `❌ Brak połączenia z backendem.`;
+            }
+        }
+
+        async function forceCronPricesUpdate() {
+            const out = document.getElementById('service-output');
+            out.style.display = 'block';
+            out.innerHTML = '⏳ Trwa pobieranie aktualnych kursów z Yahoo Finance...';
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`);
+                const result = await res.json();
+                if(res.ok) {
+                    out.innerHTML = `✅ <strong>Baza cen zaktualizowana.</strong><br>Przetworzonych tickerów: ${result.updated_tickers || 0}`;
+                } else {
+                    out.innerHTML = `❌ Błąd: ${result.message}`;
+                }
+            } catch(e) {
+                console.error(e);
+                out.innerHTML = `❌ Błąd sieci.`;
+            }
+        }
     </script>
+</body>
+</html>
