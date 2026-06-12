@@ -836,7 +836,6 @@
             document.getElementById(moduleId).style.display = 'block';
             document.getElementById('app-title').innerText = moduleTitle;
             document.getElementById('back-btn').style.display = 'flex';
-            document.getElementById('spacer').style.display = 'none';
 
             if (moduleId === 'database-module') { loadDatabase(); loadMacroData(); }
             if (moduleId === 'alerthistory-module') loadAlertHistory();
@@ -854,7 +853,6 @@
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('app-title').innerHTML = 'Quant<span>Desk</span>';
             document.getElementById('back-btn').style.display = 'none';
-            document.getElementById('spacer').style.display = 'block';
         }
 
         function loadMacroData() {
