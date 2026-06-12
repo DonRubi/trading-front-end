@@ -818,7 +818,7 @@
                 const rr = (item.buy_price-item.sl!==0) ? ((item.tp-item.buy_price)*mod)/((item.buy_price-item.sl)*mod) : 0;
                 let prog = 0; if(item.tp-item.buy_price!==0) prog = ((cp-item.buy_price)*mod)/((item.tp-item.buy_price)*mod);
                 let dsl = item.sl;
-                if(prog >= 1) dsl = item.tp; else if(prog >= 0.5) dsl = item.buy_price + ((item.tp - item.buy_price)*(prog - 0.2)*mod); 
+                if(prog >= 1) dsl = item.tp; else if(prog >= 0.5) dsl = item.buy_price + ((item.tp - item.buy_price)*(prog - 0.2)); 
                 let pd = prog*100; let pc = 'var(--success)';
                 if(pd<0){ pc='var(--danger)'; pd = (item.buy_price-item.sl!==0) ? Math.abs(((cp-item.buy_price)*mod)/((item.buy_price-item.sl)*mod))*100 : 0; }
                 if(pd>100) pd=100;
