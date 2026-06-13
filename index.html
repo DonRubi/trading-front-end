@@ -236,7 +236,23 @@
         </div>
     </div>
 <script>
-        const API_BASE_URL = 'https://kuba-quant-desk.onrender.com';
+        const API_BASE_URL = 'https://kuba-quant-desk.onrender.com'; 
+        
+        // --- SWR CACHE ENGINE ---
+        function getCachedData(key) { try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : null; } catch(e){return null;} }
+        function setCachedData(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e){} }
+        async function fetchSWR(endpoint, cacheKey, callback) {
+            const cached = getCachedData(cacheKey);
+            if (cached) callback(cached); // Natychmiastowe ładowanie dla użytkownika
+            try {
+                const res = await fetch(`${API_BASE_URL}${endpoint}`);
+                if (res.ok) { 
+                    const fresh = await res.json(); 
+                    setCachedData(cacheKey, fresh); 
+                    callback(fresh); // Cicha aktualizacja w tle
+                }
+            } catch (e) { console.error("SWR Sync Error:", e); }
+        }
         let isPrivacyMode = false;
 
         let macroDataArray = [], currentMacroPage = 1; const macroPageSize = 10;
@@ -247,7 +263,7 @@
         let depositsDataArray = [];
         let summaryChartInstance = null;
         let summaryOpenSortKey = 'valLev', summaryOpenSortDir = 'desc';
-        let formEntries = [], filteredFormEntries = [], formCurrentPage = 1; const formRowsPerPage = 6;
+        let formEntries = [], filteredFormEntries = [], formCurrentPage = 1; const formRowsPerPage = 25;
         let filteredFocusListEntries = [], currentFocusListPage = 1; const focusListPageSize = 20;
         let allAlertsData = [], filteredAlertsData = [], currentAlertPage = 1; const alertPageSize = 20;
 
@@ -488,17 +504,24 @@
             if (cached) { formEntries = cached; applyFormFilterAndSort(); }
             try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); const data = await res.json(); formEntries = Array.isArray(data) ? data.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : []; setCachedData('form_cache', formEntries); applyFormFilterAndSort(); } catch (error) {}
         }
-        async function fetchFormEntries() { fetchFormEntriesCache(); } // Aktualizuj starą funkcję
-        async function fetchFocusEntriesCache() {
-            const cached = getCachedData('focus_cache');
-            if (cached) { focusDataArray = cached; renderFocusTable(); }
-            try { const res = await fetch(`${API_BASE_URL}/api/focus/entries`); focusDataArray = await res.json(); setCachedData('focus_cache', focusDataArray); renderFocusTable(); } catch(e) { }
+        function fetchFormEntries() {
+            fetchSWR('/api/form/entries', 'form_cache', (data) => {
+                formEntries = Array.isArray(data) ? data.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : [];
+                applyFormFilterAndSort();
+            });
         }
         async function fetchFocusEntries() { fetchFocusEntriesCache(); }
 
         // W funkcji renderFocusTable() podmień komórkę z przyciskiem "Usuń" na:
         // <td><button class="btn-edit" onclick="openEditModal('focus', ${i.id})">✎</button> <button class="btn-delete" onclick="deleteFocusEntry(${i.id})">Usuń</button></td>
-        async function fetchTradesEntries() { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); const data = await res.json(); allTradesData = Array.isArray(data) ? data : []; } catch(e) { allTradesData = []; } if(tickerDataArray.length === 0) await loadDatabase(); handleTradesFilter(); if(document.getElementById('summary-module').style.display === 'block') loadSummaryData(); }
+        function fetchTradesEntries() {
+            fetchSWR('/api/trades/entries', 'trades_cache', async (data) => {
+                allTradesData = Array.isArray(data) ? data : [];
+                if(tickerDataArray.length === 0) await loadDatabase();
+                handleTradesFilter(); 
+                if(document.getElementById('summary-module').style.display === 'block') loadSummaryData();
+            });
+        }
 
         async function fetchDatabase() {
             const cached = getCachedData('db_cache');
@@ -506,7 +529,12 @@
             try { const res = await fetch(`${API_BASE_URL}/api/database`); const dt = await res.json(); tickerDataArray = Array.isArray(dt) ? dt : []; setCachedData('db_cache', tickerDataArray); renderMobileList(); } catch (e) {}
         }
 
-        function loadDatabase() { fetchDatabase(); } // Aktualizuj starą funkcję
+        function loadDatabase() { 
+            fetchSWR('/api/database', 'db_cache', (data) => {
+                tickerDataArray = Array.isArray(data) ? data : []; 
+                renderMobileList();
+            }); 
+        }
         
         // --- SUMMARY MODULE & CHARTS ---
         async function drawSummaryChart() { try { const res = await fetch(`${API_BASE_URL}/api/portfolio/roi/history`); const roiHistory = await res.json() || []; if (!Array.isArray(roiHistory) || roiHistory.length === 0) return; roiHistory.sort((a, b) => new Date(a.date) - new Date(b.date)); const labels = []; const roiDataset = []; const sp500Dataset = []; let baselineSp500 = null; const firstDate = roiHistory[0].date; const baselineMacro = macroDataArray.find(m => m.date === firstDate) || macroDataArray[macroDataArray.length - 1]; if (baselineMacro && baselineMacro.sp500) { baselineSp500 = parseFloat(baselineMacro.sp500); } roiHistory.forEach(entry => { labels.push(entry.date); roiDataset.push(entry.roi_pct); let sp500Pct = 0; if (baselineSp500) { const macroDay = macroDataArray.find(m => m.date === entry.date); if (macroDay && macroDay.sp500) { const currentSp500 = parseFloat(macroDay.sp500); sp500Pct = ((currentSp500 - baselineSp500) / baselineSp500) * 100; } else { sp500Pct = sp500Dataset.length > 0 ? sp500Dataset[sp500Dataset.length - 1] : 0; } } sp500Dataset.push(sp500Pct); }); const ctx = document.getElementById('roiChart').getContext('2d'); if(summaryChartInstance) summaryChartInstance.destroy(); Chart.defaults.color = '#cdd6f4'; summaryChartInstance = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [ { label: 'Twój Portfel (ROI %)', data: roiDataset, borderColor: '#0ecb81', backgroundColor: 'rgba(14, 203, 129, 0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#0ecb81' }, { label: 'S&P 500 (%)', data: sp500Dataset, borderColor: '#89b4fa', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], tension: 0.3, pointRadius: 0 } ] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { grid: {color: 'rgba(255,255,255,0.05)'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4', maxTicksLimit: 10} } }, plugins: { legend: { display: true, position: 'top', labels: {color: '#cdd6f4'} }, tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + c.parsed.y.toFixed(2) + '%'; } } } } } }); } catch (err) { console.error("Błąd wykresu", err); } }
@@ -517,7 +545,11 @@
         function renderSummaryOpen() { const tb = document.getElementById('s-open-tbody'); const fCur = document.getElementById('s-open-cur-filter').value; let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur); data.sort((a,b) => { let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey]; if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); } return summaryOpenSortDir==='asc' ? va-vb : vb-va; }); if(data.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; } tb.innerHTML = data.map(i => `<tr><td style="font-weight:bold; color:var(--accent);">${i.ticker}</td><td class="sensitive">${i.inv.toFixed(2)} ${i.curr}</td><td class="sensitive" style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td><td class="sensitive">${i.valLev.toFixed(2)} ${i.curr}</td></tr>`).join(''); }
         function sortSummaryOpen(key) { summaryOpenSortDir = (summaryOpenSortKey===key && summaryOpenSortDir==='desc') ? 'asc' : 'desc'; summaryOpenSortKey = key; renderSummaryOpen(); }
         async function loadSummaryData() { if(document.getElementById('summary-module').style.display === 'block') { initSummaryModule(); } }
-        async function initSummaryModule() { if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); const dt = await res.json(); allTradesData = Array.isArray(dt) ? dt : []; } catch(e) { allTradesData = []; } } if(tickerDataArray.length === 0) await loadDatabase(); if(macroDataArray.length === 0) { try { const mRes = await fetch(`${API_BASE_URL}/api/macro/history`); macroDataArray = await mRes.json() || []; } catch(e) {} } try { const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); const dData = await rD.json(); depositsDataArray = Array.isArray(dData) ? dData : []; renderDepositsTable(); calculateAndRenderSummary(); } catch(e){ console.error(e); } }
+        async function initSummaryModule() { if(allTradesData.length === 0) { fetchSWR('/api/portfolio/deposits', 'dep_cache', (data) => {
+            depositsDataArray = Array.isArray(data) ? data : [];
+            renderDepositsTable();
+            calculateAndRenderSummary();
+        }); } if(tickerDataArray.length === 0) await loadDatabase(); if(macroDataArray.length === 0) { try { const mRes = await fetch(`${API_BASE_URL}/api/macro/history`); macroDataArray = await mRes.json() || []; } catch(e) {} } try { const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); const dData = await rD.json(); depositsDataArray = Array.isArray(dData) ? dData : []; renderDepositsTable(); calculateAndRenderSummary(); } catch(e){ console.error(e); } }
         function renderMobileList() {
             const container = document.getElementById('db-list-container'); container.innerHTML = '';
             if (tickerDataArray.length === 0) return;
@@ -528,7 +560,13 @@
         function changeTickerPage(dir) { currentTickerPage += dir; renderMobileList(); }
         async function addTicker() { const t = document.getElementById('new-ticker').value.trim().toUpperCase(); if (!t) return; try { const res = await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) { document.getElementById('new-ticker').value = ''; loadDatabase(); } } catch (e) {} }
         async function removeTicker(t) { if (!confirm(`Usunąć ${t}?`)) return; try { const res = await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) loadDatabase(); } catch (e) {} }
-        function loadMacroData() { const tbody = document.getElementById('macro-table-body'); if (!tbody) return; fetch(`${API_BASE_URL}/api/macro/history`).then(r => r.json()).then(data => { macroDataArray = Array.isArray(data) ? data : []; currentMacroPage = 1; renderMacroTable(); }).catch(e => {}); }
+        function loadMacroData() {
+            fetchSWR('/api/macro/history', 'macro_cache', (data) => {
+                macroDataArray = Array.isArray(data) ? data : []; 
+                currentMacroPage = 1; 
+                renderMacroTable();
+            });
+        }
         function renderMacroTable() { const tbody = document.getElementById('macro-table-body'); if (macroDataArray.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro w bazie.</td></tr>`; return; } const totalPages = Math.ceil(macroDataArray.length / macroPageSize); const start = (currentMacroPage - 1) * macroPageSize; tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => `<tr><td class="macro-val-date">${row.date || '-'}</td><td class="macro-val-currency sensitive">${row.eurpln || '-'}</td><td class="macro-val-currency sensitive">${row.usdpln || '-'}</td><td class="macro-val-vix">${row.vix || '-'}</td><td style="font-weight: 500;" class="sensitive">${row.sp500 || '-'}</td><td class="macro-val-time">${row.updated_at || '-'}</td></tr>`).join(''); document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`; }
         function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
         async function forceMacroUpdate() { try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } catch (e) { alert("Błąd połączenia z serwerem."); } }
@@ -537,7 +575,12 @@
         function renderDepositsTable() { const tb = document.getElementById('s-dep-table'); if(!depositsDataArray || depositsDataArray.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak wpłat.</td></tr>'; return; } tb.innerHTML = depositsDataArray.map(x => `<tr> <td>${x.deposit_date || x.created_at ? (x.deposit_date || x.created_at).split('T')[0] : '-'}</td> <td class="sensitive" style="font-weight:bold;">${Number(x.amount || 0).toFixed(2)} ${x.currency || 'PLN'}</td> <td style="color:var(--text-muted);">${x.currency || 'PLN'}</td> <td class="sensitive" style="color:var(--success); font-weight:bold;">${Number(x.amount_pln || x.amount || 0).toFixed(2)} PLN</td> <td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td> </tr>`).join(''); }
         async function addDeposit(e) { e.preventDefault(); const amt = document.getElementById('dep-amt').value; const d = document.getElementById('dep-date').value; const cur = document.getElementById('dep-cur').value; try { const res = await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); if(!res.ok) { const err = await res.json(); alert("Wystąpił błąd przy dodawaniu wpłaty: " + (err.message)); } else { document.getElementById('dep-amt').value = ''; } } catch(err) { alert("Błąd połączenia z serwerem."); } initSummaryModule(); }
         async function deleteDeposit(id) { if(!confirm("Na pewno usunąć? Saldo ulegnie zmianie.")) return; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); } catch(e) {} initSummaryModule(); }
-        async function loadAlertHistory() { try { const r = await fetch(`${API_BASE_URL}/api/alerts/history`); const data = await r.json(); allAlertsData = Array.isArray(data) ? data : []; handleAlertsFilter(); } catch(e){} }
+        function loadAlertHistory() { 
+            fetchSWR('/api/alerts/history', 'alerts_cache', (data) => {
+                allAlertsData = Array.isArray(data) ? data : []; 
+                handleAlertsFilter();
+            });
+        }
         function handleAlertsFilter() { const searchText = (document.getElementById('alert-search').value || '').toLowerCase(); const typeFilter = document.getElementById('alert-type-filter').value || 'ALL'; filteredAlertsData = allAlertsData.filter(a => { const textMatch = (a.ticker || '').toLowerCase().includes(searchText); const aType = a.alert_type || 'Wejście'; let typeMatch = false; if (typeFilter === 'ALL') { typeMatch = true; } else if (typeFilter === 'Wejście') { typeMatch = (aType === 'Wejście' || aType === 'Punkt wejścia'); } else { typeMatch = (aType === typeFilter); } return textMatch && typeMatch; }); currentAlertPage = 1; renderAlertsTable(); }
         function renderAlertsTable() { const tbody = document.getElementById("alert-history-tbody"); if (filteredAlertsData.length === 0) { tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--text-muted);">Brak alertów.</td></tr>`; return; } const start = (currentAlertPage - 1) * alertPageSize; tbody.innerHTML = filteredAlertsData.slice(start, start + alertPageSize).map(item => { const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>'; let aType = item.alert_type || 'Punkt wejścia'; if (aType === 'Wejście') aType = 'Punkt wejścia'; let typeColor = '#89b4fa'; if(aType === 'Take Profit') typeColor = '#0ecb81'; if(aType === 'Stop Loss') typeColor = '#f6465d'; return `<tr> <td style="font-size: 0.85em; color: var(--text-muted);">${new Date(item.triggered_at).toLocaleString('pl-PL')}</td> <td style="font-weight: bold; color: ${typeColor};">${aType}</td> <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td> <td>${pb}</td><td style="color: ${item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d'};">${item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej'}</td> <td class="sensitive" style="font-weight: bold;">${Number(item.target_price).toFixed(2)} $</td> <td class="sensitive" style="font-size: 0.9em; color: var(--text-muted);">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td> <td style="color: #a6e3a1; font-weight: bold;">${item.score || 0}/5</td> <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 TV</a></td> <td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td> </tr>`; }).join(''); document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${Math.ceil(filteredAlertsData.length/alertPageSize)||1}`; }
         function changeAlertPage(d) { const total = Math.ceil(filteredAlertsData.length / alertPageSize) || 1; if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) { currentAlertPage += d; renderAlertsTable(); } }
