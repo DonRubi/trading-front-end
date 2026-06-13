@@ -6,7 +6,7 @@
     <title>Quant Desk v8.2</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* === UI OPTIMIZATIONS (DESKTOP + MOBILE) === */
+/* === UI OPTIMIZATIONS (DESKTOP + MOBILE) === */
         :root {
             --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef;
             --text-muted: #848e9c; --accent: #c99400; --accent-hover: #fcd535; --danger: #f6465d;
@@ -20,8 +20,8 @@
         ::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-        /* Zabezpieczenie przed przewijaniem całego ekranu w poziomie na urządzeniach mobilnych */
-        body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 70px; overflow-x: hidden; width: 100vw; }
+        /* Zabezpieczenie strony przed przewijaniem w poziomie */
+        body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 70px; overflow-x: hidden; width: 100vw; max-width: 100%; }
         
         header { background-color: var(--bg-card); padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; width: 100%; box-sizing: border-box; }
         header h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
@@ -53,8 +53,10 @@
         
         .journal-sidebar { background: #1e1e2e; padding: 15px; border-radius: 8px; border: 1px solid #313244; width: 100%; box-sizing: border-box; }
         
+        /* KLUCZOWA POPRAWKA: min-width: 0 pozwala siatce na zmniejszenie się do rozmiaru telefonu */
+        .journal-main { min-width: 0; width: 100%; overflow: hidden; }
+        
         /* === COMPACT FORMS (Mobile Fix) === */
-        /* !important wymusza zawijanie pól formularza na telefonach pomimo narzuconych styli inline html */
         .form-row { display: flex; flex-wrap: wrap !important; gap: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
         .form-group { flex: 1 1 45%; min-width: 70px; display: flex; flex-direction: column; margin-bottom: 8px; }
         
@@ -65,7 +67,7 @@
         .btn-submit { width: 100%; padding: 12px; background: #89b4fa; color: #11111b; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 14px; margin-top: 5px; box-sizing: border-box; }
         .btn-submit:hover { background: #b4befe; }
         
-        /* === COMPACT TABLES (Mobile Fix) === */
+        /* === COMPACT TABLES (Mobile Scroll Fix) === */
         .table-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; align-items: stretch; width: 100%; }
         @media (min-width: 768px) { .table-controls { flex-direction: row; align-items: center; flex-wrap: wrap; } }
         
@@ -75,8 +77,9 @@
             .table-controls select { width: auto; max-width: 200px; }
         }
         
-        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; display: block; }
-        #journal-table, .macro-custom-table { width: 100%; border-collapse: collapse; background: #1e1e2e; min-width: max-content; }
+        /* Gwarantowany pasek przewijania wewnętrznego dla tabel */
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--border-color); display: block; }
+        #journal-table, .macro-custom-table { width: 100%; border-collapse: collapse; background: #1e1e2e; min-width: 850px; }
         #journal-table th, #journal-table td, .macro-custom-table th, .macro-custom-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #313244; font-size: 12.5px; white-space: nowrap; }
         #journal-table th, .macro-custom-table th { background: #313244; color: #cdd6f4; cursor: pointer; user-select: none; position: sticky; top: 0; z-index: 10; }
         #journal-table th:hover, .macro-custom-table th:hover { background: #45475a; }
