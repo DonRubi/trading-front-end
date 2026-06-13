@@ -324,31 +324,33 @@
         let focusSortKey = 'created_at', focusSortDir = 'desc', focusFilterText = '';
         let tradeSortKey = 'buy_date', tradeSortDir = 'desc', tradeFilterText = '', tradeStatusFilter = 'OPEN';
 
-        // --- CACHE NAZW SPÓŁEK ---
-        const companyNameCache = {};
+        // --- TRWAŁY CACHE NAZW SPÓŁEK ---
+        let companyNameCache = getCachedData('company_names') || {};
         const pendingNameFetches = new Set();
 
         function getCompanyName(ticker) {
             if (!ticker) return "";
             if (companyNameCache[ticker]) return companyNameCache[ticker];
             
-            // Szybki fallback: szukaj w zapisanych zleceniach TradesList
             const trade = allTradesData.find(t => t.ticker === ticker && t.stock_name && t.stock_name !== 'Wyszukiwanie...');
             if (trade) {
                 companyNameCache[ticker] = trade.stock_name;
+                setCachedData('company_names', companyNameCache); // Zapis do pamięci
                 return trade.stock_name;
             }
 
-            // Jeśli nie ma, pobierz asynchronicznie i odśwież widok
             if (!pendingNameFetches.has(ticker)) {
                 pendingNameFetches.add(ticker);
                 fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${ticker}`)
                     .then(r => r.json())
                     .then(d => { 
                         companyNameCache[ticker] = d.name || ticker; 
+                        setCachedData('company_names', companyNameCache); // Zapis na stałe w telefonie!
+                        
                         // Odśwież UI po załadowaniu
                         if(document.getElementById('form-module').style.display === 'block') renderAdvancedFormTable();
                         if(document.getElementById('focus-module').style.display === 'block') renderFocusTable();
+                        if(document.getElementById('tradeslist-module').style.display === 'block') renderTradesTable();
                     })
                     .catch(e => { companyNameCache[ticker] = ticker; });
             }
@@ -533,6 +535,10 @@
             fetchSWR('/api/database', 'db_cache', (data) => {
                 tickerDataArray = Array.isArray(data) ? data : []; 
                 renderMobileList();
+                // Jeśli jesteś na widoku Form, cicho odśwież ceny
+                if(document.getElementById('form-module').style.display === 'block') {
+                    renderAdvancedFormTable();
+                }
             }); 
         }
         
@@ -545,11 +551,19 @@
         function renderSummaryOpen() { const tb = document.getElementById('s-open-tbody'); const fCur = document.getElementById('s-open-cur-filter').value; let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur); data.sort((a,b) => { let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey]; if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); } return summaryOpenSortDir==='asc' ? va-vb : vb-va; }); if(data.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; } tb.innerHTML = data.map(i => `<tr><td style="font-weight:bold; color:var(--accent);">${i.ticker}</td><td class="sensitive">${i.inv.toFixed(2)} ${i.curr}</td><td class="sensitive" style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td><td class="sensitive">${i.valLev.toFixed(2)} ${i.curr}</td></tr>`).join(''); }
         function sortSummaryOpen(key) { summaryOpenSortDir = (summaryOpenSortKey===key && summaryOpenSortDir==='desc') ? 'asc' : 'desc'; summaryOpenSortKey = key; renderSummaryOpen(); }
         async function loadSummaryData() { if(document.getElementById('summary-module').style.display === 'block') { initSummaryModule(); } }
-        async function initSummaryModule() { if(allTradesData.length === 0) { fetchSWR('/api/portfolio/deposits', 'dep_cache', (data) => {
-            depositsDataArray = Array.isArray(data) ? data : [];
-            renderDepositsTable();
-            calculateAndRenderSummary();
-        }); } if(tickerDataArray.length === 0) await loadDatabase(); if(macroDataArray.length === 0) { try { const mRes = await fetch(`${API_BASE_URL}/api/macro/history`); macroDataArray = await mRes.json() || []; } catch(e) {} } try { const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); const dData = await rD.json(); depositsDataArray = Array.isArray(dData) ? dData : []; renderDepositsTable(); calculateAndRenderSummary(); } catch(e){ console.error(e); } }
+        function initSummaryModule() { 
+            if(tickerDataArray.length === 0) loadDatabase();
+            if(allTradesData.length === 0) fetchTradesEntries();
+            
+            fetchSWR('/api/macro/history', 'macro_cache', (data) => { 
+                macroDataArray = Array.isArray(data) ? data : []; 
+            });
+            fetchSWR('/api/portfolio/deposits', 'dep_cache', (data) => {
+                depositsDataArray = Array.isArray(data) ? data : [];
+                renderDepositsTable();
+                calculateAndRenderSummary();
+            }); 
+        }
         function renderMobileList() {
             const container = document.getElementById('db-list-container'); container.innerHTML = '';
             if (tickerDataArray.length === 0) return;
