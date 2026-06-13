@@ -32,8 +32,9 @@
         .privacy-btn { font-size: 1.3rem; filter: grayscale(1); transition: 0.2s; }
         .privacy-btn:hover { filter: grayscale(0); transform: scale(1.1); }
 
-        /* Szeroki Layout do 1500px na 25" monitorach */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 15px; }
+        /* === MOBILE-FIRST GRID LAYOUT === */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 12px; padding: 15px; }
+        @media (min-width: 480px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (min-width: 768px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); max-width: 1500px; margin: 0 auto; } }
         @media (min-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(5, 1fr); } }
         
@@ -45,21 +46,34 @@
         .app-module { display: none; padding: 15px; animation: fadeIn 0.3s ease-in-out; max-width: 1500px; margin: 0 auto; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .journal-container { display: grid; grid-template-columns: 320px 1fr; gap: 24px; margin-top: 15px; align-items: start; }
-        @media (max-width: 1024px) { .journal-container { grid-template-columns: 1fr; } }
+        .journal-container { display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 15px; align-items: start; }
+        @media (min-width: 1025px) { .journal-container { grid-template-columns: 320px 1fr; } }
+        
         .journal-sidebar { background: #1e1e2e; padding: 20px; border-radius: 8px; border: 1px solid #313244; }
         
-        .form-group { margin-bottom: 14px; }
+        /* === MOBILE-FIRST FORMS === */
+        .form-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+        .form-group { flex: 1 1 100%; min-width: 140px; display: flex; flex-direction: column; margin-bottom: 10px; }
+        @media (min-width: 480px) { .form-group { flex: 1; } }
+        
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 13px; color: #cdd6f4; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border-radius: 6px; background: #11111b; border: 1px solid #45475a; color: #cdd6f4; box-sizing: border-box; font-family: inherit; font-size: 14px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border-radius: 6px; background: #11111b; border: 1px solid #45475a; color: #cdd6f4; box-sizing: border-box; font-family: inherit; font-size: 14px; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #89b4fa; }
         
-        .btn-submit { width: 100%; padding: 10px; background: #89b4fa; color: #11111b; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .btn-submit { width: 100%; padding: 12px; background: #89b4fa; color: #11111b; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 15px; }
         .btn-submit:hover { background: #b4befe; }
         
+        /* === MOBILE-FIRST TABLE CONTROLS === */
+        .table-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; align-items: stretch; }
+        @media (min-width: 768px) { .table-controls { flex-direction: row; align-items: center; flex-wrap: wrap; } }
+        
+        .table-controls input[type="text"], .table-controls select { width: 100%; padding: 10px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4; max-width: 100%; }
+        @media (min-width: 768px) { 
+            .table-controls input[type="text"] { flex: 1; max-width: 350px; }
+            .table-controls select { width: auto; max-width: 200px; }
+        }
+        
         /* Optymalizacja Tabel dla Androida */
-        .table-controls { margin-bottom: 12px; }
-        #journal-search { width: 100%; max-width: 350px; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4; }
         .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--border-color); }
         #journal-table, .macro-custom-table { width: 100%; border-collapse: collapse; background: #1e1e2e; min-width: 800px; }
         #journal-table th, #journal-table td, .macro-custom-table th, .macro-custom-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #313244; font-size: 14px; white-space: nowrap; }
@@ -70,31 +84,31 @@
         }
 
         .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 5px; }
-        .btn-pag { padding: 6px 14px; background: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-pag { padding: 8px 16px; background: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
         .btn-pag:disabled { opacity: 0.3; cursor: not-allowed; }
-        .btn-delete-journal { background: #f38ba8; color: #11111b; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .btn-delete-journal:hover { background: #eba0ac; }
-        .btn-delete { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 5px 10px; font-size: 0.85rem; border-radius: 4px; cursor: pointer; font-weight:bold; }
+        .btn-delete { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; cursor: pointer; font-weight:bold; }
         .btn-delete:active { background-color: var(--danger); color: #fff; }
         
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .kpi-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 30px; }
+        .kpi-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
         .kpi-card h4 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
-        .kpi-card .value { font-size: 1.4rem; font-weight: bold; color: var(--text-main); }
+        .kpi-card .value { font-size: 1.25rem; font-weight: bold; color: var(--text-main); }
+        @media (min-width: 768px) { .kpi-card { padding: 20px; } .kpi-card .value { font-size: 1.4rem; } }
         
-        .tabs { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; overflow-x:auto; padding-bottom: 5px; }
-        .tab-btn { background: none; border: none; padding: 10px 20px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: bold; font-size: 1rem; white-space:nowrap; }
+        .tabs { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; overflow-x:auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
+        .tab-btn { background: none; border: none; padding: 10px 15px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: bold; font-size: 0.95rem; white-space:nowrap; }
         .tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
         .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
         .tab-content.active { display: block; }
         
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; }
-        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 400; padding: 5px; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.3); }
+        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 400; padding: 5px 15px; }
         .nav-item.active { color: var(--accent); }
+        .nav-item span { font-size: 1.2rem; }
         
-        .brief-carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding: 10px 5px 20px 5px; scrollbar-width: none; }
+        .brief-carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding: 10px 5px 20px 5px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .brief-carousel-container::-webkit-scrollbar { display: none; }
-        .brief-card { flex: 0 0 100%; scroll-snap-align: start; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+        .brief-card { flex: 0 0 90%; scroll-snap-align: start; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
         @media (min-width: 768px) { .brief-card { flex: 0 0 calc(50% - 8px); } }
         .brief-card h4 { font-size: 1.15rem; color: var(--accent); line-height: 1.4; font-weight: 600; }
         .brief-text { font-size: 0.95rem; line-height: 1.6; color: var(--text-main); white-space: pre-line; overflow-y: auto; max-height: 340px; padding-right: 5px; }
@@ -142,19 +156,19 @@
         <div class="journal-container">
             <div class="journal-sidebar">
                 <form id="trading-form">
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;">
+                    <div class="form-row">
+                        <div class="form-group">
                             <label style="display: flex; justify-content: space-between;">Ticker <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label>
                             <select id="form-ticker" onchange="updateFormTvLink()"></select>
                         </div>
                     </div>
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div>
-                        <div class="form-group" style="flex:1;"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div>
+                        <div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div>
                     </div>
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div>
-                        <div class="form-group" style="flex:1;"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div>
+                        <div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div>
                     </div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01"></div>
                     <div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01"></div>
@@ -170,22 +184,17 @@
                     <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
                 </form>
                 
-                <button type="button" onclick="toggleFibo()" style="background: none; border: 1px solid var(--accent); color: var(--accent); margin-top: 15px; width: 100%; border-radius: 6px; padding: 8px; cursor: pointer;">📐 Otwórz Asystenta Fibo</button>
+                <button type="button" onclick="toggleFibo()" style="background: none; border: 1px solid var(--accent); color: var(--accent); margin-top: 15px; width: 100%; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: bold;">📐 Otwórz Asystenta Fibo</button>
                 <div id="fibo-drawer" style="display:none; margin-top: 10px; padding: 15px; background: rgba(201,148,0,0.05); border: 1px solid var(--accent); border-radius: 8px;">
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;"><label>Początek impulsu</label><input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()"></div>
-                        <div class="form-group" style="flex:1;"><label>Szczyt impulsu</label><input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Początek impulsu</label><input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()"></div>
+                        <div class="form-group"><label>Szczyt impulsu</label><input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()"></div>
                     </div>
                     <div class="form-group">
                         <label>Zewnętrzne zniesienie (Cel)</label>
-                        <select id="fibo-level">
-                            <option value="1.272">1.272</option>
-                            <option value="1.618">1.618</option>
-                            <option value="2.000">2.000</option>
-                            <option value="2.618">2.618</option>
-                        </select>
+                        <select id="fibo-level"><option value="1.272">1.272</option><option value="1.618">1.618</option><option value="2.000">2.000</option><option value="2.618">2.618</option></select>
                     </div>
-                    <button type="button" onclick="applyFibo()" style="width:100%; background:var(--accent); color:#000; border-radius:6px; padding:8px; border:none; font-weight:bold; cursor:pointer;">Zastosuj do Take Profit</button>
+                    <button type="button" onclick="applyFibo()" style="width:100%; background:var(--accent); color:#000; border-radius:6px; padding:10px; border:none; font-weight:bold; cursor:pointer;">Zastosuj do Take Profit</button>
                 </div>
             </div>
             
@@ -208,29 +217,29 @@
             <div class="journal-sidebar">
                 <form id="focus-form" onsubmit="submitFocusForm(event)">
                     <div class="form-group"><label>Wybierz ID Form</label><select id="focus-form-id" onchange="onFocusIdChange()"></select></div>
-                    <div class="form-row" style="display:flex; gap:10px; background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
-                        <div class="form-group" style="flex:1;"><label>Wybrany Ticker</label><input type="text" id="focus-ticker" readonly style="opacity:0.7;"></div>
-                        <div class="form-group" style="flex:1;"><label>Kierunek</label><input type="text" id="focus-direction" readonly style="opacity:0.7;"></div>
+                    <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
+                        <div class="form-group"><label>Wybrany Ticker</label><input type="text" id="focus-ticker" readonly style="opacity:0.7;"></div>
+                        <div class="form-group"><label>Kierunek</label><input type="text" id="focus-direction" readonly style="opacity:0.7;"></div>
                     </div>
-                    <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC()" style="background: #0284c7; color:#fff; padding: 6px 12px; font-size: 0.8rem;">🤖 Automatyzuj SMC (Yahoo)</button></div>
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5"></div>
-                        <div class="form-group" style="flex:1;"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div>
+                    <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC()" style="background: #0284c7; color:#fff; padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; border: none; font-weight: bold; width: 100%;">🤖 Automatyzuj SMC (Yahoo)</button></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5"></div>
+                        <div class="form-group"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div>
                     </div>
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;">
+                    <div class="form-row">
+                        <div class="form-group">
                             <label>Luka Sesyjna</label><select id="focus-gap"><option value="1">1.0 (Domknięcie/Zgodna)</option><option value="0.5">0.5 (Neutralna)</option><option value="0">0.0 (Brak luki/Negatywna)</option></select>
                         </div>
-                        <div class="form-group" style="flex:1;">
+                        <div class="form-group">
                             <label>Kalendarz (Raporty)</label><select id="focus-calendar"><option value="1">1.0 (Bezpiecznie > 30 dni)</option><option value="0.5">0.5 (Blisko < 30 dni)</option><option value="0">0.0 (Ryzyko < 20 dni)</option></select>
                         </div>
                     </div>
                     <div class="form-group">
                         <label>CVD Order Flow [0-3]</label><select id="focus-cvd"><option value="3">3.0 - Silna absorpcja</option><option value="2">2.0 - Zgodny trend delty z ceną</option><option value="1">1.0 - Słaba delta / Churn</option><option value="0">0.0 - Negatywne uderzenia</option></select>
                     </div>
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;"><label>VIX Sentyment [0-2]</label><input type="number" id="focus-vix" step="0.5" min="0" max="2" value="1"></div>
-                        <div class="form-group" style="flex:1;"><label>Indeks (Siła) [0-2]</label><input type="number" id="focus-index" step="1" min="0" max="2" value="0"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>VIX Sentyment [0-2]</label><input type="number" id="focus-vix" step="0.5" min="0" max="2" value="1"></div>
+                        <div class="form-group"><label>Indeks (Siła) [0-2]</label><input type="number" id="focus-index" step="1" min="0" max="2" value="0"></div>
                     </div>
                     <div class="form-group"><label>HTF Market Structure [0-1]</label><select id="focus-htf"><option value="1">1.0 - Zgodny z trendem wyższego rzędu</option><option value="0">0.0 - Pod prąd trendu</option></select></div>
                     <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">💾 Zapisz Analizę</button>
@@ -254,30 +263,30 @@
             <div class="journal-sidebar">
                 <form id="trade-form" onsubmit="submitTradeForm(event)">
                     <div class="form-group"><label>Powiązane z ID Focus</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Wybierz przeanalizowany Setup...</option></select></div>
-                    <div class="form-row" style="display:flex; gap:5px; flex-wrap:wrap; background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);">
-                        <div class="form-group" style="min-width:60px;"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div>
-                        <div class="form-group" style="min-width:60px;"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div>
-                        <div class="form-group" style="min-width:60px;"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div>
-                        <div class="form-group" style="min-width:60px;"><label>Waluta</label><input type="text" id="trade-currency" readonly></div>
-                        <div class="form-group" style="min-width:60px;"><label>Max Wyd.</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div>
+                    <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);">
+                        <div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div>
+                        <div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div>
+                        <div class="form-group"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div>
+                        <div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div>
+                        <div class="form-group"><label>Max Wyd.</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div>
                     </div>
                     <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div>
-                        <div class="form-group" style="flex:1;"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div>
+                        <div class="form-group"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div>
                     </div>
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;"><label>Wydano gotówki</label><input type="number" step="1" id="trade-spent" required></div>
-                        <div class="form-group" style="flex:1;"><label>Dźwignia (1=Akcje)</label><input type="number" step="1" min="1" id="trade-leverage" value="1" required></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Wydano gotówki</label><input type="number" step="1" id="trade-spent" required></div>
+                        <div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="1" min="1" id="trade-leverage" value="1" required></div>
                     </div>
                     <input type="hidden" id="trade-tp"><input type="hidden" id="trade-sl"><input type="hidden" id="trade-score">
                     <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">🛒 Zarejestruj Transakcję</button>
                 </form>
             </div>
             <div class="journal-main">
-                <div class="table-controls" style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center;">
-                    <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze lub nazwie..." oninput="handleTradesFilter()" style="flex: 1; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
-                    <select id="trade-status-filter" onchange="handleTradesFilter()" style="max-width: 200px; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                <div class="table-controls">
+                    <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze lub nazwie..." oninput="handleTradesFilter()">
+                    <select id="trade-status-filter" onchange="handleTradesFilter()">
                         <option value="ALL">Wszystkie Statusy</option>
                         <option value="OPEN" selected>Otwarte</option>
                         <option value="CLOSED">Zamknięte</option>
@@ -299,10 +308,10 @@
         <div class="macro-header-container"><h3>Podsumowanie Portfela</h3></div>
         
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchSummaryTab('dashboard')">Bieżące saldo (Wykres Liniowy)</button>
+            <button class="tab-btn active" onclick="switchSummaryTab('dashboard')">Bieżące saldo</button>
             <button class="tab-btn" onclick="switchSummaryTab('deposits')">Historia depozytu</button>
-            <button class="tab-btn" onclick="switchSummaryTab('open')">Podsumowanie otwartych</button>
-            <button class="tab-btn" onclick="switchSummaryTab('closed')">Podsumowanie zamkniętych</button>
+            <button class="tab-btn" onclick="switchSummaryTab('open')">Otwarte</button>
+            <button class="tab-btn" onclick="switchSummaryTab('closed')">Zamknięte</button>
         </div>
 
         <div id="tab-dashboard" class="tab-content active">
@@ -312,7 +321,7 @@
                 <div class="kpi-card"><h4>Obecny Zysk (Otwarte)</h4><div class="value sensitive" id="s-openpnl" style="color:var(--accent);">0.00 PLN</div></div>
                 <div class="kpi-card"><h4>Wolna Gotówka</h4><div class="value sensitive" id="s-cash" style="color:var(--success);">0.00 PLN</div></div>
                 <div class="kpi-card"><h4>Wartość Portfela</h4><div class="value sensitive" id="s-total">0.00 PLN</div></div>
-                <div class="kpi-card"><h4>Obecna Stopa Zwrotu (ROI)</h4><div class="value sensitive" id="s-roi" style="color:var(--success);">0.00 %</div></div>
+                <div class="kpi-card"><h4>Obecna Stopa (ROI)</h4><div class="value sensitive" id="s-roi" style="color:var(--success);">0.00 %</div></div>
             </div>
             
             <div class="kpi-grid" style="margin-top: 15px;">
@@ -320,9 +329,9 @@
                 <div class="kpi-card"><h4>Zalewarowanie Konta</h4><div class="value sensitive" id="s-levpct" style="color:#fcd535;">0.00 %</div></div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px;">
                 <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Wartość Otwartych (Zainwestowano + Zysk)</h4>
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Wartość Otwartych (Waluty)</h4>
                     <table class="macro-custom-table">
                         <thead><tr><th>Waluta</th><th>Wartość</th></tr></thead>
                         <tbody id="s-curr-breakdown"></tbody>
@@ -330,7 +339,7 @@
                 </div>
                 
                 <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Wykres Liniowy: Historia ROI % Portfela vs S&P 500</h4>
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Historia ROI % vs S&P 500</h4>
                     <div style="position: relative; height: 250px; width: 100%;">
                         <canvas id="roiChart"></canvas>
                     </div>
@@ -340,11 +349,11 @@
 
         <div id="tab-deposits" class="tab-content">
             <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
-                <form onsubmit="addDeposit(event)" style="display: flex; gap: 10px; flex-wrap:wrap; align-items: flex-end; max-width: 600px; margin-bottom: 20px;">
-                    <div class="form-group" style="margin-bottom:0; flex:1; min-width:120px;"><label>Data</label><input type="date" id="dep-date" required></div>
-                    <div class="form-group" style="margin-bottom:0; flex:1; min-width:120px;"><label>Kwota (na minus = wypłata)</label><input type="number" step="0.01" id="dep-amt" required></div>
-                    <div class="form-group" style="margin-bottom:0; flex:1; min-width:120px;"><label>Waluta</label><select id="dep-cur"><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
-                    <button type="submit" style="background: var(--success); color:#fff; padding: 10px 15px; height: 40px;">Księguj</button>
+                <form onsubmit="addDeposit(event)" class="form-row" style="align-items: flex-end; margin-bottom: 20px;">
+                    <div class="form-group" style="margin-bottom:0;"><label>Data</label><input type="date" id="dep-date" required></div>
+                    <div class="form-group" style="margin-bottom:0;"><label>Kwota (na minus = wypłata)</label><input type="number" step="0.01" id="dep-amt" required></div>
+                    <div class="form-group" style="margin-bottom:0;"><label>Waluta</label><select id="dep-cur"><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+                    <div class="form-group" style="margin-bottom:0;"><label>&nbsp;</label><button type="submit" style="background: var(--success); color:#fff; padding: 10px 15px; border-radius: 6px; border:none; font-weight:bold; height: 40px; cursor: pointer; width: 100%;">Księguj</button></div>
                 </form>
                 
                 <div class="table-responsive">
@@ -357,8 +366,8 @@
         </div>
 
         <div id="tab-open" class="tab-content">
-            <div class="table-controls" style="margin-bottom: 15px;">
-                <select id="s-open-cur-filter" onchange="renderSummaryOpen()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+            <div class="table-controls">
+                <select id="s-open-cur-filter" onchange="renderSummaryOpen()">
                     <option value="ALL">Wszystkie Waluty</option>
                     <option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option>
                 </select>
@@ -379,17 +388,17 @@
         </div>
 
         <div id="tab-closed" class="tab-content">
-            <div class="table-controls" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <select id="s-cls-month-filter" onchange="renderSummaryClosed()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+            <div class="table-controls">
+                <select id="s-cls-month-filter" onchange="renderSummaryClosed()">
                     <option value="ALL">Wszystkie Miesiące</option>
                 </select>
-                <select id="s-cls-cur-filter" onchange="renderSummaryClosed()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                <select id="s-cls-cur-filter" onchange="renderSummaryClosed()">
                     <option value="ALL">Wszystkie Waluty</option>
                     <option value="PLN">PLN</option>
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
                 </select>
-                <select id="s-cls-lev-filter" onchange="renderSummaryClosed()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                <select id="s-cls-lev-filter" onchange="renderSummaryClosed()">
                     <option value="ALL">Wszystkie Dźwignie</option>
                     <option value="1">Akcje (x1)</option>
                     <option value=">1">Z dźwignią (>1)</option>
@@ -398,31 +407,31 @@
                     <option value="5">Dźwignia x5</option>
                     <option value="10">Dźwignia x10</option>
                 </select>
-                <div style="background: #313244; padding: 8px 15px; border-radius: 6px; border: 1px solid #45475a; display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 13px; color: var(--text-muted);">Filtrowany Zysk:</span>
+                <div style="background: #313244; padding: 10px 15px; border-radius: 6px; border: 1px solid #45475a; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                    <span style="font-size: 13px; color: var(--text-muted);">Zysk (Filtry):</span>
                     <span id="s-cls-filtered-total" class="sensitive" style="font-weight: bold; font-size: 15px;">0.00 PLN</span>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
                 <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;">
-                    <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Miesiąca (W PLN)</h4>
+                    <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Miesiąca</h4>
                     <table class="macro-custom-table">
-                        <thead><tr><th>Miesiąc Zamknięcia</th><th>Suma Profit PLN</th></tr></thead>
+                        <thead><tr><th>Miesiąc</th><th>Profit PLN</th></tr></thead>
                         <tbody id="s-cls-month"></tbody>
                     </table>
                 </div>
                 <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;">
                     <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Waluty Bazy</h4>
                     <table class="macro-custom-table">
-                        <thead><tr><th>Waluta Zleceń</th><th>Suma Profit PLN</th></tr></thead>
+                        <thead><tr><th>Waluta</th><th>Profit PLN</th></tr></thead>
                         <tbody id="s-cls-curr"></tbody>
                     </table>
                 </div>
                 <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;">
                     <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Dźwigni</h4>
                     <table class="macro-custom-table">
-                        <thead><tr><th>Poziom Dźwigni</th><th>Suma Profit PLN</th></tr></thead>
+                        <thead><tr><th>Dźwignia</th><th>Profit PLN</th></tr></thead>
                         <tbody id="s-cls-lev"></tbody>
                     </table>
                 </div>
@@ -431,18 +440,21 @@
     </section>
 
     <section id="database-module" class="app-module">
-        <div class="macro-header-container" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div class="macro-header-container" style="display:flex; justify-content:space-between; flex-direction:column; gap:10px;">
             <h3>Panel Sentymentu (Makro)</h3>
-            <div style="display:flex; gap:10px;">
-                <button class="btn-submit" style="width:auto; padding:8px 16px; background:#0284c7; color:#fff;" onclick="forceMacroYTDUpdate(event)">📥 Pobierz YTD</button>
-                <button class="btn-submit" style="width:auto; padding:8px 16px;" onclick="forceMacroUpdate()">Aktualizuj Dzisiaj</button>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn-submit" style="width:100%; padding:10px; background:#0284c7; color:#fff;" onclick="forceMacroYTDUpdate(event)">📥 Pobierz YTD</button>
+                <button class="btn-submit" style="width:100%; padding:10px;" onclick="forceMacroUpdate()">Aktualizuj Dzisiaj</button>
             </div>
         </div>
-        <div class="table-responsive"><table class="macro-custom-table" style="width:100%;"><thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&P 500</th><th>Odczyt</th></tr></thead><tbody id="macro-table-body"></tbody></table></div>
+        <div class="table-responsive" style="margin-top:15px;"><table class="macro-custom-table" style="width:100%;"><thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&P 500</th><th>Odczyt</th></tr></thead><tbody id="macro-table-body"></tbody></table></div>
         <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><span id="macro-page-info">Strona 1 z 1</span><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div>
         <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
             <h3>Baza Tickerów</h3>
-            <div class="input-group" style="max-width:400px; margin-top:15px;"><input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. AAPL)"><button onclick="addTicker()">Dodaj</button></div>
+            <div class="form-row" style="margin-top:15px;">
+                <div class="form-group" style="flex:2;"><input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. AAPL)"></div>
+                <div class="form-group" style="flex:1;"><button onclick="addTicker()" class="btn-submit" style="height:100%;">Dodaj</button></div>
+            </div>
             <div id="db-list-container"></div>
             <div class="pagination-container"><button class="btn-pag" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprz</button><span id="ticker-page-info">Strona 1 z 1</span><button class="btn-pag" id="ticker-next-btn" onclick="changeTickerPage(1)">Nast →</button></div>
         </div>
@@ -450,7 +462,7 @@
 
     <section id="service-module" class="app-module">
         <h2>Panel Admina (Service)</h2>
-        <div class="dashboard-grid" style="grid-template-columns: 1fr; max-width: 600px; margin: 0; padding: 0;">
+        <div class="dashboard-grid" style="grid-template-columns: 1fr; margin: 0; padding: 0;">
             <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;">
                 <h4 style="color: var(--accent); margin-bottom: 15px;">💰 Rejestracja Dywidendy</h4>
                 <form onsubmit="addDividend(event)">
@@ -460,18 +472,18 @@
                             <option value="">Ładowanie pozycji...</option>
                         </select>
                     </div>
-                    <div class="form-row" style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;"><label>Data wpłaty</label><input type="date" id="div-date" required></div>
-                        <div class="form-group" style="flex:1;"><label>Kwota (w walucie)</label><input type="number" step="0.01" id="div-amount" required></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Data wpłaty</label><input type="date" id="div-date" required></div>
+                        <div class="form-group"><label>Kwota (w walucie)</label><input type="number" step="0.01" id="div-amount" required></div>
                     </div>
-                    <button type="submit" style="width: 100%; background: var(--success); color: #fff; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">Zapisz Dywidendę</button>
+                    <button type="submit" class="btn-submit" style="background: var(--success); color: #fff;">Zapisz Dywidendę</button>
                 </form>
             </div>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 12px; max-width:400px; margin-top:10px;">
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top:10px;">
             <h4 style="margin-bottom: 5px;">Ręczne wywołania (CRON)</h4>
-            <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🔔 Wymuś sprawdzenie alertów (SMC)</button>
-            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen tickerów</button>
+            <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🔔 Wymuś sprawdzenie alertów</button>
+            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen</button>
         </div>
         <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div>
     </section>
@@ -480,13 +492,13 @@
         <div class="macro-header-container">
             <h3>Lista Obserwowanych (Focus List)</h3>
         </div>
-        <div class="table-controls" style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
-            <select id="focuslist-status-filter" onchange="handleFocusListFilter()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+        <div class="table-controls">
+            <select id="focuslist-status-filter" onchange="handleFocusListFilter()">
                 <option value="ALL">Wszystkie Statusy</option>
                 <option value="Skupienie">Skupienie</option>
                 <option value="Obserwacja">Obserwacja</option>
             </select>
-            <select id="focuslist-currency-filter" onchange="handleFocusListFilter()" style="padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+            <select id="focuslist-currency-filter" onchange="handleFocusListFilter()">
                 <option value="ALL">Wszystkie Waluty</option>
                 <option value="USD">USD</option>
                 <option value="PLN">PLN</option>
@@ -530,9 +542,9 @@
         <div class="macro-header-container">
             <h3>Historia Wywołanych Alertów</h3>
         </div>
-        <div class="table-controls" style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center;">
-            <input type="text" id="alert-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleAlertsFilter()" style="flex: 1; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
-            <select id="alert-type-filter" onchange="handleAlertsFilter()" style="max-width: 200px; padding: 9px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+        <div class="table-controls">
+            <input type="text" id="alert-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleAlertsFilter()">
+            <select id="alert-type-filter" onchange="handleAlertsFilter()">
                 <option value="ALL">Wszystkie typy</option>
                 <option value="Punkt wejścia">Punkt wejścia</option>
                 <option value="Take Profit">Take Profit</option>
@@ -573,7 +585,7 @@
         </div>
         
         <div class="tabs" style="margin-bottom: 20px;">
-            <button class="tab-btn active" onclick="switchTechTab('harmonics')">Formacje XABCD</button>
+            <button class="tab-btn active" onclick="switchTechTab('harmonics')">XABCD</button>
             <button class="tab-btn" onclick="switchTechTab('elliott')">Fale Elliotta</button>
             <button class="tab-btn" onclick="switchTechTab('rgr')">RGR / oRGR</button>
         </div>
@@ -583,13 +595,13 @@
                 <div class="journal-sidebar">
                     <h4 style="color: var(--accent); margin-bottom: 15px;">Kalkulator XABCD</h4>
                     <form onsubmit="calculateHarmonics(event)">
-                        <div class="form-row" style="display:flex; gap:10px;">
-                            <div class="form-group" style="flex:1;"><label>Punkt X</label><input type="number" step="0.01" id="ha-x" required></div>
-                            <div class="form-group" style="flex:1;"><label>Punkt A</label><input type="number" step="0.01" id="ha-a" required></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Punkt X</label><input type="number" step="0.01" id="ha-x" required></div>
+                            <div class="form-group"><label>Punkt A</label><input type="number" step="0.01" id="ha-a" required></div>
                         </div>
-                        <div class="form-row" style="display:flex; gap:10px;">
-                            <div class="form-group" style="flex:1;"><label>Punkt B</label><input type="number" step="0.01" id="ha-b" required></div>
-                            <div class="form-group" style="flex:1;"><label>Punkt C</label><input type="number" step="0.01" id="ha-c" required></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Punkt B</label><input type="number" step="0.01" id="ha-b" required></div>
+                            <div class="form-group"><label>Punkt C</label><input type="number" step="0.01" id="ha-c" required></div>
                         </div>
                         <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Wylicz Punkt D i Formację</button>
                     </form>
@@ -615,13 +627,13 @@
                                 <option value="DOWN">Spadkowy (Impuls Bessa)</option>
                             </select>
                         </div>
-                        <div class="form-row" style="display:flex; gap:10px;">
-                            <div class="form-group" style="flex:1;"><label>Punkt X (Start)</label><input type="number" step="0.01" id="ew-x" required></div>
-                            <div class="form-group" style="flex:1;"><label>Fala 1 (Koniec)</label><input type="number" step="0.01" id="ew-1" required></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Punkt X (Start)</label><input type="number" step="0.01" id="ew-x" required></div>
+                            <div class="form-group"><label>Fala 1 (Koniec)</label><input type="number" step="0.01" id="ew-1" required></div>
                         </div>
-                        <div class="form-row" style="display:flex; gap:10px;">
-                            <div class="form-group" style="flex:1;"><label>Fala 2 (Koniec)</label><input type="number" step="0.01" id="ew-2" required></div>
-                            <div class="form-group" style="flex:1;"><label>Fala 3 (Koniec)</label><input type="number" step="0.01" id="ew-3" required></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Fala 2 (Koniec)</label><input type="number" step="0.01" id="ew-2" required></div>
+                            <div class="form-group"><label>Fala 3 (Koniec)</label><input type="number" step="0.01" id="ew-3" required></div>
                         </div>
                         <div class="form-group"><label>Fala 4 (Koniec)</label><input type="number" step="0.01" id="ew-4" required></div>
                         <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Sprawdź i Wyznacz Zasięgi</button>
@@ -654,18 +666,18 @@
                                 <option value="ORGR">oRGR (Wzrostowa / Odwrócona)</option>
                             </select>
                         </div>
-                        <div class="form-row" style="display:flex; gap:10px;">
-                            <div class="form-group" style="flex:1;"><label>Lewe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-ls" required></div>
-                            <div class="form-group" style="flex:1;"><label>Lewa Linia Szyi</label><input type="number" step="0.01" id="rgr-ln" required></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Lewe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-ls" required></div>
+                            <div class="form-group"><label>Lewa Linia Szyi</label><input type="number" step="0.01" id="rgr-ln" required></div>
                         </div>
                         <div class="form-group"><label>Głowa (Szczyt absolutny)</label><input type="number" step="0.01" id="rgr-h" required></div>
-                        <div class="form-row" style="display:flex; gap:10px;">
-                            <div class="form-group" style="flex:1;"><label>Prawa Linia Szyi</label><input type="number" step="0.01" id="rgr-rn" required></div>
-                            <div class="form-group" style="flex:1;"><label>Prawe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-rs" required></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Prawa Linia Szyi</label><input type="number" step="0.01" id="rgr-rn" required></div>
+                            <div class="form-group"><label>Prawe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-rs" required></div>
                         </div>
                         <div class="form-group">
-                            <label>Punkt Przebicia Szyi (Opcjonalny)</label>
-                            <input type="number" step="0.01" id="rgr-bp" placeholder="Domyślnie=Prawa Linia Szyi">
+                            <label>Punkt Przebicia Szyi</label>
+                            <input type="number" step="0.01" id="rgr-bp" placeholder="Opcjonalne">
                         </div>
                         <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Zbadaj Formację</button>
                     </form>
@@ -678,7 +690,7 @@
                     <div class="kpi-grid" id="rgr-targets" style="display:none;">
                         <div class="kpi-card"><h4>Kąt Linii Szyi</h4><div class="value" id="rgr-angle" style="color:#89b4fa;">-</div></div>
                         <div class="kpi-card"><h4>Wysokość Głowy</h4><div class="value" id="rgr-height" style="color:var(--text-main);">-</div></div>
-                        <div class="kpi-card"><h4>Zasięg Docelowy (TP)</h4><div class="value" id="rgr-target" style="color:var(--accent);">-</div></div>
+                        <div class="kpi-card"><h4>Zasięg (TP)</h4><div class="value" id="rgr-target" style="color:var(--accent);">-</div></div>
                     </div>
                 </div>
             </div>
@@ -691,30 +703,30 @@
     </section>
 
     <nav class="bottom-nav">
-        <button class="nav-item active" onclick="openDashboard()"><span>🏠</span>Home</button>
-        <button class="nav-item" onclick="openModule('tradeslist-module', 'Trades')"><span>📊</span>Trades</button>
-        <button class="nav-item" onclick="openModule('database-module', 'Baza')"><span>🗄️</span>Baza</button>
+        <button class="nav-item active" onclick="openDashboard()"><span>🏠</span><br>Home</button>
+        <button class="nav-item" onclick="openModule('tradeslist-module', 'Trades')"><span>📊</span><br>Trades</button>
+        <button class="nav-item" onclick="openModule('database-module', 'Baza')"><span>🗄️</span><br>Baza</button>
     </nav>
 
-    <div id="sell-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
-        <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:90%; max-width:400px; border:1px solid var(--border-color);">
+    <div id="sell-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; padding: 15px;">
+        <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:400px; border:1px solid var(--border-color);">
             <h3 style="color:var(--accent); margin-bottom:15px;">Zamknięcie Pozycji (Kalkulator)</h3>
             <input type="hidden" id="sell-trade-id">
             <div class="form-group"><label>Data Sprzedaży</label><input type="date" id="sell-date"></div>
             <div class="form-group"><label>Cena Sprzedaży z platformy</label><input type="number" step="0.0001" id="sell-price" placeholder="np. 154.32"></div>
             
             <div class="form-group" id="sell-cfd-group" style="display:none; border: 1px dashed var(--danger); padding: 10px; border-radius: 6px; margin-bottom: 10px;">
-                <label style="color:var(--danger);">Koszt Prowadzenia CVD/CFD <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz wartość jaka została pobrana w walucie rozliczeniowej. Zostanie odjęta od zysku (Profitu).</small></label>
+                <label style="color:var(--danger);">Koszt Prowadzenia CVD/CFD <br><small style="color:var(--text-muted); font-weight:normal;">Zostanie odjęta od zysku (Profitu).</small></label>
                 <input type="number" step="0.01" id="sell-cfd-cost" value="0">
             </div>
 
             <div class="form-group">
-                <label style="color:var(--success);">Ile % pozycji sprzedajesz? <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz jako procent (np. 50%), ułamek (np. 1/3) lub zostaw 1 dla całości.</small></label>
+                <label style="color:var(--success);">Ile % pozycji sprzedajesz? <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz jako procent (np. 50%), ułamek (np. 1/3) lub 1.</small></label>
                 <input type="text" id="sell-fraction" value="1" placeholder="np. 0.5, 50%, 1/3, 23/41">
             </div>
             <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:10px; border-radius:6px; cursor:pointer;">Anuluj</button>
-                <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">Księguj Zysk</button>
+                <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
+                <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">Księguj Zysk</button>
             </div>
         </div>
     </div>
@@ -726,469 +738,8 @@
             isPrivacyMode = !isPrivacyMode;
             const btn = document.getElementById('privacy-btn');
             btn.innerText = isPrivacyMode ? '🙈' : '👁️';
-            
-            if (isPrivacyMode) {
-                document.body.classList.add('privacy-active');
-            } else {
-                document.body.classList.remove('privacy-active');
-            }
-        }
-
-        function calculateTradeStats(item) {
-            try {
-                const isClosed = (item.status === 'CLOSED' || item.sell_date != null);
-                const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1;
-                const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
-                
-                const buyPrice = parseFloat(item.buy_price) || 0;
-                let cp = buyPrice;
-                if (isClosed && item.sell_price) {
-                    cp = parseFloat(item.sell_price);
-                } else if (tm && tm.price) {
-                    cp = parseFloat(tm.price);
-                }
-                
-                const spent = parseFloat(item.spent) || 0;
-                const lev = parseInt(item.leverage) || 1;
-                const val = spent * lev; 
-                const cfdCost = parseFloat(item.cfd_cost) || 0;
-                const div = parseFloat(item.dividend) || 0;
-                
-                let prof = 0;
-                if (buyPrice !== 0) {
-                    prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost;
-                }
-                
-                const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1));
-                const profPln = prof * usedFx;
-                const valPln = val * usedFx;
-                
-                const tp = parseFloat(item.tp) || 0;
-                const sl = parseFloat(item.sl) || 0;
-                
-                let rr = 0;
-                if (buyPrice - sl !== 0) {
-                    rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod);
-                }
-                
-                let prog = 0; 
-                if (tp - buyPrice !== 0) {
-                    prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod);
-                }
-                
-                let dsl = sl;
-                if (prog >= 1) dsl = tp; 
-                else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); 
-                
-                let pd = prog * 100; 
-                let pc = 'var(--success)';
-                if (pd < 0) { 
-                    pc = 'var(--danger)'; 
-                    if (buyPrice - sl !== 0) {
-                        pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100;
-                    } else {
-                        pd = 0;
-                    }
-                }
-                if (pd > 100) pd = 100;
-                
-                return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx };
-            } catch (error) {
-                console.error("Błąd kalkulacji dla", item.ticker, error);
-                return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 };
-            }
-        }
-
-        function getTradingViewLink(ticker) {
-            if (!ticker) return '#';
-            const cleanTicker = ticker.trim().toUpperCase();
-            const LAYOUT_ID = 'k5llKflB'; 
-            const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/';
-            if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; }
-            const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ'];
-            const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA'];
-            let exchange = '';
-            if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } 
-            else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } 
-            else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; }
-            return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`;
-        }
-
-        function getCurrencyForFrontend(ticker) {
-            if (!ticker) return 'USD';
-            const t = ticker.toUpperCase();
-            if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN';
-            if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR';
-            return 'USD';
-        }
-
-        let macroDataArray = []; let currentMacroPage = 1; const macroPageSize = 10;
-        let tickerDataArray = []; let currentTickerPage = 1; const tickerPageSize = 20;
-        let focusDataArray = []; let currentFocusPage = 1; const focusPageSize = 20; 
-        let formEntriesGlobal = []; 
-        let allTradesData = []; let filteredTradesData = []; let currentTradePage = 1; const tradePageSize = 20;
-        let depositsDataArray = [];
-        let summaryChartInstance = null;
-
-        function openModule(moduleId, moduleTitle) {
-            document.getElementById('dashboard').style.display = 'none';
-            document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
-            document.getElementById(moduleId).style.display = 'block';
-            document.getElementById('app-title').innerText = moduleTitle;
-            document.getElementById('back-btn').style.display = 'flex';
-
-            if (moduleId === 'database-module') { loadDatabase(); loadMacroData(); }
-            if (moduleId === 'alerthistory-module') loadAlertHistory();
-            if (moduleId === 'dailybrief-module') loadDailyBriefs();
-            if (moduleId === 'form-module') initFormModule();
-            if (moduleId === 'focus-module') initFocusModule();
-            if (moduleId === 'tradeslist-module') initTradesModule();
-            if (moduleId === 'summary-module') initSummaryModule();
-            if (moduleId === 'service-module') loadServiceModule();
-            if (moduleId === 'focuslist-module') initFocusListModule();
-        }
-
-        function openDashboard() {
-            document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
-            document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('app-title').innerHTML = 'Quant<span>Desk</span>';
-            document.getElementById('back-btn').style.display = 'none';
-        }
-
-        function loadMacroData() {
-            const tbody = document.getElementById('macro-table-body');
-            if (!tbody) return;
-            fetch(`${API_BASE_URL}/api/macro/history`).then(r => r.json()).then(data => { macroDataArray = Array.isArray(data) ? data : []; currentMacroPage = 1; renderMacroTable(); }).catch(e => {});
-        }
-
-        function renderMacroTable() {
-            const tbody = document.getElementById('macro-table-body');
-            if (macroDataArray.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro w bazie.</td></tr>`; return; }
-            const totalPages = Math.ceil(macroDataArray.length / macroPageSize);
-            const start = (currentMacroPage - 1) * macroPageSize;
-            tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => `<tr><td class="macro-val-date">${row.date || '-'}</td><td class="macro-val-currency sensitive">${row.eurpln || '-'}</td><td class="macro-val-currency sensitive">${row.usdpln || '-'}</td><td class="macro-val-vix">${row.vix || '-'}</td><td style="font-weight: 500;" class="sensitive">${row.sp500 || '-'}</td><td class="macro-val-time">${row.updated_at || '-'}</td></tr>`).join('');
-            document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`;
-        }
-
-        function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
-        async function forceMacroUpdate() { try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } catch (e) { alert("Błąd połączenia z serwerem."); } }
-
-        async function forceMacroYTDUpdate() { 
-            if(typeof event !== 'undefined') {
-                const btn = event.currentTarget;
-                const originalText = btn.innerText;
-                btn.innerText = "⏳ Pobieram YTD (to potrwa 10-20s)...";
-                btn.disabled = true;
-                try { 
-                    const res = await fetch(`${API_BASE_URL}/api/macro/backfill-ytd`, { method: 'POST' }); 
-                    const data = await res.json();
-                    if(res.ok) {
-                        alert(data.message); 
-                        loadMacroData(); 
-                    } else {
-                        alert("Wystąpił błąd: " + data.message);
-                    }
-                } catch (e) { alert("Błąd połączenia z serwerem."); } 
-                finally {
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                }
-            } else {
-                try { 
-                    await fetch(`${API_BASE_URL}/api/macro/backfill-ytd`, { method: 'POST' }); 
-                    loadMacroData(); 
-                } catch (e) {} 
-            }
-        }
-
-        async function loadDatabase() { try { const response = await fetch(`${API_BASE_URL}/api/database`); const dt = await response.json(); tickerDataArray = Array.isArray(dt) ? dt : []; renderMobileList(); } catch (e) {} }
-
-        function renderMobileList() {
-            const container = document.getElementById('db-list-container'); container.innerHTML = '';
-            if (tickerDataArray.length === 0) return;
-            const start = (currentTickerPage - 1) * tickerPageSize;
-            container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `<div class="data-card"><div class="data-card-info"><h4>${item.ticker}</h4><p>Dodano: ${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style="display: flex; align-items: center; gap: 10px;"><span class="price-tag sensitive">${item.price !== null ? item.price + ' $' : '...'}</span><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">📈 TV</a><button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button></div></div>`).join('');
-            document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${Math.ceil(tickerDataArray.length / tickerPageSize)}`;
-        }
-
-        function changeTickerPage(dir) { currentTickerPage += dir; renderMobileList(); }
-        async function addTicker() { const t = document.getElementById('new-ticker').value.trim().toUpperCase(); if (!t) return; try { const res = await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) { document.getElementById('new-ticker').value = ''; loadDatabase(); } } catch (e) {} }
-        async function removeTicker(t) { if (!confirm(`Usunąć ${t}?`)) return; try { const res = await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) loadDatabase(); } catch (e) {} }
-
-        let allAlertsData = []; let filteredAlertsData = []; let currentAlertPage = 1; const alertPageSize = 20;
-        async function loadAlertHistory() { try { const r = await fetch(`${API_BASE_URL}/api/alerts/history`); const data = await r.json(); allAlertsData = Array.isArray(data) ? data : []; handleAlertsFilter(); } catch(e){} }
-        function handleAlertsFilter() {
-            const searchText = (document.getElementById('alert-search').value || '').toLowerCase();
-            const typeFilter = document.getElementById('alert-type-filter').value || 'ALL';
-            filteredAlertsData = allAlertsData.filter(a => {
-                const textMatch = (a.ticker || '').toLowerCase().includes(searchText);
-                const aType = a.alert_type || 'Punkt wejścia'; 
-                const typeMatch = (typeFilter === 'ALL') || (aType === typeFilter);
-                return textMatch && typeMatch;
-            });
-            currentAlertPage = 1; renderAlertsTable();
-        }
-        function renderAlertsTable() {
-            const tbody = document.getElementById("alert-history-tbody");
-            if (filteredAlertsData.length === 0) { tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--text-muted);">Brak alertów.</td></tr>`; return; }
-            const start = (currentAlertPage - 1) * alertPageSize;
-            tbody.innerHTML = filteredAlertsData.slice(start, start + alertPageSize).map(item => {
-                const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>';
-                const aType = item.alert_type || 'Punkt wejścia';
-                let typeColor = '#89b4fa'; if(aType === 'Take Profit') typeColor = '#0ecb81'; if(aType === 'Stop Loss') typeColor = '#f6465d';
-                return `<tr>
-                    <td style="font-size: 0.85em; color: var(--text-muted);">${new Date(item.triggered_at).toLocaleString('pl-PL')}</td>
-                    <td style="font-weight: bold; color: ${typeColor};">${aType}</td>
-                    <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td>
-                    <td>${pb}</td><td style="color: ${item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d'};">${item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej'}</td>
-                    <td class="sensitive" style="font-weight: bold;">${Number(item.target_price).toFixed(2)} $</td>
-                    <td class="sensitive" style="font-size: 0.9em; color: var(--text-muted);">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td>
-                    <td style="color: #a6e3a1; font-weight: bold;">${item.score || 0}/5</td>
-                    <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 TV</a></td>
-                    <td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td>
-                </tr>`;
-            }).join('');
-            document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${Math.ceil(filteredAlertsData.length/alertPageSize)||1}`;
-        }
-        function changeAlertPage(d) { const total = Math.ceil(filteredAlertsData.length / alertPageSize) || 1; if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) { currentAlertPage += d; renderAlertsTable(); } }
-        async function deleteAlert(id) { try { await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); loadAlertHistory(); } catch(e) {} }
-
-        async function loadDailyBriefs() {
-            try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; 
-                if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); }
-            } catch (error) {}
-        }
-
-        // ==========================================
-        // SUMMARY MODULE
-        // ==========================================
-        let summaryOpenSortKey = 'valLev';
-        let summaryOpenSortDir = 'desc';
-
-        function switchSummaryTab(tab) {
-            document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active'));
-            event.currentTarget.classList.add('active'); 
-            document.getElementById('tab-'+tab).classList.add('active');
-            if(tab === 'dashboard' && summaryChartInstance) summaryChartInstance.update();
-        }
-
-        async function initSummaryModule() {
-            if(allTradesData.length === 0) {
-                try {
-                    const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
-                    const dt = await res.json();
-                    allTradesData = Array.isArray(dt) ? dt : [];
-                } catch(e) { allTradesData = []; }
-            }
-            if(tickerDataArray.length === 0) await loadDatabase();
-            if(macroDataArray.length === 0) {
-                try {
-                    const mRes = await fetch(`${API_BASE_URL}/api/macro/history`);
-                    macroDataArray = await mRes.json() || [];
-                } catch(e) {}
-            }
-            try {
-                const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`);
-                const dData = await rD.json();
-                depositsDataArray = Array.isArray(dData) ? dData : [];
-                renderDepositsTable();
-                calculateAndRenderSummary();
-            } catch(e){ console.error(e); }
-        }
-
-        async function loadSummaryData() {
-            if(document.getElementById('summary-module').style.display === 'block') {
-                initSummaryModule();
-            }
-        }
-
-        function calculateAndRenderSummary() {
-            if (!Array.isArray(depositsDataArray)) depositsDataArray = [];
-            if (!Array.isArray(allTradesData)) allTradesData = [];
-
-            let totalDepositsPln = 0;
-            depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount || 0));
-
-            let totalClosedPnlPln = 0;
-            let openInvestedPln = 0;
-            let openProfitPln = 0;
-            let openLevValuePln = 0;
-            
-            const currBreakdown = { PLN: 0, USD: 0, EUR: 0 };
-            const openGrouped = {};
-            const monthSet = new Set();
-
-            allTradesData.forEach(trade => {
-                try {
-                    const s = calculateTradeStats(trade);
-                    const curr = trade.currency || 'USD';
-                    if (s.isClosed) {
-                        totalClosedPnlPln += s.profPln;
-                        let month = 'Brak daty';
-                        if (trade.sell_date && trade.sell_date.length >= 7) {
-                            month = trade.sell_date.substring(0, 7);
-                        }
-                        monthSet.add(month);
-                    } else {
-                        openInvestedPln += s.spentPln;
-                        openProfitPln += s.profPln;
-                        openLevValuePln += s.valPln + s.profPln; 
-                        
-                        const spent = parseFloat(trade.spent) || 0;
-                        const valInCurr = spent + s.prof;
-                        if(currBreakdown[curr] !== undefined) currBreakdown[curr] += valInCurr;
-
-                        const ticker = trade.ticker || 'N/A';
-                        if(!openGrouped[ticker]) openGrouped[ticker] = {inv:0, prof:0, valLev:0, curr: curr};
-                        openGrouped[ticker].inv += spent;
-                        openGrouped[ticker].prof += s.prof;
-                        openGrouped[ticker].valLev += s.val + s.prof;
-                    }
-                } catch(err) { console.error("Błąd agregacji trade", trade, err); }
-            });
-
-            const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
-            const freeCashPln = currentCapitalPln - openInvestedPln;
-            const openPositionsValuePln = openInvestedPln + openProfitPln;
-            const totalPortfolioValuePln = freeCashPln + openPositionsValuePln;
-            
-            let roiPct = 0;
-            if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
-            
-            let levPct = 0;
-            if (totalPortfolioValuePln > 0) levPct = (openLevValuePln / totalPortfolioValuePln) * 100;
-
-            document.getElementById('s-dep').innerText = totalDepositsPln.toFixed(2) + ' PLN';
-            document.getElementById('s-pnl').innerText = totalClosedPnlPln.toFixed(2) + ' PLN';
-            document.getElementById('s-pnl').style.color = totalClosedPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            
-            document.getElementById('s-openpnl').innerText = openProfitPln.toFixed(2) + ' PLN';
-            document.getElementById('s-openpnl').style.color = openProfitPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            
-            document.getElementById('s-cash').innerText = freeCashPln.toFixed(2) + ' PLN';
-            document.getElementById('s-cash').style.color = freeCashPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            
-            document.getElementById('s-total').innerText = totalPortfolioValuePln.toFixed(2) + ' PLN';
-            
-            document.getElementById('s-roi').innerText = roiPct.toFixed(2) + ' %';
-            document.getElementById('s-roi').style.color = roiPct >= 0 ? 'var(--success)' : 'var(--danger)';
-
-            document.getElementById('s-levval').innerText = openLevValuePln.toFixed(2) + ' PLN';
-            document.getElementById('s-levpct').innerText = levPct.toFixed(2) + ' %';
-
-            document.getElementById('s-curr-breakdown').innerHTML = `
-                <tr><td>PLN</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr>
-                <tr><td>USD</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr>
-                <tr><td>EUR</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>
-            `;
-
-            window.summaryOpenData = Object.keys(openGrouped).map(k => ({ ticker: k, ...openGrouped[k] }));
-            renderSummaryOpen();
-
-            const monthSelect = document.getElementById('s-cls-month-filter');
-            if (monthSelect) {
-                const currentMonthVal = monthSelect.value;
-                monthSelect.innerHTML = '<option value="ALL">Wszystkie Miesiące</option>';
-                Array.from(monthSet).sort().reverse().forEach(m => {
-                    monthSelect.innerHTML += `<option value="${m}">${m}</option>`;
-                });
-                if(Array.from(monthSet).includes(currentMonthVal)) monthSelect.value = currentMonthVal;
-            }
-
-            renderSummaryClosed();
-
-            // Automatyczny zapis ROI i rysowanie wykresu
-            fetch(`${API_BASE_URL}/api/portfolio/roi/save`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({roi_pct: roiPct})
-            }).then(() => { drawSummaryChart(); }).catch(e => { drawSummaryChart(); });
-        }
-
-        function renderSummaryClosed() {
-            const fMonth = document.getElementById('s-cls-month-filter').value;
-            const fCur = document.getElementById('s-cls-cur-filter').value;
-            const fLev = document.getElementById('s-cls-lev-filter').value;
-
-            const closedByMonth = {};
-            const closedByCurr = {};
-            const closedByLev = {};
-            let filteredPnlPln = 0;
-
-            allTradesData.forEach(trade => {
-                try {
-                    const s = calculateTradeStats(trade);
-                    if (!s.isClosed) return;
-
-                    const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty';
-                    const curr = trade.currency || 'USD';
-                    const lev = parseInt(trade.leverage) || 1;
-
-                    if (fMonth !== 'ALL' && month !== fMonth) return;
-                    if (fCur !== 'ALL' && curr !== fCur) return;
-                    if (fLev === '>1' && lev <= 1) return;
-                    if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return;
-
-                    filteredPnlPln += s.profPln;
-
-                    if(!closedByMonth[month]) closedByMonth[month] = 0;
-                    closedByMonth[month] += s.profPln;
-
-                    if(!closedByCurr[curr]) closedByCurr[curr] = 0;
-                    closedByCurr[curr] += s.profPln;
-
-                    if(!closedByLev[lev]) closedByLev[lev] = 0;
-                    closedByLev[lev] += s.profPln;
-                } catch(e) {}
-            });
-
-            const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML='';
-            Object.keys(closedByMonth).sort().reverse().forEach(k => { 
-                cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; 
-            });
-            if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
-            
-            const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML='';
-            Object.keys(closedByCurr).sort().forEach(k => { 
-                cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; 
-            });
-            if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
-            
-            const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML='';
-            Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { 
-                cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; 
-            });
-            if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
-
-            const totalEl = document.getElementById('s-cls-filtered-total');
-            if(totalEl) {
-                totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN';
-                totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
-            }
-        }
-
-        function renderSummaryOpen() {
-            const tb = document.getElementById('s-open-tbody');
-            const fCur = document.getElementById('s-open-cur-filter').value;
-            
-            let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur);
-            data.sort((a,b) => {
-                let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey];
-                if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
-                return summaryOpenSortDir==='asc' ? va-vb : vb-va;
-            });
-
-            if(data.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; }
-            tb.innerHTML = data.map(i => `<tr>
-                <td style="font-weight:bold; color:var(--accent);">${i.ticker}</td>
-                <td class="sensitive">${i.inv.toFixed(2)} ${i.curr}</td>
-                <td class="sensitive" style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td>
-                <td class="sensitive">${i.valLev.toFixed(2)} ${i.curr}</td>
-            </tr>`).join('');
-        }
-
-        function sortSummaryOpen(key) {
-            summaryOpenSortDir = (summaryOpenSortKey===key && summaryOpenSortDir==='desc') ? 'asc' : 'desc';
-            summaryOpenSortKey = key; renderSummaryOpen();
+            if (isPrivacyMode) document.body.classList.add('privacy-active');
+            else document.body.classList.remove('privacy-active');
         }
 
         function renderDepositsTable() {
@@ -1204,31 +755,6 @@
                 <td class="sensitive" style="color:var(--success); font-weight:bold;">${Number(x.amount_pln || x.amount || 0).toFixed(2)} PLN</td>
                 <td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td>
             </tr>`).join('');
-        }
-
-        async function addDeposit(e) { 
-            e.preventDefault();
-            const amt = document.getElementById('dep-amt').value; 
-            const d = document.getElementById('dep-date').value; 
-            const cur = document.getElementById('dep-cur').value;
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); 
-                if(!res.ok) {
-                    const err = await res.json();
-                    alert("Wystąpił błąd przy dodawaniu wpłaty: " + (err.message));
-                } else {
-                    document.getElementById('dep-amt').value = '';
-                }
-            } catch(err) { alert("Błąd połączenia z serwerem."); }
-            initSummaryModule();
-        }
-
-        async function deleteDeposit(id) { 
-            if(!confirm("Na pewno usunąć? Saldo ulegnie zmianie.")) return;
-            try {
-                await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); 
-            } catch(e) {}
-            initSummaryModule(); 
         }
 
         async function drawSummaryChart() {
@@ -1303,152 +829,210 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
+                        interaction: { mode: 'index', intersect: false },
                         scales: { 
-                            y: { 
-                                grid: {color: 'rgba(255,255,255,0.05)'}, 
-                                ticks: {color: '#cdd6f4'} 
-                            }, 
-                            x: { 
-                                grid: {display: false}, 
-                                ticks: {color: '#cdd6f4', maxTicksLimit: 10} 
-                            } 
+                            y: { grid: {color: 'rgba(255,255,255,0.05)'}, ticks: {color: '#cdd6f4'} }, 
+                            x: { grid: {display: false}, ticks: {color: '#cdd6f4', maxTicksLimit: 10} } 
                         },
                         plugins: { 
                             legend: { display: true, position: 'top', labels: {color: '#cdd6f4'} },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
-                                    }
-                                }
-                            }
+                            tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + c.parsed.y.toFixed(2) + '%'; } } }
                         }
                     }
                 });
-            } catch (err) {
-                console.error("Błąd rysowania wykresu", err);
+            } catch (err) { console.error("Błąd wykresu", err); }
+        }
+
+        function calculateAndRenderSummary() {
+            if (!Array.isArray(depositsDataArray)) depositsDataArray = [];
+            if (!Array.isArray(allTradesData)) allTradesData = [];
+
+            let totalDepositsPln = 0;
+            depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount || 0));
+
+            let totalClosedPnlPln = 0; let openInvestedPln = 0; let openProfitPln = 0; let openLevValuePln = 0;
+            const currBreakdown = { PLN: 0, USD: 0, EUR: 0 }; const openGrouped = {}; const monthSet = new Set();
+
+            allTradesData.forEach(trade => {
+                try {
+                    const s = calculateTradeStats(trade); const curr = trade.currency || 'USD';
+                    if (s.isClosed) {
+                        totalClosedPnlPln += s.profPln;
+                        let month = 'Brak daty'; if (trade.sell_date && trade.sell_date.length >= 7) month = trade.sell_date.substring(0, 7);
+                        monthSet.add(month);
+                    } else {
+                        openInvestedPln += s.spentPln; openProfitPln += s.profPln; openLevValuePln += s.valPln + s.profPln; 
+                        const spent = parseFloat(trade.spent) || 0; const valInCurr = spent + s.prof;
+                        if(currBreakdown[curr] !== undefined) currBreakdown[curr] += valInCurr;
+                        const ticker = trade.ticker || 'N/A';
+                        if(!openGrouped[ticker]) openGrouped[ticker] = {inv:0, prof:0, valLev:0, curr: curr};
+                        openGrouped[ticker].inv += spent; openGrouped[ticker].prof += s.prof; openGrouped[ticker].valLev += s.val + s.prof;
+                    }
+                } catch(err) { console.error(err); }
+            });
+
+            const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
+            const freeCashPln = currentCapitalPln - openInvestedPln;
+            const openPositionsValuePln = openInvestedPln + openProfitPln;
+            const totalPortfolioValuePln = freeCashPln + openPositionsValuePln;
+            
+            let roiPct = 0; if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
+            let levPct = 0; if (totalPortfolioValuePln > 0) levPct = (openLevValuePln / totalPortfolioValuePln) * 100;
+
+            document.getElementById('s-dep').innerText = totalDepositsPln.toFixed(2) + ' PLN';
+            document.getElementById('s-pnl').innerText = totalClosedPnlPln.toFixed(2) + ' PLN';
+            document.getElementById('s-pnl').style.color = totalClosedPnlPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('s-openpnl').innerText = openProfitPln.toFixed(2) + ' PLN';
+            document.getElementById('s-openpnl').style.color = openProfitPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('s-cash').innerText = freeCashPln.toFixed(2) + ' PLN';
+            document.getElementById('s-cash').style.color = freeCashPln >= 0 ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('s-total').innerText = totalPortfolioValuePln.toFixed(2) + ' PLN';
+            document.getElementById('s-roi').innerText = roiPct.toFixed(2) + ' %';
+            document.getElementById('s-roi').style.color = roiPct >= 0 ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('s-levval').innerText = openLevValuePln.toFixed(2) + ' PLN';
+            document.getElementById('s-levpct').innerText = levPct.toFixed(2) + ' %';
+
+            document.getElementById('s-curr-breakdown').innerHTML = `
+                <tr><td>PLN</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr>
+                <tr><td>USD</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr>
+                <tr><td>EUR</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>
+            `;
+
+            window.summaryOpenData = Object.keys(openGrouped).map(k => ({ ticker: k, ...openGrouped[k] }));
+            renderSummaryOpen();
+
+            const monthSelect = document.getElementById('s-cls-month-filter');
+            if (monthSelect) {
+                const currentMonthVal = monthSelect.value; monthSelect.innerHTML = '<option value="ALL">Wszystkie Miesiące</option>';
+                Array.from(monthSet).sort().reverse().forEach(m => { monthSelect.innerHTML += `<option value="${m}">${m}</option>`; });
+                if(Array.from(monthSet).includes(currentMonthVal)) monthSelect.value = currentMonthVal;
             }
+
+            renderSummaryClosed();
+
+            // Automatyczny zapis ROI i rysowanie wykresu
+            fetch(`${API_BASE_URL}/api/portfolio/roi/save`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({roi_pct: roiPct})
+            }).then(() => { drawSummaryChart(); }).catch(e => { drawSummaryChart(); });
         }
 
-        // ==========================================
-        // INNE MODUŁY I SKRYPTY
-        // ==========================================
-        let formEntries = []; let filteredFormEntries = []; let formCurrentPage = 1; const formRowsPerPage = 6; let formSortKey = 'created_at'; let formSortDir = 'desc'; let formFilterText = '';
-
-        async function initFormModule() {
-            if(tickerDataArray.length === 0) await loadDatabase(); 
-            const select = document.getElementById('form-ticker'); select.innerHTML = ''; tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; });
-            loadFormReasons(); fetchFormEntries(); document.getElementById('trading-form').onsubmit = submitAdvancedForm; updateFormTvLink(); 
-        }
-
-        async function fetchFormEntries() {
+        // --- Zabezpieczenia Kalkulatorów i Tickerów ---
+        function calculateTradeStats(item) {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/form/entries`);
-                const rawData = await response.json();
-                formEntries = Array.isArray(rawData) ? rawData.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : [];
-                applyFormFilterAndSort(); 
-            } catch (error) { formEntries = []; applyFormFilterAndSort(); }
+                const isClosed = (item.status === 'CLOSED' || item.sell_date != null);
+                const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1;
+                const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
+                const buyPrice = parseFloat(item.buy_price) || 0;
+                let cp = buyPrice; if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } else if (tm && tm.price) { cp = parseFloat(tm.price); }
+                const spent = parseFloat(item.spent) || 0; const lev = parseInt(item.leverage) || 1; const val = spent * lev; 
+                const cfdCost = parseFloat(item.cfd_cost) || 0; const div = parseFloat(item.dividend) || 0;
+                let prof = 0; if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; }
+                const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1));
+                const profPln = prof * usedFx; const valPln = val * usedFx;
+                const tp = parseFloat(item.tp) || 0; const sl = parseFloat(item.sl) || 0;
+                let rr = 0; if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); }
+                let prog = 0; if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); }
+                let dsl = sl; if (prog >= 1) dsl = tp; else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); 
+                let pd = prog * 100; let pc = 'var(--success)';
+                if (pd < 0) { pc = 'var(--danger)'; if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } else { pd = 0; } }
+                if (pd > 100) pd = 100;
+                return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx };
+            } catch (error) { return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; }
         }
 
+        // --- SKRÓCONY RESZTA WIDOKÓW ---
+        function renderSummaryClosed() {
+            const fMonth = document.getElementById('s-cls-month-filter').value; const fCur = document.getElementById('s-cls-cur-filter').value; const fLev = document.getElementById('s-cls-lev-filter').value;
+            const closedByMonth = {}; const closedByCurr = {}; const closedByLev = {}; let filteredPnlPln = 0;
+            allTradesData.forEach(trade => {
+                try {
+                    const s = calculateTradeStats(trade); if (!s.isClosed) return;
+                    const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty'; const curr = trade.currency || 'USD'; const lev = parseInt(trade.leverage) || 1;
+                    if (fMonth !== 'ALL' && month !== fMonth) return; if (fCur !== 'ALL' && curr !== fCur) return; if (fLev === '>1' && lev <= 1) return; if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return;
+                    filteredPnlPln += s.profPln;
+                    if(!closedByMonth[month]) closedByMonth[month] = 0; closedByMonth[month] += s.profPln;
+                    if(!closedByCurr[curr]) closedByCurr[curr] = 0; closedByCurr[curr] += s.profPln;
+                    if(!closedByLev[lev]) closedByLev[lev] = 0; closedByLev[lev] += s.profPln;
+                } catch(e) {}
+            });
+            const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML=''; Object.keys(closedByMonth).sort().reverse().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
+            const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML=''; Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
+            const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML=''; Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>';
+            const totalEl = document.getElementById('s-cls-filtered-total'); if(totalEl) { totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN'; totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)'; }
+        }
+
+        function renderSummaryOpen() {
+            const tb = document.getElementById('s-open-tbody'); const fCur = document.getElementById('s-open-cur-filter').value;
+            let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur);
+            data.sort((a,b) => { let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey]; if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); } return summaryOpenSortDir==='asc' ? va-vb : vb-va; });
+            if(data.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; }
+            tb.innerHTML = data.map(i => `<tr><td style="font-weight:bold; color:var(--accent);">${i.ticker}</td><td class="sensitive">${i.inv.toFixed(2)} ${i.curr}</td><td class="sensitive" style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td><td class="sensitive">${i.valLev.toFixed(2)} ${i.curr}</td></tr>`).join('');
+        }
+        function sortSummaryOpen(key) { summaryOpenSortDir = (summaryOpenSortKey===key && summaryOpenSortDir==='desc') ? 'asc' : 'desc'; summaryOpenSortKey = key; renderSummaryOpen(); }
+
+        // Fetching API Functions
+        async function loadSummaryData() { if(document.getElementById('summary-module').style.display === 'block') { initSummaryModule(); } }
+        async function initSummaryModule() {
+            if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); const dt = await res.json(); allTradesData = Array.isArray(dt) ? dt : []; } catch(e) { allTradesData = []; } }
+            if(tickerDataArray.length === 0) await loadDatabase();
+            if(macroDataArray.length === 0) { try { const mRes = await fetch(`${API_BASE_URL}/api/macro/history`); macroDataArray = await mRes.json() || []; } catch(e) {} }
+            try { const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); const dData = await rD.json(); depositsDataArray = Array.isArray(dData) ? dData : []; renderDepositsTable(); calculateAndRenderSummary(); } catch(e){ console.error(e); }
+        }
+
+        function getTradingViewLink(ticker) { if (!ticker) return '#'; const cleanTicker = ticker.trim().toUpperCase(); const LAYOUT_ID = 'k5llKflB'; const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/'; if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; } const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ']; const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA']; let exchange = ''; if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; } return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`; }
+        function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = ticker.toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
+        
+        async function loadDatabase() { try { const response = await fetch(`${API_BASE_URL}/api/database`); const dt = await response.json(); tickerDataArray = Array.isArray(dt) ? dt : []; renderMobileList(); } catch (e) {} }
+        function renderMobileList() { const container = document.getElementById('db-list-container'); container.innerHTML = ''; if (tickerDataArray.length === 0) return; const start = (currentTickerPage - 1) * tickerPageSize; container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `<div class="data-card"><div class="data-card-info"><h4>${item.ticker}</h4><p>Dodano: ${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style="display: flex; align-items: center; gap: 10px;"><span class="price-tag sensitive">${item.price !== null ? item.price + ' $' : '...'}</span><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">📈 TV</a><button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button></div></div>`).join(''); document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${Math.ceil(tickerDataArray.length / tickerPageSize)}`; }
+        function changeTickerPage(dir) { currentTickerPage += dir; renderMobileList(); }
+        async function addTicker() { const t = document.getElementById('new-ticker').value.trim().toUpperCase(); if (!t) return; try { const res = await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) { document.getElementById('new-ticker').value = ''; loadDatabase(); } } catch (e) {} }
+        async function removeTicker(t) { if (!confirm(`Usunąć ${t}?`)) return; try { const res = await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); if (res.ok) loadDatabase(); } catch (e) {} }
+        function loadMacroData() { const tbody = document.getElementById('macro-table-body'); if (!tbody) return; fetch(`${API_BASE_URL}/api/macro/history`).then(r => r.json()).then(data => { macroDataArray = Array.isArray(data) ? data : []; currentMacroPage = 1; renderMacroTable(); }).catch(e => {}); }
+        function renderMacroTable() { const tbody = document.getElementById('macro-table-body'); if (macroDataArray.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro w bazie.</td></tr>`; return; } const totalPages = Math.ceil(macroDataArray.length / macroPageSize); const start = (currentMacroPage - 1) * macroPageSize; tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => `<tr><td class="macro-val-date">${row.date || '-'}</td><td class="macro-val-currency sensitive">${row.eurpln || '-'}</td><td class="macro-val-currency sensitive">${row.usdpln || '-'}</td><td class="macro-val-vix">${row.vix || '-'}</td><td style="font-weight: 500;" class="sensitive">${row.sp500 || '-'}</td><td class="macro-val-time">${row.updated_at || '-'}</td></tr>`).join(''); document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`; }
+        function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
+        async function forceMacroUpdate() { try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } catch (e) { alert("Błąd połączenia z serwerem."); } }
+
+        async function addDeposit(e) { e.preventDefault(); const amt = document.getElementById('dep-amt').value; const d = document.getElementById('dep-date').value; const cur = document.getElementById('dep-cur').value; try { const res = await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); if(!res.ok) { const err = await res.json(); alert("Wystąpił błąd przy dodawaniu wpłaty: " + (err.message)); } else { document.getElementById('dep-amt').value = ''; } } catch(err) { alert("Błąd połączenia z serwerem."); } initSummaryModule(); }
+        async function deleteDeposit(id) { if(!confirm("Na pewno usunąć? Saldo ulegnie zmianie.")) return; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); } catch(e) {} initSummaryModule(); }
+        
+        async function loadAlertHistory() { try { const r = await fetch(`${API_BASE_URL}/api/alerts/history`); const data = await r.json(); allAlertsData = Array.isArray(data) ? data : []; handleAlertsFilter(); } catch(e){} }
+        function handleAlertsFilter() { const searchText = (document.getElementById('alert-search').value || '').toLowerCase(); const typeFilter = document.getElementById('alert-type-filter').value || 'ALL'; filteredAlertsData = allAlertsData.filter(a => { const textMatch = (a.ticker || '').toLowerCase().includes(searchText); const aType = a.alert_type || 'Punkt wejścia'; const typeMatch = (typeFilter === 'ALL') || (aType === typeFilter); return textMatch && typeMatch; }); currentAlertPage = 1; renderAlertsTable(); }
+        function renderAlertsTable() { const tbody = document.getElementById("alert-history-tbody"); if (filteredAlertsData.length === 0) { tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--text-muted);">Brak alertów.</td></tr>`; return; } const start = (currentAlertPage - 1) * alertPageSize; tbody.innerHTML = filteredAlertsData.slice(start, start + alertPageSize).map(item => { const pb = item.priority === 1 ? '<span style="color: #fcd535; font-weight: bold;">⚡ Wysoki</span>' : '<span style="color: var(--text-muted);">Normalny</span>'; const aType = item.alert_type || 'Punkt wejścia'; let typeColor = '#89b4fa'; if(aType === 'Take Profit') typeColor = '#0ecb81'; if(aType === 'Stop Loss') typeColor = '#f6465d'; return `<tr> <td style="font-size: 0.85em; color: var(--text-muted);">${new Date(item.triggered_at).toLocaleString('pl-PL')}</td> <td style="font-weight: bold; color: ${typeColor};">${aType}</td> <td style="font-weight: bold; color: var(--accent);">${item.ticker}</td> <td>${pb}</td><td style="color: ${item.condition === 'ABOVE' ? '#0ecb81' : '#f6465d'};">${item.condition === 'ABOVE' ? 'Powyżej' : 'Poniżej'}</td> <td class="sensitive" style="font-weight: bold;">${Number(item.target_price).toFixed(2)} $</td> <td class="sensitive" style="font-size: 0.9em; color: var(--text-muted);">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td> <td style="color: #a6e3a1; font-weight: bold;">${item.score || 0}/5</td> <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 TV</a></td> <td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td> </tr>`; }).join(''); document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${Math.ceil(filteredAlertsData.length/alertPageSize)||1}`; }
+        function changeAlertPage(d) { const total = Math.ceil(filteredAlertsData.length / alertPageSize) || 1; if (currentAlertPage + d >= 1 && currentAlertPage + d <= total) { currentAlertPage += d; renderAlertsTable(); } }
+        async function deleteAlert(id) { try { await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); loadAlertHistory(); } catch(e) {} }
+        
+        async function loadDailyBriefs() { try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); } } catch (error) {} }
+
+        async function initFormModule() { if(tickerDataArray.length === 0) await loadDatabase(); const select = document.getElementById('form-ticker'); select.innerHTML = ''; tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); loadFormReasons(); fetchFormEntries(); document.getElementById('trading-form').onsubmit = submitAdvancedForm; updateFormTvLink(); }
+        async function fetchFormEntries() { try { const response = await fetch(`${API_BASE_URL}/api/form/entries`); const rawData = await response.json(); formEntries = Array.isArray(rawData) ? rawData.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : []; applyFormFilterAndSort(); } catch (error) { formEntries = []; applyFormFilterAndSort(); } }
         function handleFormFilter(value) { formFilterText = value.toLowerCase(); formCurrentPage = 1; applyFormFilterAndSort(); }
         function handleFormSort(key) { formSortDir = (formSortKey === key && formSortDir === 'asc') ? 'desc' : 'asc'; formSortKey = key; updateFormSortIcons(); applyFormFilterAndSort(); }
         function updateFormSortIcons() { ['entry_id', 'ticker', 'direction', 'score', 'priority', 'mute'].forEach(col => { const icon = document.getElementById(`sort-icon-${col}`); if (icon) icon.innerText = formSortKey === col ? (formSortDir === 'asc' ? ' ▲' : ' ▼') : ' ─'; }); }
-
-        function applyFormFilterAndSort() {
-            filteredFormEntries = formEntries.filter(entry => (entry.ticker || '').toLowerCase().includes(formFilterText) || (entry.direction || '').toLowerCase().includes(formFilterText)).sort((a, b) => {
-                let valA = a[formSortKey] || ''; let valB = b[formSortKey] || '';
-                if (['score', 'priority', 'mute'].includes(formSortKey)) return formSortDir === 'asc' ? valA - valB : valB - valA;
-                if (valA < valB) return formSortDir === 'asc' ? -1 : 1;
-                if (valA > valB) return formSortDir === 'asc' ? 1 : -1;
-                return 0;
-            });
-            renderAdvancedFormTable();
-        }
-
-        function renderAdvancedFormTable() {
-            const tbody = document.getElementById('form-table-body'); tbody.innerHTML = '';
-            const itemsToDisplay = filteredFormEntries.slice((formCurrentPage - 1) * formRowsPerPage, formCurrentPage * formRowsPerPage);
-            itemsToDisplay.forEach(item => {
-                const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); const mod = isLong ? 1 : -1;
-                const entry = parseFloat(item.entry_point); const sl = parseFloat(item.stop_loss); const tp = parseFloat(item.take_profit);
-                let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
-                const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
-                const diff = (Math.abs(currentPrice - entry) / entry) * 100;
-                let status = diff > 15 ? 'Ignorowanie' : (diff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
-                let statusColor = diff > 15 ? '#f6465d' : (diff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
-                const tvLink = getTradingViewLink(item.ticker); const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
-                const priorityBadge = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`;
-                const muteBadge = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`;
-
-                tbody.innerHTML += `<tr>
-                    <td style="font-weight:bold;">${item.entry_id}</td>
-                    <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
-                    <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
-                    <td class="sensitive" style="font-weight: 600;">${entry.toFixed(2)} $</td>
-                    <td>${priorityBadge}</td><td>${muteBadge}</td>
-                    <td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td>
-                    <td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
-                    <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a></td>
-                    <td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
-                </tr>`;
-            });
-            document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`;
-        }
-
+        function applyFormFilterAndSort() { filteredFormEntries = formEntries.filter(entry => (entry.ticker || '').toLowerCase().includes(formFilterText) || (entry.direction || '').toLowerCase().includes(formFilterText)).sort((a, b) => { let valA = a[formSortKey] || ''; let valB = b[formSortKey] || ''; if (['score', 'priority', 'mute'].includes(formSortKey)) return formSortDir === 'asc' ? valA - valB : valB - valA; if (valA < valB) return formSortDir === 'asc' ? -1 : 1; if (valA > valB) return formSortDir === 'asc' ? 1 : -1; return 0; }); renderAdvancedFormTable(); }
+        function renderAdvancedFormTable() { const tbody = document.getElementById('form-table-body'); tbody.innerHTML = ''; const itemsToDisplay = filteredFormEntries.slice((formCurrentPage - 1) * formRowsPerPage, formCurrentPage * formRowsPerPage); itemsToDisplay.forEach(item => { const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); const mod = isLong ? 1 : -1; const entry = parseFloat(item.entry_point); const sl = parseFloat(item.stop_loss); const tp = parseFloat(item.take_profit); let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0; const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; const diff = (Math.abs(currentPrice - entry) / entry) * 100; let status = diff > 15 ? 'Ignorowanie' : (diff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja')); let statusColor = diff > 15 ? '#f6465d' : (diff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c')); const tvLink = getTradingViewLink(item.ticker); const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1; const priorityBadge = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki (1)</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny (0)</span>`; const muteBadge = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak (1)</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie (0)</span>`; tbody.innerHTML += `<tr><td style="font-weight:bold;">${item.entry_id}</td><td style="font-weight:bold; color:var(--accent);">${item.ticker}</td><td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td><td class="sensitive" style="font-weight: 600;">${entry.toFixed(2)} $</td><td>${priorityBadge}</td><td>${muteBadge}</td><td style="color:${statusColor}; font-weight:bold;">${status} (${diff.toFixed(1)}%)</td><td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td><td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a></td><td><button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td></tr>`; }); document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`; }
         function changeFormPage(direction) { formCurrentPage += direction; renderAdvancedFormTable(); }
-
-        async function submitAdvancedForm(e) {
-            e.preventDefault();
-            const data = { ticker: document.getElementById('form-ticker').value, direction: document.getElementById('form-direction').value, priority: document.getElementById('form-priority').value, start_zone: document.getElementById('form-start').value, end_zone: document.getElementById('form-end').value, entry_point: document.getElementById('form-entry').value, take_profit: document.getElementById('form-tp').value, reasons: [document.getElementById('form-reason-1')?.value || '', document.getElementById('form-reason-2')?.value || '', document.getElementById('form-reason-3')?.value || '', document.getElementById('form-reason-4')?.value || '', document.getElementById('form-reason-5')?.value || ''].filter(r => r.trim() !== '') };
-            if(!data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) return alert('Uzupełnij wszystkie pola liczbowe!');
-            try { await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); document.getElementById('trading-form').reset(); fetchFormEntries(); loadFormReasons(); } catch(err) {}
-        }
-        
+        async function submitAdvancedForm(e) { e.preventDefault(); const data = { ticker: document.getElementById('form-ticker').value, direction: document.getElementById('form-direction').value, priority: document.getElementById('form-priority').value, start_zone: document.getElementById('form-start').value, end_zone: document.getElementById('form-end').value, entry_point: document.getElementById('form-entry').value, take_profit: document.getElementById('form-tp').value, reasons: [document.getElementById('form-reason-1')?.value || '', document.getElementById('form-reason-2')?.value || '', document.getElementById('form-reason-3')?.value || '', document.getElementById('form-reason-4')?.value || '', document.getElementById('form-reason-5')?.value || ''].filter(r => r.trim() !== '') }; if(!data.start_zone || !data.end_zone || !data.entry_point || !data.take_profit) return alert('Uzupełnij wszystkie pola liczbowe!'); try { await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); document.getElementById('trading-form').reset(); fetchFormEntries(); loadFormReasons(); } catch(err) {} }
         async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(); } catch(e) {} }
         async function updateFormEntryField(entryId, field, newValue) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: entryId, field: field, value: newValue }) }); fetchFormEntries(); } catch(e){} }
         async function loadFormReasons() { try { const res = await fetch(`${API_BASE_URL}/api/form/reasons`); const reasons = await res.json(); const datalist = document.getElementById('reasons-list'); datalist.innerHTML = ''; if(Array.isArray(reasons)) { reasons.forEach(r => { datalist.innerHTML += `<option value="${r}">`; }); } } catch(e) {} }
-
         function toggleFibo() { const drawer = document.getElementById('fibo-drawer'); drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; if (drawer.style.display === 'block') updateFiboLabels(); }
-        function updateFiboLabels() {
-            const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const direction = document.getElementById('form-direction').value; const select = document.getElementById('fibo-level');
-            if (!select) return; const levels = [1.272, 1.618, 2.000, 2.618]; const currentSelected = select.value; select.innerHTML = ''; 
-            levels.forEach(lvl => {
-                let optionText = lvl.toFixed(3);
-                if (!isNaN(start) && !isNaN(peak)) { let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * lvl : peak - (start - peak) * lvl; optionText += ` (cena: ${calculatedPrice.toFixed(2)})`; }
-                const opt = document.createElement('option'); opt.value = lvl.toString(); opt.textContent = optionText; if (lvl.toString() === currentSelected) opt.selected = true; select.appendChild(opt);
-            });
-        }
-
-        function applyFibo() {
-            const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const level = parseFloat(document.getElementById('fibo-level').value); const direction = document.getElementById('form-direction').value;
-            if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
-            const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * level : peak - (start - peak) * level; document.getElementById('form-tp').value = tp.toFixed(2); toggleFibo();
-        }
+        function updateFiboLabels() { const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const direction = document.getElementById('form-direction').value; const select = document.getElementById('fibo-level'); if (!select) return; const levels = [1.272, 1.618, 2.000, 2.618]; const currentSelected = select.value; select.innerHTML = ''; levels.forEach(lvl => { let optionText = lvl.toFixed(3); if (!isNaN(start) && !isNaN(peak)) { let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * lvl : peak - (start - peak) * lvl; optionText += ` (cena: ${calculatedPrice.toFixed(2)})`; } const opt = document.createElement('option'); opt.value = lvl.toString(); opt.textContent = optionText; if (lvl.toString() === currentSelected) opt.selected = true; select.appendChild(opt); }); }
+        function applyFibo() { const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const level = parseFloat(document.getElementById('fibo-level').value); const direction = document.getElementById('form-direction').value; if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.'); const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * level : peak - (start - peak) * level; document.getElementById('form-tp').value = tp.toFixed(2); toggleFibo(); }
         function updateFormTvLink() { const ticker = document.getElementById('form-ticker').value; const linkEl = document.getElementById('form-tv-link'); if (ticker) { linkEl.href = getTradingViewLink(ticker); linkEl.style.display = 'inline-block'; } }
 
-        let filteredFocusListEntries = []; let currentFocusListPage = 1; const focusListPageSize = 20;
-
         async function initFocusListModule() { if(tickerDataArray.length === 0) await loadDatabase(); await fetchFormEntries(); handleFocusListFilter(); }
-
         function handleFocusListFilter() {
             const sFilter = document.getElementById('focuslist-status-filter').value; const cFilter = document.getElementById('focuslist-currency-filter').value;
             filteredFocusListEntries = [];
             formEntries.forEach(item => {
                 const entry = parseFloat(item.entry_point); const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; const diff = (Math.abs(currentPrice - entry) / entry) * 100;
                 let status = ''; if (diff > 15) status = 'Ignorowanie'; else if (diff > 10) status = 'Czekanie'; else if (item.priority === 1) status = 'Skupienie'; else status = 'Obserwacja';
-                if (status !== 'Skupienie' && status !== 'Obserwacja') return;
-                if (sFilter !== 'ALL' && status !== sFilter) return;
-                const currency = getCurrencyForFrontend(item.ticker);
-                if (cFilter !== 'ALL' && currency !== cFilter) return;
+                if (status !== 'Skupienie' && status !== 'Obserwacja') return; if (sFilter !== 'ALL' && status !== sFilter) return;
+                const currency = getCurrencyForFrontend(item.ticker); if (cFilter !== 'ALL' && currency !== cFilter) return;
                 filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: diff });
             });
             filteredFocusListEntries.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); currentFocusListPage = 1; renderFocusListTable();
         }
-
         function renderFocusListTable() {
             const tb = document.getElementById('focuslist-table-body'); if (!tb) return;
             if (filteredFocusListEntries.length === 0) { tb.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów.</td></tr>`; document.getElementById('focuslist-page-info').innerText = 'Strona 0 z 0'; return; }
