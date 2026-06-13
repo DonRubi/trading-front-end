@@ -425,11 +425,18 @@
         // --- FORM MODULE ---
         function initFormModule() { if(tickerDataArray.length === 0) loadDatabase(); const select = document.getElementById('form-ticker'); select.innerHTML = ''; tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); loadFormReasons(); fetchFormEntries(); updateFormTvLink(); }
         
-        function fetchFormEntries() {
-            fetchSWR('/api/form/entries', 'form_cache', (data) => {
-                formEntries = Array.isArray(data) ? data.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : [];
-                applyFormFilterAndSort();
-            });
+        function fetchFormEntries() { 
+            fetchSWR('/api/form/entries', 'form_cache', (data) => { 
+                formEntries = Array.isArray(data) ? data.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : []; 
+                
+                // Odświeża tylko ten moduł, na który właśnie patrzysz
+                if(document.getElementById('form-module').style.display === 'block') {
+                    applyFormFilterAndSort(); 
+                }
+                if(document.getElementById('focuslist-module').style.display === 'block') {
+                    handleFocusListFilter();
+                }
+            }); 
         }
         function handleFormFilter() { formFilterText = document.getElementById('journal-search').value.toLowerCase(); formCurrentPage = 1; applyFormFilterAndSort(); }
         function handleFormSort(key) { formSortDir = (formSortKey === key && formSortDir === 'asc') ? 'desc' : 'asc'; formSortKey = key; applyFormFilterAndSort(); }
@@ -549,13 +556,15 @@
 
         // --- FOCUS LIST ---
         function initFocusListModule() { 
-        if(tickerDataArray.length === 0) loadDatabase(); 
-    
-        // FocusList pobiera dane z cache i ma swój własny mechanizm odświeżania
-        fetchSWR('/api/form/entries', 'form_cache', (data) => { 
-        formEntries = Array.isArray(data) ? data.map(item => ({ ...item, score: item.reasons ? item.reasons.length : 0 })) : []; 
-        handleFocusListFilter(); 
-        }); 
+            if(tickerDataArray.length === 0) loadDatabase(); 
+            
+            // FocusList bazuje w 100% na danych pamięci z modułu Form. 
+            // Brak redundancji zapytania do bazy!
+            if(formEntries.length === 0) {
+                fetchFormEntries();
+            } else {
+                handleFocusListFilter();
+            }
         }
         function handleFocusListFilter() { const sFilter = document.getElementById('focuslist-status-filter').value; const cFilter = document.getElementById('focuslist-currency-filter').value; filteredFocusListEntries = []; formEntries.forEach(item => { const entry = parseFloat(item.entry_point); const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; const diff = (Math.abs(currentPrice - entry) / entry) * 100; let status = ''; if (diff > 15) status = 'Ignorowanie'; else if (diff > 10) status = 'Czekanie'; else if (item.priority === 1) status = 'Skupienie'; else status = 'Obserwacja'; if (status !== 'Skupienie' && status !== 'Obserwacja') return; if (sFilter !== 'ALL' && status !== sFilter) return; const currency = getCurrencyForFrontend(item.ticker); if (cFilter !== 'ALL' && currency !== cFilter) return; filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: diff }); }); filteredFocusListEntries.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); currentFocusListPage = 1; renderFocusListTable(); }
         function renderFocusListTable() { const tb = document.getElementById('focuslist-table-body'); if (!tb) return; if (filteredFocusListEntries.length === 0) { tb.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów.</td></tr>`; document.getElementById('focuslist-page-info').innerText = 'Strona 0 z 0'; return; } const start = (currentFocusListPage - 1) * focusListPageSize; const pageData = filteredFocusListEntries.slice(start, start + focusListPageSize); tb.innerHTML = pageData.map(item => { const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-'; const mod = (item.direction === 'DBR' || item.direction === 'RBR') ? 1 : -1; const entry = parseFloat(item.entry_point); const sl = parseFloat(item.stop_loss); const tp = parseFloat(item.take_profit); let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0; let statusColor = item.calcStatus === 'Skupienie' ? '#0ecb81' : '#848e9c'; const pb = item.priority === 1 ? `<span style="color: #fcd535;">Wysoki</span>` : `<span style="color: var(--text-muted);">Norm</span>`; const mb = item.mute === 1 ? `<span style="color: var(--danger);">🔕</span>` : `<span style="color: var(--success);">🔔</span>`; const r1 = (item.reasons && item.reasons[0]) ? item.reasons[0] : '-'; return `<tr><td style="white-space: nowrap;">${dateStr}</td><td style="font-weight:bold; color:var(--accent);">${item.ticker}</td><td style="font-weight:bold;">${item.calcCurrency}</td><td>${item.direction}</td><td class="sensitive" style="font-weight: 600;">${entry.toFixed(2)}</td><td>${pb}</td><td>${mb}</td><td style="color:${statusColor}; font-weight:bold;">${item.calcStatus} (${item.calcDiff.toFixed(1)}%)</td><td class="sensitive">${rr.toFixed(2)}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r1}">${r1}</td><td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 TV</a></td></tr>`; }).join(''); document.getElementById('focuslist-page-info').innerText = `Strona ${currentFocusListPage} z ${Math.ceil(filteredFocusListEntries.length / focusListPageSize)}`; }
