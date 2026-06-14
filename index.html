@@ -554,6 +554,11 @@
         let allTradesData = [], filteredTradesData = [], currentTradePage = 1, tradePageSize = 20;
         let allAlertsData = [], filteredAlertsData = [], currentAlertPage = 1, alertPageSize = 20;
 
+        // --- BRAKUJĄCE ZMIENNE (Rozwiązanie błędu "Ładowanie...") ---
+        let filteredFocusListEntries = [], currentFocusListPage = 1, focusListPageSize = 20;
+        let summaryChartInstance = null;
+        // -----------------------------------------------------------
+
         let currentEditContext = null;
         let currentEditId = null;
         
@@ -561,6 +566,8 @@
         let formSortKey = 'created_at', formSortDir = 'desc';
         let focusSortKey = 'id', focusSortDir = 'desc';
         let tradeSortKey = 'buy_date', tradeSortDir = 'desc';
+
+        // --- LOCAL CACHING ---
 
         // --- LOCAL CACHING ---
         function getCachedData(key) {
