@@ -1,533 +1,3 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quant Desk v9.3</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root { --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef; --text-muted: #848e9c; --accent: #c99400; --accent-hover: #fcd535; --danger: #f6465d; --success: #0ecb81; --border-color: #2b3139; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-        ::-webkit-scrollbar { height: 8px; width: 8px; } ::-webkit-scrollbar-track { background: var(--bg-main); } ::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-        body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 70px; overflow-x: hidden; width: 100vw; max-width: 100%; }
-        header { background-color: var(--bg-card); padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; width: 100%; box-sizing: border-box; }
-        header h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; } header h1 span { color: var(--accent); }
-        .header-actions { display: flex; align-items: center; gap: 15px; } .back-btn, .privacy-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; } .back-btn { color: var(--accent); font-size: 1rem; display: none; gap: 5px; font-weight: bold; } .privacy-btn { font-size: 1.3rem; filter: grayscale(1); transition: 0.2s; } .privacy-btn:hover { filter: grayscale(0); transform: scale(1.1); }
-        .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 12px; padding: 15px; width: 100%; box-sizing: border-box; } @media (min-width: 480px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } } @media (min-width: 768px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); max-width: 1500px; margin: 0 auto; } } @media (min-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(5, 1fr); } }
-        .menu-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: transform 0.2s, border-color 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; } .menu-card:active { transform: scale(0.95); background-color: #20242c; } .menu-card .icon { font-size: 1.8rem; } .menu-card h3 { font-size: 0.95rem; font-weight: 500; }
-        .app-module { display: none; padding: 15px; animation: fadeIn 0.3s ease-in-out; max-width: 1500px; margin: 0 auto; width: 100%; box-sizing: border-box; } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .journal-container { display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 15px; align-items: start; width: 100%; } @media (min-width: 1025px) { .journal-container { grid-template-columns: 320px 1fr; } }
-        .journal-sidebar { background: #1e1e2e; padding: 15px; border-radius: 8px; border: 1px solid #313244; width: 100%; box-sizing: border-box; }
-        .journal-main { min-width: 0; width: 100%; overflow: hidden; }
-        .form-row { display: flex; flex-wrap: wrap !important; gap: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; } .form-group { flex: 1 1 45%; min-width: 70px; display: flex; flex-direction: column; margin-bottom: 8px; } .form-group label { display: block; margin-bottom: 4px; font-weight: 500; font-size: 12px; color: #cdd6f4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border-radius: 6px; background: #11111b; border: 1px solid #45475a; color: #cdd6f4; box-sizing: border-box; font-family: inherit; font-size: 13px; } .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #89b4fa; }
-        .btn-submit { width: 100%; padding: 12px; background: #89b4fa; color: #11111b; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 14px; margin-top: 5px; box-sizing: border-box; } .btn-submit:hover { background: #b4befe; }
-        .table-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; align-items: stretch; width: 100%; } @media (min-width: 768px) { .table-controls { flex-direction: row; align-items: center; flex-wrap: wrap; } } .table-controls input[type="text"], .table-controls select { width: 100%; padding: 8px 12px; background: #1e1e2e; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4; max-width: 100%; box-sizing: border-box; font-size: 13px; } @media (min-width: 768px) { .table-controls input[type="text"] { flex: 1; max-width: 350px; } .table-controls select { width: auto; max-width: 200px; } }
-        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--border-color); display: block; }
-        #journal-table, .macro-custom-table { width: 100%; border-collapse: collapse; background: #1e1e2e; min-width: max-content; }
-        .btn-edit { background-color: transparent; color: #89b4fa; border: 1px solid #89b4fa; padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight:bold; margin-right: 5px; } #journal-table th, #journal-table td, .macro-custom-table th, .macro-custom-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #313244; font-size: 12.5px; white-space: nowrap; } #journal-table th, .macro-custom-table th { background: #313244; color: #cdd6f4; cursor: pointer; user-select: none; position: sticky; top: 0; z-index: 10; } #journal-table th:hover, .macro-custom-table th:hover { background: #45475a; }
-        .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 5px; width: 100%; } .btn-pag { padding: 8px 16px; background: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; } .btn-pag:disabled { opacity: 0.3; cursor: not-allowed; } .btn-delete { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight:bold; } .btn-delete:active { background-color: var(--danger); color: #fff; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; width: 100%; } .kpi-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; justify-content: center; } .kpi-card h4 { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; } .kpi-card .value { font-size: 1.15rem; font-weight: bold; color: var(--text-main); } @media (min-width: 768px) { .kpi-card { padding: 20px; } .kpi-card .value { font-size: 1.4rem; } }
-        .tabs { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 15px; overflow-x:auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; width: 100%; } .tab-btn { background: none; border: none; padding: 8px 12px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: bold; font-size: 0.9rem; white-space:nowrap; } .tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); } .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; } .tab-content.active { display: block; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 6px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.3); } .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.7rem; display: flex; flex-direction: column; align-items: center; gap: 3px; font-weight: 400; padding: 5px 10px; cursor: pointer; } .nav-item.active { color: var(--accent); } .nav-item span { font-size: 1.1rem; }
-        .brief-carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 10px 5px 20px 5px; scrollbar-width: none; -webkit-overflow-scrolling: touch; width: 100%; } .brief-carousel-container::-webkit-scrollbar { display: none; } .brief-card { flex: 0 0 90%; scroll-snap-align: start; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); } @media (min-width: 768px) { .brief-card { flex: 0 0 calc(50% - 8px); padding: 20px; } } .brief-card h4 { font-size: 1.05rem; color: var(--accent); line-height: 1.3; font-weight: 600; } .brief-text { font-size: 0.9rem; line-height: 1.5; color: var(--text-main); white-space: pre-line; overflow-y: auto; max-height: 340px; padding-right: 5px; } .brief-card-footer { margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 10px; text-align: right; } .brief-link { color: var(--text-muted); font-size: 0.8rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; } .brief-link:hover { color: var(--accent-hover); }
-        body.privacy-active .sensitive { filter: blur(6px); user-select: none; opacity: 0.6; transition: filter 0.3s ease; pointer-events: none; }
-        #edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; padding: 15px; }
-        .modal-box { background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:400px; border:1px solid var(--border-color); max-height: 90vh; overflow-y: auto; }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="header-actions"><button class="back-btn" id="back-btn" onclick="openDashboard()">← Powrót</button><h1 id="app-title">Quant<span>Desk</span></h1></div>
-        <button class="privacy-btn" id="privacy-btn" onclick="togglePrivacy()" title="Tryb ukrycia danych">👁️</button>
-    </header>
-
-    <main id="dashboard">
-        <div class="dashboard-grid">
-            <div class="menu-card" onclick="openModule('form-module', 'Form')"><span class="icon">📝</span><h3>Form</h3></div>
-            <div class="menu-card" onclick="openModule('focus-module', 'Focus')"><span class="icon">🎯</span><h3>Focus</h3></div>
-            <div class="menu-card" onclick="openModule('tradeslist-module', 'TradesList')"><span class="icon">📊</span><h3>TradesList</h3></div>
-            <div class="menu-card" onclick="openModule('summary-module', 'Summary')"><span class="icon">📈</span><h3>Summary</h3></div>
-            <div class="menu-card" onclick="openModule('database-module', 'DataBase')"><span class="icon">🗄️</span><h3>DataBase</h3></div>
-            <div class="menu-card" onclick="openModule('service-module', 'Service')"><span class="icon">⚙️</span><h3>Service</h3></div>
-            <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Tech. Analysis')"><span class="icon">📐</span><h3>Tech. Analysis</h3></div>
-            <div class="menu-card" onclick="openModule('focuslist-module', 'FocusList')"><span class="icon">👁️</span><h3>FocusList</h3></div>
-            <div class="menu-card" onclick="openModule('alerthistory-module', 'Alerts History')"><span class="icon">🔔</span><h3>AlertHistory</h3></div>
-            <div class="menu-card" onclick="openModule('dailybrief-module', 'Daily Brief')"><span class="icon">📰</span><h3>DailyBrief</h3></div>
-        </div>
-    </main>
-
-    <section id="form-module" class="app-module">
-        <div class="macro-header-container"><h3>Kreator Pozycji (Form)</h3></div>
-        <div class="journal-container">
-            <div class="journal-sidebar">
-                <form id="trading-form">
-                    <div class="form-row"><div class="form-group"><label style="display: flex; justify-content: space-between;">Ticker <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label><select id="form-ticker" onchange="updateFormTvLink()"></select></div></div>
-                    <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div></div>
-                    <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div></div>
-                    <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01"></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01"></div>
-                    <div class="form-group"><label>Powody wejścia (Opcjonalne)</label><input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2..."><input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3..."><input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4..."><input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5..."><datalist id="reasons-list"></datalist></div>
-                    <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
-                </form>
-                <button type="button" onclick="toggleFibo()" style="background: none; border: 1px solid var(--accent); color: var(--accent); margin-top: 15px; width: 100%; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: bold;">📐 Otwórz Asystenta Fibo</button>
-                <div id="fibo-drawer" style="display:none; margin-top: 10px; padding: 15px; background: rgba(201,148,0,0.05); border: 1px solid var(--accent); border-radius: 8px;">
-                    <div class="form-row"><div class="form-group"><label>Początek impulsu</label><input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()"></div><div class="form-group"><label>Szczyt impulsu</label><input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()"></div></div>
-                    <div class="form-group"><label>Zewnętrzne zniesienie (Cel)</label><select id="fibo-level"><option value="1.272">1.272</option><option value="1.618">1.618</option><option value="2.000">2.000</option><option value="2.618">2.618</option></select></div>
-                    <button type="button" onclick="applyFibo()" style="width:100%; background:var(--accent); color:#000; border-radius:6px; padding:10px; border:none; font-weight:bold; cursor:pointer;">Zastosuj do Take Profit</button>
-                </div>
-            </div>
-            <div class="journal-main">
-                <div class="table-controls" style="display:flex; gap:10px;">
-                    <input type="text" id="journal-search" placeholder="🔍 Szukaj..." oninput="handleFormFilter()">
-                    <select id="form-mute-filter" onchange="handleFormFilter()">
-                        <option value="ALL">Wszystkie (Wyciszenie)</option>
-                        <option value="0">Aktywne (Nie wyciszone)</option>
-                        <option value="1">Wyciszone (Zignorowane)</option>
-                    </select>
-                </div>
-                <div class="table-responsive">
-                    <table id="journal-table">
-                        <thead><tr>
-                            <th onclick="handleFormSort('entry_id')">ID ↕</th>
-                            <th onclick="handleFormSort('created_at')">Data ↕</th>
-                            <th onclick="handleFormSort('ticker')">Ticker / Spółka ↕</th>
-                            <th onclick="handleFormSort('direction')">Kierunek ↕</th>
-                            <th onclick="handleFormSort('entry_point')">Wejście ↕</th>
-                            <th onclick="handleFormSort('priority')">Priorytet ↕</th>
-                            <th onclick="handleFormSort('mute')">Mute ↕</th>
-                            <th onclick="handleFormSort('diff')">Status ↕</th>
-                            <th onclick="handleFormSort('diff')">Dystans % ↕</th>
-                            <th onclick="handleFormSort('rr')">R:R ↕</th>
-                            <th onclick="handleFormSort('score')">Score ↕</th>
-                            <th>Akcje</th>
-                        </tr></thead>
-                        <tbody id="form-table-body"></tbody>
-                    </table>
-                </div>
-                <div class="pagination-container"><button onclick="changeFormPage(-1)" id="form-prev-page" class="btn-pag">◀ Poprzednia</button><span id="form-page-info">Strona 1 z 1</span><button onclick="changeFormPage(1)" id="form-next-page" class="btn-pag">Następna ▶</button></div>
-            </div>
-        </div>
-    </section>
-
-    <section id="focus-module" class="app-module">
-        <div class="macro-header-container"><h3>Analiza przed Wejściem (Focus)</h3></div>
-        <div class="journal-container">
-            <div class="journal-sidebar">
-                <form id="focus-form" onsubmit="submitFocusForm(event)">
-                    <div class="form-group"><label>Wybierz ID Form</label><select id="focus-form-id" onchange="onFocusIdChange()"></select></div>
-                    <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);"><div class="form-group"><label>Wybrany Ticker</label><input type="text" id="focus-ticker" readonly style="opacity:0.7;"></div><div class="form-group"><label>Kierunek</label><input type="text" id="focus-direction" readonly style="opacity:0.7;"></div></div>
-                    <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC()" style="background: #0284c7; color:#fff; padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; border: none; font-weight: bold; width: 100%;">🤖 Automatyzuj SMC (Yahoo)</button></div>
-                    <div class="form-row"><div class="form-group"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5"></div><div class="form-group"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div></div>
-                    <div class="form-row"><div class="form-group"><label>Luka Sesyjna</label><select id="focus-gap"><option value="1">1.0 (Domknięcie/Zgodna)</option><option value="0.5">0.5 (Neutralna)</option><option value="0">0.0 (Brak luki/Negatywna)</option></select></div><div class="form-group"><label>Kalendarz (Raporty)</label><select id="focus-calendar"><option value="1">1.0 (Bezpiecznie > 30 dni)</option><option value="0.5">0.5 (Blisko < 30 dni)</option><option value="0">0.0 (Ryzyko < 20 dni)</option></select></div></div>
-                    <div class="form-group"><label>CVD Order Flow [0-3]</label><select id="focus-cvd"><option value="3">3.0 - Silna absorpcja</option><option value="2">2.0 - Zgodny trend delty z ceną</option><option value="1">1.0 - Słaba delta / Churn</option><option value="0">0.0 - Negatywne uderzenia</option></select></div>
-                    <div class="form-row"><div class="form-group"><label>VIX Sentyment [0-2]</label><input type="number" id="focus-vix" step="0.5" min="0" max="2" value="1"></div><div class="form-group"><label>Indeks (Siła) [0-2]</label><input type="number" id="focus-index" step="1" min="0" max="2" value="0"></div></div>
-                    <div class="form-group"><label>HTF Market Structure [0-1]</label><select id="focus-htf"><option value="1">1.0 - Zgodny z trendem wyższego rzędu</option><option value="0">0.0 - Pod prąd trendu</option></select></div>
-                    <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">💾 Zapisz Analizę</button>
-                </form>
-            </div>
-            <div class="journal-main">
-                <div class="table-controls"><input type="text" id="focus-search-input" placeholder="🔍 Filtruj po tickerze lub nazwie spółki..." oninput="handleFocusFilter(this.value)"></div>
-                <div class="table-responsive">
-                    <table id="journal-table">
-                        <thead><tr>
-                            <th onclick="handleFocusSort('id')">ID Focus ↕</th>
-                            <th onclick="handleFocusSort('created_at')">Data ↕</th>
-                            <th onclick="handleFocusSort('entry_id')">ID Form ↕</th>
-                            <th onclick="handleFocusSort('ticker')">Ticker / Spółka ↕</th>
-                            <th onclick="handleFocusSort('points_total')">Punkty ↕</th>
-                            <th onclick="handleFocusSort('final_ratio')">Wynik % ↕</th>
-                            <th onclick="handleFocusSort('allocated_pct')">Alokacja % ↕</th>
-                            <th>Rozmiar Pozycji</th>
-                            <th>Akcje</th>
-                        </tr></thead>
-                        <tbody id="focus-table-body"></tbody>
-                    </table>
-                </div>
-                <div class="pagination-container"><button onclick="changeFocusPage(-1)" id="focus-prev-page" class="btn-pag">◀ Poprzednia</button><span id="focus-page-info">Strona 1 z 1</span><button onclick="changeFocusPage(1)" id="focus-next-page" class="btn-pag">Następna ▶</button></div>
-            </div>
-        </div>
-    </section>
-
-    <section id="tradeslist-module" class="app-module">
-        <div class="macro-header-container"><h3>Dziennik Otwartych Pozycji (Trades)</h3></div>
-        <div class="journal-container">
-            <div class="journal-sidebar">
-                <form id="trade-form" onsubmit="submitTradeForm(event)">
-                    <div class="form-group"><label>Powiązane z ID Focus</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Wybierz przeanalizowany Setup...</option></select></div>
-                    <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);"><div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div><div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div><div class="form-group"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div><div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div><div class="form-group"><label>Max Wyd.</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div></div>
-                    <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
-                    <div class="form-row"><div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div><div class="form-group"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div></div>
-                    <div class="form-row"><div class="form-group"><label>Wydano gotówki</label><input type="number" step="1" id="trade-spent" required></div><div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="1" min="1" id="trade-leverage" value="1" required></div></div>
-                    <input type="hidden" id="trade-tp"><input type="hidden" id="trade-sl"><input type="hidden" id="trade-score">
-                    <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">🛒 Zarejestruj Transakcję</button>
-                </form>
-            </div>
-            <div class="journal-main">
-                <div class="table-controls">
-                    <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze lub nazwie spółki..." oninput="handleTradesFilter()">
-                    <select id="trade-status-filter" onchange="handleTradesFilter()"><option value="ALL">Wszystkie Statusy</option><option value="OPEN" selected>Otwarte</option><option value="CLOSED">Zamknięte</option></select>
-                </div>
-                <div class="table-responsive">
-                    <table id="journal-table">
-                        <thead><tr>
-                            <th onclick="handleTradeSort('buy_date')">Data/ID ↕</th>
-                            <th onclick="handleTradeSort('ticker')">Spółka ↕</th>
-                            <th onclick="handleTradeSort('spent')">Zainwestowano ↕</th>
-                            <th onclick="handleTradeSort('buy_price')">Ceny (Wejście/Obecnie) ↕</th>
-                            <th onclick="handleTradeSort('rr')">R:R | Trail SL ↕</th>
-                            <th onclick="handleTradeSort('prof')">Zysk (Waluta) ↕</th>
-                            <th onclick="handleTradeSort('profPln')">Zysk PLN ↕</th>
-                            <th onclick="handleTradeSort('prog')" style="min-width: 150px;">Progres TP ↕</th>
-                            <th>Akcje</th>
-                        </tr></thead>
-                        <tbody id="trades-table-body"></tbody>
-                    </table>
-                </div>
-                <div class="pagination-container"><button onclick="changeTradePage(-1)" id="trade-prev-page" class="btn-pag">◀ Poprzednia</button><span id="trade-page-info">Strona 1 z 1</span><button onclick="changeTradePage(1)" id="trade-next-page" class="btn-pag">Następna ▶</button></div>
-            </div>
-        </div>
-    </section>
-
-    <section id="summary-module" class="app-module"> 
-        <div class="macro-header-container"><h3>Podsumowanie Portfela</h3></div> 
-        <div class="tabs"> 
-            <button class="tab-btn active" onclick="switchSummaryTab('dashboard')">Bieżące saldo (Wykres Liniowy)</button> 
-            <button class="tab-btn" onclick="switchSummaryTab('deposits')">Historia depozytu</button> 
-            <button class="tab-btn" onclick="switchSummaryTab('open')">Podsumowanie otwartych</button> 
-            <button class="tab-btn" onclick="switchSummaryTab('closed')">Podsumowanie zamkniętych</button> 
-        </div> 
-        <div id="tab-dashboard" class="tab-content active"> 
-            <div class="kpi-grid"> 
-                <div class="kpi-card"><h4>Suma Depozytów</h4><div class="value sensitive" id="s-dep">0.00 PLN</div></div> 
-                <div class="kpi-card"><h4>Zysk Zamknięty (PnL)</h4><div class="value sensitive" id="s-pnl" style="color:var(--success);">0.00 PLN</div></div> 
-                <div class="kpi-card"><h4>Obecny Zysk (Otwarte)</h4><div class="value sensitive" id="s-openpnl" style="color:var(--accent);">0.00 PLN</div></div> 
-                <div class="kpi-card"><h4>Wolna Gotówka</h4><div class="value sensitive" id="s-cash" style="color:var(--success);">0.00 PLN</div></div> 
-                <div class="kpi-card"><h4>Wartość Portfela</h4><div class="value sensitive" id="s-total">0.00 PLN</div></div> 
-                <div class="kpi-card"><h4>Obecna Stopa Zwrotu (ROI)</h4><div class="value sensitive" id="s-roi" style="color:var(--success);">0.00 %</div></div> 
-            </div> 
-            <div class="kpi-grid" style="margin-top: 15px;"> 
-                <div class="kpi-card"><h4>Wartość Pozycji (Dźwignia)</h4><div class="value sensitive" id="s-levval">0.00 PLN</div></div> 
-                <div class="kpi-card"><h4>Średnie Zalewarowanie Konta</h4><div class="value sensitive" id="s-levpct" style="color:#fcd535;">x 0.00</div></div> 
-            </div> 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px;"> 
-                <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;"> 
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Wartość Otwartych (Zainwestowano + Zysk)</h4> 
-                    <table class="macro-custom-table"> <thead><tr><th>Waluta</th><th>Wartość</th></tr></thead> <tbody id="s-curr-breakdown"></tbody> </table> 
-                </div> 
-                <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;"> 
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Wykres Liniowy: Historia ROI % Portfela vs S&P 500</h4> 
-                    <div style="position: relative; height: 250px; width: 100%;"> <canvas id="roiChart"></canvas> </div> 
-                </div> 
-            </div> 
-        </div> 
-        <div id="tab-deposits" class="tab-content"> 
-            <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);"> 
-                <form onsubmit="addDeposit(event)" class="form-row" style="align-items: flex-end; margin-bottom: 20px;"> 
-                    <div class="form-group" style="margin-bottom:0;"><label>Data</label><input type="date" id="dep-date" required></div> 
-                    <div class="form-group" style="margin-bottom:0;"><label>Kwota (na minus = wypłata)</label><input type="number" step="0.01" id="dep-amt" required></div> 
-                    <div class="form-group" style="margin-bottom:0;"><label>Waluta</label><select id="dep-cur"><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div> 
-                    <div class="form-group" style="margin-bottom:0;"><label>&nbsp;</label><button type="submit" style="background: var(--success); color:#fff; padding: 10px 15px; border-radius: 6px; border:none; font-weight:bold; height: 40px; cursor: pointer; width: 100%;">Księguj</button></div> 
-                </form> 
-                <div class="table-responsive"> 
-                    <table class="macro-custom-table"> <thead><tr><th>Data Depozytu</th><th>Kwota Oryginalna</th><th>Waluta</th><th>Przeliczone na PLN</th><th>Akcja</th></tr></thead> <tbody id="s-dep-table"><tr><td colspan="5" style="text-align:center;">Ładowanie...</td></tr></tbody> </table> 
-                </div> 
-            </div> 
-        </div> 
-        <div id="tab-open" class="tab-content"> 
-            <div class="table-controls"> 
-                <select id="s-open-cur-filter" onchange="renderSummaryOpen()"> <option value="ALL">Wszystkie Waluty</option> <option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option> </select> 
-            </div> 
-            <div class="table-responsive"> 
-                <table class="macro-custom-table" id="s-open-table">
-                    <thead>
-                        <tr>
-                            <th onclick="sortSummaryOpen('ticker')">Ticker ↕</th>
-                            <th onclick="sortSummaryOpen('invPln')">Zainw. (PLN) ↕</th>
-                            <th onclick="sortSummaryOpen('pctInv')">% Udział (Gotówka) ↕</th>
-                            <th onclick="sortSummaryOpen('pctLev')">% Udział (Dźwignia) ↕</th>
-                            <th onclick="sortSummaryOpen('prof')">Obecny Zysk (Waluta) ↕</th>
-                            <th onclick="sortSummaryOpen('valLev')">Wartość z Dźwignią (Waluta) ↕</th>
-                        </tr>
-                    </thead>
-                    <tbody id="s-open-tbody"></tbody>
-                </table> 
-            </div> 
-        </div> 
-        <div id="tab-closed" class="tab-content"> 
-            <div class="table-controls"> 
-                <select id="s-cls-month-filter" onchange="renderSummaryClosed()"> <option value="ALL">Wszystkie Miesiące</option> </select> 
-                <select id="s-cls-cur-filter" onchange="renderSummaryClosed()"> <option value="ALL">Wszystkie Waluty</option> <option value="PLN">PLN</option> <option value="USD">USD</option> <option value="EUR">EUR</option> </select> 
-                <select id="s-cls-lev-filter" onchange="renderSummaryClosed()"> <option value="ALL">Wszystkie Dźwignie</option> <option value="1">Akcje (x1)</option> <option value=">1">Z dźwignią (>1)</option> <option value="2">Dźwignia x2</option> <option value="3">Dźwignia x3</option> <option value="5">Dźwignia x5</option> <option value="10">Dźwignia x10</option> </select> 
-                <div style="background: #313244; padding: 10px 15px; border-radius: 6px; border: 1px solid #45475a; display: flex; align-items: center; justify-content: space-between; gap: 10px;"> <span style="font-size: 13px; color: var(--text-muted);">Zysk (Filtry):</span> <span id="s-cls-filtered-total" class="sensitive" style="font-weight: bold; font-size: 15px;">0.00 PLN</span> </div> 
-            </div> 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;"> 
-                <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;"> <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Miesiąca</h4> <table class="macro-custom-table"> <thead><tr><th>Miesiąc</th><th>Profit PLN</th></tr></thead> <tbody id="s-cls-month"></tbody> </table> </div> 
-                <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;"> <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Waluty Bazy</h4> <table class="macro-custom-table"> <thead><tr><th>Waluta</th><th>Profit PLN</th></tr></thead> <tbody id="s-cls-curr"></tbody> </table> </div> 
-                <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto;"> <h4 style="color: var(--accent); margin-bottom: 10px;">Zysk wg Dźwigni</h4> <table class="macro-custom-table"> <thead><tr><th>Dźwignia</th><th>Profit PLN</th></tr></thead> <tbody id="s-cls-lev"></tbody> </table> </div> 
-            </div> 
-        </div> 
-    </section>
-
-    <section id="database-module" class="app-module"> 
-        <div class="macro-header-container" style="display:flex; justify-content:space-between; flex-direction:column; gap:10px;"> 
-            <h3>Panel Sentymentu (Makro)</h3> 
-            <div style="display:flex; gap:10px; flex-wrap:wrap;"> 
-                <button class="btn-submit" style="width:100%; padding:10px; background:#0284c7; color:#fff;" onclick="forceMacroYTDUpdate(event)">📥 Pobierz YTD</button> 
-                <button class="btn-submit" style="width:100%; padding:10px;" onclick="forceMacroUpdate()">Aktualizuj Dzisiaj</button> 
-            </div> 
-        </div> 
-        <div class="table-responsive" style="margin-top:15px;">
-            <table class="macro-custom-table" style="width:100%;">
-                <thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&P 500</th><th>Odczyt</th></tr></thead>
-                <tbody id="macro-table-body"></tbody>
-            </table>
-        </div> 
-        <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><span id="macro-page-info">Strona 1 z 1</span><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div> 
-        <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;"> 
-            <h3>Baza Tickerów</h3> 
-            <div class="form-row" style="margin-top:15px;"> <div class="form-group" style="flex:2;"><input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. AAPL)"></div> <div class="form-group" style="flex:1;"><button onclick="addTicker()" class="btn-submit" style="height:100%;">Dodaj</button></div> </div> 
-            <div id="db-list-container"></div> 
-            <div class="pagination-container"><button class="btn-pag" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprz</button><span id="ticker-page-info">Strona 1 z 1</span><button class="btn-pag" id="ticker-next-btn" onclick="changeTickerPage(1)">Nast →</button></div> 
-        </div> 
-    </section>
-
-    <section id="service-module" class="app-module"> 
-        <h2>Panel Admina (Service)</h2> 
-        <div class="dashboard-grid" style="grid-template-columns: 1fr; margin: 0; padding: 0;"> 
-            <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;"> 
-                <h4 style="color: var(--accent); margin-bottom: 15px;">💰 Rejestracja Dywidendy</h4> 
-                <form onsubmit="addDividend(event)"> 
-                    <div class="form-group"> <label>Wybierz otwartą pozycję (ID - Ticker)</label> <select id="div-trade-id" required style="background: var(--bg-input);"> <option value="">Ładowanie pozycji...</option> </select> </div> 
-                    <div class="form-row"> <div class="form-group"><label>Data wpłaty</label><input type="date" id="div-date" required></div> <div class="form-group"><label>Kwota (w walucie)</label><input type="number" step="0.01" id="div-amount" required></div> </div> 
-                    <button type="submit" class="btn-submit" style="background: var(--success); color: #fff;">Zapisz Dywidendę</button> 
-                </form> 
-            </div> 
-        </div> 
-        <div style="display: flex; flex-direction: column; gap: 12px; margin-top:10px;"> 
-            <h4 style="margin-bottom: 5px;">Ręczne wywołania (CRON)</h4> 
-            <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🔔 Wymuś sprawdzenie alertów</button> 
-            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen</button> 
-        </div> 
-        <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div> 
-    </section>
-
-    <section id="focuslist-module" class="app-module"> 
-        <div class="macro-header-container"> <h3>Lista Obserwowanych (Focus List)</h3> </div> 
-        <div class="table-controls"> 
-            <select id="focuslist-status-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Statusy</option> <option value="Skupienie">Skupienie</option> <option value="Obserwacja">Obserwacja</option> </select> 
-            <select id="focuslist-currency-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Waluty</option> <option value="USD">USD</option> <option value="PLN">PLN</option> <option value="EUR">EUR</option> </select> 
-        </div> 
-        <div class="table-responsive"> 
-            <table class="macro-custom-table" style="width:100%; font-size: 0.85em;"> 
-                <thead>
-                    <tr>
-                        <th>Data dodania</th>
-                        <th>Ticker</th>
-                        <th>Waluta</th>
-                        <th>Kierunek</th>
-                        <th>Wejście</th>
-                        <th>Prio.</th>
-                        <th>Mute</th>
-                        <th>Status</th>
-                        <th>Dystans %</th>
-                        <th>R:R</th>
-                        <th>Powód 1</th>
-                        <th>Powód 2</th>
-                        <th>Powód 3</th>
-                        <th>Powód 4</th>
-                        <th>Powód 5</th>
-                        <th>Akcje</th>
-                    </tr>
-                </thead> 
-                <tbody id="focuslist-table-body"> <tr><td colspan="16" style="text-align:center;">Ładowanie...</td></tr> </tbody> 
-            </table> 
-        </div> 
-        <div class="pagination-container"> <button onclick="changeFocusListPage(-1)" id="focuslist-prev-page" class="btn-pag">◀ Poprzednia</button> <span id="focuslist-page-info">Strona 1 z 1</span> <button onclick="changeFocusListPage(1)" id="focuslist-next-page" class="btn-pag">Następna ▶</button> </div> 
-    </section>
-
-    <section id="alerthistory-module" class="app-module"> 
-        <div class="macro-header-container"> <h3>Historia Wywołanych Alertów</h3> </div> 
-        <div class="table-controls"> 
-            <input type="text" id="alert-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleAlertsFilter()"> 
-            <select id="alert-type-filter" onchange="handleAlertsFilter()"> 
-                <option value="ALL">Wszystkie typy</option> 
-                <option value="Wejście">Punkt wejścia</option> 
-                <option value="Take Profit">Take Profit</option> 
-                <option value="Stop Loss">Stop Loss</option> 
-            </select> 
-        </div> 
-        <div class="table-responsive"> 
-            <table class="macro-custom-table" style="width:100%;"> 
-                <thead> <tr> <th>Data Wywołania</th> <th>Typ Alertu</th> <th>Ticker</th> <th>Priorytet</th> <th>Warunek</th> <th>Cena Docelowa</th> <th>Ekstrema Dnia (L/H)</th> <th>Wynik (Score)</th> <th>Wykres TV</th> <th>Akcje</th> </tr> </thead> 
-                <tbody id="alert-history-tbody"> <tr><td colspan="10" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td></tr> </tbody> 
-            </table> 
-        </div> 
-        <div class="pagination-container"> <button onclick="changeAlertPage(-1)" id="alert-prev-page" class="btn-pag">◀ Poprzednia</button> <span id="alert-page-info">Strona 1 z 1</span> <button onclick="changeAlertPage(1)" id="alert-next-page" class="btn-pag">Następna ▶</button> </div> 
-    </section>
-
-    <section id="technicalanalysis-module" class="app-module">
-        <div class="macro-header-container">
-            <h3>Zaawansowana Analiza Techniczna</h3>
-        </div>
-        
-        <div class="tabs" style="margin-bottom: 20px;">
-            <button class="tab-btn active" onclick="switchTechTab('harmonics')">XABCD</button>
-            <button class="tab-btn" onclick="switchTechTab('elliott')">Fale Elliotta</button>
-            <button class="tab-btn" onclick="switchTechTab('rgr')">RGR / oRGR</button>
-        </div>
-
-        <div id="tab-harmonics" class="tab-content active">
-            <div class="journal-container">
-                <div class="journal-sidebar">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Kalkulator XABCD</h4>
-                    <form onsubmit="calculateHarmonics(event)">
-                        <div class="form-row">
-                            <div class="form-group"><label>Punkt X</label><input type="number" step="0.01" id="ha-x" required></div>
-                            <div class="form-group"><label>Punkt A</label><input type="number" step="0.01" id="ha-a" required></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Punkt B</label><input type="number" step="0.01" id="ha-b" required></div>
-                            <div class="form-group"><label>Punkt C</label><input type="number" step="0.01" id="ha-c" required></div>
-                        </div>
-                        <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Wylicz Punkt D i Formację</button>
-                    </form>
-                </div>
-                <div class="journal-main">
-                    <h4 style="margin-bottom: 15px;">Wynik analizy struktury:</h4>
-                    <div id="ha-results" class="kpi-grid">
-                        <div style="grid-column: 1 / -1; color: var(--text-muted); text-align: center; padding: 30px;">Wprowadź punkty X, A, B, C po lewej stronie.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-elliott" class="tab-content">
-            <div class="journal-container">
-                <div class="journal-sidebar">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Walidator Fal Elliotta</h4>
-                    <form onsubmit="calculateElliott(event)">
-                        <div class="form-group">
-                            <label>Kierunek cyklu</label>
-                            <select id="ew-direction">
-                                <option value="UP">Wzrostowy (Impuls Hossa)</option>
-                                <option value="DOWN">Spadkowy (Impuls Bessa)</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Punkt X (Start)</label><input type="number" step="0.01" id="ew-x" required></div>
-                            <div class="form-group"><label>Fala 1 (Koniec)</label><input type="number" step="0.01" id="ew-1" required></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Fala 2 (Koniec)</label><input type="number" step="0.01" id="ew-2" required></div>
-                            <div class="form-group"><label>Fala 3 (Koniec)</label><input type="number" step="0.01" id="ew-3" required></div>
-                        </div>
-                        <div class="form-group"><label>Fala 4 (Koniec)</label><input type="number" step="0.01" id="ew-4" required></div>
-                        <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Sprawdź i Wyznacz Zasięgi</button>
-                    </form>
-                </div>
-                <div class="journal-main">
-                    <div id="ew-score-container" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                        <h3 style="margin-bottom: 10px;">Ocena Zgodności: <span id="ew-score-text" style="color:var(--text-muted);">Brak danych</span></h3>
-                        <div id="ew-rules-list" style="font-size: 0.9em; line-height: 1.6; color: var(--text-muted);">Oczekuję na dane...</div>
-                    </div>
-                    <div class="kpi-grid" id="ew-projections" style="display:none;">
-                        <div class="kpi-card"><h4>Projekcja Fali 5</h4><div class="value" id="ew-p5" style="color:var(--success);">-</div></div>
-                        <div class="kpi-card"><h4>Korekta A</h4><div class="value" id="ew-pa" style="color:var(--danger);">-</div></div>
-                        <div class="kpi-card"><h4>Korekta B</h4><div class="value" id="ew-pb" style="color:#89b4fa;">-</div></div>
-                        <div class="kpi-card"><h4>Korekta C</h4><div class="value" id="ew-pc" style="color:var(--danger);">-</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-rgr" class="tab-content">
-            <div class="journal-container">
-                <div class="journal-sidebar">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Model RGR / oRGR</h4>
-                    <form onsubmit="calculateRGR(event)">
-                        <div class="form-group">
-                            <label>Typ Formacji</label>
-                            <select id="rgr-type">
-                                <option value="RGR">RGR (Spadkowa / Głowa z Ramionami)</option>
-                                <option value="ORGR">oRGR (Wzrostowa / Odwrócona)</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Lewe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-ls" required></div>
-                            <div class="form-group"><label>Lewa Linia Szyi</label><input type="number" step="0.01" id="rgr-ln" required></div>
-                        </div>
-                        <div class="form-group"><label>Głowa (Szczyt absolutny)</label><input type="number" step="0.01" id="rgr-h" required></div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Prawa Linia Szyi</label><input type="number" step="0.01" id="rgr-rn" required></div>
-                            <div class="form-group"><label>Prawe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-rs" required></div>
-                        </div>
-                        <div class="form-group">
-                            <label>Punkt Przebicia Szyi</label>
-                            <input type="number" step="0.01" id="rgr-bp" placeholder="Opcjonalne">
-                        </div>
-                        <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Zbadaj Formację</button>
-                    </form>
-                </div>
-                <div class="journal-main">
-                    <div id="rgr-validation" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                        <h3 style="margin-bottom: 10px;">Zgodność z modelem: <span id="rgr-valid-text" style="color:var(--text-muted);">Brak danych</span></h3>
-                        <p id="rgr-valid-desc" style="color: var(--text-muted); font-size: 0.9em;"></p>
-                    </div>
-                    <div class="kpi-grid" id="rgr-targets" style="display:none;">
-                        <div class="kpi-card"><h4>Kąt Linii Szyi</h4><div class="value" id="rgr-angle" style="color:#89b4fa;">-</div></div>
-                        <div class="kpi-card"><h4>Wysokość Głowy</h4><div class="value" id="rgr-height" style="color:var(--text-main);">-</div></div>
-                        <div class="kpi-card"><h4>Zasięg (TP)</h4><div class="value" id="rgr-target" style="color:var(--accent);">-</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="dailybrief-module" class="app-module">
-        <div class="macro-header-container"><h3>Wpisy Makro (AI Brief)</h3></div>
-        <div class="brief-carousel-container" id="dailybrief-carousel"><p style="text-align:center; padding:20px;">Ładowanie...</p></div>
-    </section>
-
-    <nav class="bottom-nav">
-        <button class="nav-item active" onclick="openDashboard()"><span>🏠</span>Home</button>
-        <button class="nav-item" onclick="openModule('tradeslist-module', 'Trades')"><span>📊</span>Trades</button>
-        <button class="nav-item" onclick="openModule('database-module', 'Baza')"><span>🗄️</span>Baza</button>
-    </nav>
-
-    <div id="edit-modal">
-        <div class="modal-box">
-            <h3 style="color:var(--accent); margin-bottom:15px;" id="edit-modal-title">Edycja Wpisu</h3>
-            <form id="edit-form" onsubmit="submitEditForm(event)">
-                <div id="edit-modal-content"></div>
-                <div style="display:flex; gap:10px; margin-top:20px;">
-                    <button type="button" onclick="closeEditModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px;">Anuluj</button>
-                    <button type="submit" style="flex:1; background:var(--accent); color:#000; border:none; padding:12px; border-radius:6px; font-weight:bold;">Zapisz</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <div id="sell-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; padding: 15px;">
-        <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:400px; border:1px solid var(--border-color);">
-            <h3 style="color:var(--accent); margin-bottom:15px;">Zamknięcie Pozycji (Kalkulator)</h3>
-            <input type="hidden" id="sell-trade-id">
-            <div class="form-group"><label>Data Sprzedaży</label><input type="date" id="sell-date"></div>
-            <div class="form-group"><label>Cena Sprzedaży z platformy</label><input type="number" step="0.0001" id="sell-price" placeholder="np. 154.32"></div>
-            
-            <div class="form-group" id="sell-cfd-group" style="display:none; border: 1px dashed var(--danger); padding: 10px; border-radius: 6px; margin-bottom: 10px;">
-                <label style="color:var(--danger);">Koszt Prowadzenia CVD/CFD <br><small style="color:var(--text-muted); font-weight:normal;">Zostanie odjęta od zysku (Profitu).</small></label>
-                <input type="number" step="0.01" id="sell-cfd-cost" value="0">
-            </div>
-
-            <div class="form-group">
-                <label style="color:var(--success);">Ile % pozycji sprzedajesz? <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz jako procent (np. 50%), ułamek (np. 1/3) lub 1.</small></label>
-                <input type="text" id="sell-fraction" value="1" placeholder="np. 0.5, 50%, 1/3, 23/41">
-            </div>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
-                <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">Księguj Zysk</button>
-            </div>
-        </div>
-    </div>
 <script>
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com';
         let isPrivacyMode = false;
@@ -540,7 +10,11 @@
 
         let currentEditContext = null;
         let currentEditId = null;
+        
         let summaryOpenSortKey = 'valLev', summaryOpenSortDir = 'desc';
+        let formSortKey = 'created_at', formSortDir = 'desc';
+        let focusSortKey = 'id', focusSortDir = 'desc';
+        let tradeSortKey = 'buy_date', tradeSortDir = 'desc';
 
         // --- LOCAL CACHING ---
         function getCachedData(key) {
@@ -549,6 +23,32 @@
         }
         function setCachedData(key, data) {
             localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        // --- NAWIGACJA (TO BYŁO POWODEM AWARII) ---
+        function openModule(moduleId, moduleTitle) {
+            document.getElementById('dashboard').style.display = 'none';
+            document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
+            document.getElementById(moduleId).style.display = 'block';
+            document.getElementById('app-title').innerText = moduleTitle;
+            document.getElementById('back-btn').style.display = 'flex';
+
+            if (moduleId === 'database-module') { loadDatabase(); loadMacroData(); }
+            if (moduleId === 'alerthistory-module') loadAlertHistory();
+            if (moduleId === 'dailybrief-module') loadDailyBriefs();
+            if (moduleId === 'form-module') initFormModule();
+            if (moduleId === 'focus-module') initFocusModule();
+            if (moduleId === 'tradeslist-module') initTradesModule();
+            if (moduleId === 'summary-module') initSummaryModule();
+            if (moduleId === 'service-module') loadServiceModule();
+            if (moduleId === 'focuslist-module') initFocusListModule();
+        }
+
+        function openDashboard() {
+            document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('app-title').innerHTML = 'Quant<span>Desk</span>';
+            document.getElementById('back-btn').style.display = 'none';
         }
 
         function togglePrivacy() {
@@ -689,6 +189,12 @@
         async function removeTicker(t) { if (!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); loadDatabase(); } catch (e) {} }
 
         // --- FORM MODULE ---
+        function handleFormSort(key) {
+            formSortDir = (formSortKey === key && formSortDir === 'desc') ? 'asc' : 'desc';
+            formSortKey = key;
+            applyFormFilterAndSort();
+        }
+
         async function initFormModule() { if(tickerDataArray.length === 0) await loadDatabase(); const select = document.getElementById('form-ticker'); select.innerHTML = ''; tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); fetchFormEntries(); }
         
         async function fetchFormEntries() { 
@@ -713,6 +219,13 @@
                 if (muteFilter !== 'ALL') muteMatch = (entry.mute.toString() === muteFilter);
                 return textMatch && muteMatch;
             });
+
+            filteredFormEntries.sort((a, b) => {
+                let va=a[formSortKey], vb=b[formSortKey];
+                if(typeof va === 'string') { return formSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+                return formSortDir==='asc' ? va-vb : vb-va;
+            });
+
             renderAdvancedFormTable();
         }
 
@@ -728,10 +241,10 @@
                 const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
                 const cp = tm && tm.price ? tm.price : entry; 
                 
-                // Rzeczywisty Dystans Cenowy (bez wartości bezwzględnej) dla celów wizualnych
-                const rawDiff = ((cp - entry) / entry) * 100;
+                // Rzeczywisty Dystans Cenowy (ujemny/dodatni)
+                const rawDiff = ((cp - entry) / entry) * 100 * mod;
                 
-                // Status opiera się na wielkości ruchu
+                // Status opiera się na bezwzględnej wielkości ruchu (dystans)
                 const absDiff = Math.abs(rawDiff);
                 let status = absDiff > 15 ? 'Ignorowanie' : (absDiff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
                 let statusColor = absDiff > 15 ? '#f6465d' : (absDiff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
@@ -743,6 +256,8 @@
                 const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
                 const pb = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny</span>`;
                 const mb = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie</span>`;
+
+                const cpDisplay = tm && tm.price ? `<br><small style="color:#eaecef;">Akt: ${tm.price.toFixed(2)}$</small>` : `<br><small style="color:var(--text-muted);">Akt: Brak</small>`;
 
                 tbody.innerHTML += `<tr>
                     <td style="font-weight:bold;">${item.entry_id}</td>
@@ -764,32 +279,73 @@
         async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(); } catch(e) {} }
         async function updateFormEntryField(id, field, val) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: id, field: field, value: val }) }); fetchFormEntries(); } catch(e){} }
 
+        // --- ASYSTENT FIBO ---
+        function toggleFibo() { const drawer = document.getElementById('fibo-drawer'); drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; if (drawer.style.display === 'block') updateFiboLabels(); }
+        function updateFiboLabels() {
+            const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const direction = document.getElementById('form-direction').value; const select = document.getElementById('fibo-level');
+            if (!select) return; const levels = [1.272, 1.618, 2.000, 2.618]; const currentSelected = select.value; select.innerHTML = ''; 
+            levels.forEach(lvl => {
+                let optionText = lvl.toFixed(3);
+                if (!isNaN(start) && !isNaN(peak)) { let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * lvl : peak - (start - peak) * lvl; optionText += ` (cena: ${calculatedPrice.toFixed(2)})`; }
+                const opt = document.createElement('option'); opt.value = lvl.toString(); opt.textContent = optionText; if (lvl.toString() === currentSelected) opt.selected = true; select.appendChild(opt);
+            });
+        }
+        function applyFibo() {
+            const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const level = parseFloat(document.getElementById('fibo-level').value); const direction = document.getElementById('form-direction').value;
+            if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
+            const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * level : peak - (start - peak) * level; document.getElementById('form-tp').value = tp.toFixed(2); toggleFibo();
+        }
+        function updateFormTvLink() { const ticker = document.getElementById('form-ticker').value; const linkEl = document.getElementById('form-tv-link'); if (ticker) { linkEl.href = getTradingViewLink(ticker); linkEl.style.display = 'inline-block'; } }
+
         // --- FOCUS MODULE ---
-        async function initFocusModule() { try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); formEntriesGlobal = await res.json(); document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join(''); fetchFocusEntries(); } catch(e) {} }
+        function handleFocusSort(key) { focusSortDir = (focusSortKey === key && focusSortDir === 'desc') ? 'asc' : 'desc'; focusSortKey = key; renderFocusTable(); }
+
+        async function initFocusModule() { try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); formEntriesGlobal = await res.json(); document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join(''); onFocusIdChange(); fetchFocusEntries(); } catch(e) {} }
+        function onFocusIdChange() { const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value); if(entry) { document.getElementById('focus-ticker').value = entry.ticker; document.getElementById('focus-direction').value = entry.direction; } }
+        async function autoCalculateSMC() { const t = document.getElementById('focus-ticker').value; const d = document.getElementById('focus-direction').value; try { const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d}) }); const r = await res.json(); document.getElementById('focus-candle').value = r.candle_score; document.getElementById('focus-volume').value = r.volume_score; document.getElementById('focus-vix').value = r.vix_score; document.getElementById('focus-index').value = r.index_score; } catch(e) { console.error(e); } }
+
         async function fetchFocusEntries() { 
             const cached = getCachedData('focus_cache');
-            if(cached) { focusDataArray = cached; renderFocusTable(); }
+            if(cached) { focusDataArray = cached; handleFocusFilter(''); }
             try { 
                 const r = await fetch(`${API_BASE_URL}/api/focus/entries`); 
                 focusDataArray = await r.json(); 
                 setCachedData('focus_cache', focusDataArray);
-                renderFocusTable(); 
+                handleFocusFilter(''); 
             } catch(e) { console.error(e); } 
         }
+
+        let filteredFocusArray = [];
+        function handleFocusFilter(text) {
+            filteredFocusArray = focusDataArray.filter(i => (i.ticker||'').toLowerCase().includes(text.toLowerCase()));
+            renderFocusTable();
+        }
+
         function renderFocusTable() {
             const tb = document.getElementById('focus-table-body'); tb.innerHTML = '';
-            focusDataArray.slice((currentFocusPage-1)*focusPageSize, currentFocusPage*focusPageSize).forEach(i => {
+            
+            filteredFocusArray.sort((a,b) => {
+                let va=a[focusSortKey], vb=b[focusSortKey];
+                if(typeof va === 'string') { return focusSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+                return focusSortDir==='asc' ? va-vb : vb-va;
+            });
+
+            filteredFocusArray.slice((currentFocusPage-1)*focusPageSize, currentFocusPage*focusPageSize).forEach(i => {
                 tb.innerHTML += `<tr><td>#${i.id}</td><td>${new Date(i.created_at).toLocaleDateString('pl-PL')}</td><td>${i.entry_id}</td><td>${i.ticker}</td><td>${Number(i.points_total).toFixed(1)}</td><td style="color:#0ecb81;">${(i.final_ratio*100).toFixed(0)}%</td><td class="sensitive" style="color:#89b4fa;">${i.allocated_pct.toFixed(1)}%</td><td class="sensitive">${i.allocated_cash} ${i.currency}</td><td><button class="btn-edit" onclick="openEditModal('focus', ${i.id})">✎</button><button class="btn-delete" onclick="deleteFocusEntry(${i.id})">✖</button></td></tr>`;
             });
             document.getElementById('focus-page-info').innerText = currentFocusPage;
         }
         function changeFocusPage(d) { currentFocusPage += d; renderFocusTable(); }
         async function deleteFocusEntry(id) { try { await fetch(`${API_BASE_URL}/api/focus/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); fetchFocusEntries(); } catch(e){} }
-        async function submitFocusForm(e) { e.preventDefault(); const d = { entry_id: document.getElementById('focus-form-id').value }; try { await fetch(`${API_BASE_URL}/api/focus/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) }); fetchFocusEntries(); } catch(e) {} }
+        async function submitFocusForm(e) { e.preventDefault(); const d = { entry_id: document.getElementById('focus-form-id').value, ticker: document.getElementById('focus-ticker').value, candle_score: document.getElementById('focus-candle').value, volume_score: document.getElementById('focus-volume').value, gap_score: document.getElementById('focus-gap').value, calendar_score: document.getElementById('focus-calendar').value, cvd_score: document.getElementById('focus-cvd').value, vix_score: document.getElementById('focus-vix').value, index_score: document.getElementById('focus-index').value, htf_score: document.getElementById('focus-htf').value }; try { await fetch(`${API_BASE_URL}/api/focus/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) }); fetchFocusEntries(); } catch(e) {} }
 
         // --- TRADES MODULE ---
-        async function initTradesModule() { if(focusDataArray.length===0) await fetchFocusEntries(); document.getElementById('trade-focus-id').innerHTML = focusDataArray.map(f => `<option value="${f.id}">#${f.id} - ${f.ticker}</option>`).join(''); fetchTradesEntries(); }
-        
+        function handleTradeSort(key) { tradeSortDir = (tradeSortKey === key && tradeSortDir === 'desc') ? 'asc' : 'desc'; tradeSortKey = key; handleTradesFilter(); }
+
+        async function initTradesModule() { if(focusDataArray.length===0) await fetchFocusEntries(); document.getElementById('trade-focus-id').innerHTML = focusDataArray.map(f => `<option value="${f.id}">#${f.id} - ${f.ticker}</option>`).join(''); document.getElementById('trade-buy-date').valueAsDate = new Date(); fetchTradesEntries(); }
+        async function onTradeFocusChange() { const fid = document.getElementById('trade-focus-id').value; const focus = focusDataArray.find(f => f.id == fid); if(!focus) return; try { const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); const form = formDb.find(frm => frm.entry_id === focus.entry_id); document.getElementById('trade-ticker').value = focus.ticker; document.getElementById('trade-form-id').value = focus.entry_id; document.getElementById('trade-currency').value = focus.currency; document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; document.getElementById('trade-score').value = focus.points_total; if(form) { document.getElementById('trade-direction').value = form.direction; document.getElementById('trade-tp').value = form.take_profit; document.getElementById('trade-sl').value = form.stop_loss; } document.getElementById('trade-name').value = 'Wyszukiwanie...'; const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); document.getElementById('trade-name').value = n.name || ''; } catch(e){} }
+        async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: spent, leverage: lev, currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(); } else alert('Błąd.'); } catch(e) { console.error(e); } }
+
         async function fetchTradesEntries() { 
             const cached = getCachedData('trades_cache');
             if(cached) { allTradesData = cached; handleTradesFilter(); }
@@ -809,12 +365,31 @@
         
         function renderTradesTable() {
             const tb = document.getElementById('trades-table-body'); tb.innerHTML = '';
-            filteredTradesData.slice((currentTradePage-1)*tradePageSize, currentTradePage*tradePageSize).forEach(item => {
-                const s = calculateTradeStats(item);
-                const actionHtml = s.isClosed ? `ZAMKNIĘTA` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
+            
+            let sortedTrades = [...filteredTradesData];
+            sortedTrades.forEach(t => { t.stats = calculateTradeStats(t); });
+
+            sortedTrades.sort((a,b) => {
+                let va, vb;
+                if(tradeSortKey === 'buy_date') { va = new Date(a.buy_date); vb = new Date(b.buy_date); }
+                else if(tradeSortKey === 'ticker') { va = a.ticker; vb = b.ticker; }
+                else if(tradeSortKey === 'spent') { va = a.spent; vb = b.spent; }
+                else if(tradeSortKey === 'buy_price') { va = a.buy_price; vb = b.buy_price; }
+                else if(tradeSortKey === 'rr') { va = a.stats.rr; vb = b.stats.rr; }
+                else if(tradeSortKey === 'prof') { va = a.stats.prof; vb = b.stats.prof; }
+                else if(tradeSortKey === 'profPln') { va = a.stats.profPln; vb = b.stats.profPln; }
+                else if(tradeSortKey === 'prog') { va = a.stats.prog; vb = b.stats.prog; }
+                
+                if(typeof va === 'string') { return tradeSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+                return tradeSortDir==='asc' ? va-vb : vb-va;
+            });
+
+            sortedTrades.slice((currentTradePage-1)*tradePageSize, currentTradePage*tradePageSize).forEach(item => {
+                const s = item.stats;
+                const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
                 tb.innerHTML += `<tr>
                     <td>${item.buy_date}<br><small>#${item.id}</small></td>
-                    <td><strong style="color:var(--accent);">${item.ticker}</strong></td>
+                    <td><strong style="color:var(--accent);">${item.ticker}</strong><br><small>${item.stock_name}</small></td>
                     <td class="sensitive">${item.spent.toFixed(2)}${item.currency}<br><small>(x${item.leverage})</small></td>
                     <td class="sensitive">WE: ${item.buy_price}$<br>TR: <b>${s.cp}$</b></td>
                     <td class="sensitive"><b>${s.rr.toFixed(1)}</b><br><span style="color:#fcd535;">SL: ${s.dsl.toFixed(2)}$</span></td>
@@ -853,21 +428,13 @@
                         let month = 'Brak daty'; if (trade.sell_date && trade.sell_date.length >= 7) month = trade.sell_date.substring(0, 7);
                         monthSet.add(month);
                     } else {
-                        openInvestedPln += s.spentPln; 
-                        openProfitPln += s.profPln; 
-                        openLevValuePln += s.valPln + s.profPln; 
-                        openLevNominalPln += s.valPln;
-                        
+                        openInvestedPln += s.spentPln; openProfitPln += s.profPln; openLevValuePln += s.valPln + s.profPln; openLevNominalPln += s.valPln;
                         const spent = parseFloat(trade.spent) || 0; const valInCurr = spent + s.prof;
                         if(currBreakdown[curr] !== undefined) currBreakdown[curr] += valInCurr;
-                        
                         const ticker = trade.ticker || 'N/A';
                         if(!openGrouped[ticker]) openGrouped[ticker] = {inv:0, prof:0, valLev:0, curr: curr, invPln:0, valLevPln:0};
-                        openGrouped[ticker].inv += spent; 
-                        openGrouped[ticker].prof += s.prof; 
-                        openGrouped[ticker].valLev += s.val + s.prof;
-                        openGrouped[ticker].invPln += s.spentPln; 
-                        openGrouped[ticker].valLevPln += s.valPln;
+                        openGrouped[ticker].inv += spent; openGrouped[ticker].prof += s.prof; openGrouped[ticker].valLev += s.val + s.prof;
+                        openGrouped[ticker].invPln += s.spentPln; openGrouped[ticker].valLevPln += s.valPln;
                     }
                 } catch(err) {}
             });
@@ -966,10 +533,17 @@
         function renderSummaryClosed() { const fMonth = document.getElementById('s-cls-month-filter').value; const fCur = document.getElementById('s-cls-cur-filter').value; const fLev = document.getElementById('s-cls-lev-filter').value; const closedByMonth = {}; const closedByCurr = {}; const closedByLev = {}; let filteredPnlPln = 0; allTradesData.forEach(trade => { try { const s = calculateTradeStats(trade); if (!s.isClosed) return; const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty'; const curr = trade.currency || 'USD'; const lev = parseInt(trade.leverage) || 1; if (fMonth !== 'ALL' && month !== fMonth) return; if (fCur !== 'ALL' && curr !== fCur) return; if (fLev === '>1' && lev <= 1) return; if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return; filteredPnlPln += s.profPln; if(!closedByMonth[month]) closedByMonth[month] = 0; closedByMonth[month] += s.profPln; if(!closedByCurr[curr]) closedByCurr[curr] = 0; closedByCurr[curr] += s.profPln; if(!closedByLev[lev]) closedByLev[lev] = 0; closedByLev[lev] += s.profPln; } catch(e) {} }); const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML=''; Object.keys(closedByMonth).sort().reverse().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML=''; Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML=''; Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const totalEl = document.getElementById('s-cls-filtered-total'); if(totalEl) { totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN'; totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)'; } }
         async function drawSummaryChart() { try { const res = await fetch(`${API_BASE_URL}/api/portfolio/roi/history`); const roiHistory = await res.json() || []; if (!Array.isArray(roiHistory) || roiHistory.length === 0) return; roiHistory.sort((a, b) => new Date(a.date) - new Date(b.date)); const labels = []; const roiDataset = []; const sp500Dataset = []; let baselineSp500 = null; const firstDate = roiHistory[0].date; const baselineMacro = macroDataArray.find(m => m.date === firstDate) || macroDataArray[macroDataArray.length - 1]; if (baselineMacro && baselineMacro.sp500) { baselineSp500 = parseFloat(baselineMacro.sp500); } roiHistory.forEach(entry => { labels.push(entry.date); roiDataset.push(entry.roi_pct); let sp500Pct = 0; if (baselineSp500) { const macroDay = macroDataArray.find(m => m.date === entry.date); if (macroDay && macroDay.sp500) { const currentSp500 = parseFloat(macroDay.sp500); sp500Pct = ((currentSp500 - baselineSp500) / baselineSp500) * 100; } else { sp500Pct = sp500Dataset.length > 0 ? sp500Dataset[sp500Dataset.length - 1] : 0; } } sp500Dataset.push(sp500Pct); }); const ctx = document.getElementById('roiChart').getContext('2d'); if(summaryChartInstance) summaryChartInstance.destroy(); Chart.defaults.color = '#cdd6f4'; summaryChartInstance = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [ { label: 'Twój Portfel (ROI %)', data: roiDataset, borderColor: '#0ecb81', backgroundColor: 'rgba(14, 203, 129, 0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#0ecb81' }, { label: 'S&P 500 (%)', data: sp500Dataset, borderColor: '#89b4fa', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], tension: 0.3, pointRadius: 0 } ] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false, }, scales: { y: { grid: {color: 'rgba(255,255,255,0.05)'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4', maxTicksLimit: 10} } }, plugins: { legend: { display: true, position: 'top', labels: {color: '#cdd6f4'} }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%'; } } } } } }); } catch (err) {} }
 
+        // Analiza Techniczna
+        function switchTechTab(tab) { document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-' + tab).classList.add('active'); }
+        function calculateHarmonics(e) { e.preventDefault(); const x = parseFloat(document.getElementById('ha-x').value); const a = parseFloat(document.getElementById('ha-a').value); const b = parseFloat(document.getElementById('ha-b').value); const c = parseFloat(document.getElementById('ha-c').value); const xa = Math.abs(a - x); const ab = Math.abs(b - a); const bc = Math.abs(c - b); const isBullish = a > x; const dirMultiplier = isBullish ? -1 : 1; const bRetracement = ab / xa; const cRetracement = bc / ab; let resultsHTML = ''; const patterns = [ { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 }, { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Butterfly', bTarget: 0.786, dRetXa: 1.272, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Crab', bTarget: 0.50, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 }, { name: 'Deep Crab', bTarget: 0.886, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 } ]; let foundMatch = false; patterns.forEach(pat => { const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) || (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618); if(isBMatch) { foundMatch = true; const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier); const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier); const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier); resultsHTML += ` <div class="kpi-card" style="border-color: var(--accent);"> <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4> <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;"> Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br> Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB </div> <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}</b></div> <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)} - ${dTargetByBC_Max.toFixed(2)}</b></div> <div class="value sensitive" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)} do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}</div> </div> `; } }); if(!foundMatch) { resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;"> Obecna struktura (B zniósł ${(bRetracement).toFixed(3)} XA, C zniósł ${(cRetracement).toFixed(3)} AB) nie mieści się w standardowych tolerancjach formacji Harmonicznych. To może być zwykła trójfalowa korekta. </div>`; } document.getElementById('ha-results').innerHTML = resultsHTML; }
+        function calculateElliott(e) { e.preventDefault(); const dir = document.getElementById('ew-direction').value; const x = parseFloat(document.getElementById('ew-x').value); const w1 = parseFloat(document.getElementById('ew-1').value); const w2 = parseFloat(document.getElementById('ew-2').value); const w3 = parseFloat(document.getElementById('ew-3').value); const w4 = parseFloat(document.getElementById('ew-4').value); const isUp = dir === 'UP'; let score = 0; let maxScore = 5; let rulesLog = ''; const lenW1 = Math.abs(w1 - x); const lenW3 = Math.abs(w3 - w2); const w2RetracedW1 = isUp ? (w2 < x) : (w2 > x); if (w2RetracedW1) { rulesLog += '❌ Fala 2 zniosła więcej niż 100% Fali 1. (Złamanie reguły Elliotta)<br>'; } else { score += 2; rulesLog += '✅ Fala 2 zatrzymała się nad/pod początkiem Fali 1. (+2 pkt)<br>'; } if (lenW3 <= lenW1 * 0.98) { rulesLog += '⚠️ Fala 3 jest krótsza od Fali 1. Pamiętaj, że Fala 5 nie będzie mogła być krótsza od Fali 3.<br>'; } else { score += 1; rulesLog += '✅ Fala 3 jest dłuższa lub równa Fali 1. (+1 pkt)<br>'; } const overlap = isUp ? (w4 <= w1) : (w4 >= w1); if (overlap) { rulesLog += '❌ Fala 4 wkroczyła w terytorium Fali 1. (Złamanie standardowego impulsu - może być klin końńcowy)<br>'; } else { score += 2; rulesLog += '✅ Fala 4 nie zachodzi na Falę 1. Klasyczny impuls. (+2 pkt)<br>'; } const color = score === 5 ? 'var(--success)' : (score >= 3 ? '#fcd535' : 'var(--danger)'); document.getElementById('ew-score-text').innerHTML = `<span style="color:${color}; font-weight:bold;">${score} / ${maxScore} Pkt</span>`; document.getElementById('ew-rules-list').innerHTML = rulesLog; if (score >= 2) { document.getElementById('ew-projections').style.display = 'grid'; const w1ToW3Dist = Math.abs(w3 - x); const w5_target1 = isUp ? w4 + lenW1 : w4 - lenW1; const w5_target2 = isUp ? w4 + (w1ToW3Dist * 0.618) : w4 - (w1ToW3Dist * 0.618); const avgW5 = (w5_target1 + w5_target2) / 2; document.getElementById('ew-p5').innerText = avgW5.toFixed(2) + ' $'; const targetA = w4; document.getElementById('ew-pa').innerText = targetA.toFixed(2) + ' $'; const distA = Math.abs(avgW5 - targetA); const targetB = isUp ? targetA + (distA * 0.5) : targetA - (distA * 0.5); document.getElementById('ew-pb').innerText = targetB.toFixed(2) + ' $'; const targetC = isUp ? targetB - distA : targetB + distA; document.getElementById('ew-pc').innerText = targetC.toFixed(2) + ' $'; } else { document.getElementById('ew-projections').style.display = 'none'; } }
+        function calculateRGR(e) { e.preventDefault(); const type = document.getElementById('rgr-type').value; const ls = parseFloat(document.getElementById('rgr-ls').value); const ln = parseFloat(document.getElementById('rgr-ln').value); const h = parseFloat(document.getElementById('rgr-h').value); const rn = parseFloat(document.getElementById('rgr-rn').value); const rs = parseFloat(document.getElementById('rgr-rs').value); let bp = parseFloat(document.getElementById('rgr-bp').value); if(isNaN(bp)) bp = rn; const isRGR = type === 'RGR'; let isValid = true; let reason = ''; if (isRGR) { if (h <= ls || h <= rs) { isValid = false; reason += '❌ Głowa RGR musi być wyżej niż ramiona.<br>'; } else reason += '✅ Głowa (wyżej).<br>'; } else { if (h >= ls || h >= rs) { isValid = false; reason += '❌ Głowa oRGR musi być niżej.<br>'; } else reason += '✅ Głowa (niżej).<br>'; } const shoulderDiff = Math.abs(ls - rs) / ls * 100; if (shoulderDiff > 15) { reason += `⚠️ Prawe ramię różni się od lewego (${shoulderDiff.toFixed(1)}%).<br>`; } else { reason += '✅ Ramiona na zbieżnym poziomie.<br>'; } const neckSlope = isRGR ? (rn - ln) : (ln - rn); if (isValid) { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--success);">Prawidłowy model</span>`; document.getElementById('rgr-targets').style.display = 'grid'; const neckAvg = (ln + rn) / 2; const headHeight = Math.abs(h - neckAvg); const target = isRGR ? bp - headHeight : bp + headHeight; document.getElementById('rgr-angle').innerText = neckSlope === 0 ? "Płaski" : (neckSlope > 0 ? "Rosnący" : "Spadkowy"); document.getElementById('rgr-height').innerText = headHeight.toFixed(2) + ' $'; document.getElementById('rgr-target').innerText = target.toFixed(2) + ' $'; } else { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--danger);">Złamane reguły</span>`; document.getElementById('rgr-targets').style.display = 'none'; } document.getElementById('rgr-valid-desc').innerHTML = reason; }
+
         // Utils
         function getTradingViewLink(ticker) { if (!ticker) return '#'; const cleanTicker = ticker.trim().toUpperCase(); const LAYOUT_ID = 'k5llKflB'; const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/'; if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; } const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ']; const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA']; let exchange = ''; if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; } return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`; }
         function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = ticker.toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
-        
+        function calculateTradeStats(item) { try { const isClosed = (item.status === 'CLOSED' || item.sell_date != null); const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1; const tm = tickerDataArray.find(t => t.ticker === item.ticker); const buyPrice = parseFloat(item.buy_price) || 0; let cp = buyPrice; if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } else if (tm && tm.price) { cp = parseFloat(tm.price); } const spent = parseFloat(item.spent) || 0; const lev = parseInt(item.leverage) || 1; const val = spent * lev; const cfdCost = parseFloat(item.cfd_cost) || 0; const div = parseFloat(item.dividend) || 0; let prof = 0; if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; } const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1)); const profPln = prof * usedFx; const valPln = val * usedFx; const tp = parseFloat(item.tp) || 0; const sl = parseFloat(item.sl) || 0; let rr = 0; if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); } let prog = 0; if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); } let dsl = sl; if (prog >= 1) dsl = tp; else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); let pd = prog * 100; let pc = 'var(--success)'; if (pd < 0) { pc = 'var(--danger)'; if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } else { pd = 0; } } if (pd > 100) pd = 100; return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx }; } catch (error) { return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; } }
+
         // Modal functions
         function openCloseModal(id) { document.getElementById('sell-modal').style.display = 'flex'; document.getElementById('sell-trade-id').value = id; document.getElementById('sell-date').valueAsDate = new Date(); document.getElementById('sell-price').value = ''; document.getElementById('sell-fraction').value = '1'; const trade = allTradesData.find(t => t.id === id); if(trade && trade.leverage > 1) { document.getElementById('sell-cfd-group').style.display = 'block'; document.getElementById('sell-cfd-cost').value = '0'; } else { document.getElementById('sell-cfd-group').style.display = 'none'; document.getElementById('sell-cfd-cost').value = '0'; } }
         function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
@@ -985,5 +559,3 @@
 
         openDashboard();
     </script>
-</body>
-</html>
