@@ -765,9 +765,22 @@
             filteredFormEntries = formEntries.filter(entry => {
                 const textMatch = (entry.ticker || '').toLowerCase().includes(formFilterText);
                 let muteMatch = true;
-                if (muteFilter !== 'ALL') muteMatch = (entry.mute.toString() === muteFilter);
+                if (muteFilter !== 'ALL') {
+                    // BEZPIECZNE POBIERANIE (ZAPOBIEGA ZAWIESZANIU APLIKACJI)
+                    const muteVal = (entry.mute === null || entry.mute === undefined) ? '0' : entry.mute.toString();
+                    muteMatch = (muteVal === muteFilter);
+                }
                 return textMatch && muteMatch;
             });
+
+            filteredFormEntries.sort((a, b) => {
+                let va=a[formSortKey], vb=b[formSortKey];
+                if(typeof va === 'string') { return formSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+                return formSortDir==='asc' ? va-vb : vb-va;
+            });
+
+            renderAdvancedFormTable();
+        }
 
             filteredFormEntries.sort((a, b) => {
                 let va=a[formSortKey], vb=b[formSortKey];
@@ -870,8 +883,20 @@
             try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); formEntriesGlobal = await res.json(); document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join(''); onFocusIdChange(); fetchFocusEntries(); } catch(e) {} 
             document.getElementById('focus-date').valueAsDate = new Date();
         }
-        function onFocusIdChange() { const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value); if(entry) { document.getElementById('focus-ticker').value = entry.ticker; document.getElementById('focus-direction').value = entry.direction; } }
-        
+        function onFocusIdChange() { 
+            const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value); 
+            if(entry) { 
+                document.getElementById('focus-ticker').value = entry.ticker; 
+                document.getElementById('focus-direction').value = entry.direction; 
+                
+                // Uruchamianie linku TradingView w Focus
+                const linkEl = document.getElementById('focus-tv-link');
+                if (linkEl) {
+                    linkEl.href = getTradingViewLink(entry.ticker);
+                    linkEl.style.display = 'inline-block';
+                }
+            } 
+        }
         async function autoCalculateSMC(event) { 
             const t = document.getElementById('focus-ticker').value; 
             const d = document.getElementById('focus-direction').value; 
