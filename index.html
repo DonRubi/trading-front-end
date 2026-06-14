@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quant Desk v11</title>
+    <title>Quant Desk v12.0</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef; --text-muted: #848e9c; --accent: #c99400; --accent-hover: #fcd535; --danger: #f6465d; --success: #0ecb81; --border-color: #2b3139; }
@@ -535,8 +535,7 @@
             </div>
         </div>
     </div>
-
-    <script>
+<script>
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com';
         let isPrivacyMode = false;
         
@@ -774,47 +773,50 @@
             const tbody = document.getElementById('form-table-body'); tbody.innerHTML = '';
             const items = filteredFormEntries.slice((formCurrentPage - 1) * formRowsPerPage, formCurrentPage * formRowsPerPage);
             items.forEach(item => {
-                const dateFormatted = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-';
-                const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); const mod = isLong ? 1 : -1;
-                const entry = parseFloat(item.entry_point); const sl = parseFloat(item.stop_loss); const tp = parseFloat(item.take_profit);
-                let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
-                
-                const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
-                const cp = tm && tm.price ? tm.price : entry; 
-                
-                // Rzeczywisty Dystans Cenowy z plusem lub minusem
-                const rawDiff = ((cp - entry) / entry) * 100 * mod;
-                
-                let diffStr = '-';
-                let status = 'Brak danych';
-                let statusColor = '#848e9c';
-                let diffColor = 'gray';
+                try {
+                    const dateFormatted = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-';
+                    const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); const mod = isLong ? 1 : -1;
+                    const entry = parseFloat(item.entry_point) || 0; const sl = parseFloat(item.stop_loss) || 0; const tp = parseFloat(item.take_profit) || 0;
+                    let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
+                    
+                    const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
+                    const cp = tm && tm.price ? tm.price : entry; 
+                    
+                    const rawDiff = entry !== 0 ? (((cp - entry) / entry) * 100 * mod) : 0;
+                    
+                    let diffStr = '-';
+                    let status = 'Brak danych';
+                    let statusColor = '#848e9c';
+                    let diffColor = 'gray';
 
-                if (!isNaN(rawDiff)) {
-                    const absDiff = Math.abs(rawDiff);
-                    status = absDiff > 15 ? 'Ignorowanie' : (absDiff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
-                    statusColor = absDiff > 15 ? '#f6465d' : (absDiff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
-                    diffColor = rawDiff >= 0 ? '#0ecb81' : '#f6465d';
-                    diffStr = (rawDiff > 0 ? '+' : '') + rawDiff.toFixed(2) + '%';
-                }
-                
-                const tvLink = getTradingViewLink(item.ticker); 
-                const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
-                const pb = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny</span>`;
-                const mb = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie</span>`;
+                    if (!isNaN(rawDiff) && isFinite(rawDiff)) {
+                        const absDiff = Math.abs(rawDiff);
+                        status = absDiff > 15 ? 'Ignorowanie' : (absDiff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
+                        statusColor = absDiff > 15 ? '#f6465d' : (absDiff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
+                        diffColor = rawDiff >= 0 ? '#0ecb81' : '#f6465d';
+                        diffStr = (rawDiff > 0 ? '+' : '') + rawDiff.toFixed(2) + '%';
+                    }
+                    
+                    const tvLink = getTradingViewLink(item.ticker); 
+                    const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
+                    const pb = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny</span>`;
+                    const mb = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie</span>`;
 
-                tbody.innerHTML += `<tr>
-                    <td style="font-weight:bold;">${item.entry_id}</td>
-                    <td style="color:var(--text-muted);">${dateFormatted}</td>
-                    <td><strong style="color:var(--accent);">${item.ticker}</strong></td>
-                    <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
-                    <td class="sensitive" style="font-weight: 600;">WE: ${entry.toFixed(2)}$</td>
-                    <td>${pb}</td><td>${mb}</td>
-                    <td style="color:${statusColor}; font-weight:bold;">${status}</td>
-                    <td class="sensitive" style="color:${diffColor}; font-weight:bold;">${diffStr}</td>
-                    <td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
-                    <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a> <button class="btn-edit" onclick="openEditModal('form', '${item.entry_id}')">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
-                </tr>`;
+                    const cpDisplay = tm && tm.price ? `<br><small style="color:#eaecef;">Akt: ${tm.price.toFixed(2)}$</small>` : `<br><small style="color:var(--text-muted);">Akt: Brak</small>`;
+
+                    tbody.innerHTML += `<tr>
+                        <td style="font-weight:bold;">${item.entry_id}</td>
+                        <td style="color:var(--text-muted);">${dateFormatted}</td>
+                        <td><strong style="color:var(--accent);">${item.ticker}</strong></td>
+                        <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
+                        <td class="sensitive" style="font-weight: 600;">WE: ${entry.toFixed(2)}$</td>
+                        <td>${pb}</td><td>${mb}</td>
+                        <td style="color:${statusColor}; font-weight:bold;">${status}</td>
+                        <td class="sensitive" style="color:${diffColor}; font-weight:bold;">${diffStr}</td>
+                        <td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
+                        <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a> <button class="btn-edit" onclick="openEditModal('form', '${item.entry_id}')">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
+                    </tr>`;
+                } catch(e) { console.error("Error drawing form row", e); }
             });
             document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`;
         }
@@ -936,6 +938,87 @@
             } catch(e) {} 
         }
 
+        // --- FOCUS LIST (ZABEZPIECZONA PĘTLA TRY/CATCH) ---
+        function safeHandleFocusListFilter() {
+            try { handleFocusListFilter(); } 
+            catch(err) { console.error("FocusList error:", err); }
+        }
+        
+        async function initFocusListModule() { 
+            if(tickerDataArray.length === 0) await loadDatabase(); 
+            await fetchFormEntries(); // Zapewnia dane z form
+            safeHandleFocusListFilter(); 
+        }
+
+        function handleFocusListFilter() { 
+            const sFilter = document.getElementById('focuslist-status-filter').value; const cFilter = document.getElementById('focuslist-currency-filter').value; 
+            filteredFocusListEntries = []; 
+            formEntries.forEach(item => { 
+                try {
+                    const entry = parseFloat(item.entry_point) || 0; 
+                    const mod = (item.direction === 'DBR' || item.direction === 'RBR') ? 1 : -1;
+                    const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); 
+                    const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
+                    
+                    const diff = entry !== 0 ? (((currentPrice - entry) / entry) * 100 * mod) : 0; 
+                    const absDiff = Math.abs(diff);
+                    let status = 'Brak danych'; 
+                    
+                    if (!isNaN(absDiff) && isFinite(absDiff)) {
+                        if (absDiff > 15) status = 'Ignorowanie'; 
+                        else if (absDiff > 10) status = 'Czekanie'; 
+                        else if (item.priority === 1) status = 'Skupienie'; 
+                        else status = 'Obserwacja'; 
+                    }
+                    
+                    if (status !== 'Skupienie' && status !== 'Obserwacja') return; 
+                    if (sFilter !== 'ALL' && status !== sFilter) return; 
+                    const currency = getCurrencyForFrontend(item.ticker); 
+                    if (cFilter !== 'ALL' && currency !== cFilter) return; 
+                    
+                    filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: diff }); 
+                } catch(err) { console.error("Filter row skip", err); }
+            }); 
+            filteredFocusListEntries.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); 
+            currentFocusListPage = 1; 
+            renderFocusListTable(); 
+        }
+
+        function renderFocusListTable() { 
+            const tb = document.getElementById('focuslist-table-body'); if (!tb) return; 
+            if (filteredFocusListEntries.length === 0) { tb.innerHTML = `<tr><td colspan="16" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów.</td></tr>`; document.getElementById('focuslist-page-info').innerText = 'Strona 0 z 0'; return; } 
+            
+            const start = (currentFocusListPage - 1) * focusListPageSize; const pageData = filteredFocusListEntries.slice(start, start + focusListPageSize); 
+            let htmlStr = '';
+
+            pageData.forEach(item => { 
+                try {
+                    const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-'; 
+                    const mod = (item.direction === 'DBR' || item.direction === 'RBR') ? 1 : -1; 
+                    const entry = parseFloat(item.entry_point) || 0; const sl = parseFloat(item.stop_loss) || 0; const tp = parseFloat(item.take_profit) || 0; 
+                    let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0; 
+                    
+                    let statusColor = item.calcStatus === 'Skupienie' ? '#0ecb81' : '#848e9c'; 
+                    let diffColor = item.calcDiff >= 0 ? '#0ecb81' : '#f6465d';
+                    
+                    let diffStr = '-';
+                    if(!isNaN(item.calcDiff) && isFinite(item.calcDiff)) {
+                        diffStr = (item.calcDiff > 0 ? '+' : '') + item.calcDiff.toFixed(2) + '%';
+                    }
+                    let rrStr = (!isNaN(rr) && isFinite(rr)) ? rr.toFixed(2) : '-';
+                    
+                    const pb = item.priority === 1 ? `<span style="color: #fcd535;">Wysoki</span>` : `<span style="color: var(--text-muted);">Norm</span>`; 
+                    const mb = item.mute === 1 ? `<span style="color: var(--danger);">🔕</span>` : `<span style="color: var(--success);">🔔</span>`; 
+                    const r1 = (item.reasons && item.reasons[0]) ? item.reasons[0] : '-'; const r2 = (item.reasons && item.reasons[1]) ? item.reasons[1] : '-'; const r3 = (item.reasons && item.reasons[2]) ? item.reasons[2] : '-'; const r4 = (item.reasons && item.reasons[3]) ? item.reasons[3] : '-'; const r5 = (item.reasons && item.reasons[4]) ? item.reasons[4] : '-'; 
+                    
+                    htmlStr += `<tr><td style="white-space: nowrap;">${dateStr}</td><td style="font-weight:bold; color:var(--accent);">${item.ticker}</td><td style="font-weight:bold;">${item.calcCurrency}</td><td>${item.direction}</td><td class="sensitive" style="font-weight: 600;">${entry.toFixed(2)}</td><td>${pb}</td><td>${mb}</td><td style="color:${statusColor}; font-weight:bold;">${item.calcStatus}</td><td class="sensitive" style="color:${diffColor}; font-weight:bold;">${diffStr}</td><td class="sensitive">${rrStr}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r1}">${r1}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r2}">${r2}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r3}">${r3}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r4}">${r4}</td><td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r5}">${r5}</td><td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 TV</a></td></tr>`; 
+                } catch(e) { console.error("Render row fail", e); }
+            }); 
+            tb.innerHTML = htmlStr;
+            document.getElementById('focuslist-page-info').innerText = `Strona ${currentFocusListPage} z ${Math.ceil(filteredFocusListEntries.length / focusListPageSize)}`; 
+        }
+        function changeFocusListPage(d) { currentFocusListPage += d; renderFocusListTable(); }
+
         // --- TRADES MODULE ---
         function handleTradeSort(key) { tradeSortDir = (tradeSortKey === key && tradeSortDir === 'desc') ? 'asc' : 'desc'; tradeSortKey = key; handleTradesFilter(); }
 
@@ -1046,7 +1129,7 @@
             
             let roiPct = 0; if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
             
-            // Poprawiona logika Dźwigni (Zainwestowano * Dzwignia / Zainwestowano)
+            // Poprawiona matematyka Zalewarowania konta: (Suma Zainwestowane * Dźwignia) / (Suma Zainwestowane)
             let avgLeverage = 0; 
             if (openInvestedPln > 0) {
                 avgLeverage = openLevNominalPln / openInvestedPln;
@@ -1083,7 +1166,7 @@
             }
             renderSummaryClosed();
             
-            // Explicitly force save so ROI is ALWAYS recorded if missing
+            // Wymuszony zapis do chmury zapewnia dostępność danych dla wykresu
             fetch(`${API_BASE_URL}/api/portfolio/roi/save`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({roi_pct: roiPct}) }).then(() => { drawSummaryChart(); }).catch(e => { drawSummaryChart(); });
         }
 
@@ -1187,8 +1270,8 @@
         }
 
         // --- Utils ---
-        function getTradingViewLink(ticker) { if (!ticker) return '#'; const cleanTicker = ticker.trim().toUpperCase(); const LAYOUT_ID = 'k5llKflB'; const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/'; if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; } const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ']; const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA']; let exchange = ''; if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; } return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`; }
-        function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = ticker.toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
+        function getTradingViewLink(ticker) { if (!ticker) return '#'; const cleanTicker = String(ticker).trim().toUpperCase(); const LAYOUT_ID = 'k5llKflB'; const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/'; if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; } const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ']; const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA']; let exchange = ''; if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; } return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`; }
+        function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = String(ticker).toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
         function calculateTradeStats(item) { try { const isClosed = (item.status === 'CLOSED' || item.sell_date != null); const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1; const tm = tickerDataArray.find(t => t.ticker === item.ticker); const buyPrice = parseFloat(item.buy_price) || 0; let cp = buyPrice; if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } else if (tm && tm.price) { cp = parseFloat(tm.price); } const spent = parseFloat(item.spent) || 0; const lev = parseInt(item.leverage) || 1; const val = spent * lev; const cfdCost = parseFloat(item.cfd_cost) || 0; const div = parseFloat(item.dividend) || 0; let prof = 0; if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; } const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1)); const profPln = prof * usedFx; const valPln = val * usedFx; const tp = parseFloat(item.tp) || 0; const sl = parseFloat(item.sl) || 0; let rr = 0; if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); } let prog = 0; if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); } let dsl = sl; if (prog >= 1) dsl = tp; else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); let pd = prog * 100; let pc = 'var(--success)'; if (pd < 0) { pc = 'var(--danger)'; if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } else { pd = 0; } } if (pd > 100) pd = 100; return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx }; } catch (error) { return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; } }
 
         // Modal functions
@@ -1212,18 +1295,6 @@
 
         // Start
         openDashboard();
-        
-        // Zabezpieczenie asynchroniczne FocusList
-        function safeHandleFocusListFilter() {
-            try { handleFocusListFilter(); } 
-            catch(err) { console.error("FocusList error:", err); }
-        }
-        
-        async function initFocusListModule() { 
-            if(tickerDataArray.length === 0) await loadDatabase(); 
-            await fetchFormEntries(); 
-            safeHandleFocusListFilter(); 
-        }
     </script>
 </body>
 </html>
