@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quant Desk v9.3</title>
+    <title>Quant Desk v10.0</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef; --text-muted: #848e9c; --accent: #c99400; --accent-hover: #fcd535; --danger: #f6465d; --success: #0ecb81; --border-color: #2b3139; }
@@ -37,7 +37,10 @@
 </head>
 <body>
     <header>
-        <div class="header-actions"><button class="back-btn" id="back-btn" onclick="openDashboard()">← Powrót</button><h1 id="app-title">Quant<span>Desk</span></h1></div>
+        <div class="header-actions">
+            <button class="back-btn" id="back-btn" onclick="openDashboard()">← Powrót</button>
+            <h1 id="app-title">Quant<span>Desk</span></h1>
+        </div>
         <button class="privacy-btn" id="privacy-btn" onclick="togglePrivacy()" title="Tryb ukrycia danych">👁️</button>
     </header>
 
@@ -60,7 +63,7 @@
         <div class="macro-header-container"><h3>Kreator Pozycji (Form)</h3></div>
         <div class="journal-container">
             <div class="journal-sidebar">
-                <form id="trading-form">
+                <form id="trading-form" onsubmit="submitAdvancedForm(event)">
                     <div class="form-row"><div class="form-group"><label style="display: flex; justify-content: space-between;">Ticker <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label><select id="form-ticker" onchange="updateFormTvLink()"></select></div></div>
                     <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div></div>
                     <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div></div>
@@ -113,7 +116,10 @@
         <div class="journal-container">
             <div class="journal-sidebar">
                 <form id="focus-form" onsubmit="submitFocusForm(event)">
-                    <div class="form-group"><label>Wybierz ID Form</label><select id="focus-form-id" onchange="onFocusIdChange()"></select></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Wybierz ID Form</label><select id="focus-form-id" onchange="onFocusIdChange()"></select></div>
+                        <div class="form-group"><label>Data Analizy</label><input type="date" id="focus-date" required></div>
+                    </div>
                     <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);"><div class="form-group"><label>Wybrany Ticker</label><input type="text" id="focus-ticker" readonly style="opacity:0.7;"></div><div class="form-group"><label>Kierunek</label><input type="text" id="focus-direction" readonly style="opacity:0.7;"></div></div>
                     <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC()" style="background: #0284c7; color:#fff; padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; border: none; font-weight: bold; width: 100%;">🤖 Automatyzuj SMC (Yahoo)</button></div>
                     <div class="form-row"><div class="form-group"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5"></div><div class="form-group"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div></div>
@@ -190,7 +196,7 @@
     <section id="summary-module" class="app-module"> 
         <div class="macro-header-container"><h3>Podsumowanie Portfela</h3></div> 
         <div class="tabs"> 
-            <button class="tab-btn active" onclick="switchSummaryTab('dashboard')">Bieżące saldo (Wykres Liniowy)</button> 
+            <button class="tab-btn active" onclick="switchSummaryTab('dashboard')">Bieżące saldo</button> 
             <button class="tab-btn" onclick="switchSummaryTab('deposits')">Historia depozytu</button> 
             <button class="tab-btn" onclick="switchSummaryTab('open')">Podsumowanie otwartych</button> 
             <button class="tab-btn" onclick="switchSummaryTab('closed')">Podsumowanie zamkniętych</button> 
@@ -241,6 +247,7 @@
                     <thead>
                         <tr>
                             <th onclick="sortSummaryOpen('ticker')">Ticker ↕</th>
+                            <th onclick="sortSummaryOpen('inv')">Zainw. (Waluta) ↕</th>
                             <th onclick="sortSummaryOpen('invPln')">Zainw. (PLN) ↕</th>
                             <th onclick="sortSummaryOpen('pctInv')">% Udział (Gotówka) ↕</th>
                             <th onclick="sortSummaryOpen('pctLev')">% Udział (Dźwignia) ↕</th>
@@ -555,7 +562,7 @@
             localStorage.setItem(key, JSON.stringify(data));
         }
 
-        // --- NAWIGACJA (TO BYŁO POWODEM AWARII) ---
+        // --- NAWIGACJA ---
         function openModule(moduleId, moduleTitle) {
             document.getElementById('dashboard').style.display = 'none';
             document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
@@ -698,7 +705,7 @@
         async function forceMacroUpdate() { try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } catch (e) { alert("Błąd połączenia z serwerem."); } }
         async function forceMacroYTDUpdate(event) { 
             let btn = null; let originalText = "📥 Pobierz YTD";
-            if(event && event.currentTarget) { btn = event.currentTarget; originalText = btn.innerText; btn.innerText = "⏳ Pobieram YTD (to potrwa 10-20s)..."; btn.disabled = true; }
+            if(event && event.currentTarget) { btn = event.currentTarget; originalText = btn.innerText; btn.innerText = "⏳ Pobieram YTD..."; btn.disabled = true; }
             try { 
                 const res = await fetch(`${API_BASE_URL}/api/macro/backfill-ytd`, { method: 'POST' }); 
                 const data = await res.json();
@@ -729,13 +736,14 @@
         
         async function fetchFormEntries() { 
             const cached = getCachedData('form_cache');
-            if(cached) { formEntries = cached; applyFormFilterAndSort(); }
+            if(cached) { formEntries = cached; applyFormFilterAndSort(); handleFocusListFilter(); }
             try { 
                 const response = await fetch(`${API_BASE_URL}/api/form/entries`); 
                 const rawData = await response.json(); 
                 formEntries = Array.isArray(rawData) ? rawData : []; 
                 setCachedData('form_cache', formEntries);
                 applyFormFilterAndSort(); 
+                handleFocusListFilter(); // Zabezpieczenie dla FocusList
             } catch (error) { console.error(error); } 
         }
         
@@ -774,7 +782,7 @@
                 // Rzeczywisty Dystans Cenowy (ujemny/dodatni)
                 const rawDiff = ((cp - entry) / entry) * 100 * mod;
                 
-                // Status opiera się na bezwzględnej wielkości ruchu (dystans)
+                // Status opiera się na bezwzględnej wielkości ruchu
                 const absDiff = Math.abs(rawDiff);
                 let status = absDiff > 15 ? 'Ignorowanie' : (absDiff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
                 let statusColor = absDiff > 15 ? '#f6465d' : (absDiff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
@@ -830,7 +838,10 @@
         // --- FOCUS MODULE ---
         function handleFocusSort(key) { focusSortDir = (focusSortKey === key && focusSortDir === 'desc') ? 'asc' : 'desc'; focusSortKey = key; renderFocusTable(); }
 
-        async function initFocusModule() { try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); formEntriesGlobal = await res.json(); document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join(''); onFocusIdChange(); fetchFocusEntries(); } catch(e) {} }
+        async function initFocusModule() { 
+            try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); formEntriesGlobal = await res.json(); document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join(''); onFocusIdChange(); fetchFocusEntries(); } catch(e) {} 
+            document.getElementById('focus-date').valueAsDate = new Date();
+        }
         function onFocusIdChange() { const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value); if(entry) { document.getElementById('focus-ticker').value = entry.ticker; document.getElementById('focus-direction').value = entry.direction; } }
         async function autoCalculateSMC() { const t = document.getElementById('focus-ticker').value; const d = document.getElementById('focus-direction').value; try { const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d}) }); const r = await res.json(); document.getElementById('focus-candle').value = r.candle_score; document.getElementById('focus-volume').value = r.volume_score; document.getElementById('focus-vix').value = r.vix_score; document.getElementById('focus-index').value = r.index_score; } catch(e) { console.error(e); } }
 
@@ -867,7 +878,23 @@
         }
         function changeFocusPage(d) { currentFocusPage += d; renderFocusTable(); }
         async function deleteFocusEntry(id) { try { await fetch(`${API_BASE_URL}/api/focus/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); fetchFocusEntries(); } catch(e){} }
-        async function submitFocusForm(e) { e.preventDefault(); const d = { entry_id: document.getElementById('focus-form-id').value, ticker: document.getElementById('focus-ticker').value, candle_score: document.getElementById('focus-candle').value, volume_score: document.getElementById('focus-volume').value, gap_score: document.getElementById('focus-gap').value, calendar_score: document.getElementById('focus-calendar').value, cvd_score: document.getElementById('focus-cvd').value, vix_score: document.getElementById('focus-vix').value, index_score: document.getElementById('focus-index').value, htf_score: document.getElementById('focus-htf').value }; try { await fetch(`${API_BASE_URL}/api/focus/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) }); fetchFocusEntries(); } catch(e) {} }
+        async function submitFocusForm(e) { 
+            e.preventDefault(); 
+            const d = { 
+                entry_id: document.getElementById('focus-form-id').value, 
+                ticker: document.getElementById('focus-ticker').value, 
+                focus_date: document.getElementById('focus-date').value,
+                candle_score: document.getElementById('focus-candle').value, 
+                volume_score: document.getElementById('focus-volume').value, 
+                gap_score: document.getElementById('focus-gap').value, 
+                calendar_score: document.getElementById('focus-calendar').value, 
+                cvd_score: document.getElementById('focus-cvd').value, 
+                vix_score: document.getElementById('focus-vix').value, 
+                index_score: document.getElementById('focus-index').value, 
+                htf_score: document.getElementById('focus-htf').value 
+            }; 
+            try { await fetch(`${API_BASE_URL}/api/focus/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) }); fetchFocusEntries(); } catch(e) {} 
+        }
 
         // --- TRADES MODULE ---
         function handleTradeSort(key) { tradeSortDir = (tradeSortKey === key && tradeSortDir === 'desc') ? 'asc' : 'desc'; tradeSortKey = key; handleTradesFilter(); }
@@ -976,7 +1003,7 @@
             
             let roiPct = 0; if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
             
-            // Poprawiona logika (Zalewarowanie): Średnia dźwignia z otwartych pozycji
+            // Poprawiona logika Dźwigni
             let avgLeverage = 0; 
             if (openInvestedPln > 0) {
                 avgLeverage = openLevNominalPln / openInvestedPln;
@@ -1061,24 +1088,70 @@
         // --- SKRÓCONE NARZĘDZIA POMOCNICZE (Wykres, Dywidendy, Kalkulatory) ---
         function renderDepositsTable() { const tb = document.getElementById('s-dep-table'); if(!depositsDataArray || depositsDataArray.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak wpłat.</td></tr>'; return; } tb.innerHTML = depositsDataArray.map(x => `<tr><td>${x.deposit_date || x.created_at ? (x.deposit_date || x.created_at).split('T')[0] : '-'}</td><td class="sensitive" style="font-weight:bold;">${Number(x.amount || 0).toFixed(2)} ${x.currency || 'PLN'}</td><td style="color:var(--text-muted);">${x.currency || 'PLN'}</td><td class="sensitive" style="color:var(--success); font-weight:bold;">${Number(x.amount_pln || x.amount || 0).toFixed(2)} PLN</td><td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td></tr>`).join(''); }
         function renderSummaryClosed() { const fMonth = document.getElementById('s-cls-month-filter').value; const fCur = document.getElementById('s-cls-cur-filter').value; const fLev = document.getElementById('s-cls-lev-filter').value; const closedByMonth = {}; const closedByCurr = {}; const closedByLev = {}; let filteredPnlPln = 0; allTradesData.forEach(trade => { try { const s = calculateTradeStats(trade); if (!s.isClosed) return; const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty'; const curr = trade.currency || 'USD'; const lev = parseInt(trade.leverage) || 1; if (fMonth !== 'ALL' && month !== fMonth) return; if (fCur !== 'ALL' && curr !== fCur) return; if (fLev === '>1' && lev <= 1) return; if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return; filteredPnlPln += s.profPln; if(!closedByMonth[month]) closedByMonth[month] = 0; closedByMonth[month] += s.profPln; if(!closedByCurr[curr]) closedByCurr[curr] = 0; closedByCurr[curr] += s.profPln; if(!closedByLev[lev]) closedByLev[lev] = 0; closedByLev[lev] += s.profPln; } catch(e) {} }); const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML=''; Object.keys(closedByMonth).sort().reverse().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML=''; Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML=''; Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const totalEl = document.getElementById('s-cls-filtered-total'); if(totalEl) { totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN'; totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)'; } }
-        async function drawSummaryChart() { try { const res = await fetch(`${API_BASE_URL}/api/portfolio/roi/history`); const roiHistory = await res.json() || []; if (!Array.isArray(roiHistory) || roiHistory.length === 0) return; roiHistory.sort((a, b) => new Date(a.date) - new Date(b.date)); const labels = []; const roiDataset = []; const sp500Dataset = []; let baselineSp500 = null; const firstDate = roiHistory[0].date; const baselineMacro = macroDataArray.find(m => m.date === firstDate) || macroDataArray[macroDataArray.length - 1]; if (baselineMacro && baselineMacro.sp500) { baselineSp500 = parseFloat(baselineMacro.sp500); } roiHistory.forEach(entry => { labels.push(entry.date); roiDataset.push(entry.roi_pct); let sp500Pct = 0; if (baselineSp500) { const macroDay = macroDataArray.find(m => m.date === entry.date); if (macroDay && macroDay.sp500) { const currentSp500 = parseFloat(macroDay.sp500); sp500Pct = ((currentSp500 - baselineSp500) / baselineSp500) * 100; } else { sp500Pct = sp500Dataset.length > 0 ? sp500Dataset[sp500Dataset.length - 1] : 0; } } sp500Dataset.push(sp500Pct); }); const ctx = document.getElementById('roiChart').getContext('2d'); if(summaryChartInstance) summaryChartInstance.destroy(); Chart.defaults.color = '#cdd6f4'; summaryChartInstance = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [ { label: 'Twój Portfel (ROI %)', data: roiDataset, borderColor: '#0ecb81', backgroundColor: 'rgba(14, 203, 129, 0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#0ecb81' }, { label: 'S&P 500 (%)', data: sp500Dataset, borderColor: '#89b4fa', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], tension: 0.3, pointRadius: 0 } ] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false, }, scales: { y: { grid: {color: 'rgba(255,255,255,0.05)'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4', maxTicksLimit: 10} } }, plugins: { legend: { display: true, position: 'top', labels: {color: '#cdd6f4'} }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%'; } } } } } }); } catch (err) {} }
+        async function drawSummaryChart() { 
+            try { 
+                const res = await fetch(`${API_BASE_URL}/api/portfolio/roi/history`); 
+                const roiHistory = await res.json() || []; 
+                if (!Array.isArray(roiHistory) || roiHistory.length === 0) return; 
+                
+                roiHistory.sort((a, b) => new Date(a.date) - new Date(b.date)); 
+                const labels = []; const roiDataset = []; const sp500Dataset = []; 
+                
+                let baselineSp500 = null; 
+                if (macroDataArray && macroDataArray.length > 0) {
+                    const firstDate = roiHistory[0].date; 
+                    const baselineMacro = macroDataArray.find(m => m.date === firstDate) || macroDataArray[macroDataArray.length - 1]; 
+                    if (baselineMacro && baselineMacro.sp500) { baselineSp500 = parseFloat(baselineMacro.sp500); } 
+                }
+                
+                roiHistory.forEach(entry => { 
+                    labels.push(entry.date); 
+                    roiDataset.push(parseFloat(entry.roi_pct) || 0); 
+                    let sp500Pct = 0; 
+                    if (baselineSp500 && macroDataArray && macroDataArray.length > 0) { 
+                        const macroDay = macroDataArray.find(m => m.date === entry.date); 
+                        if (macroDay && macroDay.sp500) { 
+                            const currentSp500 = parseFloat(macroDay.sp500); 
+                            sp500Pct = ((currentSp500 - baselineSp500) / baselineSp500) * 100; 
+                        } else { 
+                            sp500Pct = sp500Dataset.length > 0 ? sp500Dataset[sp500Dataset.length - 1] : 0; 
+                        } 
+                    } 
+                    sp500Dataset.push(sp500Pct); 
+                }); 
+                
+                const ctx = document.getElementById('roiChart').getContext('2d'); 
+                if(summaryChartInstance) summaryChartInstance.destroy(); 
+                Chart.defaults.color = '#cdd6f4'; 
+                summaryChartInstance = new Chart(ctx, { 
+                    type: 'line', 
+                    data: { 
+                        labels: labels, 
+                        datasets: [ 
+                            { label: 'Twój Portfel (ROI %)', data: roiDataset, borderColor: '#0ecb81', backgroundColor: 'rgba(14, 203, 129, 0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#0ecb81' }, 
+                            { label: 'S&P 500 (%)', data: sp500Dataset, borderColor: '#89b4fa', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], tension: 0.3, pointRadius: 0 } 
+                        ] 
+                    }, 
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false, }, 
+                        scales: { y: { grid: {color: 'rgba(255,255,255,0.05)'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4', maxTicksLimit: 10} } }, 
+                        plugins: { legend: { display: true, position: 'top', labels: {color: '#cdd6f4'} }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%'; } } } } 
+                    } 
+                }); 
+            } catch (err) { console.error("Chart error", err); } 
+        }
 
-        // Analiza Techniczna
-        function switchTechTab(tab) { document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-' + tab).classList.add('active'); }
-        function calculateHarmonics(e) { e.preventDefault(); const x = parseFloat(document.getElementById('ha-x').value); const a = parseFloat(document.getElementById('ha-a').value); const b = parseFloat(document.getElementById('ha-b').value); const c = parseFloat(document.getElementById('ha-c').value); const xa = Math.abs(a - x); const ab = Math.abs(b - a); const bc = Math.abs(c - b); const isBullish = a > x; const dirMultiplier = isBullish ? -1 : 1; const bRetracement = ab / xa; const cRetracement = bc / ab; let resultsHTML = ''; const patterns = [ { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 }, { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Butterfly', bTarget: 0.786, dRetXa: 1.272, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Crab', bTarget: 0.50, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 }, { name: 'Deep Crab', bTarget: 0.886, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 } ]; let foundMatch = false; patterns.forEach(pat => { const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) || (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618); if(isBMatch) { foundMatch = true; const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier); const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier); const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier); resultsHTML += ` <div class="kpi-card" style="border-color: var(--accent);"> <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4> <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;"> Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br> Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB </div> <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}</b></div> <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)} - ${dTargetByBC_Max.toFixed(2)}</b></div> <div class="value sensitive" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)} do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}</div> </div> `; } }); if(!foundMatch) { resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;"> Obecna struktura (B zniósł ${(bRetracement).toFixed(3)} XA, C zniósł ${(cRetracement).toFixed(3)} AB) nie mieści się w standardowych tolerancjach formacji Harmonicznych. To może być zwykła trójfalowa korekta. </div>`; } document.getElementById('ha-results').innerHTML = resultsHTML; }
-        function calculateElliott(e) { e.preventDefault(); const dir = document.getElementById('ew-direction').value; const x = parseFloat(document.getElementById('ew-x').value); const w1 = parseFloat(document.getElementById('ew-1').value); const w2 = parseFloat(document.getElementById('ew-2').value); const w3 = parseFloat(document.getElementById('ew-3').value); const w4 = parseFloat(document.getElementById('ew-4').value); const isUp = dir === 'UP'; let score = 0; let maxScore = 5; let rulesLog = ''; const lenW1 = Math.abs(w1 - x); const lenW3 = Math.abs(w3 - w2); const w2RetracedW1 = isUp ? (w2 < x) : (w2 > x); if (w2RetracedW1) { rulesLog += '❌ Fala 2 zniosła więcej niż 100% Fali 1. (Złamanie reguły Elliotta)<br>'; } else { score += 2; rulesLog += '✅ Fala 2 zatrzymała się nad/pod początkiem Fali 1. (+2 pkt)<br>'; } if (lenW3 <= lenW1 * 0.98) { rulesLog += '⚠️ Fala 3 jest krótsza od Fali 1. Pamiętaj, że Fala 5 nie będzie mogła być krótsza od Fali 3.<br>'; } else { score += 1; rulesLog += '✅ Fala 3 jest dłuższa lub równa Fali 1. (+1 pkt)<br>'; } const overlap = isUp ? (w4 <= w1) : (w4 >= w1); if (overlap) { rulesLog += '❌ Fala 4 wkroczyła w terytorium Fali 1. (Złamanie standardowego impulsu - może być klin końńcowy)<br>'; } else { score += 2; rulesLog += '✅ Fala 4 nie zachodzi na Falę 1. Klasyczny impuls. (+2 pkt)<br>'; } const color = score === 5 ? 'var(--success)' : (score >= 3 ? '#fcd535' : 'var(--danger)'); document.getElementById('ew-score-text').innerHTML = `<span style="color:${color}; font-weight:bold;">${score} / ${maxScore} Pkt</span>`; document.getElementById('ew-rules-list').innerHTML = rulesLog; if (score >= 2) { document.getElementById('ew-projections').style.display = 'grid'; const w1ToW3Dist = Math.abs(w3 - x); const w5_target1 = isUp ? w4 + lenW1 : w4 - lenW1; const w5_target2 = isUp ? w4 + (w1ToW3Dist * 0.618) : w4 - (w1ToW3Dist * 0.618); const avgW5 = (w5_target1 + w5_target2) / 2; document.getElementById('ew-p5').innerText = avgW5.toFixed(2) + ' $'; const targetA = w4; document.getElementById('ew-pa').innerText = targetA.toFixed(2) + ' $'; const distA = Math.abs(avgW5 - targetA); const targetB = isUp ? targetA + (distA * 0.5) : targetA - (distA * 0.5); document.getElementById('ew-pb').innerText = targetB.toFixed(2) + ' $'; const targetC = isUp ? targetB - distA : targetB + distA; document.getElementById('ew-pc').innerText = targetC.toFixed(2) + ' $'; } else { document.getElementById('ew-projections').style.display = 'none'; } }
-        function calculateRGR(e) { e.preventDefault(); const type = document.getElementById('rgr-type').value; const ls = parseFloat(document.getElementById('rgr-ls').value); const ln = parseFloat(document.getElementById('rgr-ln').value); const h = parseFloat(document.getElementById('rgr-h').value); const rn = parseFloat(document.getElementById('rgr-rn').value); const rs = parseFloat(document.getElementById('rgr-rs').value); let bp = parseFloat(document.getElementById('rgr-bp').value); if(isNaN(bp)) bp = rn; const isRGR = type === 'RGR'; let isValid = true; let reason = ''; if (isRGR) { if (h <= ls || h <= rs) { isValid = false; reason += '❌ Głowa RGR musi być wyżej niż ramiona.<br>'; } else reason += '✅ Głowa (wyżej).<br>'; } else { if (h >= ls || h >= rs) { isValid = false; reason += '❌ Głowa oRGR musi być niżej.<br>'; } else reason += '✅ Głowa (niżej).<br>'; } const shoulderDiff = Math.abs(ls - rs) / ls * 100; if (shoulderDiff > 15) { reason += `⚠️ Prawe ramię różni się od lewego (${shoulderDiff.toFixed(1)}%).<br>`; } else { reason += '✅ Ramiona na zbieżnym poziomie.<br>'; } const neckSlope = isRGR ? (rn - ln) : (ln - rn); if (isValid) { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--success);">Prawidłowy model</span>`; document.getElementById('rgr-targets').style.display = 'grid'; const neckAvg = (ln + rn) / 2; const headHeight = Math.abs(h - neckAvg); const target = isRGR ? bp - headHeight : bp + headHeight; document.getElementById('rgr-angle').innerText = neckSlope === 0 ? "Płaski" : (neckSlope > 0 ? "Rosnący" : "Spadkowy"); document.getElementById('rgr-height').innerText = headHeight.toFixed(2) + ' $'; document.getElementById('rgr-target').innerText = target.toFixed(2) + ' $'; } else { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--danger);">Złamane reguły</span>`; document.getElementById('rgr-targets').style.display = 'none'; } document.getElementById('rgr-valid-desc').innerHTML = reason; }
-
-        // Utils
+        // --- Utils ---
         function getTradingViewLink(ticker) { if (!ticker) return '#'; const cleanTicker = ticker.trim().toUpperCase(); const LAYOUT_ID = 'k5llKflB'; const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/'; if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; } const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ']; const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA']; let exchange = ''; if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; } return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`; }
         function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = ticker.toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
         function calculateTradeStats(item) { try { const isClosed = (item.status === 'CLOSED' || item.sell_date != null); const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1; const tm = tickerDataArray.find(t => t.ticker === item.ticker); const buyPrice = parseFloat(item.buy_price) || 0; let cp = buyPrice; if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } else if (tm && tm.price) { cp = parseFloat(tm.price); } const spent = parseFloat(item.spent) || 0; const lev = parseInt(item.leverage) || 1; const val = spent * lev; const cfdCost = parseFloat(item.cfd_cost) || 0; const div = parseFloat(item.dividend) || 0; let prof = 0; if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; } const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1)); const profPln = prof * usedFx; const valPln = val * usedFx; const tp = parseFloat(item.tp) || 0; const sl = parseFloat(item.sl) || 0; let rr = 0; if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); } let prog = 0; if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); } let dsl = sl; if (prog >= 1) dsl = tp; else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); let pd = prog * 100; let pc = 'var(--success)'; if (pd < 0) { pc = 'var(--danger)'; if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } else { pd = 0; } } if (pd > 100) pd = 100; return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx }; } catch (error) { return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; } }
 
-        // Modal functions
+        // --- Modal functions ---
         function openCloseModal(id) { document.getElementById('sell-modal').style.display = 'flex'; document.getElementById('sell-trade-id').value = id; document.getElementById('sell-date').valueAsDate = new Date(); document.getElementById('sell-price').value = ''; document.getElementById('sell-fraction').value = '1'; const trade = allTradesData.find(t => t.id === id); if(trade && trade.leverage > 1) { document.getElementById('sell-cfd-group').style.display = 'block'; document.getElementById('sell-cfd-cost').value = '0'; } else { document.getElementById('sell-cfd-group').style.display = 'none'; document.getElementById('sell-cfd-cost').value = '0'; } }
         function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
         async function confirmSell() { const id = document.getElementById('sell-trade-id').value; const price = parseFloat(document.getElementById('sell-price').value); const date = document.getElementById('sell-date').value; const cfdCost = parseFloat(document.getElementById('sell-cfd-cost').value) || 0; const fracStr = document.getElementById('sell-fraction').value.trim(); if(!price || isNaN(price)) return alert('Błąd ceny!'); let fraction = 1.0; if(fracStr.includes('%')) { fraction = parseFloat(fracStr.replace('%', '')) / 100.0; } else if(fracStr.includes('/')) { const parts = fracStr.split('/'); fraction = parseFloat(parts[0]) / parseFloat(parts[1]); } else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; } try { await fetch(`${API_BASE_URL}/api/trades/close`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost }) }); closeSellModal(); fetchTradesEntries(); } catch(e) {} }
 
+        // --- INNE (Blog, Service, itp.) ---
         async function loadDailyBriefs() { try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); } } catch (error) {} }
         async function loadServiceModule() { if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); allTradesData = await res.json() || []; } catch(e) {} } const openTrades = allTradesData.filter(t => t.status === 'OPEN'); const select = document.getElementById('div-trade-id'); select.innerHTML = '<option value="">Wybierz otwartą pozycję...</option>'; openTrades.forEach(t => { select.innerHTML += `<option value="${t.id}">ID: #${t.id} | ${t.ticker} (${t.direction})</option>`; }); document.getElementById('div-date').valueAsDate = new Date(); }
         async function addDeposit(e) { e.preventDefault(); const amt = document.getElementById('dep-amt').value; const d = document.getElementById('dep-date').value; const cur = document.getElementById('dep-cur').value; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); document.getElementById('dep-amt').value = ''; initSummaryModule(); } catch(err) {} }
@@ -1087,7 +1160,26 @@
         async function forceAlertsCheck() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Uruchamianie silnika alertów...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`); const result = await res.json(); out.innerHTML = `✅ <strong>Gotowe.</strong> Aktywowane: ${result.alerts_triggered || 0}`; } catch(e) { out.innerHTML = `❌ Błąd.`; } }
         async function forceCronPricesUpdate() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Pobieranie z Yahoo...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`); const result = await res.json(); out.innerHTML = `✅ <strong>Zaktualizowano.</strong> Tickerów: ${result.updated_tickers || 0}`; } catch(e) { out.innerHTML = `❌ Błąd.`; } }
 
+        // --- Analiza Techniczna ---
+        function switchTechTab(tab) { document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-' + tab).classList.add('active'); }
+        function calculateHarmonics(e) { e.preventDefault(); const x = parseFloat(document.getElementById('ha-x').value); const a = parseFloat(document.getElementById('ha-a').value); const b = parseFloat(document.getElementById('ha-b').value); const c = parseFloat(document.getElementById('ha-c').value); const xa = Math.abs(a - x); const ab = Math.abs(b - a); const bc = Math.abs(c - b); const isBullish = a > x; const dirMultiplier = isBullish ? -1 : 1; const bRetracement = ab / xa; const cRetracement = bc / ab; let resultsHTML = ''; const patterns = [ { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 }, { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Butterfly', bTarget: 0.786, dRetXa: 1.272, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Crab', bTarget: 0.50, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 }, { name: 'Deep Crab', bTarget: 0.886, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 } ]; let foundMatch = false; patterns.forEach(pat => { const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) || (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618); if(isBMatch) { foundMatch = true; const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier); const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier); const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier); resultsHTML += ` <div class="kpi-card" style="border-color: var(--accent);"> <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4> <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;"> Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br> Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB </div> <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}</b></div> <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)} - ${dTargetByBC_Max.toFixed(2)}</b></div> <div class="value sensitive" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)} do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}</div> </div> `; } }); if(!foundMatch) { resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;"> Obecna struktura nie mieści się w tolerancjach formacji Harmonicznych. </div>`; } document.getElementById('ha-results').innerHTML = resultsHTML; }
+        function calculateElliott(e) { e.preventDefault(); const dir = document.getElementById('ew-direction').value; const x = parseFloat(document.getElementById('ew-x').value); const w1 = parseFloat(document.getElementById('ew-1').value); const w2 = parseFloat(document.getElementById('ew-2').value); const w3 = parseFloat(document.getElementById('ew-3').value); const w4 = parseFloat(document.getElementById('ew-4').value); const isUp = dir === 'UP'; let score = 0; let maxScore = 5; let rulesLog = ''; const lenW1 = Math.abs(w1 - x); const lenW3 = Math.abs(w3 - w2); const w2RetracedW1 = isUp ? (w2 < x) : (w2 > x); if (w2RetracedW1) { rulesLog += '❌ Fala 2 zniosła więcej niż 100% Fali 1.<br>'; } else { score += 2; rulesLog += '✅ Fala 2 zatrzymała się w zakresie.<br>'; } if (lenW3 <= lenW1 * 0.98) { rulesLog += '⚠️ Fala 3 jest krótsza od Fali 1.<br>'; } else { score += 1; rulesLog += '✅ Fala 3 jest dłuższa lub równa Fali 1.<br>'; } const overlap = isUp ? (w4 <= w1) : (w4 >= w1); if (overlap) { rulesLog += '❌ Fala 4 wkroczyła w terytorium Fali 1.<br>'; } else { score += 2; rulesLog += '✅ Fala 4 nie zachodzi na Falę 1.<br>'; } const color = score === 5 ? 'var(--success)' : (score >= 3 ? '#fcd535' : 'var(--danger)'); document.getElementById('ew-score-text').innerHTML = `<span style="color:${color}; font-weight:bold;">${score} / ${maxScore} Pkt</span>`; document.getElementById('ew-rules-list').innerHTML = rulesLog; if (score >= 2) { document.getElementById('ew-projections').style.display = 'grid'; const w1ToW3Dist = Math.abs(w3 - x); const w5_target1 = isUp ? w4 + lenW1 : w4 - lenW1; const w5_target2 = isUp ? w4 + (w1ToW3Dist * 0.618) : w4 - (w1ToW3Dist * 0.618); const avgW5 = (w5_target1 + w5_target2) / 2; document.getElementById('ew-p5').innerText = avgW5.toFixed(2) + ' $'; const targetA = w4; document.getElementById('ew-pa').innerText = targetA.toFixed(2) + ' $'; const distA = Math.abs(avgW5 - targetA); const targetB = isUp ? targetA + (distA * 0.5) : targetA - (distA * 0.5); document.getElementById('ew-pb').innerText = targetB.toFixed(2) + ' $'; const targetC = isUp ? targetB - distA : targetB + distA; document.getElementById('ew-pc').innerText = targetC.toFixed(2) + ' $'; } else { document.getElementById('ew-projections').style.display = 'none'; } }
+        function calculateRGR(e) { e.preventDefault(); const type = document.getElementById('rgr-type').value; const ls = parseFloat(document.getElementById('rgr-ls').value); const ln = parseFloat(document.getElementById('rgr-ln').value); const h = parseFloat(document.getElementById('rgr-h').value); const rn = parseFloat(document.getElementById('rgr-rn').value); const rs = parseFloat(document.getElementById('rgr-rs').value); let bp = parseFloat(document.getElementById('rgr-bp').value); if(isNaN(bp)) bp = rn; const isRGR = type === 'RGR'; let isValid = true; let reason = ''; if (isRGR) { if (h <= ls || h <= rs) { isValid = false; reason += '❌ Głowa RGR musi być wyżej niż ramiona.<br>'; } else reason += '✅ Głowa (wyżej).<br>'; } else { if (h >= ls || h >= rs) { isValid = false; reason += '❌ Głowa oRGR musi być niżej.<br>'; } else reason += '✅ Głowa (niżej).<br>'; } const shoulderDiff = Math.abs(ls - rs) / ls * 100; if (shoulderDiff > 15) { reason += `⚠️ Prawe ramię różni się od lewego (${shoulderDiff.toFixed(1)}%).<br>`; } else { reason += '✅ Ramiona na zbieżnym poziomie.<br>'; } const neckSlope = isRGR ? (rn - ln) : (ln - rn); if (isValid) { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--success);">Prawidłowy model</span>`; document.getElementById('rgr-targets').style.display = 'grid'; const neckAvg = (ln + rn) / 2; const headHeight = Math.abs(h - neckAvg); const target = isRGR ? bp - headHeight : bp + headHeight; document.getElementById('rgr-angle').innerText = neckSlope === 0 ? "Płaski" : (neckSlope > 0 ? "Rosnący" : "Spadkowy"); document.getElementById('rgr-height').innerText = headHeight.toFixed(2) + ' $'; document.getElementById('rgr-target').innerText = target.toFixed(2) + ' $'; } else { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--danger);">Złamane reguły</span>`; document.getElementById('rgr-targets').style.display = 'none'; } document.getElementById('rgr-valid-desc').innerHTML = reason; }
+
+        // Start
         openDashboard();
+        
+        // Funkcja do omijania try/catch zawieszania w FocusList (Czeka na dane)
+        function safeHandleFocusListFilter() {
+            try { handleFocusListFilter(); } 
+            catch(err) { console.error("FocusList error:", err); }
+        }
+        
+        async function initFocusListModule() { 
+            if(tickerDataArray.length === 0) await loadDatabase(); 
+            await fetchFormEntries(); // To gwarantuje wczytanie przed użyciem filtra
+            safeHandleFocusListFilter(); 
+        }
     </script>
 </body>
 </html>
