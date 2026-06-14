@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quant Desk v10.0</title>
+    <title>Quant Desk v11</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef; --text-muted: #848e9c; --accent: #c99400; --accent-hover: #fcd535; --danger: #f6465d; --success: #0ecb81; --border-color: #2b3139; }
@@ -66,8 +66,8 @@
                 <form id="trading-form" onsubmit="submitAdvancedForm(event)">
                     <div class="form-row"><div class="form-group"><label style="display: flex; justify-content: space-between;">Ticker <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label><select id="form-ticker" onchange="updateFormTvLink()"></select></div></div>
                     <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div></div>
-                    <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01"></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01"></div></div>
-                    <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01"></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01"></div>
+                    <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01" required></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01" required></div></div>
+                    <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01" required></div>
                     <div class="form-group"><label>Powody wejścia (Opcjonalne)</label><input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2..."><input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3..."><input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4..."><input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5..."><datalist id="reasons-list"></datalist></div>
                     <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
                 </form>
@@ -121,7 +121,7 @@
                         <div class="form-group"><label>Data Analizy</label><input type="date" id="focus-date" required></div>
                     </div>
                     <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);"><div class="form-group"><label>Wybrany Ticker</label><input type="text" id="focus-ticker" readonly style="opacity:0.7;"></div><div class="form-group"><label>Kierunek</label><input type="text" id="focus-direction" readonly style="opacity:0.7;"></div></div>
-                    <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC()" style="background: #0284c7; color:#fff; padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; border: none; font-weight: bold; width: 100%;">🤖 Automatyzuj SMC (Yahoo)</button></div>
+                    <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC(event)" style="background: #0284c7; color:#fff; padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; border: none; font-weight: bold; width: 100%; cursor: pointer;">🤖 Automatyzuj SMC (Yahoo)</button></div>
                     <div class="form-row"><div class="form-group"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5"></div><div class="form-group"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div></div>
                     <div class="form-row"><div class="form-group"><label>Luka Sesyjna</label><select id="focus-gap"><option value="1">1.0 (Domknięcie/Zgodna)</option><option value="0.5">0.5 (Neutralna)</option><option value="0">0.0 (Brak luki/Negatywna)</option></select></div><div class="form-group"><label>Kalendarz (Raporty)</label><select id="focus-calendar"><option value="1">1.0 (Bezpiecznie > 30 dni)</option><option value="0.5">0.5 (Blisko < 30 dni)</option><option value="0">0.0 (Ryzyko < 20 dni)</option></select></div></div>
                     <div class="form-group"><label>CVD Order Flow [0-3]</label><select id="focus-cvd"><option value="3">3.0 - Silna absorpcja</option><option value="2">2.0 - Zgodny trend delty z ceną</option><option value="1">1.0 - Słaba delta / Churn</option><option value="0">0.0 - Negatywne uderzenia</option></select></div>
@@ -535,7 +535,8 @@
             </div>
         </div>
     </div>
-<script>
+
+    <script>
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com';
         let isPrivacyMode = false;
         
@@ -675,9 +676,9 @@
                 if(res.ok) {
                     closeEditModal(); alert('Zaktualizowano pomyślnie!');
                     if(currentEditContext === 'ticker') loadDatabase();
-                    if(currentEditContext === 'form') fetchFormEntries();
-                    if(currentEditContext === 'focus') fetchFocusEntries();
-                    if(currentEditContext === 'trade') fetchTradesEntries();
+                    if(currentEditContext === 'form') fetchFormEntries(true);
+                    if(currentEditContext === 'focus') fetchFocusEntries(true);
+                    if(currentEditContext === 'trade') fetchTradesEntries(true);
                 } else alert('Błąd aktualizacji bazy.');
             } catch(err) { console.error(err); }
         }
@@ -734,16 +735,18 @@
 
         async function initFormModule() { if(tickerDataArray.length === 0) await loadDatabase(); const select = document.getElementById('form-ticker'); select.innerHTML = ''; tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); fetchFormEntries(); }
         
-        async function fetchFormEntries() { 
-            const cached = getCachedData('form_cache');
-            if(cached) { formEntries = cached; applyFormFilterAndSort(); handleFocusListFilter(); }
+        async function fetchFormEntries(forceFresh = false) { 
+            if (!forceFresh) {
+                const cached = getCachedData('form_cache');
+                if(cached) { formEntries = cached; applyFormFilterAndSort(); safeHandleFocusListFilter(); }
+            }
             try { 
                 const response = await fetch(`${API_BASE_URL}/api/form/entries`); 
                 const rawData = await response.json(); 
                 formEntries = Array.isArray(rawData) ? rawData : []; 
                 setCachedData('form_cache', formEntries);
                 applyFormFilterAndSort(); 
-                handleFocusListFilter(); // Zabezpieczenie dla FocusList
+                safeHandleFocusListFilter();
             } catch (error) { console.error(error); } 
         }
         
@@ -779,23 +782,26 @@
                 const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
                 const cp = tm && tm.price ? tm.price : entry; 
                 
-                // Rzeczywisty Dystans Cenowy (ujemny/dodatni)
+                // Rzeczywisty Dystans Cenowy z plusem lub minusem
                 const rawDiff = ((cp - entry) / entry) * 100 * mod;
                 
-                // Status opiera się na bezwzględnej wielkości ruchu
-                const absDiff = Math.abs(rawDiff);
-                let status = absDiff > 15 ? 'Ignorowanie' : (absDiff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
-                let statusColor = absDiff > 15 ? '#f6465d' : (absDiff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
-                
-                let diffColor = rawDiff >= 0 ? '#0ecb81' : '#f6465d';
-                let diffStr = (rawDiff > 0 ? '+' : '') + rawDiff.toFixed(2) + '%';
+                let diffStr = '-';
+                let status = 'Brak danych';
+                let statusColor = '#848e9c';
+                let diffColor = 'gray';
+
+                if (!isNaN(rawDiff)) {
+                    const absDiff = Math.abs(rawDiff);
+                    status = absDiff > 15 ? 'Ignorowanie' : (absDiff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
+                    statusColor = absDiff > 15 ? '#f6465d' : (absDiff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
+                    diffColor = rawDiff >= 0 ? '#0ecb81' : '#f6465d';
+                    diffStr = (rawDiff > 0 ? '+' : '') + rawDiff.toFixed(2) + '%';
+                }
                 
                 const tvLink = getTradingViewLink(item.ticker); 
                 const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
                 const pb = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny</span>`;
                 const mb = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie</span>`;
-
-                const cpDisplay = tm && tm.price ? `<br><small style="color:#eaecef;">Akt: ${tm.price.toFixed(2)}$</small>` : `<br><small style="color:var(--text-muted);">Akt: Brak</small>`;
 
                 tbody.innerHTML += `<tr>
                     <td style="font-weight:bold;">${item.entry_id}</td>
@@ -813,9 +819,20 @@
             document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`;
         }
         function changeFormPage(d) { formCurrentPage += d; renderAdvancedFormTable(); }
-        async function submitAdvancedForm(e) { e.preventDefault(); const data = { ticker: document.getElementById('form-ticker').value, direction: document.getElementById('form-direction').value, priority: document.getElementById('form-priority').value, start_zone: document.getElementById('form-start').value, end_zone: document.getElementById('form-end').value, entry_point: document.getElementById('form-entry').value, take_profit: document.getElementById('form-tp').value }; try { await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); document.getElementById('trading-form').reset(); fetchFormEntries(); } catch(err) {} }
-        async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(); } catch(e) {} }
-        async function updateFormEntryField(id, field, val) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: id, field: field, value: val }) }); fetchFormEntries(); } catch(e){} }
+        
+        async function submitAdvancedForm(e) { 
+            e.preventDefault(); 
+            const data = { ticker: document.getElementById('form-ticker').value, direction: document.getElementById('form-direction').value, priority: document.getElementById('form-priority').value, start_zone: document.getElementById('form-start').value, end_zone: document.getElementById('form-end').value, entry_point: document.getElementById('form-entry').value, take_profit: document.getElementById('form-tp').value }; 
+            try { 
+                await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); 
+                document.getElementById('trading-form').reset(); 
+                await fetchFormEntries(true); 
+                alert("Zapisano Setup w bazie!");
+            } catch(err) { alert('Błąd: ' + err.message); } 
+        }
+
+        async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(true); } catch(e) {} }
+        async function updateFormEntryField(id, field, val) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: id, field: field, value: val }) }); fetchFormEntries(true); } catch(e){} }
 
         // --- ASYSTENT FIBO ---
         function toggleFibo() { const drawer = document.getElementById('fibo-drawer'); drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; if (drawer.style.display === 'block') updateFiboLabels(); }
@@ -843,11 +860,30 @@
             document.getElementById('focus-date').valueAsDate = new Date();
         }
         function onFocusIdChange() { const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value); if(entry) { document.getElementById('focus-ticker').value = entry.ticker; document.getElementById('focus-direction').value = entry.direction; } }
-        async function autoCalculateSMC() { const t = document.getElementById('focus-ticker').value; const d = document.getElementById('focus-direction').value; try { const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d}) }); const r = await res.json(); document.getElementById('focus-candle').value = r.candle_score; document.getElementById('focus-volume').value = r.volume_score; document.getElementById('focus-vix').value = r.vix_score; document.getElementById('focus-index').value = r.index_score; } catch(e) { console.error(e); } }
+        
+        async function autoCalculateSMC(event) { 
+            const t = document.getElementById('focus-ticker').value; 
+            const d = document.getElementById('focus-direction').value; 
+            let btn = null; let origText = "🤖 Automatyzuj SMC (Yahoo)";
+            if(event && event.currentTarget) { btn = event.currentTarget; origText = btn.innerText; btn.innerText = "⏳ Pobieranie SMC..."; btn.disabled = true; }
+            
+            try { 
+                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d}) }); 
+                const r = await res.json(); 
+                document.getElementById('focus-candle').value = r.candle_score; 
+                document.getElementById('focus-volume').value = r.volume_score; 
+                document.getElementById('focus-vix').value = r.vix_score; 
+                document.getElementById('focus-index').value = r.index_score; 
+                alert("Pomyślnie zaktualizowano parametry SMC dla tego waloru!");
+            } catch(e) { console.error(e); alert("Błąd pobierania danych SMC"); } 
+            finally { if(btn) { btn.innerText = origText; btn.disabled = false; } }
+        }
 
-        async function fetchFocusEntries() { 
-            const cached = getCachedData('focus_cache');
-            if(cached) { focusDataArray = cached; handleFocusFilter(''); }
+        async function fetchFocusEntries(forceFresh = false) { 
+            if(!forceFresh) {
+                const cached = getCachedData('focus_cache');
+                if(cached) { focusDataArray = cached; handleFocusFilter(''); }
+            }
             try { 
                 const r = await fetch(`${API_BASE_URL}/api/focus/entries`); 
                 focusDataArray = await r.json(); 
@@ -877,7 +913,7 @@
             document.getElementById('focus-page-info').innerText = currentFocusPage;
         }
         function changeFocusPage(d) { currentFocusPage += d; renderFocusTable(); }
-        async function deleteFocusEntry(id) { try { await fetch(`${API_BASE_URL}/api/focus/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); fetchFocusEntries(); } catch(e){} }
+        async function deleteFocusEntry(id) { try { await fetch(`${API_BASE_URL}/api/focus/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); fetchFocusEntries(true); } catch(e){} }
         async function submitFocusForm(e) { 
             e.preventDefault(); 
             const d = { 
@@ -893,7 +929,11 @@
                 index_score: document.getElementById('focus-index').value, 
                 htf_score: document.getElementById('focus-htf').value 
             }; 
-            try { await fetch(`${API_BASE_URL}/api/focus/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) }); fetchFocusEntries(); } catch(e) {} 
+            try { 
+                await fetch(`${API_BASE_URL}/api/focus/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) }); 
+                fetchFocusEntries(true); 
+                alert("Zapisano Analizę Focus!");
+            } catch(e) {} 
         }
 
         // --- TRADES MODULE ---
@@ -901,11 +941,13 @@
 
         async function initTradesModule() { if(focusDataArray.length===0) await fetchFocusEntries(); document.getElementById('trade-focus-id').innerHTML = focusDataArray.map(f => `<option value="${f.id}">#${f.id} - ${f.ticker}</option>`).join(''); document.getElementById('trade-buy-date').valueAsDate = new Date(); fetchTradesEntries(); }
         async function onTradeFocusChange() { const fid = document.getElementById('trade-focus-id').value; const focus = focusDataArray.find(f => f.id == fid); if(!focus) return; try { const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); const form = formDb.find(frm => frm.entry_id === focus.entry_id); document.getElementById('trade-ticker').value = focus.ticker; document.getElementById('trade-form-id').value = focus.entry_id; document.getElementById('trade-currency').value = focus.currency; document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; document.getElementById('trade-score').value = focus.points_total; if(form) { document.getElementById('trade-direction').value = form.direction; document.getElementById('trade-tp').value = form.take_profit; document.getElementById('trade-sl').value = form.stop_loss; } document.getElementById('trade-name').value = 'Wyszukiwanie...'; const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); document.getElementById('trade-name').value = n.name || ''; } catch(e){} }
-        async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: spent, leverage: lev, currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(); } else alert('Błąd.'); } catch(e) { console.error(e); } }
+        async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: spent, leverage: lev, currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(true); } else alert('Błąd.'); } catch(e) { console.error(e); } }
 
-        async function fetchTradesEntries() { 
-            const cached = getCachedData('trades_cache');
-            if(cached) { allTradesData = cached; handleTradesFilter(); }
+        async function fetchTradesEntries(forceFresh = false) { 
+            if(!forceFresh) {
+                const cached = getCachedData('trades_cache');
+                if(cached) { allTradesData = cached; handleTradesFilter(); }
+            }
             try { 
                 const res = await fetch(`${API_BASE_URL}/api/trades/entries`); 
                 allTradesData = await res.json(); 
@@ -961,7 +1003,8 @@
         function changeTradePage(d) { currentTradePage += d; renderTradesTable(); }
 
         // --- SUMMARY MODULE ---
-        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'dashboard' && summaryChartInstance) summaryChartInstance.update(); }
+        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
+        
         async function initSummaryModule() {
             if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); allTradesData = await res.json() || []; } catch(e) {} }
             if(tickerDataArray.length === 0) await loadDatabase();
@@ -1003,7 +1046,7 @@
             
             let roiPct = 0; if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
             
-            // Poprawiona logika Dźwigni
+            // Poprawiona logika Dźwigni (Zainwestowano * Dzwignia / Zainwestowano)
             let avgLeverage = 0; 
             if (openInvestedPln > 0) {
                 avgLeverage = openLevNominalPln / openInvestedPln;
@@ -1039,6 +1082,8 @@
                 if(Array.from(monthSet).includes(currentMonthVal)) monthSelect.value = currentMonthVal;
             }
             renderSummaryClosed();
+            
+            // Explicitly force save so ROI is ALWAYS recorded if missing
             fetch(`${API_BASE_URL}/api/portfolio/roi/save`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({roi_pct: roiPct}) }).then(() => { drawSummaryChart(); }).catch(e => { drawSummaryChart(); });
         }
 
@@ -1146,17 +1191,16 @@
         function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = ticker.toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
         function calculateTradeStats(item) { try { const isClosed = (item.status === 'CLOSED' || item.sell_date != null); const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1; const tm = tickerDataArray.find(t => t.ticker === item.ticker); const buyPrice = parseFloat(item.buy_price) || 0; let cp = buyPrice; if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } else if (tm && tm.price) { cp = parseFloat(tm.price); } const spent = parseFloat(item.spent) || 0; const lev = parseInt(item.leverage) || 1; const val = spent * lev; const cfdCost = parseFloat(item.cfd_cost) || 0; const div = parseFloat(item.dividend) || 0; let prof = 0; if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; } const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1)); const profPln = prof * usedFx; const valPln = val * usedFx; const tp = parseFloat(item.tp) || 0; const sl = parseFloat(item.sl) || 0; let rr = 0; if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); } let prog = 0; if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); } let dsl = sl; if (prog >= 1) dsl = tp; else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); let pd = prog * 100; let pc = 'var(--success)'; if (pd < 0) { pc = 'var(--danger)'; if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } else { pd = 0; } } if (pd > 100) pd = 100; return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx }; } catch (error) { return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; } }
 
-        // --- Modal functions ---
+        // Modal functions
         function openCloseModal(id) { document.getElementById('sell-modal').style.display = 'flex'; document.getElementById('sell-trade-id').value = id; document.getElementById('sell-date').valueAsDate = new Date(); document.getElementById('sell-price').value = ''; document.getElementById('sell-fraction').value = '1'; const trade = allTradesData.find(t => t.id === id); if(trade && trade.leverage > 1) { document.getElementById('sell-cfd-group').style.display = 'block'; document.getElementById('sell-cfd-cost').value = '0'; } else { document.getElementById('sell-cfd-group').style.display = 'none'; document.getElementById('sell-cfd-cost').value = '0'; } }
         function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
-        async function confirmSell() { const id = document.getElementById('sell-trade-id').value; const price = parseFloat(document.getElementById('sell-price').value); const date = document.getElementById('sell-date').value; const cfdCost = parseFloat(document.getElementById('sell-cfd-cost').value) || 0; const fracStr = document.getElementById('sell-fraction').value.trim(); if(!price || isNaN(price)) return alert('Błąd ceny!'); let fraction = 1.0; if(fracStr.includes('%')) { fraction = parseFloat(fracStr.replace('%', '')) / 100.0; } else if(fracStr.includes('/')) { const parts = fracStr.split('/'); fraction = parseFloat(parts[0]) / parseFloat(parts[1]); } else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; } try { await fetch(`${API_BASE_URL}/api/trades/close`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost }) }); closeSellModal(); fetchTradesEntries(); } catch(e) {} }
+        async function confirmSell() { const id = document.getElementById('sell-trade-id').value; const price = parseFloat(document.getElementById('sell-price').value); const date = document.getElementById('sell-date').value; const cfdCost = parseFloat(document.getElementById('sell-cfd-cost').value) || 0; const fracStr = document.getElementById('sell-fraction').value.trim(); if(!price || isNaN(price)) return alert('Błąd ceny!'); let fraction = 1.0; if(fracStr.includes('%')) { fraction = parseFloat(fracStr.replace('%', '')) / 100.0; } else if(fracStr.includes('/')) { const parts = fracStr.split('/'); fraction = parseFloat(parts[0]) / parseFloat(parts[1]); } else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; } try { await fetch(`${API_BASE_URL}/api/trades/close`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost }) }); closeSellModal(); fetchTradesEntries(true); } catch(e) {} }
 
-        // --- INNE (Blog, Service, itp.) ---
         async function loadDailyBriefs() { try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); } } catch (error) {} }
         async function loadServiceModule() { if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); allTradesData = await res.json() || []; } catch(e) {} } const openTrades = allTradesData.filter(t => t.status === 'OPEN'); const select = document.getElementById('div-trade-id'); select.innerHTML = '<option value="">Wybierz otwartą pozycję...</option>'; openTrades.forEach(t => { select.innerHTML += `<option value="${t.id}">ID: #${t.id} | ${t.ticker} (${t.direction})</option>`; }); document.getElementById('div-date').valueAsDate = new Date(); }
         async function addDeposit(e) { e.preventDefault(); const amt = document.getElementById('dep-amt').value; const d = document.getElementById('dep-date').value; const cur = document.getElementById('dep-cur').value; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); document.getElementById('dep-amt').value = ''; initSummaryModule(); } catch(err) {} }
         async function deleteDeposit(id) { if(!confirm("Na pewno usunąć?")) return; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); initSummaryModule(); } catch(e) {} }
-        async function addDividend(e) { e.preventDefault(); const tid = document.getElementById('div-trade-id').value; const date = document.getElementById('div-date').value; const amt = document.getElementById('div-amount').value; try { await fetch(`${API_BASE_URL}/api/trades/dividend/add`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({trade_id: parseInt(tid), dividend_date: date, amount: parseFloat(amt)}) }); document.getElementById('div-amount').value = ''; fetchTradesEntries(); alert("Dywidenda dodana!"); } catch(err) {} }
+        async function addDividend(e) { e.preventDefault(); const tid = document.getElementById('div-trade-id').value; const date = document.getElementById('div-date').value; const amt = document.getElementById('div-amount').value; try { await fetch(`${API_BASE_URL}/api/trades/dividend/add`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({trade_id: parseInt(tid), dividend_date: date, amount: parseFloat(amt)}) }); document.getElementById('div-amount').value = ''; fetchTradesEntries(true); alert("Dywidenda dodana!"); } catch(err) {} }
         async function forceAlertsCheck() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Uruchamianie silnika alertów...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`); const result = await res.json(); out.innerHTML = `✅ <strong>Gotowe.</strong> Aktywowane: ${result.alerts_triggered || 0}`; } catch(e) { out.innerHTML = `❌ Błąd.`; } }
         async function forceCronPricesUpdate() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Pobieranie z Yahoo...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`); const result = await res.json(); out.innerHTML = `✅ <strong>Zaktualizowano.</strong> Tickerów: ${result.updated_tickers || 0}`; } catch(e) { out.innerHTML = `❌ Błąd.`; } }
 
@@ -1164,12 +1208,12 @@
         function switchTechTab(tab) { document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-' + tab).classList.add('active'); }
         function calculateHarmonics(e) { e.preventDefault(); const x = parseFloat(document.getElementById('ha-x').value); const a = parseFloat(document.getElementById('ha-a').value); const b = parseFloat(document.getElementById('ha-b').value); const c = parseFloat(document.getElementById('ha-c').value); const xa = Math.abs(a - x); const ab = Math.abs(b - a); const bc = Math.abs(c - b); const isBullish = a > x; const dirMultiplier = isBullish ? -1 : 1; const bRetracement = ab / xa; const cRetracement = bc / ab; let resultsHTML = ''; const patterns = [ { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 }, { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Butterfly', bTarget: 0.786, dRetXa: 1.272, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Crab', bTarget: 0.50, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 }, { name: 'Deep Crab', bTarget: 0.886, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 } ]; let foundMatch = false; patterns.forEach(pat => { const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) || (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618); if(isBMatch) { foundMatch = true; const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier); const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier); const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier); resultsHTML += ` <div class="kpi-card" style="border-color: var(--accent);"> <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4> <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;"> Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br> Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB </div> <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}</b></div> <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)} - ${dTargetByBC_Max.toFixed(2)}</b></div> <div class="value sensitive" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)} do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}</div> </div> `; } }); if(!foundMatch) { resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;"> Obecna struktura nie mieści się w tolerancjach formacji Harmonicznych. </div>`; } document.getElementById('ha-results').innerHTML = resultsHTML; }
         function calculateElliott(e) { e.preventDefault(); const dir = document.getElementById('ew-direction').value; const x = parseFloat(document.getElementById('ew-x').value); const w1 = parseFloat(document.getElementById('ew-1').value); const w2 = parseFloat(document.getElementById('ew-2').value); const w3 = parseFloat(document.getElementById('ew-3').value); const w4 = parseFloat(document.getElementById('ew-4').value); const isUp = dir === 'UP'; let score = 0; let maxScore = 5; let rulesLog = ''; const lenW1 = Math.abs(w1 - x); const lenW3 = Math.abs(w3 - w2); const w2RetracedW1 = isUp ? (w2 < x) : (w2 > x); if (w2RetracedW1) { rulesLog += '❌ Fala 2 zniosła więcej niż 100% Fali 1.<br>'; } else { score += 2; rulesLog += '✅ Fala 2 zatrzymała się w zakresie.<br>'; } if (lenW3 <= lenW1 * 0.98) { rulesLog += '⚠️ Fala 3 jest krótsza od Fali 1.<br>'; } else { score += 1; rulesLog += '✅ Fala 3 jest dłuższa lub równa Fali 1.<br>'; } const overlap = isUp ? (w4 <= w1) : (w4 >= w1); if (overlap) { rulesLog += '❌ Fala 4 wkroczyła w terytorium Fali 1.<br>'; } else { score += 2; rulesLog += '✅ Fala 4 nie zachodzi na Falę 1.<br>'; } const color = score === 5 ? 'var(--success)' : (score >= 3 ? '#fcd535' : 'var(--danger)'); document.getElementById('ew-score-text').innerHTML = `<span style="color:${color}; font-weight:bold;">${score} / ${maxScore} Pkt</span>`; document.getElementById('ew-rules-list').innerHTML = rulesLog; if (score >= 2) { document.getElementById('ew-projections').style.display = 'grid'; const w1ToW3Dist = Math.abs(w3 - x); const w5_target1 = isUp ? w4 + lenW1 : w4 - lenW1; const w5_target2 = isUp ? w4 + (w1ToW3Dist * 0.618) : w4 - (w1ToW3Dist * 0.618); const avgW5 = (w5_target1 + w5_target2) / 2; document.getElementById('ew-p5').innerText = avgW5.toFixed(2) + ' $'; const targetA = w4; document.getElementById('ew-pa').innerText = targetA.toFixed(2) + ' $'; const distA = Math.abs(avgW5 - targetA); const targetB = isUp ? targetA + (distA * 0.5) : targetA - (distA * 0.5); document.getElementById('ew-pb').innerText = targetB.toFixed(2) + ' $'; const targetC = isUp ? targetB - distA : targetB + distA; document.getElementById('ew-pc').innerText = targetC.toFixed(2) + ' $'; } else { document.getElementById('ew-projections').style.display = 'none'; } }
-        function calculateRGR(e) { e.preventDefault(); const type = document.getElementById('rgr-type').value; const ls = parseFloat(document.getElementById('rgr-ls').value); const ln = parseFloat(document.getElementById('rgr-ln').value); const h = parseFloat(document.getElementById('rgr-h').value); const rn = parseFloat(document.getElementById('rgr-rn').value); const rs = parseFloat(document.getElementById('rgr-rs').value); let bp = parseFloat(document.getElementById('rgr-bp').value); if(isNaN(bp)) bp = rn; const isRGR = type === 'RGR'; let isValid = true; let reason = ''; if (isRGR) { if (h <= ls || h <= rs) { isValid = false; reason += '❌ Głowa RGR musi być wyżej niż ramiona.<br>'; } else reason += '✅ Głowa (wyżej).<br>'; } else { if (h >= ls || h >= rs) { isValid = false; reason += '❌ Głowa oRGR musi być niżej.<br>'; } else reason += '✅ Głowa (niżej).<br>'; } const shoulderDiff = Math.abs(ls - rs) / ls * 100; if (shoulderDiff > 15) { reason += `⚠️ Prawe ramię różni się od lewego (${shoulderDiff.toFixed(1)}%).<br>`; } else { reason += '✅ Ramiona na zbieżnym poziomie.<br>'; } const neckSlope = isRGR ? (rn - ln) : (ln - rn); if (isValid) { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--success);">Prawidłowy model</span>`; document.getElementById('rgr-targets').style.display = 'grid'; const neckAvg = (ln + rn) / 2; const headHeight = Math.abs(h - neckAvg); const target = isRGR ? bp - headHeight : bp + headHeight; document.getElementById('rgr-angle').innerText = neckSlope === 0 ? "Płaski" : (neckSlope > 0 ? "Rosnący" : "Spadkowy"); document.getElementById('rgr-height').innerText = headHeight.toFixed(2) + ' $'; document.getElementById('rgr-target').innerText = target.toFixed(2) + ' $'; } else { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--danger);">Złamane reguły</span>`; document.getElementById('rgr-targets').style.display = 'none'; } document.getElementById('rgr-valid-desc').innerHTML = reason; }
+        function calculateRGR(e) { e.preventDefault(); const type = document.getElementById('rgr-type').value; const ls = parseFloat(document.getElementById('rgr-ls').value); const ln = parseFloat(document.getElementById('rgr-ln').value); const h = parseFloat(document.getElementById('rgr-h').value); const rn = parseFloat(document.getElementById('rgr-rn').value); const rs = parseFloat(document.getElementById('rgr-rs').value); let bp = parseFloat(document.getElementById('rgr-bp').value); if(isNaN(bp)) bp = rn; const isRGR = type === 'RGR'; let isValid = true; let reason = ''; if (isRGR) { if (h <= ls || h <= rs) { isValid = false; reason += '❌ Głowa RGR musi być wyżej.<br>'; } else reason += '✅ Głowa (wyżej).<br>'; } else { if (h >= ls || h >= rs) { isValid = false; reason += '❌ Głowa oRGR musi być niżej.<br>'; } else reason += '✅ Głowa (niżej).<br>'; } const shoulderDiff = Math.abs(ls - rs) / ls * 100; if (shoulderDiff > 15) { reason += `⚠️ Prawe ramię różni się od lewego (${shoulderDiff.toFixed(1)}%).<br>`; } else { reason += '✅ Ramiona na zbieżnym poziomie.<br>'; } const neckSlope = isRGR ? (rn - ln) : (ln - rn); if (isValid) { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--success);">Prawidłowy model</span>`; document.getElementById('rgr-targets').style.display = 'grid'; const neckAvg = (ln + rn) / 2; const headHeight = Math.abs(h - neckAvg); const target = isRGR ? bp - headHeight : bp + headHeight; document.getElementById('rgr-angle').innerText = neckSlope === 0 ? "Płaski" : (neckSlope > 0 ? "Rosnący" : "Spadkowy"); document.getElementById('rgr-height').innerText = headHeight.toFixed(2) + ' $'; document.getElementById('rgr-target').innerText = target.toFixed(2) + ' $'; } else { document.getElementById('rgr-valid-text').innerHTML = `<span style="color:var(--danger);">Złamane reguły</span>`; document.getElementById('rgr-targets').style.display = 'none'; } document.getElementById('rgr-valid-desc').innerHTML = reason; }
 
         // Start
         openDashboard();
         
-        // Funkcja do omijania try/catch zawieszania w FocusList (Czeka na dane)
+        // Zabezpieczenie asynchroniczne FocusList
         function safeHandleFocusListFilter() {
             try { handleFocusListFilter(); } 
             catch(err) { console.error("FocusList error:", err); }
@@ -1177,7 +1221,7 @@
         
         async function initFocusListModule() { 
             if(tickerDataArray.length === 0) await loadDatabase(); 
-            await fetchFormEntries(); // To gwarantuje wczytanie przed użyciem filtra
+            await fetchFormEntries(); 
             safeHandleFocusListFilter(); 
         }
     </script>
