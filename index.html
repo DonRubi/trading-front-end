@@ -86,6 +86,14 @@
                         <option value="0">Aktywne (Nie wyciszone)</option>
                         <option value="1">Wyciszone (Zignorowane)</option>
                     </select>
+                    <select id="form-status-filter" onchange="applyFormFilterAndSort()" style="padding:5px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:4px; margin-left: 10px;">
+                        <option value="ALL">Wszystkie statusy</option>
+                        <option value="Skupienie">🟢 Skupienie</option>
+                        <option value="Obserwacja">⚪ Obserwacja</option>
+                        <option value="Czekanie">🟡 Czekanie</option>
+                        <option value="Ignorowanie">🔴 Ignorowanie</option>
+                        <option value="Brak danych">Brak danych</option>
+                    </select>
                 </div>
                 <div class="table-responsive">
                     <table id="journal-table">
