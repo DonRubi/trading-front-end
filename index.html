@@ -863,15 +863,11 @@
         
         function applyFormFilterAndSort() {
             const muteFilter = document.getElementById('form-mute-filter').value;
+            // Pobieramy wartość nowego filtra statusów
+            const statusFilter = document.getElementById('form-status-filter') ? document.getElementById('form-status-filter').value : 'ALL';
             
-            // Filtrowanie i MAPOWANIE (wstrzykiwanie dynamicznych wartości do sortowania)
-            filteredFormEntries = formEntries.filter(entry => {
-                const textMatch = (entry.ticker || '').toLowerCase().includes(formFilterText);
-                let muteMatch = true;
-                if (muteFilter !== 'ALL') muteMatch = (entry.mute.toString() === muteFilter);
-                return textMatch && muteMatch;
-            }).map(item => {
-                // Wyliczanie Dystansu, R:R i Score "w locie" dla każdego wpisu
+            // 1. MAPOWANIE: Obliczanie wszystkich wartości (w tym statusu) przed filtrowaniem
+            let mappedEntries = formEntries.map(item => {
                 const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); 
                 const mod = isLong ? 1 : -1;
                 const entry = parseFloat(item.entry_point) || 0; 
@@ -881,14 +877,43 @@
                 const rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
                 const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
                 const cp = tm && tm.price ? tm.price : entry; 
-                const diff = entry !== 0 ? (((cp - entry) / entry) * 100 * mod) : 0;
+                
+                const rawDiff = entry !== 0 ? (((cp - entry) / entry) * 100 * mod) : 0;
+                const realDiff = entry !== 0 ? (((cp - entry) / entry) * 100) : 0;
                 const score = Array.isArray(item.reasons) ? item.reasons.length : 0;
 
-                // Zwracamy obiekt ze wszystkimi kluczami, których szukają przyciski nagłówków <th>
-                return { ...item, diff: diff, rr: rr, score: score };
+                // Wyliczanie statusu "w locie" na potrzeby nowego filtra
+                let calcStatus = 'Brak danych';
+                if (entry !== 0 && !isNaN(rawDiff) && isFinite(rawDiff)) {
+                    let isObserwacja = false, isSkupienie = false;
+                    
+                    if (isLong) {
+                        if (realDiff >= -5 && realDiff <= 10) isObserwacja = true;
+                        if (realDiff >= -3 && realDiff <= 10 && item.priority === 1) isSkupienie = true;
+                    } else {
+                        if (realDiff >= -10 && realDiff <= 5) isObserwacja = true;
+                        if (realDiff >= -10 && realDiff <= 3 && item.priority === 1) isSkupienie = true;
+                    }
+
+                    if (isSkupienie) calcStatus = 'Skupienie';
+                    else if (isObserwacja) calcStatus = 'Obserwacja';
+                    else calcStatus = Math.abs(rawDiff) > 15 ? 'Ignorowanie' : 'Czekanie';
+                }
+
+                // Zwracamy obiekt ze wstrzykniętymi danymi, łącznie ze statusem
+                return { ...item, diff: rawDiff, rr: rr, score: score, calculatedStatus: calcStatus };
             });
 
-            // Sortowanie z użyciem nowych wstrzykniętych wartości
+            // 2. FILTROWANIE: Uwzględnienie Mute, Tekstu ORAZ Statusu
+            filteredFormEntries = mappedEntries.filter(entry => {
+                const textMatch = (entry.ticker || '').toLowerCase().includes(formFilterText);
+                const muteMatch = muteFilter === 'ALL' ? true : (entry.mute.toString() === muteFilter);
+                const statusMatch = statusFilter === 'ALL' ? true : (entry.calculatedStatus === statusFilter);
+                
+                return textMatch && muteMatch && statusMatch;
+            });
+
+            // 3. SORTOWANIE
             filteredFormEntries.sort((a, b) => {
                 let va = a[formSortKey];
                 let vb = b[formSortKey];
@@ -900,7 +925,7 @@
             });
 
             renderAdvancedFormTable();
-            }
+        }
     
             function renderAdvancedFormTable() {
             const tbody = document.getElementById('form-table-body'); tbody.innerHTML = '';
