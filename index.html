@@ -647,6 +647,14 @@
             } else if (context === 'form') {
                 const item = formEntries.find(x => x.entry_id === id);
                 document.getElementById('edit-modal-title').innerText = "Edycja Form (Kaskadowa)";
+                
+                // Pobieramy aktualne powody (jeśli istnieją)
+                const r1 = (item.reasons && item.reasons[0]) ? item.reasons[0] : '';
+                const r2 = (item.reasons && item.reasons[1]) ? item.reasons[1] : '';
+                const r3 = (item.reasons && item.reasons[2]) ? item.reasons[2] : '';
+                const r4 = (item.reasons && item.reasons[3]) ? item.reasons[3] : '';
+                const r5 = (item.reasons && item.reasons[4]) ? item.reasons[4] : '';
+
                 content.innerHTML = `
                     <p style="font-size:12px; color:var(--danger); margin-bottom:10px;">Zmiana Tickera lub Początku Strefy wygeneruje nowe ID i zaktualizuje powiązane pozycje Focus/Trades!</p>
                     <div class="form-group"><label>Ticker</label><input type="text" id="edit-f-ticker" value="${item.ticker}" required></div>
@@ -657,6 +665,14 @@
                     <div class="form-row">
                         <div class="form-group"><label>Wejście</label><input type="number" step="0.01" id="edit-f-entry" value="${item.entry_point}"></div>
                         <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" id="edit-f-tp" value="${item.take_profit}"></div>
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label>Powody wejścia</label>
+                        <input type="text" id="edit-f-r1" value="${r1}" list="reasons-list" placeholder="Powód 1..." style="margin-bottom: 4px;">
+                        <input type="text" id="edit-f-r2" value="${r2}" list="reasons-list" placeholder="Powód 2..." style="margin-bottom: 4px;">
+                        <input type="text" id="edit-f-r3" value="${r3}" list="reasons-list" placeholder="Powód 3..." style="margin-bottom: 4px;">
+                        <input type="text" id="edit-f-r4" value="${r4}" list="reasons-list" placeholder="Powód 4..." style="margin-bottom: 4px;">
+                        <input type="text" id="edit-f-r5" value="${r5}" list="reasons-list" placeholder="Powód 5...">
                     </div>
                 `;
             } else if (context === 'focus') {
@@ -696,7 +712,26 @@
                 payload = { old_ticker: currentEditId, ticker: document.getElementById('edit-t-name').value, price: document.getElementById('edit-t-price').value };
             } else if (currentEditContext === 'form') {
                 endpoint = '/api/form/edit';
-                payload = { old_entry_id: currentEditId, ticker: document.getElementById('edit-f-ticker').value, start_zone: document.getElementById('edit-f-start').value, end_zone: document.getElementById('edit-f-end').value, entry_point: document.getElementById('edit-f-entry').value, take_profit: document.getElementById('edit-f-tp').value, stop_loss: document.getElementById('edit-f-end').value };
+                
+                // Zbieranie edytowanych powodów do tablicy
+                const editedReasons = [
+                    document.getElementById('edit-f-r1').value,
+                    document.getElementById('edit-f-r2').value,
+                    document.getElementById('edit-f-r3').value,
+                    document.getElementById('edit-f-r4').value,
+                    document.getElementById('edit-f-r5').value
+                ].filter(r => r.trim() !== '');
+
+                payload = { 
+                    old_entry_id: currentEditId, 
+                    ticker: document.getElementById('edit-f-ticker').value, 
+                    start_zone: document.getElementById('edit-f-start').value, 
+                    end_zone: document.getElementById('edit-f-end').value, 
+                    entry_point: document.getElementById('edit-f-entry').value, 
+                    take_profit: document.getElementById('edit-f-tp').value, 
+                    stop_loss: document.getElementById('edit-f-end').value,
+                    reasons: editedReasons 
+                };
             } else if (currentEditContext === 'focus') {
                 endpoint = '/api/focus/edit';
                 payload = { id: currentEditId, allocated_pct: document.getElementById('edit-fo-pct').value, allocated_cash: document.getElementById('edit-fo-cash').value };
@@ -784,7 +819,16 @@
             if(tickerDataArray.length === 0) await loadDatabase(); 
             const select = document.getElementById('form-ticker'); 
             select.innerHTML = ''; 
-            tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); 
+            
+            // Inteligentne sortowanie ignorujące prefix np. 'GPW:'
+            const sortedTickers = [...tickerDataArray].sort((a, b) => {
+                const baseA = a.ticker.includes(':') ? a.ticker.split(':')[1] : a.ticker;
+                const baseB = b.ticker.includes(':') ? b.ticker.split(':')[1] : b.ticker;
+                return baseA.localeCompare(baseB);
+            });
+            
+            sortedTickers.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); 
+            
             fetchFormEntries(); 
             fetchFormReasons();
         }
@@ -859,6 +903,9 @@
                     const pb = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny</span>`;
                     const mb = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie</span>`;
 
+                    // Obliczanie Score (Zliczanie ilości powodów)
+                    const reasonsCount = Array.isArray(item.reasons) ? item.reasons.length : 0;
+                    
                     tbody.innerHTML += `<tr>
                         <td style="font-weight:bold;">${item.entry_id}</td>
                         <td style="color:var(--text-muted);">${dateFormatted}</td>
@@ -868,7 +915,7 @@
                         <td>${pb}</td><td>${mb}</td>
                         <td style="color:${statusColor}; font-weight:bold;">${status}</td>
                         <td class="sensitive" style="color:${diffColor}; font-weight:bold;">${diffStr}</td>
-                        <td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${item.score}/5</td>
+                        <td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${reasonsCount}/5</td>
                         <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a> <button class="btn-edit" onclick="openEditModal('form', '${item.entry_id}')">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
                     </tr>`;
                 } catch(e) { console.error("Error drawing form row", e); }
@@ -920,6 +967,9 @@
                 const datalist = document.getElementById('reasons-list');
                 datalist.innerHTML = ''; 
                 if (Array.isArray(reasons)) {
+                    // Sortowanie alfabetyczne powodów
+                    reasons.sort((a, b) => a.localeCompare(b));
+                    
                     reasons.forEach(r => {
                         const option = document.createElement('option');
                         option.value = r;
