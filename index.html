@@ -1462,7 +1462,9 @@
             let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur);
             data.sort((a,b) => { let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey]; if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); } return summaryOpenSortDir==='asc' ? va-vb : vb-va; });
             if(data.length === 0) { tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; }
-            tb.innerHTML = data.map(i => `<tr>
+            
+            // 1. Wygenerowanie standardowych wierszy
+            let html = data.map(i => `<tr>
                 <td style="font-weight:bold; color:var(--accent);">${i.ticker}</td>
                 <td class="sensitive">${i.inv.toFixed(2)} ${i.curr}</td>
                 <td class="sensitive" style="color: #cdd6f4;">${i.invPln.toFixed(2)} PLN</td>
@@ -1472,6 +1474,34 @@
                 <td class="sensitive" style="color:${i.profPln>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.profPln.toFixed(2)} PLN</td>
                 <td class="sensitive">${i.valLev.toFixed(2)} ${i.curr}</td>
             </tr>`).join('');
+
+            // 2. Obliczanie Sumy
+            let tCount = data.length;
+            let tInv = 0, tInvPln = 0, tPctInv = 0, tPctLev = 0, tProf = 0, tProfPln = 0, tValLev = 0;
+            
+            data.forEach(i => {
+                tInv += i.inv;
+                tInvPln += i.invPln;
+                tPctInv += i.pctInv;
+                tPctLev += i.pctLev;
+                tProf += i.prof;
+                tProfPln += i.profPln;
+                tValLev += i.valLev;
+            });
+
+            // 3. Doklejenie wiersza podsumowania (Suma)
+            html += `<tr style="background-color: rgba(255,255,255,0.05); border-top: 2px solid #555;">
+                <td style="font-weight:bold; color:var(--text-main);">Suma: ${tCount}</td>
+                <td class="sensitive" style="font-weight:bold;">${tInv.toFixed(2)}</td>
+                <td class="sensitive" style="color: #cdd6f4; font-weight:bold;">${tInvPln.toFixed(2)} PLN</td>
+                <td class="sensitive" style="color:#89b4fa; font-weight:bold;">${tPctInv.toFixed(1)} %</td>
+                <td class="sensitive" style="color:#fcd535; font-weight:bold;">${tPctLev.toFixed(1)} %</td>
+                <td class="sensitive" style="color:${tProf>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${tProf.toFixed(2)}</td>
+                <td class="sensitive" style="color:${tProfPln>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${tProfPln.toFixed(2)} PLN</td>
+                <td class="sensitive" style="font-weight:bold;">${tValLev.toFixed(2)}</td>
+            </tr>`;
+
+            tb.innerHTML = html;
         }
         function sortSummaryOpen(key) { summaryOpenSortDir = (summaryOpenSortKey===key && summaryOpenSortDir==='desc') ? 'asc' : 'desc'; summaryOpenSortKey = key; renderSummaryOpen(); }
 
