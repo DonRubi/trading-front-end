@@ -958,22 +958,37 @@
             } 
         }
         
-        async function autoCalculateSMC(event) { 
+async function autoCalculateSMC(event) { 
             const t = document.getElementById('focus-ticker').value; 
             const d = document.getElementById('focus-direction').value; 
+            
+            // POBIERAMY DATĘ Z KALENDARZA FORMULARZA!
+            const fDate = document.getElementById('focus-date').value;
+
             let btn = null; let origText = "🤖 Automatyzuj SMC (Yahoo)";
-            if(event && event.currentTarget) { btn = event.currentTarget; origText = btn.innerText; btn.innerText = "⏳ Pobieranie SMC..."; btn.disabled = true; }
+            if(event && event.currentTarget) { btn = event.currentTarget; origText = btn.innerText; btn.innerText = "⏳ Analiza wykresu wstecz..."; btn.disabled = true; }
             
             try { 
-                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d}) }); 
+                // Wysyłamy datę (focus_date) do silnika Python
+                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ 
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({ ticker: t, direction: d, focus_date: fDate }) 
+                }); 
                 const r = await res.json(); 
                 document.getElementById('focus-candle').value = r.candle_score; 
                 document.getElementById('focus-volume').value = r.volume_score; 
                 document.getElementById('focus-vix').value = r.vix_score; 
                 document.getElementById('focus-index').value = r.index_score; 
-                alert("Pomyślnie zaktualizowano parametry SMC dla tego waloru!");
-            } catch(e) { console.error(e); alert("Błąd pobierania danych SMC"); } 
-            finally { if(btn) { btn.innerText = origText; btn.disabled = false; } }
+                
+                alert("Pomyślnie przenalizowano parametry SMC dla wykresu z podanej daty!");
+            } catch(e) { 
+                console.error(e); 
+                alert("Błąd pobierania danych SMC z Yahoo"); 
+            } 
+            finally { 
+                if(btn) { btn.innerText = origText; btn.disabled = false; } 
+            }
         }
 
         async function fetchFocusEntries(forceFresh = false) { 
