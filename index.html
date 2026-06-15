@@ -1219,6 +1219,7 @@
             const cFilter = document.getElementById('focuslist-currency-filter').value; 
             filteredFocusListEntries = []; 
 
+            // Pobieramy dane ZAWSZE ze świeżego formEntries (synchronizacja z Form)
             formEntries.forEach(item => { 
                 try {
                     const entry = parseFloat(item.entry_point) || 0; 
@@ -1232,18 +1233,32 @@
                     const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
                     
                     const diff = entry !== 0 ? (((currentPrice - entry) / entry) * 100 * mod) : 0; 
-                    const absDiff = Math.abs(diff);
-                    let status = 'Brak danych'; 
+                    const realDiff = entry !== 0 ? (((currentPrice - entry) / entry) * 100) : 0;
                     
-                    if (!isNaN(absDiff) && isFinite(absDiff)) {
-                        if (absDiff > 15) status = 'Ignorowanie'; 
-                        else if (absDiff > 10) status = 'Czekanie'; 
-                        else if (item.priority === 1) status = 'Skupienie'; 
-                        else status = 'Obserwacja'; 
+                    let status = 'Brak danych'; 
+                    const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
+                    
+                    // Asymetryczne reguły zaciągnięte z modułu Form!
+                    if (!isNaN(diff) && isFinite(diff)) {
+                        let isObserwacja = false, isSkupienie = false;
+                        
+                        if (isLong) {
+                            if (realDiff >= -5 && realDiff <= 10) isObserwacja = true;
+                            if (realDiff >= -3 && realDiff <= 10 && item.priority === 1) isSkupienie = true;
+                        } else {
+                            if (realDiff >= -10 && realDiff <= 5) isObserwacja = true;
+                            if (realDiff >= -10 && realDiff <= 3 && item.priority === 1) isSkupienie = true;
+                        }
+
+                        if (isSkupienie) status = 'Skupienie';
+                        else if (isObserwacja) status = 'Obserwacja';
+                        else status = Math.abs(diff) > 15 ? 'Ignorowanie' : 'Czekanie';
                     }
                     
+                    // FocusList pokazuje TYLKO Skupienie i Obserwację (lub to co wybrane w filtrze)
                     if (status !== 'Skupienie' && status !== 'Obserwacja') return; 
                     if (sFilter !== 'ALL' && status !== sFilter) return; 
+                    
                     const currency = getCurrencyForFrontend(item.ticker); 
                     if (cFilter !== 'ALL' && currency !== cFilter) return; 
                     
