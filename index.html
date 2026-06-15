@@ -557,7 +557,6 @@
         let allTradesData = [], filteredTradesData = [], currentTradePage = 1, tradePageSize = 20;
         let allAlertsData = [], filteredAlertsData = [], currentAlertPage = 1, alertPageSize = 20;
         
-        // Zmienne FocusList i Wykresu (ich brak też powodował błędy)
         let filteredFocusListEntries = [], currentFocusListPage = 1, focusListPageSize = 20;
         let summaryChartInstance = null;
 
@@ -690,58 +689,40 @@
             try {
                 const res = await fetch(`${API_BASE_URL}${endpoint}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
                 if(res.ok) {
-                    closeEditModal(); 
-                    alert('Zaktualizowano pomyślnie!');
+                    closeEditModal(); alert('Zaktualizowano pomyślnie!');
                     if(currentEditContext === 'ticker') loadDatabase();
                     if(currentEditContext === 'form') fetchFormEntries(true);
                     if(currentEditContext === 'focus') fetchFocusEntries(true);
                     if(currentEditContext === 'trade') fetchTradesEntries(true);
-                } else {
-                    alert('Błąd aktualizacji bazy.');
-                }
+                } else alert('Błąd aktualizacji bazy.');
             } catch(err) { console.error(err); }
         }
 
         // --- BAZA I MAKRO ---
-        let macroDataArray = [], currentMacroPage = 1, macroPageSize = 10;
-        let depositsDataArray = [];
-
         function loadMacroData() {
             const tbody = document.getElementById('macro-table-body');
             if (!tbody) return;
-            fetch(`${API_BASE_URL}/api/macro/history`)
-                .then(r => r.json())
-                .then(data => { 
-                    macroDataArray = Array.isArray(data) ? data : []; 
-                    currentMacroPage = 1; 
-                    renderMacroTable(); 
-                }).catch(e => console.error(e));
+            fetch(`${API_BASE_URL}/api/macro/history`).then(r => r.json()).then(data => { macroDataArray = Array.isArray(data) ? data : []; currentMacroPage = 1; renderMacroTable(); }).catch(e => {});
         }
 
         function renderMacroTable() {
             const tbody = document.getElementById('macro-table-body');
-            if (macroDataArray.length === 0) { 
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro.</td></tr>`; 
-                return; 
-            }
-            const totalPages = Math.ceil(macroDataArray.length / macroPageSize);
+            if (macroDataArray.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Brak wpisów makro w bazie.</td></tr>`; return; }
+            const totalPages = Math.ceil(macroDataArray.length / macroPageSize) || 1;
             const start = (currentMacroPage - 1) * macroPageSize;
-            tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => 
-                `<tr><td class="macro-val-date">${row.date || '-'}</td><td class="macro-val-currency sensitive">${row.eurpln || '-'}</td><td class="macro-val-currency sensitive">${row.usdpln || '-'}</td><td class="macro-val-vix">${row.vix || '-'}</td><td style="font-weight: 500;" class="sensitive">${row.sp500 || '-'}</td><td class="macro-val-time">${row.updated_at || '-'}</td></tr>`
-            ).join('');
+            tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => `<tr><td class="macro-val-date">${row.date || '-'}</td><td class="macro-val-currency sensitive">${row.eurpln || '-'}</td><td class="macro-val-currency sensitive">${row.usdpln || '-'}</td><td class="macro-val-vix">${row.vix || '-'}</td><td style="font-weight: 500;" class="sensitive">${row.sp500 || '-'}</td><td class="macro-val-time">${row.updated_at || '-'}</td></tr>`).join('');
             document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`;
         }
 
-        function changeMacroPage(dir) { currentMacroPage += dir; renderMacroTable(); }
-        
-        async function forceMacroUpdate() { 
-            try { 
-                await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); 
-                alert("Zaktualizowano makro"); 
-                loadMacroData(); 
-            } catch (e) { alert("Błąd połączenia z serwerem."); } 
+        function changeMacroPage(dir) { 
+            const maxPage = Math.ceil(macroDataArray.length / macroPageSize) || 1;
+            currentMacroPage += dir; 
+            if(currentMacroPage < 1) currentMacroPage = 1;
+            if(currentMacroPage > maxPage) currentMacroPage = maxPage;
+            renderMacroTable(); 
         }
 
+        async function forceMacroUpdate() { try { await fetch(`${API_BASE_URL}/api/macro/force`, { method: 'POST' }); alert("Zaktualizowano makro"); loadMacroData(); } catch (e) { alert("Błąd połączenia z serwerem."); } }
         async function forceMacroYTDUpdate(event) { 
             let btn = null; let originalText = "📥 Pobierz YTD";
             if(event && event.currentTarget) { btn = event.currentTarget; originalText = btn.innerText; btn.innerText = "⏳ Pobieram YTD..."; btn.disabled = true; }
@@ -753,44 +734,25 @@
             finally { if(btn) { btn.innerText = originalText; btn.disabled = false; } }
         }
 
-        async function loadDatabase() { 
-            try { 
-                const response = await fetch(`${API_BASE_URL}/api/database`); 
-                const dt = await response.json(); 
-                tickerDataArray = Array.isArray(dt) ? dt : []; 
-                renderMobileList(); 
-            } catch (e) { console.error(e); } 
-        }
-
+        async function loadDatabase() { try { const response = await fetch(`${API_BASE_URL}/api/database`); const dt = await response.json(); tickerDataArray = Array.isArray(dt) ? dt : []; renderMobileList(); } catch (e) {} }
         function renderMobileList() {
-            const container = document.getElementById('db-list-container'); container.innerHTML = ''; 
-            if (tickerDataArray.length === 0) return;
+            const container = document.getElementById('db-list-container'); container.innerHTML = ''; if (tickerDataArray.length === 0) return;
             const start = (currentTickerPage - 1) * tickerPageSize;
-            container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => 
-                `<div class="data-card"><div class="data-card-info"><h4>${item.ticker}</h4><p>${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style="display: flex; gap:5px;"><span class="price-tag sensitive">${item.price !== null ? item.price + '$' : '...'}</span><button class="btn-edit" onclick="openEditModal('ticker', '${item.ticker}')">Edytuj</button><button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button></div></div>`
-            ).join('');
-            document.getElementById('ticker-page-info').innerText = currentTickerPage;
+            const maxPage = Math.ceil(tickerDataArray.length / tickerPageSize) || 1;
+            container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `<div class="data-card"><div class="data-card-info"><h4>${item.ticker}</h4><p>${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style="display: flex; gap:5px;"><span class="price-tag sensitive">${item.price !== null ? item.price + '$' : '...'}</span><button class="btn-edit" onclick="openEditModal('ticker', '${item.ticker}')">Edytuj</button><button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button></div></div>`).join('');
+            document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${maxPage}`;
         }
 
-        function changeTickerPage(dir) { currentTickerPage += dir; renderMobileList(); }
-        
-        async function addTicker() { 
-            const t = document.getElementById('new-ticker').value.trim().toUpperCase(); 
-            if (!t) return; 
-            try { 
-                await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); 
-                document.getElementById('new-ticker').value = ''; 
-                loadDatabase(); 
-            } catch (e) { console.error(e); } 
+        function changeTickerPage(dir) { 
+            const maxPage = Math.ceil(tickerDataArray.length / tickerPageSize) || 1;
+            currentTickerPage += dir; 
+            if(currentTickerPage < 1) currentTickerPage = 1;
+            if(currentTickerPage > maxPage) currentTickerPage = maxPage;
+            renderMobileList(); 
         }
 
-        async function removeTicker(t) { 
-            if (!confirm('Usunąć?')) return; 
-            try { 
-                await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); 
-                loadDatabase(); 
-            } catch (e) { console.error(e); } 
-        }
+        async function addTicker() { const t = document.getElementById('new-ticker').value.trim().toUpperCase(); if (!t) return; try { await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); document.getElementById('new-ticker').value = ''; loadDatabase(); } catch (e) {} }
+        async function removeTicker(t) { if (!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); loadDatabase(); } catch (e) {} }
 
         // --- FORM MODULE ---
         function handleFormSort(key) {
@@ -804,9 +766,8 @@
             const select = document.getElementById('form-ticker'); 
             select.innerHTML = ''; 
             tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); 
-            
             fetchFormEntries(); 
-            fetchFormReasons(); // <--- To wywołuje nową funkcję pobierającą podpowiedzi
+            fetchFormReasons();
         }
         
         async function fetchFormEntries(forceFresh = false) { 
@@ -845,17 +806,15 @@
         }
 
         function renderAdvancedFormTable() {
-            const tbody = document.getElementById('form-table-body'); 
-            tbody.innerHTML = '';
+            const tbody = document.getElementById('form-table-body'); tbody.innerHTML = '';
             const items = filteredFormEntries.slice((formCurrentPage - 1) * formRowsPerPage, formCurrentPage * formRowsPerPage);
-            
+            const maxPage = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
+
             items.forEach(item => {
                 try {
                     const dateFormatted = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-';
                     const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); const mod = isLong ? 1 : -1;
-                    const entry = parseFloat(item.entry_point) || 0; 
-                    const sl = parseFloat(item.stop_loss) || 0; 
-                    const tp = parseFloat(item.take_profit) || 0;
+                    const entry = parseFloat(item.entry_point) || 0; const sl = parseFloat(item.stop_loss) || 0; const tp = parseFloat(item.take_profit) || 0;
                     let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
                     
                     const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
@@ -881,8 +840,6 @@
                     const pb = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny</span>`;
                     const mb = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie</span>`;
 
-                    const cpDisplay = tm && tm.price ? `<br><small style="color:#eaecef;">Akt: ${tm.price.toFixed(2)}$</small>` : `<br><small style="color:var(--text-muted);">Akt: Brak</small>`;
-
                     tbody.innerHTML += `<tr>
                         <td style="font-weight:bold;">${item.entry_id}</td>
                         <td style="color:var(--text-muted);">${dateFormatted}</td>
@@ -897,15 +854,19 @@
                     </tr>`;
                 } catch(e) { console.error("Error drawing form row", e); }
             });
-            document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage}`;
+            document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage} z ${maxPage}`;
         }
 
-        function changeFormPage(d) { formCurrentPage += d; renderAdvancedFormTable(); }
+        function changeFormPage(d) { 
+            const maxPage = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
+            formCurrentPage += d; 
+            if(formCurrentPage < 1) formCurrentPage = 1;
+            if(formCurrentPage > maxPage) formCurrentPage = maxPage;
+            renderAdvancedFormTable(); 
+        }
         
         async function submitAdvancedForm(e) { 
             e.preventDefault(); 
-            
-            // Pobieramy i filtrujemy puste powody
             const formReasons = [
                 document.getElementById('form-reason-1').value,
                 document.getElementById('form-reason-2').value,
@@ -922,29 +883,23 @@
                 end_zone: document.getElementById('form-end').value, 
                 entry_point: document.getElementById('form-entry').value, 
                 take_profit: document.getElementById('form-tp').value,
-                reasons: formReasons // <--- Wysyłamy powody do bazy!
+                reasons: formReasons
             }; 
-            
             try { 
                 await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); 
                 document.getElementById('trading-form').reset(); 
                 await fetchFormEntries(true); 
-                fetchFormReasons(); // Odświeżamy listę podpowiedzi, gdyby dodano nowy powód
+                fetchFormReasons();
                 alert("Zapisano Setup w bazie!");
             } catch(err) { alert('Błąd: ' + err.message); } 
         }
 
-        async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(true); } catch(e) {} }
-        async function updateFormEntryField(id, field, val) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: id, field: field, value: val }) }); fetchFormEntries(true); } catch(e){} }
-
-        // --- FUNKCJA POBIERAJĄCA AUTO-PODPOWIEDZI POWODÓW ---
         async function fetchFormReasons() {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/form/reasons`);
                 const reasons = await res.json();
                 const datalist = document.getElementById('reasons-list');
-                datalist.innerHTML = ''; // Czyścimy starą listę
-                
+                datalist.innerHTML = ''; 
                 if (Array.isArray(reasons)) {
                     reasons.forEach(r => {
                         const option = document.createElement('option');
@@ -952,11 +907,12 @@
                         datalist.appendChild(option);
                     });
                 }
-            } catch (error) {
-                console.error("Błąd pobierania powodów: ", error);
-            }
+            } catch (error) { console.error("Błąd pobierania powodów: ", error); }
         }
-    
+
+        async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(true); } catch(e) {} }
+        async function updateFormEntryField(id, field, val) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: id, field: field, value: val }) }); fetchFormEntries(true); } catch(e){} }
+
         // --- ASYSTENT FIBO ---
         function toggleFibo() { const drawer = document.getElementById('fibo-drawer'); drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; if (drawer.style.display === 'block') updateFiboLabels(); }
         function updateFiboLabels() {
@@ -987,54 +943,35 @@
                 fetchFocusEntries(); 
             } catch(e) { console.error(e); } 
             document.getElementById('focus-date').valueAsDate = new Date();
-                }
+        }
 
-            function onFocusIdChange() { 
+        function onFocusIdChange() { 
             const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value); 
             if(entry) { 
                 document.getElementById('focus-ticker').value = entry.ticker; 
                 document.getElementById('focus-direction').value = entry.direction; 
-                
-                // Uruchamianie linku TradingView dla Focus
                 const linkEl = document.getElementById('focus-tv-link');
-                if (linkEl) {
-                    linkEl.href = getTradingViewLink(entry.ticker);
-                    linkEl.style.display = 'inline-block';
-                }
+                if (linkEl) { linkEl.href = getTradingViewLink(entry.ticker); linkEl.style.display = 'inline-block'; }
             } 
-                }
+        }
         
-            async function autoCalculateSMC(event) { 
+        async function autoCalculateSMC(event) { 
             const t = document.getElementById('focus-ticker').value; 
             const d = document.getElementById('focus-direction').value; 
-            
-            // POBIERAMY DATĘ Z KALENDARZA FORMULARZA!
             const fDate = document.getElementById('focus-date').value;
-
             let btn = null; let origText = "🤖 Automatyzuj SMC (Yahoo)";
-            if(event && event.currentTarget) { btn = event.currentTarget; origText = btn.innerText; btn.innerText = "⏳ Analiza wykresu wstecz..."; btn.disabled = true; }
+            if(event && event.currentTarget) { btn = event.currentTarget; origText = btn.innerText; btn.innerText = "⏳ Analiza wykresu..."; btn.disabled = true; }
             
             try { 
-                // Wysyłamy datę (focus_date) do silnika Python
-                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ 
-                    method:'POST', 
-                    headers:{'Content-Type':'application/json'}, 
-                    body:JSON.stringify({ ticker: t, direction: d, focus_date: fDate }) 
-                }); 
+                const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d, focus_date: fDate}) }); 
                 const r = await res.json(); 
                 document.getElementById('focus-candle').value = r.candle_score; 
                 document.getElementById('focus-volume').value = r.volume_score; 
                 document.getElementById('focus-vix').value = r.vix_score; 
                 document.getElementById('focus-index').value = r.index_score; 
-                
-                alert("Pomyślnie przenalizowano parametry SMC dla wykresu z podanej daty!");
-            } catch(e) { 
-                console.error(e); 
-                alert("Błąd pobierania danych SMC z Yahoo"); 
-            } 
-            finally { 
-                if(btn) { btn.innerText = origText; btn.disabled = false; } 
-            }
+                alert("Pomyślnie przeanalizowano parametry SMC!");
+            } catch(e) { console.error(e); alert("Błąd pobierania danych SMC"); } 
+            finally { if(btn) { btn.innerText = origText; btn.disabled = false; } }
         }
 
         async function fetchFocusEntries(forceFresh = false) { 
@@ -1052,6 +989,7 @@
 
         function handleFocusFilter(text) {
             filteredFocusArray = focusDataArray.filter(i => (i.ticker||'').toLowerCase().includes(text.toLowerCase()));
+            currentFocusPage = 1;
             renderFocusTable();
         }
 
@@ -1064,13 +1002,22 @@
                 return focusSortDir==='asc' ? va-vb : vb-va;
             });
 
-            filteredFocusArray.slice((currentFocusPage-1)*focusPageSize, currentFocusPage*focusPageSize).forEach(i => {
+            const start = (currentFocusPage-1)*focusPageSize;
+            const maxPage = Math.ceil(filteredFocusArray.length / focusPageSize) || 1;
+
+            filteredFocusArray.slice(start, start + focusPageSize).forEach(i => {
                 tb.innerHTML += `<tr><td>#${i.id}</td><td>${new Date(i.created_at).toLocaleDateString('pl-PL')}</td><td>${i.entry_id}</td><td>${i.ticker}</td><td>${Number(i.points_total).toFixed(1)}</td><td style="color:#0ecb81;">${(i.final_ratio*100).toFixed(0)}%</td><td class="sensitive" style="color:#89b4fa;">${i.allocated_pct.toFixed(1)}%</td><td class="sensitive">${i.allocated_cash} ${i.currency}</td><td><button class="btn-edit" onclick="openEditModal('focus', ${i.id})">✎</button><button class="btn-delete" onclick="deleteFocusEntry(${i.id})">✖</button></td></tr>`;
             });
-            document.getElementById('focus-page-info').innerText = currentFocusPage;
+            document.getElementById('focus-page-info').innerText = `Strona ${currentFocusPage} z ${maxPage}`;
         }
 
-        function changeFocusPage(d) { currentFocusPage += d; renderFocusTable(); }
+        function changeFocusPage(d) { 
+            const maxPage = Math.ceil(filteredFocusArray.length / focusPageSize) || 1;
+            currentFocusPage += d; 
+            if(currentFocusPage < 1) currentFocusPage = 1;
+            if(currentFocusPage > maxPage) currentFocusPage = maxPage;
+            renderFocusTable(); 
+        }
         
         async function deleteFocusEntry(id) { try { await fetch(`${API_BASE_URL}/api/focus/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); fetchFocusEntries(true); } catch(e){} }
         
@@ -1096,7 +1043,7 @@
             } catch(e) { console.error(e); } 
         }
 
-        // --- FOCUS LIST MODULE (ZABEZPIECZONY Z SORTOWANIEM) ---
+        // --- FOCUS LIST MODULE ---
         function handleFocusListSort(key) {
             focusListSortDir = (focusListSortKey === key && focusListSortDir === 'desc') ? 'asc' : 'desc';
             focusListSortKey = key;
@@ -1126,7 +1073,6 @@
                     const tp = parseFloat(item.take_profit) || 0; 
                     const mod = (item.direction === 'DBR' || item.direction === 'RBR') ? 1 : -1;
                     
-                    // Wyliczamy RR już tutaj, by móc po nim sortować
                     let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0; 
                     
                     const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); 
@@ -1148,7 +1094,6 @@
                     const currency = getCurrencyForFrontend(item.ticker); 
                     if (cFilter !== 'ALL' && currency !== cFilter) return; 
                     
-                    // Zapisujemy dodatkowo calcRR, aby sortowanie działało
                     filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: diff, calcRR: rr }); 
                 } catch(err) { console.error("Filter row skip", err); }
             }); 
@@ -1166,7 +1111,6 @@
                 return; 
             } 
             
-            // Logika sortowania dynamicznego
             filteredFocusListEntries.sort((a,b) => {
                 let va, vb;
                 if(focusListSortKey === 'created_at') { va = new Date(a.created_at); vb = new Date(b.created_at); }
@@ -1180,6 +1124,7 @@
             });
 
             const start = (currentFocusListPage - 1) * focusListPageSize; 
+            const maxPage = Math.ceil(filteredFocusListEntries.length / focusListPageSize) || 1;
             const pageData = filteredFocusListEntries.slice(start, start + focusListPageSize); 
             let htmlStr = '';
 
@@ -1225,11 +1170,17 @@
                 } catch(e) { console.error("Render row fail", e); }
             }); 
             tb.innerHTML = htmlStr;
-            document.getElementById('focuslist-page-info').innerText = `Strona ${currentFocusListPage} z ${Math.ceil(filteredFocusListEntries.length / focusListPageSize)}`; 
+            document.getElementById('focuslist-page-info').innerText = `Strona ${currentFocusListPage} z ${maxPage}`; 
         }
         
-        function changeFocusListPage(d) { currentFocusListPage += d; renderFocusListTable(); }
-    
+        function changeFocusListPage(d) { 
+            const maxPage = Math.ceil(filteredFocusListEntries.length / focusListPageSize) || 1;
+            currentFocusListPage += d; 
+            if(currentFocusListPage < 1) currentFocusListPage = 1;
+            if(currentFocusListPage > maxPage) currentFocusListPage = maxPage;
+            renderFocusListTable(); 
+        }
+
         // --- TRADES MODULE ---
         function handleTradeSort(key) { tradeSortDir = (tradeSortKey === key && tradeSortDir === 'desc') ? 'asc' : 'desc'; tradeSortKey = key; handleTradesFilter(); }
 
@@ -1253,6 +1204,7 @@
         function handleTradesFilter() { 
             const s = document.getElementById('trade-search').value.toLowerCase(); const stat = document.getElementById('trade-status-filter').value;
             filteredTradesData = allTradesData.filter(t => ((t.ticker || '').toLowerCase().includes(s)) && (stat==='OPEN' ? t.status==='OPEN' : t.status==='CLOSED'));
+            currentTradePage = 1;
             renderTradesTable(); 
         }
         
@@ -1277,7 +1229,10 @@
                 return tradeSortDir==='asc' ? va-vb : vb-va;
             });
 
-            sortedTrades.slice((currentTradePage-1)*tradePageSize, currentTradePage*tradePageSize).forEach(item => {
+            const start = (currentTradePage-1)*tradePageSize;
+            const maxPage = Math.ceil(sortedTrades.length / tradePageSize) || 1;
+
+            sortedTrades.slice(start, start + tradePageSize).forEach(item => {
                 const s = item.stats;
                 const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
                 tb.innerHTML += `<tr>
@@ -1292,9 +1247,16 @@
                     <td><button class="btn-edit" onclick="openEditModal('trade', ${item.id})">✎</button> ${actionHtml}</td>
                 </tr>`;
             });
-            document.getElementById('trade-page-info').innerText = currentTradePage;
+            document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage} z ${maxPage}`;
         }
-        function changeTradePage(d) { currentTradePage += d; renderTradesTable(); }
+
+        function changeTradePage(d) { 
+            const maxPage = Math.ceil(filteredTradesData.length / tradePageSize) || 1;
+            currentTradePage += d; 
+            if(currentTradePage < 1) currentTradePage = 1;
+            if(currentTradePage > maxPage) currentTradePage = maxPage;
+            renderTradesTable(); 
+        }
 
         // --- SUMMARY MODULE ---
         function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
@@ -1310,13 +1272,9 @@
             if (!Array.isArray(depositsDataArray)) depositsDataArray = [];
             if (!Array.isArray(allTradesData)) allTradesData = [];
 
-            let totalDepositsPln = 0; 
-            depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount || 0));
-            
+            let totalDepositsPln = 0; depositsDataArray.forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount || 0));
             let totalClosedPnlPln = 0; let openInvestedPln = 0; let openProfitPln = 0; let openLevValuePln = 0; let openLevNominalPln = 0;
-            const currBreakdown = { PLN: 0, USD: 0, EUR: 0 }; 
-            const openGrouped = {}; 
-            const monthSet = new Set();
+            const currBreakdown = { PLN: 0, USD: 0, EUR: 0 }; const openGrouped = {}; const monthSet = new Set();
 
             allTradesData.forEach(trade => {
                 try {
@@ -1326,24 +1284,15 @@
                         let month = 'Brak daty'; if (trade.sell_date && trade.sell_date.length >= 7) month = trade.sell_date.substring(0, 7);
                         monthSet.add(month);
                     } else {
-                        openInvestedPln += s.spentPln; 
-                        openProfitPln += s.profPln; 
-                        openLevValuePln += s.valPln + s.profPln; 
-                        openLevNominalPln += s.valPln;
-                        
-                        const spent = parseFloat(trade.spent) || 0; 
-                        const valInCurr = spent + s.prof;
+                        openInvestedPln += s.spentPln; openProfitPln += s.profPln; openLevValuePln += s.valPln + s.profPln; openLevNominalPln += s.valPln;
+                        const spent = parseFloat(trade.spent) || 0; const valInCurr = spent + s.prof;
                         if(currBreakdown[curr] !== undefined) currBreakdown[curr] += valInCurr;
-                        
                         const ticker = trade.ticker || 'N/A';
                         if(!openGrouped[ticker]) openGrouped[ticker] = {inv:0, prof:0, valLev:0, curr: curr, invPln:0, valLevPln:0};
-                        openGrouped[ticker].inv += spent; 
-                        openGrouped[ticker].prof += s.prof; 
-                        openGrouped[ticker].valLev += s.val + s.prof;
-                        openGrouped[ticker].invPln += s.spentPln; 
-                        openGrouped[ticker].valLevPln += s.valPln;
+                        openGrouped[ticker].inv += spent; openGrouped[ticker].prof += s.prof; openGrouped[ticker].valLev += s.val + s.prof;
+                        openGrouped[ticker].invPln += s.spentPln; openGrouped[ticker].valLevPln += s.valPln;
                     }
-                } catch(err) { console.error(err); }
+                } catch(err) {}
             });
 
             const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
@@ -1352,12 +1301,8 @@
             const totalPortfolioValuePln = freeCashPln + openPositionsValuePln;
             
             let roiPct = 0; if (totalDepositsPln > 0) roiPct = ((totalPortfolioValuePln - totalDepositsPln) / totalDepositsPln) * 100;
-            
-            // Poprawiona logika Dźwigni
             let avgLeverage = 0; 
-            if (openInvestedPln > 0) {
-                avgLeverage = openLevNominalPln / openInvestedPln;
-            }
+            if (openInvestedPln > 0) { avgLeverage = openLevNominalPln / openInvestedPln; }
 
             document.getElementById('s-dep').innerText = totalDepositsPln.toFixed(2) + ' PLN';
             document.getElementById('s-pnl').innerText = totalClosedPnlPln.toFixed(2) + ' PLN';
@@ -1375,8 +1320,7 @@
             document.getElementById('s-curr-breakdown').innerHTML = `<tr><td>PLN</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.PLN.toFixed(2)} PLN</td></tr><tr><td>USD</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.USD.toFixed(2)} USD</td></tr><tr><td>EUR</td><td class="sensitive" style="font-weight:bold;">${currBreakdown.EUR.toFixed(2)} EUR</td></tr>`;
 
             window.summaryOpenData = Object.keys(openGrouped).map(k => {
-                const item = openGrouped[k]; 
-                item.ticker = k;
+                const item = openGrouped[k]; item.ticker = k;
                 item.pctInv = openInvestedPln > 0 ? (item.invPln / openInvestedPln) * 100 : 0;
                 item.pctLev = openLevNominalPln > 0 ? (item.valLevPln / openLevNominalPln) * 100 : 0;
                 return item;
@@ -1385,13 +1329,11 @@
 
             const monthSelect = document.getElementById('s-cls-month-filter');
             if (monthSelect) {
-                const currentMonthVal = monthSelect.value; 
-                monthSelect.innerHTML = '<option value="ALL">Wszystkie Miesiące</option>';
+                const currentMonthVal = monthSelect.value; monthSelect.innerHTML = '<option value="ALL">Wszystkie Miesiące</option>';
                 Array.from(monthSet).sort().reverse().forEach(m => { monthSelect.innerHTML += `<option value="${m}">${m}</option>`; });
                 if(Array.from(monthSet).includes(currentMonthVal)) monthSelect.value = currentMonthVal;
             }
             renderSummaryClosed();
-            
             fetch(`${API_BASE_URL}/api/portfolio/roi/save`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({roi_pct: roiPct}) }).then(() => { drawSummaryChart(); }).catch(e => { drawSummaryChart(); });
         }
 
@@ -1426,19 +1368,34 @@
                 else { typeMatch = (aType === typeFilter); }
                 return textMatch && typeMatch;
             });
-            currentAlertPage = 1; renderAlertsTable();
+            currentAlertPage = 1; 
+            renderAlertsTable();
         }
         function renderAlertsTable() {
             const tbody = document.getElementById("alert-history-tbody"); tbody.innerHTML = '';
-            filteredAlertsData.slice((currentAlertPage-1)*alertPageSize, currentAlertPage*alertPageSize).forEach(item => {
+            
+            const start = (currentAlertPage-1)*alertPageSize;
+            const maxPage = Math.ceil(filteredAlertsData.length / alertPageSize) || 1;
+
+            filteredAlertsData.slice(start, start+alertPageSize).forEach(item => {
                 let aType = item.alert_type || 'Punkt wejścia'; if (aType === 'Wejście') aType = 'Punkt wejścia'; 
                 let typeColor = '#89b4fa'; if(aType === 'Take Profit') typeColor = '#0ecb81'; if(aType === 'Stop Loss') typeColor = '#f6465d';
                 tbody.innerHTML += `<tr><td>${new Date(item.triggered_at).toLocaleDateString('pl-PL')}</td><td style="color:${typeColor}; font-weight:bold;">${aType}</td><td style="color:var(--accent); font-weight:bold;">${item.ticker}</td><td class="sensitive">${Number(item.target_price).toFixed(2)}$</td><td class="sensitive">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td><td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td></tr>`;
             });
+            document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${maxPage}`;
         }
+
+        function changeAlertPage(d) { 
+            const maxPage = Math.ceil(filteredAlertsData.length / alertPageSize) || 1;
+            currentAlertPage += d; 
+            if(currentAlertPage < 1) currentAlertPage = 1;
+            if(currentAlertPage > maxPage) currentAlertPage = maxPage;
+            renderAlertsTable(); 
+        }
+
         async function deleteAlert(id) { try { await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); loadAlertHistory(); } catch(e) {} }
 
-        // --- NARZĘDZIA POMOCNICZE (Wykres, Dywidendy, Kalkulatory) ---
+        // --- SKRÓCONE NARZĘDZIA POMOCNICZE ---
         function renderDepositsTable() { const tb = document.getElementById('s-dep-table'); if(!depositsDataArray || depositsDataArray.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak wpłat.</td></tr>'; return; } tb.innerHTML = depositsDataArray.map(x => `<tr><td>${x.deposit_date || x.created_at ? (x.deposit_date || x.created_at).split('T')[0] : '-'}</td><td class="sensitive" style="font-weight:bold;">${Number(x.amount || 0).toFixed(2)} ${x.currency || 'PLN'}</td><td style="color:var(--text-muted);">${x.currency || 'PLN'}</td><td class="sensitive" style="color:var(--success); font-weight:bold;">${Number(x.amount_pln || x.amount || 0).toFixed(2)} PLN</td><td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td></tr>`).join(''); }
         function renderSummaryClosed() { const fMonth = document.getElementById('s-cls-month-filter').value; const fCur = document.getElementById('s-cls-cur-filter').value; const fLev = document.getElementById('s-cls-lev-filter').value; const closedByMonth = {}; const closedByCurr = {}; const closedByLev = {}; let filteredPnlPln = 0; allTradesData.forEach(trade => { try { const s = calculateTradeStats(trade); if (!s.isClosed) return; const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty'; const curr = trade.currency || 'USD'; const lev = parseInt(trade.leverage) || 1; if (fMonth !== 'ALL' && month !== fMonth) return; if (fCur !== 'ALL' && curr !== fCur) return; if (fLev === '>1' && lev <= 1) return; if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return; filteredPnlPln += s.profPln; if(!closedByMonth[month]) closedByMonth[month] = 0; closedByMonth[month] += s.profPln; if(!closedByCurr[curr]) closedByCurr[curr] = 0; closedByCurr[curr] += s.profPln; if(!closedByLev[lev]) closedByLev[lev] = 0; closedByLev[lev] += s.profPln; } catch(e) {} }); const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML=''; Object.keys(closedByMonth).sort().reverse().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML=''; Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML=''; Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const totalEl = document.getElementById('s-cls-filtered-total'); if(totalEl) { totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN'; totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)'; } }
         
@@ -1498,56 +1455,7 @@
         // --- Utils ---
         function getTradingViewLink(ticker) { if (!ticker) return '#'; const cleanTicker = String(ticker).trim().toUpperCase(); const LAYOUT_ID = 'k5llKflB'; const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/'; if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; } const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ']; const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA']; let exchange = ''; if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; } return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`; }
         function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = String(ticker).toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
-        function calculateTradeStats(item) { 
-            try { 
-                const isClosed = (item.status === 'CLOSED' || item.sell_date != null); 
-                const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1; 
-                const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
-                const buyPrice = parseFloat(item.buy_price) || 0; 
-                
-                let cp = buyPrice; 
-                if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } 
-                else if (tm && tm.price) { cp = parseFloat(tm.price); } 
-                
-                const spent = parseFloat(item.spent) || 0; 
-                const lev = parseInt(item.leverage) || 1; 
-                const val = spent * lev; 
-                const cfdCost = parseFloat(item.cfd_cost) || 0; 
-                const div = parseFloat(item.dividend) || 0; 
-                
-                let prof = 0; 
-                if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; } 
-                
-                const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1)); 
-                const profPln = prof * usedFx; 
-                const valPln = val * usedFx; 
-                const tp = parseFloat(item.tp) || 0; 
-                const sl = parseFloat(item.sl) || 0; 
-                
-                let rr = 0; 
-                if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); } 
-                
-                let prog = 0; 
-                if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); } 
-                
-                let dsl = sl; 
-                if (prog >= 1) dsl = tp; 
-                else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); 
-                
-                let pd = prog * 100; 
-                let pc = 'var(--success)'; 
-                if (pd < 0) { 
-                    pc = 'var(--danger)'; 
-                    if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } 
-                    else { pd = 0; } 
-                } 
-                if (pd > 100) pd = 100; 
-                return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx }; 
-            } catch (error) { 
-                console.error(error); 
-                return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; 
-            } 
-        }
+        function calculateTradeStats(item) { try { const isClosed = (item.status === 'CLOSED' || item.sell_date != null); const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1; const tm = tickerDataArray.find(t => t.ticker === item.ticker); const buyPrice = parseFloat(item.buy_price) || 0; let cp = buyPrice; if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } else if (tm && tm.price) { cp = parseFloat(tm.price); } const spent = parseFloat(item.spent) || 0; const lev = parseInt(item.leverage) || 1; const val = spent * lev; const cfdCost = parseFloat(item.cfd_cost) || 0; const div = parseFloat(item.dividend) || 0; let prof = 0; if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; } const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1)); const profPln = prof * usedFx; const valPln = val * usedFx; const tp = parseFloat(item.tp) || 0; const sl = parseFloat(item.sl) || 0; let rr = 0; if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); } let prog = 0; if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); } let dsl = sl; if (prog >= 1) dsl = tp; else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); let pd = prog * 100; let pc = 'var(--success)'; if (pd < 0) { pc = 'var(--danger)'; if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } else { pd = 0; } } if (pd > 100) pd = 100; return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx }; } catch (error) { return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; } }
 
         // Modal functions
         function openCloseModal(id) { document.getElementById('sell-modal').style.display = 'flex'; document.getElementById('sell-trade-id').value = id; document.getElementById('sell-date').valueAsDate = new Date(); document.getElementById('sell-price').value = ''; document.getElementById('sell-fraction').value = '1'; const trade = allTradesData.find(t => t.id === id); if(trade && trade.leverage > 1) { document.getElementById('sell-cfd-group').style.display = 'block'; document.getElementById('sell-cfd-cost').value = '0'; } else { document.getElementById('sell-cfd-group').style.display = 'none'; document.getElementById('sell-cfd-cost').value = '0'; } }
@@ -1555,6 +1463,7 @@
         async function confirmSell() { const id = document.getElementById('sell-trade-id').value; const price = parseFloat(document.getElementById('sell-price').value); const date = document.getElementById('sell-date').value; const cfdCost = parseFloat(document.getElementById('sell-cfd-cost').value) || 0; const fracStr = document.getElementById('sell-fraction').value.trim(); if(!price || isNaN(price)) return alert('Błąd ceny!'); let fraction = 1.0; if(fracStr.includes('%')) { fraction = parseFloat(fracStr.replace('%', '')) / 100.0; } else if(fracStr.includes('/')) { const parts = fracStr.split('/'); fraction = parseFloat(parts[0]) / parseFloat(parts[1]); } else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; } try { await fetch(`${API_BASE_URL}/api/trades/close`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost }) }); closeSellModal(); fetchTradesEntries(true); } catch(e) {} }
 
         async function loadDailyBriefs() { try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); } } catch (error) {} }
+        
         async function loadServiceModule() { 
             if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); allTradesData = await res.json() || []; } catch(e) {} } 
             const openTrades = allTradesData.filter(t => t.status === 'OPEN'); 
@@ -1563,17 +1472,13 @@
             openTrades.forEach(t => { select.innerHTML += `<option value="${t.id}">ID: #${t.id} | ${t.ticker} (${t.direction})</option>`; }); 
             document.getElementById('div-date').valueAsDate = new Date(); 
             
-            // --- Odzyskiwanie logu z pamięci przeglądarki ---
             const lastUpdateMsg = localStorage.getItem('last_price_update');
             if (lastUpdateMsg) {
                 const logEl = document.getElementById('last-price-update-log');
                 if (logEl) logEl.innerHTML = lastUpdateMsg;
             }
         }
-        async function addDeposit(e) { e.preventDefault(); const amt = document.getElementById('dep-amt').value; const d = document.getElementById('dep-date').value; const cur = document.getElementById('dep-cur').value; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); document.getElementById('dep-amt').value = ''; initSummaryModule(); } catch(err) {} }
-        async function deleteDeposit(id) { if(!confirm("Na pewno usunąć?")) return; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); initSummaryModule(); } catch(e) {} }
-        async function addDividend(e) { e.preventDefault(); const tid = document.getElementById('div-trade-id').value; const date = document.getElementById('div-date').value; const amt = document.getElementById('div-amount').value; try { await fetch(`${API_BASE_URL}/api/trades/dividend/add`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({trade_id: parseInt(tid), dividend_date: date, amount: parseFloat(amt)}) }); document.getElementById('div-amount').value = ''; fetchTradesEntries(true); alert("Dywidenda dodana!"); } catch(err) {} }
-        async function forceAlertsCheck() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Uruchamianie silnika alertów...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`); const result = await res.json(); out.innerHTML = `✅ <strong>Gotowe.</strong> Aktywowane: ${result.alerts_triggered || 0}`; } catch(e) { out.innerHTML = `❌ Błąd.`; } }
+
         async function forceCronPricesUpdate() { 
             const out = document.getElementById('service-output'); 
             out.style.display = 'block'; 
@@ -1586,7 +1491,6 @@
                 const updated = result.updated_tickers || 0;
                 const timeNow = new Date().toLocaleString('pl-PL');
                 
-                // Zapisujemy log do pamięci lokalnej
                 const logMsg = `Ostatnia aktualizacja: <strong style="color:var(--text-main);">${timeNow}</strong> <br> Pobrano ceny dla: <strong style="color:${updated === total && total > 0 ? 'var(--success)' : 'var(--accent)'};">${updated} z ${total}</strong> spółek.`;
                 localStorage.setItem('last_price_update', logMsg);
                 
@@ -1596,6 +1500,7 @@
                 out.innerHTML = `✅ <strong>Gotowe.</strong> Zaktualizowano ${updated}/${total}.`; 
             } catch(e) { out.innerHTML = `❌ Błąd.`; } 
         }
+
         async function forceDatabasePricesUpdate(event) { 
             let btn = event.currentTarget; 
             let origText = btn.innerHTML; 
@@ -1609,7 +1514,6 @@
                     const updated = result.updated_tickers || 0;
                     const timeNow = new Date().toLocaleString('pl-PL');
                     
-                    // Zapisujemy log również z poziomu DataBase
                     const logMsg = `Ostatnia aktualizacja: <strong style="color:var(--text-main);">${timeNow}</strong> <br> Pobrano ceny dla: <strong style="color:${updated === total && total > 0 ? 'var(--success)' : 'var(--accent)'};">${updated} z ${total}</strong> spółek.`;
                     localStorage.setItem('last_price_update', logMsg);
                     const logEl = document.getElementById('last-price-update-log');
@@ -1628,6 +1532,12 @@
                 btn.disabled = false; 
             } 
         }
+
+        async function addDeposit(e) { e.preventDefault(); const amt = document.getElementById('dep-amt').value; const d = document.getElementById('dep-date').value; const cur = document.getElementById('dep-cur').value; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:amt, date:d, currency:cur}) }); document.getElementById('dep-amt').value = ''; initSummaryModule(); } catch(err) {} }
+        async function deleteDeposit(id) { if(!confirm("Na pewno usunąć?")) return; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); initSummaryModule(); } catch(e) {} }
+        async function addDividend(e) { e.preventDefault(); const tid = document.getElementById('div-trade-id').value; const date = document.getElementById('div-date').value; const amt = document.getElementById('div-amount').value; try { await fetch(`${API_BASE_URL}/api/trades/dividend/add`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({trade_id: parseInt(tid), dividend_date: date, amount: parseFloat(amt)}) }); document.getElementById('div-amount').value = ''; fetchTradesEntries(true); alert("Dywidenda dodana!"); } catch(err) {} }
+        async function forceAlertsCheck() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Uruchamianie silnika alertów...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`); const result = await res.json(); out.innerHTML = `✅ <strong>Gotowe.</strong> Aktywowane: ${result.alerts_triggered || 0}`; } catch(e) { out.innerHTML = `❌ Błąd.`; } }
+
         // --- Analiza Techniczna ---
         function switchTechTab(tab) { document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-' + tab).classList.add('active'); }
         function calculateHarmonics(e) { e.preventDefault(); const x = parseFloat(document.getElementById('ha-x').value); const a = parseFloat(document.getElementById('ha-a').value); const b = parseFloat(document.getElementById('ha-b').value); const c = parseFloat(document.getElementById('ha-c').value); const xa = Math.abs(a - x); const ab = Math.abs(b - a); const bc = Math.abs(c - b); const isBullish = a > x; const dirMultiplier = isBullish ? -1 : 1; const bRetracement = ab / xa; const cRetracement = bc / ab; let resultsHTML = ''; const patterns = [ { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 }, { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Butterfly', bTarget: 0.786, dRetXa: 1.272, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Crab', bTarget: 0.50, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 }, { name: 'Deep Crab', bTarget: 0.886, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 } ]; let foundMatch = false; patterns.forEach(pat => { const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) || (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618); if(isBMatch) { foundMatch = true; const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier); const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier); const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier); resultsHTML += ` <div class="kpi-card" style="border-color: var(--accent);"> <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4> <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;"> Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br> Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB </div> <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}</b></div> <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)} - ${dTargetByBC_Max.toFixed(2)}</b></div> <div class="value sensitive" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)} do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}</div> </div> `; } }); if(!foundMatch) { resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;"> Obecna struktura nie mieści się w tolerancjach formacji Harmonicznych. </div>`; } document.getElementById('ha-results').innerHTML = resultsHTML; }
