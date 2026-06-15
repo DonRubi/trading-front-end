@@ -894,7 +894,7 @@
             renderAdvancedFormTable();
             }
     
-        function renderAdvancedFormTable() {
+            function renderAdvancedFormTable() {
             const tbody = document.getElementById('form-table-body'); tbody.innerHTML = '';
             const items = filteredFormEntries.slice((formCurrentPage - 1) * formRowsPerPage, formCurrentPage * formRowsPerPage);
             const maxPage = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
@@ -909,7 +909,10 @@
                     const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
                     const cp = tm && tm.price ? tm.price : entry; 
                     
+                    // rawDiff - dystans pokazujący (+), gdy cena idzie w pożądanym kierunku trade'u
                     const rawDiff = entry !== 0 ? (((cp - entry) / entry) * 100 * mod) : 0;
+                    // realDiff - surowa zmiana ceny (zawsze na minusie pod wejściem, na plusie ponad wejściem)
+                    const realDiff = entry !== 0 ? (((cp - entry) / entry) * 100) : 0;
                     
                     let diffStr = '-';
                     let status = 'Brak danych';
@@ -917,9 +920,31 @@
                     let diffColor = 'gray';
 
                     if (!isNaN(rawDiff) && isFinite(rawDiff)) {
-                        const absDiff = Math.abs(rawDiff);
-                        status = absDiff > 15 ? 'Ignorowanie' : (absDiff > 10 ? 'Czekanie' : (item.priority === 1 ? 'Skupienie' : 'Obserwacja'));
-                        statusColor = absDiff > 15 ? '#f6465d' : (absDiff > 10 ? '#fcd535' : (item.priority === 1 ? '#0ecb81' : '#848e9c'));
+                        let isObserwacja = false;
+                        let isSkupienie = false;
+
+                        // Asymetryczne reguły w zależności od kierunku (wyliczane na bazie realnej ceny na wykresie)
+                        if (isLong) {
+                            if (realDiff >= -5 && realDiff <= 10) isObserwacja = true;
+                            if (realDiff >= -3 && realDiff <= 10 && item.priority === 1) isSkupienie = true;
+                        } else {
+                            if (realDiff >= -10 && realDiff <= 5) isObserwacja = true;
+                            if (realDiff >= -10 && realDiff <= 3 && item.priority === 1) isSkupienie = true;
+                        }
+
+                        // Przypisywanie ostatecznego statusu
+                        if (isSkupienie) {
+                            status = 'Skupienie';
+                            statusColor = '#0ecb81';
+                        } else if (isObserwacja) {
+                            status = 'Obserwacja';
+                            statusColor = '#848e9c';
+                        } else {
+                            const dist = Math.abs(rawDiff);
+                            status = dist > 15 ? 'Ignorowanie' : 'Czekanie';
+                            statusColor = dist > 15 ? '#f6465d' : '#fcd535';
+                        }
+
                         diffColor = rawDiff >= 0 ? '#0ecb81' : '#f6465d';
                         diffStr = (rawDiff > 0 ? '+' : '') + rawDiff.toFixed(2) + '%';
                     }
