@@ -125,9 +125,10 @@
             <div class="journal-sidebar">
                 <form id="focus-form" onsubmit="submitFocusForm(event)">
                     <div class="form-row">
-                        <div class="form-group"><label>Wybierz ID Form</label><select id="focus-form-id" onchange="onFocusIdChange()"></select></div>
-                        <div class="form-group"><label>Data Analizy</label><input type="date" id="focus-date" required></div>
+                        <div class="form-group"><label>Wybierz Ticker</label><select id="focus-ticker-select" onchange="onFocusTickerChange()"><option value="">Ładowanie...</option></select></div>
+                        <div class="form-group"><label>Wybierz Setup (ID Form)</label><select id="focus-form-id" onchange="onFocusIdChange()"><option value="">Najpierw wybierz ticker...</option></select></div>
                     </div>
+                    <div class="form-group" style="margin-bottom: 10px;"><label>Data Analizy</label><input type="date" id="focus-date" required></div>
                     <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
                         <div class="form-group">
                             <label style="display: flex; justify-content: space-between;">Wybrany Ticker <a id="focus-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label>
@@ -175,7 +176,10 @@
         <div class="journal-container">
             <div class="journal-sidebar">
                 <form id="trade-form" onsubmit="submitTradeForm(event)">
-                    <div class="form-group"><label>Powiązane z ID Focus</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Wybierz przeanalizowany Setup...</option></select></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Wybierz Ticker</label><select id="trade-ticker-select" onchange="onTradeTickerChange()"><option value="">Ładowanie...</option></select></div>
+                        <div class="form-group"><label>Analiza Focus (ID)</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Najpierw wybierz ticker...</option></select></div>
+                    </div>
                     <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);"><div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div><div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div><div class="form-group"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div><div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div><div class="form-group"><label>Max Wyd.</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div></div>
                     <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
                     <div class="form-row"><div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div><div class="form-group"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div></div>
@@ -1092,21 +1096,59 @@
             try { 
                 const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
                 formEntriesGlobal = await res.json(); 
-                document.getElementById('focus-form-id').innerHTML = formEntriesGlobal.map(e => `<option value="${e.entry_id}">${e.entry_id} (${e.ticker})</option>`).join(''); 
+                
+                // Unikalne tickery posortowane alfabetycznie (bez prefixu jak w Form)
+                const uniqueTickers = [...new Set(formEntriesGlobal.map(e => e.ticker))];
+                uniqueTickers.sort((a, b) => {
+                    const baseA = a.includes(':') ? a.split(':')[1] : a;
+                    const baseB = b.includes(':') ? b.split(':')[1] : b;
+                    return baseA.localeCompare(baseB);
+                });
+
+                const tickerSelect = document.getElementById('focus-ticker-select');
+                tickerSelect.innerHTML = '<option value="">Wybierz Ticker...</option>';
+                uniqueTickers.forEach(t => { tickerSelect.innerHTML += `<option value="${t}">${t}</option>`; });
+
+                document.getElementById('focus-form-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
                 onFocusIdChange(); 
                 fetchFocusEntries(); 
             } catch(e) { console.error(e); } 
             document.getElementById('focus-date').valueAsDate = new Date();
         }
 
+        // Nowa funkcja wywoływana po wybraniu Tickera
+        function onFocusTickerChange() {
+            const selectedTicker = document.getElementById('focus-ticker-select').value;
+            const formSelect = document.getElementById('focus-form-id');
+            
+            if (!selectedTicker) {
+                formSelect.innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
+                onFocusIdChange();
+                return;
+            }
+
+            const entries = formEntriesGlobal.filter(e => e.ticker === selectedTicker);
+            formSelect.innerHTML = '<option value="">Wybierz Setup...</option>';
+            entries.forEach(e => {
+                const dateAdded = e.created_at ? new Date(e.created_at).toLocaleDateString('pl-PL') : '-';
+                formSelect.innerHTML += `<option value="${e.entry_id}">${e.entry_id} (Dodano: ${dateAdded})</option>`;
+            });
+            onFocusIdChange(); 
+        }
+
         function onFocusIdChange() { 
             const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value); 
+            const linkEl = document.getElementById('focus-tv-link');
+            
             if(entry) { 
                 document.getElementById('focus-ticker').value = entry.ticker; 
                 document.getElementById('focus-direction').value = entry.direction; 
-                const linkEl = document.getElementById('focus-tv-link');
                 if (linkEl) { linkEl.href = getTradingViewLink(entry.ticker); linkEl.style.display = 'inline-block'; }
-            } 
+            } else {
+                document.getElementById('focus-ticker').value = ''; 
+                document.getElementById('focus-direction').value = ''; 
+                if (linkEl) linkEl.style.display = 'none';
+            }
         }
         
         async function autoCalculateSMC(event) { 
@@ -1363,9 +1405,83 @@
         // --- TRADES MODULE ---
         function handleTradeSort(key) { tradeSortDir = (tradeSortKey === key && tradeSortDir === 'desc') ? 'asc' : 'desc'; tradeSortKey = key; handleTradesFilter(); }
 
-        async function initTradesModule() { if(focusDataArray.length===0) await fetchFocusEntries(); document.getElementById('trade-focus-id').innerHTML = focusDataArray.map(f => `<option value="${f.id}">#${f.id} - ${f.ticker}</option>`).join(''); document.getElementById('trade-buy-date').valueAsDate = new Date(); fetchTradesEntries(); }
-        async function onTradeFocusChange() { const fid = document.getElementById('trade-focus-id').value; const focus = focusDataArray.find(f => f.id == fid); if(!focus) return; try { const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); const form = formDb.find(frm => frm.entry_id === focus.entry_id); document.getElementById('trade-ticker').value = focus.ticker; document.getElementById('trade-form-id').value = focus.entry_id; document.getElementById('trade-currency').value = focus.currency; document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; document.getElementById('trade-score').value = focus.points_total; if(form) { document.getElementById('trade-direction').value = form.direction; document.getElementById('trade-tp').value = form.take_profit; document.getElementById('trade-sl').value = form.stop_loss; } document.getElementById('trade-name').value = 'Wyszukiwanie...'; const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); document.getElementById('trade-name').value = n.name || ''; } catch(e){} }
-        async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: spent, leverage: lev, currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(true); } else alert('Błąd.'); } catch(e) { console.error(e); } }
+        async function initTradesModule() { 
+            if(focusDataArray.length===0) await fetchFocusEntries(); 
+            
+            // Unikalne tickery z bazy Focus
+            const uniqueTickers = [...new Set(focusDataArray.map(f => f.ticker))];
+            uniqueTickers.sort((a, b) => {
+                const baseA = a.includes(':') ? a.split(':')[1] : a;
+                const baseB = b.includes(':') ? b.split(':')[1] : b;
+                return baseA.localeCompare(baseB);
+            });
+
+            const tickerSelect = document.getElementById('trade-ticker-select');
+            tickerSelect.innerHTML = '<option value="">Wybierz Ticker...</option>';
+            uniqueTickers.forEach(t => { tickerSelect.innerHTML += `<option value="${t}">${t}</option>`; });
+
+            document.getElementById('trade-focus-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
+            document.getElementById('trade-buy-date').valueAsDate = new Date(); 
+            fetchTradesEntries(); 
+        }
+
+        // Nowa funkcja dla Trades po wybraniu Tickera
+        function onTradeTickerChange() {
+            const selectedTicker = document.getElementById('trade-ticker-select').value;
+            const focusSelect = document.getElementById('trade-focus-id');
+            
+            if (!selectedTicker) {
+                focusSelect.innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
+                onTradeFocusChange();
+                return;
+            }
+
+            const entries = focusDataArray.filter(f => f.ticker === selectedTicker);
+            focusSelect.innerHTML = '<option value="">Wybierz analizę...</option>';
+            entries.forEach(f => {
+                const dateAdded = f.created_at ? new Date(f.created_at).toLocaleDateString('pl-PL') : '-';
+                focusSelect.innerHTML += `<option value="${f.id}">#${f.id} (Dodano: ${dateAdded} | Score: ${Number(f.points_total).toFixed(1)})</option>`;
+            });
+            onTradeFocusChange();
+        }
+
+        async function onTradeFocusChange() { 
+            const fid = document.getElementById('trade-focus-id').value; 
+            // Czyszczenie ukrytych pól jeśli nic nie wybrano
+            if (!fid) {
+                document.getElementById('trade-ticker').value = ''; 
+                document.getElementById('trade-form-id').value = ''; 
+                document.getElementById('trade-currency').value = ''; 
+                document.getElementById('trade-max-spend').value = ''; 
+                document.getElementById('trade-direction').value = ''; 
+                document.getElementById('trade-tp').value = ''; 
+                document.getElementById('trade-sl').value = ''; 
+                document.getElementById('trade-name').value = '';
+                return;
+            }
+            
+            const focus = focusDataArray.find(f => f.id == fid); 
+            if(!focus) return; 
+            
+            try { 
+                const formDb = await (await fetch(`${API_BASE_URL}/api/form/entries`)).json(); 
+                const form = formDb.find(frm => frm.entry_id === focus.entry_id); 
+                document.getElementById('trade-ticker').value = focus.ticker; 
+                document.getElementById('trade-form-id').value = focus.entry_id; 
+                document.getElementById('trade-currency').value = focus.currency; 
+                document.getElementById('trade-max-spend').value = `${focus.allocated_cash} ${focus.currency}`; 
+                document.getElementById('trade-score').value = focus.points_total; 
+                if(form) { 
+                    document.getElementById('trade-direction').value = form.direction; 
+                    document.getElementById('trade-tp').value = form.take_profit; 
+                    document.getElementById('trade-sl').value = form.stop_loss; 
+                } 
+                document.getElementById('trade-name').value = 'Wyszukiwanie...'; 
+                const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); 
+                document.getElementById('trade-name').value = n.name || ''; 
+            } catch(e){} 
+        }
+    async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: spent, leverage: lev, currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(true); } else alert('Błąd.'); } catch(e) { console.error(e); } }
 
         async function fetchTradesEntries(forceFresh = false) { 
             if(!forceFresh) {
