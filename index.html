@@ -120,14 +120,14 @@
                         <div class="form-group"><label>Wybierz ID Form</label><select id="focus-form-id" onchange="onFocusIdChange()"></select></div>
                         <div class="form-group"><label>Data Analizy</label><input type="date" id="focus-date" required></div>
                     </div>
-                        <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
-                     <div class="form-group">
-                            <label style="display: flex; justify-content: space-between;">Wybrany Ticker <a id="focus-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label>
-                        <input type="text" id="focus-ticker" readonly style="opacity:0.7;">
-                    </div>
+                    <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
                         <div class="form-group">
-                        <label>Kierunek</label>
-                        <input type="text" id="focus-direction" readonly style="opacity:0.7;">
+                            <label style="display: flex; justify-content: space-between;">Wybrany Ticker <a id="focus-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label>
+                            <input type="text" id="focus-ticker" readonly style="opacity:0.7;">
+                        </div>
+                        <div class="form-group">
+                            <label>Kierunek</label>
+                            <input type="text" id="focus-direction" readonly style="opacity:0.7;">
                         </div>
                     </div>
                     <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC(event)" style="background: #0284c7; color:#fff; padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; border: none; font-weight: bold; width: 100%; cursor: pointer;">🤖 Automatyzuj SMC (Yahoo)</button></div>
@@ -336,16 +336,16 @@
             <table class="macro-custom-table" style="width:100%; font-size: 0.85em;"> 
                 <thead>
                     <tr>
-                        <th>Data dodania</th>
-                        <th>Ticker</th>
-                        <th>Waluta</th>
-                        <th>Kierunek</th>
-                        <th>Wejście</th>
-                        <th>Prio.</th>
-                        <th>Mute</th>
-                        <th>Status</th>
-                        <th>Dystans %</th>
-                        <th>R:R</th>
+                        <th onclick="handleFocusListSort('created_at')">Data dodania ↕</th>
+                        <th onclick="handleFocusListSort('ticker')">Ticker ↕</th>
+                        <th onclick="handleFocusListSort('calcCurrency')">Waluta ↕</th>
+                        <th onclick="handleFocusListSort('direction')">Kierunek ↕</th>
+                        <th onclick="handleFocusListSort('entry_point')">Wejście ↕</th>
+                        <th onclick="handleFocusListSort('priority')">Prio. ↕</th>
+                        <th onclick="handleFocusListSort('mute')">Mute ↕</th>
+                        <th onclick="handleFocusListSort('calcStatus')">Status ↕</th>
+                        <th onclick="handleFocusListSort('calcDiff')">Dystans % ↕</th>
+                        <th onclick="handleFocusListSort('calcRR')">R:R ↕</th>
                         <th>Powód 1</th>
                         <th>Powód 2</th>
                         <th>Powód 3</th>
@@ -355,7 +355,7 @@
                     </tr>
                 </thead> 
                 <tbody id="focuslist-table-body"> <tr><td colspan="16" style="text-align:center;">Ładowanie...</td></tr> </tbody> 
-            </table> 
+            </table>
         </div> 
         <div class="pagination-container"> <button onclick="changeFocusListPage(-1)" id="focuslist-prev-page" class="btn-pag">◀ Poprzednia</button> <span id="focuslist-page-info">Strona 1 z 1</span> <button onclick="changeFocusListPage(1)" id="focuslist-next-page" class="btn-pag">Następna ▶</button> </div> 
     </section>
@@ -549,7 +549,7 @@
         let isPrivacyMode = false;
         
         let tickerDataArray = [], currentTickerPage = 1, tickerPageSize = 20;
-        let formEntries = [], filteredFormEntries = [], formCurrentPage = 1, formRowsPerPage = 6, formFilterText = '';
+        let formEntries = [], filteredFormEntries = [], formCurrentPage = 1, formRowsPerPage = 30, formFilterText = '';
         let focusDataArray = [], currentFocusPage = 1, focusPageSize = 20, formEntriesGlobal = [];
         let allTradesData = [], filteredTradesData = [], currentTradePage = 1, tradePageSize = 20;
         let allAlertsData = [], filteredAlertsData = [], currentAlertPage = 1, alertPageSize = 20;
@@ -948,17 +948,24 @@
                 fetchFocusEntries(); 
             } catch(e) { console.error(e); } 
             document.getElementById('focus-date').valueAsDate = new Date();
-        }
+                }
 
-        function onFocusIdChange() { 
+            function onFocusIdChange() { 
             const entry = formEntriesGlobal.find(e => e.entry_id === document.getElementById('focus-form-id').value); 
             if(entry) { 
                 document.getElementById('focus-ticker').value = entry.ticker; 
                 document.getElementById('focus-direction').value = entry.direction; 
+                
+                // Uruchamianie linku TradingView dla Focus
+                const linkEl = document.getElementById('focus-tv-link');
+                if (linkEl) {
+                    linkEl.href = getTradingViewLink(entry.ticker);
+                    linkEl.style.display = 'inline-block';
+                }
             } 
-        }
+                }
         
-async function autoCalculateSMC(event) { 
+            async function autoCalculateSMC(event) { 
             const t = document.getElementById('focus-ticker').value; 
             const d = document.getElementById('focus-direction').value; 
             
@@ -1050,7 +1057,13 @@ async function autoCalculateSMC(event) {
             } catch(e) { console.error(e); } 
         }
 
-        // --- FOCUS LIST MODULE (ZABEZPIECZONY) ---
+        // --- FOCUS LIST MODULE (ZABEZPIECZONY Z SORTOWANIEM) ---
+        function handleFocusListSort(key) {
+            focusListSortDir = (focusListSortKey === key && focusListSortDir === 'desc') ? 'asc' : 'desc';
+            focusListSortKey = key;
+            renderFocusListTable();
+        }
+
         function safeHandleFocusListFilter() {
             try { handleFocusListFilter(); } 
             catch(err) { console.error("FocusList error:", err); }
@@ -1070,7 +1083,13 @@ async function autoCalculateSMC(event) {
             formEntries.forEach(item => { 
                 try {
                     const entry = parseFloat(item.entry_point) || 0; 
+                    const sl = parseFloat(item.stop_loss) || 0; 
+                    const tp = parseFloat(item.take_profit) || 0; 
                     const mod = (item.direction === 'DBR' || item.direction === 'RBR') ? 1 : -1;
+                    
+                    // Wyliczamy RR już tutaj, by móc po nim sortować
+                    let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0; 
+                    
                     const tickerData = tickerDataArray.find(t => t.ticker === item.ticker); 
                     const currentPrice = tickerData && tickerData.price ? tickerData.price : entry; 
                     
@@ -1090,10 +1109,11 @@ async function autoCalculateSMC(event) {
                     const currency = getCurrencyForFrontend(item.ticker); 
                     if (cFilter !== 'ALL' && currency !== cFilter) return; 
                     
-                    filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: diff }); 
+                    // Zapisujemy dodatkowo calcRR, aby sortowanie działało
+                    filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: diff, calcRR: rr }); 
                 } catch(err) { console.error("Filter row skip", err); }
             }); 
-            filteredFocusListEntries.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); 
+            
             currentFocusListPage = 1; 
             renderFocusListTable(); 
         }
@@ -1107,6 +1127,19 @@ async function autoCalculateSMC(event) {
                 return; 
             } 
             
+            // Logika sortowania dynamicznego
+            filteredFocusListEntries.sort((a,b) => {
+                let va, vb;
+                if(focusListSortKey === 'created_at') { va = new Date(a.created_at); vb = new Date(b.created_at); }
+                else if(focusListSortKey === 'entry_point') { va = parseFloat(a.entry_point) || 0; vb = parseFloat(b.entry_point) || 0; }
+                else if(focusListSortKey === 'priority') { va = a.priority || 0; vb = b.priority || 0; }
+                else if(focusListSortKey === 'mute') { va = a.mute || 0; vb = b.mute || 0; }
+                else { va = a[focusListSortKey]; vb = b[focusListSortKey]; }
+
+                if(typeof va === 'string') { return focusListSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+                return focusListSortDir === 'asc' ? va - vb : vb - va;
+            });
+
             const start = (currentFocusListPage - 1) * focusListPageSize; 
             const pageData = filteredFocusListEntries.slice(start, start + focusListPageSize); 
             let htmlStr = '';
@@ -1114,11 +1147,7 @@ async function autoCalculateSMC(event) {
             pageData.forEach(item => { 
                 try {
                     const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-'; 
-                    const mod = (item.direction === 'DBR' || item.direction === 'RBR') ? 1 : -1; 
                     const entry = parseFloat(item.entry_point) || 0; 
-                    const sl = parseFloat(item.stop_loss) || 0; 
-                    const tp = parseFloat(item.take_profit) || 0; 
-                    let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0; 
                     
                     let statusColor = item.calcStatus === 'Skupienie' ? '#0ecb81' : '#848e9c'; 
                     let diffColor = item.calcDiff >= 0 ? '#0ecb81' : '#f6465d';
@@ -1127,7 +1156,7 @@ async function autoCalculateSMC(event) {
                     if(!isNaN(item.calcDiff) && isFinite(item.calcDiff)) {
                         diffStr = (item.calcDiff > 0 ? '+' : '') + item.calcDiff.toFixed(2) + '%';
                     }
-                    let rrStr = (!isNaN(rr) && isFinite(rr)) ? rr.toFixed(2) : '-';
+                    let rrStr = (!isNaN(item.calcRR) && isFinite(item.calcRR)) ? item.calcRR.toFixed(2) : '-';
                     
                     const pb = item.priority === 1 ? `<span style="color: #fcd535;">Wysoki</span>` : `<span style="color: var(--text-muted);">Norm</span>`; 
                     const mb = item.mute === 1 ? `<span style="color: var(--danger);">🔕</span>` : `<span style="color: var(--success);">🔔</span>`; 
@@ -1159,8 +1188,9 @@ async function autoCalculateSMC(event) {
             tb.innerHTML = htmlStr;
             document.getElementById('focuslist-page-info').innerText = `Strona ${currentFocusListPage} z ${Math.ceil(filteredFocusListEntries.length / focusListPageSize)}`; 
         }
+        
         function changeFocusListPage(d) { currentFocusListPage += d; renderFocusListTable(); }
-
+    
         // --- TRADES MODULE ---
         function handleTradeSort(key) { tradeSortDir = (tradeSortKey === key && tradeSortDir === 'desc') ? 'asc' : 'desc'; tradeSortKey = key; handleTradesFilter(); }
 
