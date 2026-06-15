@@ -261,6 +261,7 @@
                             <th onclick="sortSummaryOpen('pctInv')">% Udział (Gotówka) ↕</th>
                             <th onclick="sortSummaryOpen('pctLev')">% Udział (Dźwignia) ↕</th>
                             <th onclick="sortSummaryOpen('prof')">Obecny Zysk (Waluta) ↕</th>
+                            <th onclick="sortSummaryOpen('profPln')">Obecny Zysk (PLN) ↕</th>
                             <th onclick="sortSummaryOpen('valLev')">Wartość z Dźwignią (Waluta) ↕</th>
                         </tr>
                     </thead>
@@ -1382,9 +1383,9 @@
                         const spent = parseFloat(trade.spent) || 0; const valInCurr = spent + s.prof;
                         if(currBreakdown[curr] !== undefined) currBreakdown[curr] += valInCurr;
                         const ticker = trade.ticker || 'N/A';
-                        if(!openGrouped[ticker]) openGrouped[ticker] = {inv:0, prof:0, valLev:0, curr: curr, invPln:0, valLevPln:0};
+                        if(!openGrouped[ticker]) openGrouped[ticker] = {inv:0, prof:0, valLev:0, curr: curr, invPln:0, valLevPln:0, profPln:0};
                         openGrouped[ticker].inv += spent; openGrouped[ticker].prof += s.prof; openGrouped[ticker].valLev += s.val + s.prof;
-                        openGrouped[ticker].invPln += s.spentPln; openGrouped[ticker].valLevPln += s.valPln;
+                        openGrouped[ticker].invPln += s.spentPln; openGrouped[ticker].valLevPln += s.valPln; openGrouped[ticker].profPln += s.profPln;
                     }
                 } catch(err) {}
             });
@@ -1435,7 +1436,7 @@
             const tb = document.getElementById('s-open-tbody'); const fCur = document.getElementById('s-open-cur-filter').value;
             let data = window.summaryOpenData.filter(i => fCur === 'ALL' || i.curr === fCur);
             data.sort((a,b) => { let va=a[summaryOpenSortKey], vb=b[summaryOpenSortKey]; if(summaryOpenSortKey==='ticker') { return summaryOpenSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); } return summaryOpenSortDir==='asc' ? va-vb : vb-va; });
-            if(data.length === 0) { tb.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; }
+            if(data.length === 0) { tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak otwartych pozycji</td></tr>`; return; }
             tb.innerHTML = data.map(i => `<tr>
                 <td style="font-weight:bold; color:var(--accent);">${i.ticker}</td>
                 <td class="sensitive">${i.inv.toFixed(2)} ${i.curr}</td>
@@ -1443,6 +1444,7 @@
                 <td class="sensitive" style="color:#89b4fa; font-weight:bold;">${i.pctInv.toFixed(1)} %</td>
                 <td class="sensitive" style="color:#fcd535; font-weight:bold;">${i.pctLev.toFixed(1)} %</td>
                 <td class="sensitive" style="color:${i.prof>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.prof.toFixed(2)} ${i.curr}</td>
+                <td class="sensitive" style="color:${i.profPln>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${i.profPln.toFixed(2)} PLN</td>
                 <td class="sensitive">${i.valLev.toFixed(2)} ${i.curr}</td>
             </tr>`).join('');
         }
