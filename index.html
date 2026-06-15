@@ -1119,12 +1119,22 @@
             try { 
                 const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d, focus_date: fDate}) }); 
                 const r = await res.json(); 
+                
+                // Standardowe pola liczbowe
                 document.getElementById('focus-candle').value = r.candle_score; 
                 document.getElementById('focus-volume').value = r.volume_score; 
                 document.getElementById('focus-vix').value = r.vix_score; 
                 document.getElementById('focus-index').value = r.index_score; 
-                alert("Pomyślnie przeanalizowano parametry SMC!");
-            } catch(e) { console.error(e); alert("Błąd pobierania danych SMC"); } 
+                
+                // Pola wyboru (Select) - musimy zaokrąglić float (np. 3.0) do int ("3"), by pasowały do <option>
+                if (r.cvd_score !== undefined) document.getElementById('focus-cvd').value = Math.round(r.cvd_score).toString();
+                if (r.htf_score !== undefined) document.getElementById('focus-htf').value = Math.round(r.htf_score).toString();
+                
+                alert("Pomyślnie przeanalizowano parametry SMC dla wybranej daty!");
+            } catch(e) { 
+                console.error(e); 
+                alert("Błąd pobierania danych. Sprawdź czy ticker istnieje w Yahoo i czy data nie jest z dalekiej przeszłości."); 
+            } 
             finally { if(btn) { btn.innerText = origText; btn.disabled = false; } }
         }
 
