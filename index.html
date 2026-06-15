@@ -801,7 +801,9 @@
             const select = document.getElementById('form-ticker'); 
             select.innerHTML = ''; 
             tickerDataArray.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); 
+            
             fetchFormEntries(); 
+            fetchFormReasons(); // <--- To wywołuje nową funkcję pobierającą podpowiedzi
         }
         
         async function fetchFormEntries(forceFresh = false) { 
@@ -899,6 +901,16 @@
         
         async function submitAdvancedForm(e) { 
             e.preventDefault(); 
+            
+            // Pobieramy i filtrujemy puste powody
+            const formReasons = [
+                document.getElementById('form-reason-1').value,
+                document.getElementById('form-reason-2').value,
+                document.getElementById('form-reason-3').value,
+                document.getElementById('form-reason-4').value,
+                document.getElementById('form-reason-5').value
+            ].filter(r => r.trim() !== '');
+
             const data = { 
                 ticker: document.getElementById('form-ticker').value, 
                 direction: document.getElementById('form-direction').value, 
@@ -906,12 +918,15 @@
                 start_zone: document.getElementById('form-start').value, 
                 end_zone: document.getElementById('form-end').value, 
                 entry_point: document.getElementById('form-entry').value, 
-                take_profit: document.getElementById('form-tp').value 
+                take_profit: document.getElementById('form-tp').value,
+                reasons: formReasons // <--- Wysyłamy powody do bazy!
             }; 
+            
             try { 
                 await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); 
                 document.getElementById('trading-form').reset(); 
                 await fetchFormEntries(true); 
+                fetchFormReasons(); // Odświeżamy listę podpowiedzi, gdyby dodano nowy powód
                 alert("Zapisano Setup w bazie!");
             } catch(err) { alert('Błąd: ' + err.message); } 
         }
@@ -919,6 +934,26 @@
         async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(true); } catch(e) {} }
         async function updateFormEntryField(id, field, val) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: id, field: field, value: val }) }); fetchFormEntries(true); } catch(e){} }
 
+        // --- FUNKCJA POBIERAJĄCA AUTO-PODPOWIEDZI POWODÓW ---
+        async function fetchFormReasons() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/form/reasons`);
+                const reasons = await res.json();
+                const datalist = document.getElementById('reasons-list');
+                datalist.innerHTML = ''; // Czyścimy starą listę
+                
+                if (Array.isArray(reasons)) {
+                    reasons.forEach(r => {
+                        const option = document.createElement('option');
+                        option.value = r;
+                        datalist.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error("Błąd pobierania powodów: ", error);
+            }
+        }
+    
         // --- ASYSTENT FIBO ---
         function toggleFibo() { const drawer = document.getElementById('fibo-drawer'); drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; if (drawer.style.display === 'block') updateFiboLabels(); }
         function updateFiboLabels() {
