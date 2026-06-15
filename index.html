@@ -1441,15 +1441,38 @@
             renderAlertsTable();
         }
         function renderAlertsTable() {
-            const tbody = document.getElementById("alert-history-tbody"); tbody.innerHTML = '';
+            const tbody = document.getElementById("alert-history-tbody"); 
+            tbody.innerHTML = '';
             
             const start = (currentAlertPage-1)*alertPageSize;
             const maxPage = Math.ceil(filteredAlertsData.length / alertPageSize) || 1;
 
             filteredAlertsData.slice(start, start+alertPageSize).forEach(item => {
-                let aType = item.alert_type || 'Punkt wejścia'; if (aType === 'Wejście') aType = 'Punkt wejścia'; 
-                let typeColor = '#89b4fa'; if(aType === 'Take Profit') typeColor = '#0ecb81'; if(aType === 'Stop Loss') typeColor = '#f6465d';
-                tbody.innerHTML += `<tr><td>${new Date(item.triggered_at).toLocaleDateString('pl-PL')}</td><td style="color:${typeColor}; font-weight:bold;">${aType}</td><td style="color:var(--accent); font-weight:bold;">${item.ticker}</td><td class="sensitive">${Number(item.target_price).toFixed(2)}$</td><td class="sensitive">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td><td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td></tr>`;
+                let aType = item.alert_type || 'Punkt wejścia'; 
+                if (aType === 'Wejście') aType = 'Punkt wejścia'; 
+                
+                let typeColor = '#89b4fa'; 
+                if(aType === 'Take Profit') typeColor = '#0ecb81'; 
+                if(aType === 'Stop Loss') typeColor = '#f6465d';
+                
+                // Generowanie danych dla nowych kolumn
+                const prioText = item.priority === 1 ? '<span style="color:#fcd535;">Wysoki</span>' : '<span style="color:var(--text-muted);">Normalny</span>';
+                const condText = item.condition || '-';
+                const scoreText = item.score !== undefined ? `${item.score}/5` : '-';
+                const tvLink = getTradingViewLink(item.ticker);
+
+                tbody.innerHTML += `<tr>
+                    <td>${new Date(item.triggered_at).toLocaleDateString('pl-PL')}</td>
+                    <td style="color:${typeColor}; font-weight:bold;">${aType}</td>
+                    <td style="color:var(--accent); font-weight:bold;">${item.ticker}</td>
+                    <td>${prioText}</td>
+                    <td style="font-weight:bold;">${condText}</td>
+                    <td class="sensitive">${Number(item.target_price).toFixed(2)} $</td>
+                    <td class="sensitive">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td>
+                    <td style="color:#a6e3a1; font-weight:bold;">${scoreText}</td>
+                    <td><a href="${tvLink}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 Link</a></td>
+                    <td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td>
+                </tr>`;
             });
             document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${maxPage}`;
         }
