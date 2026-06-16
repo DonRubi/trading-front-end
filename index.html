@@ -2001,9 +2001,16 @@
                 
                 let baselineSp500 = null; 
                 if (macroDataArray && macroDataArray.length > 0) {
-                    const firstDate = roiHistory[0].date; 
-                    const baselineMacro = macroDataArray.find(m => m.date === firstDate) || macroDataArray[macroDataArray.length - 1]; 
-                    if (baselineMacro && baselineMacro.sp500) { baselineSp500 = parseFloat(baselineMacro.sp500); } 
+                    // Kopiujemy i sortujemy bazę makro chronologicznie
+                    const sortedMacro = [...macroDataArray].sort((a, b) => a.date.localeCompare(b.date));
+                    
+                    // Szukamy pierwszej dostępnej ceny S&P500 począwszy od 1 lutego 2026
+                    for (let row of sortedMacro) {
+                        if (row.sp500 && row.date >= '2026-02-01') {
+                            baselineSp500 = parseFloat(row.sp500);
+                            break;
+                        }
+                    }
                 }
                 
                 roiHistory.forEach(entry => { 
