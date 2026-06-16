@@ -346,8 +346,15 @@
         </div> 
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top:10px;"> 
             <h4 style="margin-bottom: 5px;">Ręczne wywołania (CRON)</h4> 
-            <div style="background: var(--bg-input); padding: 10px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="last-price-update-log">
-                Ostatnia aktualizacja cen: Brak danych w pamięci urządzenia
+            <div style="display:flex; gap:10px; margin-bottom: 10px; flex-wrap: wrap;">
+            <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="last-price-update-log">
+                <strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>
+                Brak danych w pamięci przeglądarki
+            </div>
+            <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="auto-price-update-log">
+                <strong style="color:#89b4fa;">Automatyczna aktualizacja (CRON):</strong><br>
+                Ładowanie danych z serwera...
+            </div>
             </div>
             <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🔔 Wymuś sprawdzenie alertów</button> 
             <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen</button> 
@@ -2056,11 +2063,26 @@
             openTrades.forEach(t => { select.innerHTML += `<option value="${t.id}">ID: #${t.id} | ${t.ticker} (${t.direction})</option>`; }); 
             document.getElementById('div-date').valueAsDate = new Date(); 
             
+            // Pobieranie statusu RĘCZNEGO (z przeglądarki)
             const lastUpdateMsg = localStorage.getItem('last_price_update');
             if (lastUpdateMsg) {
                 const logEl = document.getElementById('last-price-update-log');
-                if (logEl) logEl.innerHTML = lastUpdateMsg;
+                if (logEl) logEl.innerHTML = `<strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>` + lastUpdateMsg;
             }
+
+            // Pobieranie statusu AUTOMATYCZNEGO (od bota z serwera)
+            try {
+                const autoRes = await fetch(`${API_BASE_URL}/api/cron/status`);
+                const autoData = await autoRes.json();
+                const autoEl = document.getElementById('auto-price-update-log');
+                if (autoEl) {
+                    if (autoData.time) {
+                        autoEl.innerHTML = `<strong style="color:#89b4fa;">Automatyczna aktualizacja (CRON):</strong><br>Ostatnia: <strong style="color:var(--text-main);">${autoData.time}</strong> <br> Pobrano ceny dla: <strong style="color:${autoData.updated === autoData.total && autoData.total > 0 ? 'var(--success)' : 'var(--accent)'};">${autoData.updated} z ${autoData.total}</strong> spółek.`;
+                    } else {
+                        autoEl.innerHTML = `<strong style="color:#89b4fa;">Automatyczna aktualizacja (CRON):</strong><br>Czekam na pierwsze wywołanie przez bota po restarcie serwera...`;
+                    }
+                }
+            } catch(e) {}
         }
 
         async function forceCronPricesUpdate() { 
@@ -2068,7 +2090,7 @@
             out.style.display = 'block'; 
             out.innerHTML = '⏳ Pobieranie z Yahoo...'; 
             try { 
-                const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`); 
+                const res = await fetch(`${API_BASE_URL}/api/cron/update-prices?manual=true`); 
                 const result = await res.json(); 
                 
                 if(res.ok) {
@@ -2076,11 +2098,10 @@
                     const updated = result.updated_tickers || 0;
                     const timeNow = new Date().toLocaleString('pl-PL');
                     
-                    const logMsg = `Ostatnia aktualizacja: <strong style="color:var(--text-main);">${timeNow}</strong> <br> Pobrano ceny dla: <strong style="color:${updated === total && total > 0 ? 'var(--success)' : 'var(--accent)'};">${updated} z ${total}</strong> spółek.`;
+                    const logMsg = `Ostatnia: <strong style="color:var(--text-main);">${timeNow}</strong> <br> Pobrano ceny dla: <strong style="color:${updated === total && total > 0 ? 'var(--success)' : 'var(--accent)'};">${updated} z ${total}</strong> spółek.`;
                     localStorage.setItem('last_price_update', logMsg);
-                    
                     const logEl = document.getElementById('last-price-update-log');
-                    if(logEl) logEl.innerHTML = logMsg;
+                    if(logEl) logEl.innerHTML = `<strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>` + logMsg;
 
                     out.innerHTML = `✅ <strong>Gotowe.</strong> Zaktualizowano ${updated}/${total}. Odświeżam tabele...`; 
                     
@@ -2115,17 +2136,17 @@
             btn.innerHTML = "<span>⏳</span> Pobieranie z Yahoo..."; 
             btn.disabled = true; 
             try { 
-                const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`); 
+                const res = await fetch(`${API_BASE_URL}/api/cron/update-prices?manual=true`); 
                 const result = await res.json(); 
                 if(res.ok) {
                     const total = result.total_tickers || 0;
                     const updated = result.updated_tickers || 0;
                     const timeNow = new Date().toLocaleString('pl-PL');
                     
-                    const logMsg = `Ostatnia aktualizacja: <strong style="color:var(--text-main);">${timeNow}</strong> <br> Pobrano ceny dla: <strong style="color:${updated === total && total > 0 ? 'var(--success)' : 'var(--accent)'};">${updated} z ${total}</strong> spółek.`;
+                    const logMsg = `Ostatnia: <strong style="color:var(--text-main);">${timeNow}</strong> <br> Pobrano ceny dla: <strong style="color:${updated === total && total > 0 ? 'var(--success)' : 'var(--accent)'};">${updated} z ${total}</strong> spółek.`;
                     localStorage.setItem('last_price_update', logMsg);
                     const logEl = document.getElementById('last-price-update-log');
-                    if(logEl) logEl.innerHTML = logMsg;
+                    if(logEl) logEl.innerHTML = `<strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>` + logMsg;
 
                     alert(`✅ Zaktualizowano pomyślnie ceny dla ${updated}/${total} tickerów!`);
                     loadDatabase(); 
