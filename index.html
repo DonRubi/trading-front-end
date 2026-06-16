@@ -1454,6 +1454,17 @@
         async function initTradesModule() { 
             if(focusDataArray.length===0) await fetchFocusEntries(); 
             
+            // --- ZABEZPIECZENIE: SAMODZIELNE POBIERANIE CEN ---
+            if(tickerDataArray.length === 0) {
+                try {
+                    // Wywołuje globalną funkcję zaciągającą ceny (którą zazwyczaj odpalało Summary)
+                    if (typeof fetchTickerData === 'function') await fetchTickerData();
+                    else if (typeof fetchPrices === 'function') await fetchPrices();
+                    else if (typeof fetchAllPrices === 'function') await fetchAllPrices();
+                } catch(e) { console.warn("Nie udało się pobrać cen w TradesList", e); }
+            }
+            // --------------------------------------------------
+
             // Unikalne tickery z bazy Focus
             const uniqueTickers = [...new Set(focusDataArray.map(f => f.ticker))];
             uniqueTickers.sort((a, b) => {
