@@ -114,7 +114,7 @@
                         <tbody id="form-table-body"></tbody>
                     </table>
                 </div>
-                <div class="pagination-container"><button onclick="changeFormPage(-1)" id="form-prev-page" class="btn-pag">◀ Poprzednia</button><span id="form-page-info">Strona 1 z 1</span><button onclick="changeFormPage(1)" id="form-next-page" class="btn-pag">Następna ▶</button></div>
+                <div class="pagination-container"><button onclick="changeFormPage(-1)" id="form-prev-page" class="btn-pag">◀ Poprzednia</button><div style="display:flex; align-items:center; gap:10px;"><span id="form-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('form', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button onclick="changeFormPage(1)" id="form-next-page" class="btn-pag">Następna ▶</button></div>
             </div>
         </div>
     </section>
@@ -166,7 +166,7 @@
                         <tbody id="focus-table-body"></tbody>
                     </table>
                 </div>
-                <div class="pagination-container"><button onclick="changeFocusPage(-1)" id="focus-prev-page" class="btn-pag">◀ Poprzednia</button><span id="focus-page-info">Strona 1 z 1</span><button onclick="changeFocusPage(1)" id="focus-next-page" class="btn-pag">Następna ▶</button></div>
+                <div class="pagination-container"><button onclick="changeFocusPage(-1)" id="focus-prev-page" class="btn-pag">◀ Poprzednia</button><div style="display:flex; align-items:center; gap:10px;"><span id="focus-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('focus', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button onclick="changeFocusPage(1)" id="focus-next-page" class="btn-pag">Następna ▶</button></div>
             </div>
         </div>
     </section>
@@ -209,7 +209,7 @@
                         <tbody id="trades-table-body"></tbody>
                     </table>
                 </div>
-                <div class="pagination-container"><button onclick="changeTradePage(-1)" id="trade-prev-page" class="btn-pag">◀ Poprzednia</button><span id="trade-page-info">Strona 1 z 1</span><button onclick="changeTradePage(1)" id="trade-next-page" class="btn-pag">Następna ▶</button></div>
+                <div class="pagination-container"><button onclick="changeTradePage(-1)" id="trade-prev-page" class="btn-pag">◀ Poprzednia</button><div style="display:flex; align-items:center; gap:10px;"><span id="trade-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('trades', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button onclick="changeTradePage(1)" id="trade-next-page" class="btn-pag">Następna ▶</button></div>
             </div>
         </div>
     </section>
@@ -311,12 +311,12 @@
                 <tbody id="macro-table-body"></tbody>
             </table>
         </div> 
-        <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><span id="macro-page-info">Strona 1 z 1</span><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div> 
+        <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="focuslist-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('focuslist', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div> 
         <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;"> 
             <h3>Baza Tickerów</h3> 
             <div class="form-row" style="margin-top:15px;"> <div class="form-group" style="flex:2;"><input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. AAPL)"></div> <div class="form-group" style="flex:1;"><button onclick="addTicker()" class="btn-submit" style="height:100%;">Dodaj</button></div> </div> 
             <div id="db-list-container"></div> 
-            <div class="pagination-container"><button class="btn-pag" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprz</button><span id="ticker-page-info">Strona 1 z 1</span><button class="btn-pag" id="ticker-next-btn" onclick="changeTickerPage(1)">Nast →</button></div> 
+            <div class="pagination-container"><button class="btn-pag" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="ticker-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('database', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="ticker-next-btn" onclick="changeTickerPage(1)">Nast →</button></div> 
         </div> 
     </section>
 
@@ -415,7 +415,7 @@
                 <tbody id="alert-history-tbody"> <tr><td colspan="10" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td></tr> </tbody> 
             </table> 
         </div> 
-        <div class="pagination-container"> <button onclick="changeAlertPage(-1)" id="alert-prev-page" class="btn-pag">◀ Poprzednia</button> <span id="alert-page-info">Strona 1 z 1</span> <button onclick="changeAlertPage(1)" id="alert-next-page" class="btn-pag">Następna ▶</button> </div> 
+        <div class="pagination-container"> <button onclick="changeAlertPage(-1)" id="alert-prev-page" class="btn-pag">◀ Poprzednia</button> <div style="display:flex; align-items:center; gap:10px;"><span id="alert-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('alerts', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div> <button onclick="changeAlertPage(1)" id="alert-next-page" class="btn-pag">Następna ▶</button> </div> 
     </section>
 
     <section id="technicalanalysis-module" class="app-module">
@@ -821,6 +821,41 @@
             if(currentTickerPage < 1) currentTickerPage = 1;
             if(currentTickerPage > maxPage) currentTickerPage = maxPage;
             renderMobileList(); 
+        }
+
+        function toggleAllRows(module, btn) {
+            let isAll = false;
+            // 1. Zmiana limitu wyświetlań w zależności od modułu (99999 to limit "Pokaż wszystko")
+            switch(module) {
+                case 'form': 
+                    if(formRowsPerPage > 1000) { formRowsPerPage = 30; } else { formRowsPerPage = 99999; isAll = true; }
+                    formCurrentPage = 1; renderAdvancedFormTable(); break;
+                case 'focus': 
+                    if(focusPageSize > 1000) { focusPageSize = 20; } else { focusPageSize = 99999; isAll = true; }
+                    currentFocusPage = 1; renderFocusTable(); break;
+                case 'trades': 
+                    if(tradePageSize > 1000) { tradePageSize = 20; } else { tradePageSize = 99999; isAll = true; }
+                    currentTradePage = 1; renderTradesTable(); break;
+                case 'focuslist': 
+                    if(focusListPageSize > 1000) { focusListPageSize = 20; } else { focusListPageSize = 99999; isAll = true; }
+                    currentFocusListPage = 1; renderFocusListTable(); break;
+                case 'alerts': 
+                    if(alertPageSize > 1000) { alertPageSize = 20; } else { alertPageSize = 99999; isAll = true; }
+                    currentAlertPage = 1; renderAlertsTable(); break;
+                case 'macro': 
+                    if(macroPageSize > 1000) { macroPageSize = 20; } else { macroPageSize = 99999; isAll = true; }
+                    currentMacroPage = 1; renderMacroTable(); break;
+                case 'database': 
+                    if(tickerPageSize > 1000) { tickerPageSize = 20; } else { tickerPageSize = 99999; isAll = true; }
+                    currentTickerPage = 1; renderMobileList(); break;
+            }
+            
+            // 2. Automatyczna zmiana stylów i nazwy klikniętego przycisku
+            if(btn) {
+                btn.innerText = isAll ? "Zwiń tabele" : "Pokaż wszystko";
+                btn.style.color = isAll ? "var(--accent)" : "var(--text-muted)";
+                btn.style.borderColor = isAll ? "var(--accent)" : "var(--border-color)";
+            }
         }
 
         async function addTicker() { const t = document.getElementById('new-ticker').value.trim().toUpperCase(); if (!t) return; try { await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); document.getElementById('new-ticker').value = ''; loadDatabase(); } catch (e) {} }
