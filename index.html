@@ -140,10 +140,10 @@
                         </div>
                     </div>
                     <div style="text-align: right; margin-bottom: 10px;"><button type="button" onclick="autoCalculateSMC(event)" style="background: #0284c7; color:#fff; padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; border: none; font-weight: bold; width: 100%; cursor: pointer;">🤖 Automatyzuj SMC (Yahoo)</button></div>
-                    <div class="form-row"><div class="form-group"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.05" min="0" max="1" value="0.5"></div><div class="form-group"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div></div>
+                    <div class="form-row"><div class="form-group"><label>Świeca (D+1H) [0-1]</label><input type="number" id="focus-candle" step="0.01" min="0" max="1" value="0.5"></div><div class="form-group"><label>Wolumen (SMC) [0-1]</label><input type="number" id="focus-volume" step="0.05" min="0" max="1" value="0.5"></div></div>
                     <div class="form-row"><div class="form-group"><label>Luka Sesyjna</label><select id="focus-gap"><option value="1">1.0 (Domknięcie/Zgodna)</option><option value="0.5">0.5 (Neutralna)</option><option value="0">0.0 (Brak luki/Negatywna)</option></select></div><div class="form-group"><label>Kalendarz (Raporty)</label><select id="focus-calendar"><option value="1">1.0 (Bezpiecznie > 30 dni)</option><option value="0.5">0.5 (Blisko < 30 dni)</option><option value="0">0.0 (Ryzyko < 20 dni)</option></select></div></div>
                     <div class="form-group"><label>CVD Order Flow [0-3]</label><select id="focus-cvd"><option value="3">3.0 - Silna absorpcja</option><option value="2">2.0 - Zgodny trend delty z ceną</option><option value="1">1.0 - Słaba delta / Churn</option><option value="0">0.0 - Negatywne uderzenia</option></select></div>
-                    <div class="form-row"><div class="form-group"><label>VIX Sentyment [0-2]</label><input type="number" id="focus-vix" step="0.5" min="0" max="2" value="1"></div><div class="form-group"><label>Indeks (Siła) [0-2]</label><input type="number" id="focus-index" step="1" min="0" max="2" value="0"></div></div>
+                    <div class="form-row"><div class="form-group"><label>VIX Sentyment [0-2]</label><input type="number" id="focus-vix" step="0.01" min="0" max="2" value="1"></div><div class="form-group"><label>Indeks (Siła) [0-2]</label><input type="number" id="focus-index" step="0.1" min="0" max="2" value="0"></div></div>
                     <div class="form-group"><label>HTF Market Structure [0-1]</label><select id="focus-htf"><option value="1">1.0 - Zgodny z trendem wyższego rzędu</option><option value="0">0.0 - Pod prąd trendu</option></select></div>
                     <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">💾 Zapisz Analizę</button>
                 </form>
@@ -183,7 +183,7 @@
                     <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);"><div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div><div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div><div class="form-group"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div><div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div><div class="form-group"><label>Max Wyd.</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div></div>
                     <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
                     <div class="form-row"><div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div><div class="form-group"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div></div>
-                    <div class="form-row"><div class="form-group"><label>Wydano gotówki</label><input type="number" step="1" id="trade-spent" required></div><div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="0.01" min="1" id="trade-leverage" value="1" required></div></div>
+                    <div class="form-row"><div class="form-group"><label>Wydano gotówki</label><input type="number" step="0.01" id="trade-spent" required></div><div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="0.01" min="1" id="trade-leverage" value="1" required></div></div>
                     <input type="hidden" id="trade-tp"><input type="hidden" id="trade-sl"><input type="hidden" id="trade-score">
                     <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">🛒 Zarejestruj Transakcję</button>
                 </form>
@@ -721,19 +721,35 @@
                         <div class="form-group"><label>Rozmiar ($)</label><input type="number" step="0.1" id="edit-fo-cash" value="${item.allocated_cash}"></div>
                     </div>
                 `;
-            } else if (context === 'trade') {
+            } else if (currentEditContext === 'trade') {
                 const item = allTradesData.find(x => x.id === id);
                 document.getElementById('edit-modal-title').innerText = "Edycja Transakcji";
-                content.innerHTML = `
+                
+                let html = `
                     <div class="form-row">
                         <div class="form-group"><label>Cena Zakupu</label><input type="number" step="0.0001" id="edit-tr-buy" value="${item.buy_price}"></div>
                         <div class="form-group"><label>Wydano Gotówki</label><input type="number" step="0.01" id="edit-tr-spent" value="${item.spent}"></div>
                     </div>
                     <div class="form-row">
+                        <div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="0.01" min="0.01" id="edit-tr-lev" value="${item.leverage || 1}"></div>
                         <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" id="edit-tr-tp" value="${item.tp}"></div>
                         <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" id="edit-tr-sl" value="${item.sl}"></div>
                     </div>
                 `;
+
+                // NOWOŚĆ: Jeśli pozycja jest ZAMKNIĘTA, dodajemy pola edycji wyjścia
+                if (item.status === 'CLOSED') {
+                    html += `
+                    <h4 style="margin-top: 15px; margin-bottom: 10px; color: var(--danger); font-size: 0.95em;">Parametry Zamknięcia:</h4>
+                    <div class="form-row">
+                        <div class="form-group"><label>Data Zamknięcia</label><input type="date" id="edit-tr-sdate" value="${item.sell_date || ''}"></div>
+                        <div class="form-group"><label>Cena Sprzedaży</label><input type="number" step="0.0001" id="edit-tr-sprice" value="${item.sell_price || ''}"></div>
+                    </div>
+                    <div class="form-group"><label>Koszt CVD/CFD</label><input type="number" step="0.01" id="edit-tr-cfd" value="${item.cfd_cost || 0}"></div>
+                    `;
+                }
+
+                content.innerHTML = html;
             }
             document.getElementById('edit-modal').style.display = 'flex';
         }
@@ -774,7 +790,21 @@
                 payload = { id: currentEditId, allocated_pct: document.getElementById('edit-fo-pct').value, allocated_cash: document.getElementById('edit-fo-cash').value };
             } else if (currentEditContext === 'trade') {
                 endpoint = '/api/trades/edit';
-                payload = { id: currentEditId, buy_price: document.getElementById('edit-tr-buy').value, spent: document.getElementById('edit-tr-spent').value, tp: document.getElementById('edit-tr-tp').value, sl: document.getElementById('edit-tr-sl').value };
+                payload = { 
+                    id: currentEditId, 
+                    buy_price: document.getElementById('edit-tr-buy').value, 
+                    spent: document.getElementById('edit-tr-spent').value, 
+                    leverage: parseFloat(document.getElementById('edit-tr-lev').value) || 1,
+                    tp: document.getElementById('edit-tr-tp').value, 
+                    sl: document.getElementById('edit-tr-sl').value 
+                };
+
+                // NOWOŚĆ: Sprawdzamy, czy w formularzu wyrenderowały się pola dla pozycji zamkniętej
+                if (document.getElementById('edit-tr-sdate')) {
+                    payload.sell_date = document.getElementById('edit-tr-sdate').value;
+                    payload.sell_price = document.getElementById('edit-tr-sprice').value;
+                    payload.cfd_cost = document.getElementById('edit-tr-cfd').value || 0;
+                }
             }
 
             try {
