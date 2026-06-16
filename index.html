@@ -198,9 +198,12 @@
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
                     </select>
-                    <select id="trade-date-filter" onchange="handleTradesFilter()">
-                        <option value="ALL">Wszystkie Daty</option>
-                        </select>
+                    <select id="trade-buy-date-filter" onchange="handleTradesFilter()">
+                        <option value="ALL">Wszystkie Daty Otwarcia</option>
+                    </select>
+                    <select id="trade-sell-date-filter" onchange="handleTradesFilter()">
+                        <option value="ALL">Wszystkie Daty Zamknięcia</option>
+                    </select>
                 </div>
                 <div class="table-responsive">
                     <table id="journal-table">
@@ -1551,75 +1554,88 @@
         }
 
         function populateTradeDateFilterOptions() {
-            const select = document.getElementById('trade-date-filter');
-            if(!select) return;
-            const currentVal = select.value || 'ALL';
+            const buySelect = document.getElementById('trade-buy-date-filter');
+            const sellSelect = document.getElementById('trade-sell-date-filter');
+            if(!buySelect || !sellSelect) return;
+            
+            const currentBuyVal = buySelect.value || 'ALL';
+            const currentSellVal = sellSelect.value || 'ALL';
 
-            const months = new Set();
+            const buyMonths = new Set();
+            const sellMonths = new Set();
+
             allTradesData.forEach(t => {
-                let dStr = (t.status === 'CLOSED' && t.sell_date) ? t.sell_date : t.buy_date;
-                if(dStr && dStr.length >= 7) months.add(dStr.substring(0, 7));
+                if(t.buy_date && t.buy_date.length >= 7) buyMonths.add(t.buy_date.substring(0, 7));
+                if(t.status === 'CLOSED' && t.sell_date && t.sell_date.length >= 7) sellMonths.add(t.sell_date.substring(0, 7));
             });
 
-            let html = `
-                <option value="ALL">Wszystkie Daty</option>
-                <option value="THIS_MONTH">Bieżący miesiąc</option>
-                <option value="LAST_MONTH">Poprzedni miesiąc</option>
-                <option value="THIS_YEAR">Bieżący rok</option>
-                <option value="LAST_YEAR">Poprzedni rok</option>
-                <optgroup label="Archiwum (Miesiące)">
-            `;
+            function buildHtml(optionsSet, defaultText) {
+                let html = `
+                    <option value="ALL">${defaultText}</option>
+                    <option value="THIS_MONTH">Bieżący miesiąc</option>
+                    <option value="LAST_MONTH">Poprzedni miesiąc</option>
+                    <option value="THIS_YEAR">Bieżący rok</option>
+                    <option value="LAST_YEAR">Poprzedni rok</option>
+                    <optgroup label="Archiwum (Miesiące)">
+                `;
+                Array.from(optionsSet).sort().reverse().forEach(m => { html += `<option value="${m}">${m}</option>`; });
+                html += `</optgroup>`;
+                return html;
+            }
 
-            Array.from(months).sort().reverse().forEach(m => {
-                html += `<option value="${m}">${m}</option>`;
-            });
-            html += `</optgroup>`;
+            buySelect.innerHTML = buildHtml(buyMonths, "Wszystkie Daty Otwarcia");
+            sellSelect.innerHTML = buildHtml(sellMonths, "Wszystkie Daty Zamknięcia");
 
-            select.innerHTML = html;
-            if(Array.from(select.options).some(o => o.value === currentVal)) select.value = currentVal;
+            if(Array.from(buySelect.options).some(o => o.value === currentBuyVal)) buySelect.value = currentBuyVal;
+            if(Array.from(sellSelect.options).some(o => o.value === currentSellVal)) sellSelect.value = currentSellVal;
         }
 
         function handleTradesFilter() { 
             const s = document.getElementById('trade-search').value.toLowerCase(); 
             const stat = document.getElementById('trade-status-filter').value;
             const cur = document.getElementById('trade-cur-filter').value;
-            const dateF = document.getElementById('trade-date-filter').value;
+            const buyDateF = document.getElementById('trade-buy-date-filter').value;
+            const sellDateF = document.getElementById('trade-sell-date-filter').value;
 
             const now = new Date();
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
 
+            // Uniwersalna funkcja do sprawdzania daty dla wybranego filtru
+            function checkDate(dStr, filterVal) {
+                if (filterVal === 'ALL') return true;
+                if (!dStr) return false; // Jeśli filtrujemy konkretną datę, a wpis jej nie ma (np. szukamy daty zamknięcia dla otwartej pozycji) to odrzucamy
+                
+                const d = new Date(dStr);
+                const dMonth = d.getMonth();
+                const dYear = d.getFullYear();
+
+                if (filterVal === 'THIS_MONTH') return (dYear === currentYear && dMonth === currentMonth);
+                if (filterVal === 'LAST_MONTH') {
+                    let tMonth = currentMonth - 1; let tYear = currentYear;
+                    if (tMonth < 0) { tMonth = 11; tYear--; }
+                    return (dYear === tYear && dMonth === tMonth);
+                } 
+                if (filterVal === 'THIS_YEAR') return (dYear === currentYear);
+                if (filterVal === 'LAST_YEAR') return (dYear === currentYear - 1);
+                return dStr.startsWith(filterVal);
+            }
+
             filteredTradesData = allTradesData.filter(t => {
                 const textMatch = ((t.ticker || '').toLowerCase().includes(s)) || ((t.stock_name || '').toLowerCase().includes(s));
                 const statMatch = (stat === 'ALL') || (t.status === stat);
                 const curMatch = (cur === 'ALL') || (t.currency === cur);
+                
+                // Niezależne sprawdzanie dla obu pól dat
+                const buyMatch = checkDate(t.buy_date, buyDateF);
+                const sellMatch = checkDate((t.status === 'CLOSED' ? t.sell_date : null), sellDateF);
 
-                let dateMatch = true;
-                if (dateF !== 'ALL') {
-                    let dStr = (t.status === 'CLOSED' && t.sell_date) ? t.sell_date : t.buy_date;
-                    if (!dStr) {
-                        dateMatch = false;
-                    } else {
-                        const d = new Date(dStr);
-                        const dMonth = d.getMonth();
-                        const dYear = d.getFullYear();
-
-                        if (dateF === 'THIS_MONTH') dateMatch = (dYear === currentYear && dMonth === currentMonth);
-                        else if (dateF === 'LAST_MONTH') {
-                            let tMonth = currentMonth - 1; let tYear = currentYear;
-                            if (tMonth < 0) { tMonth = 11; tYear--; }
-                            dateMatch = (dYear === tYear && dMonth === tMonth);
-                        } 
-                        else if (dateF === 'THIS_YEAR') dateMatch = (dYear === currentYear);
-                        else if (dateF === 'LAST_YEAR') dateMatch = (dYear === currentYear - 1);
-                        else dateMatch = dStr.startsWith(dateF);
-                    }
-                }
-                return textMatch && statMatch && curMatch && dateMatch;
+                return textMatch && statMatch && curMatch && buyMatch && sellMatch;
             });
+            
             currentTradePage = 1;
             renderTradesTable(); 
-            }
+        }
         
         function renderTradesTable() {
             const tb = document.getElementById('trades-table-body'); 
