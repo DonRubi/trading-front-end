@@ -190,8 +190,17 @@
             </div>
             <div class="journal-main">
                 <div class="table-controls">
-                    <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze lub nazwie spółki..." oninput="handleTradesFilter()">
+                    <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleTradesFilter()">
                     <select id="trade-status-filter" onchange="handleTradesFilter()"><option value="ALL">Wszystkie Statusy</option><option value="OPEN" selected>Otwarte</option><option value="CLOSED">Zamknięte</option></select>
+                    <select id="trade-cur-filter" onchange="handleTradesFilter()">
+                        <option value="ALL">Wszystkie Waluty</option>
+                        <option value="PLN">PLN</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                    <select id="trade-date-filter" onchange="handleTradesFilter()">
+                        <option value="ALL">Wszystkie Daty</option>
+                        </select>
                 </div>
                 <div class="table-responsive">
                     <table id="journal-table">
@@ -1523,24 +1532,89 @@
         async function fetchTradesEntries(forceFresh = false) { 
             if(!forceFresh) {
                 const cached = getCachedData('trades_cache');
-                if(cached) { allTradesData = cached; handleTradesFilter(); }
+                if(cached) { allTradesData = cached; populateTradeDateFilterOptions(); handleTradesFilter(); }
             }
             try { 
                 const res = await fetch(`${API_BASE_URL}/api/trades/entries`); 
                 allTradesData = await res.json(); 
                 setCachedData('trades_cache', allTradesData);
+                populateTradeDateFilterOptions();
                 handleTradesFilter(); 
             } catch(e) { console.error(e); } 
         }
 
+        function populateTradeDateFilterOptions() {
+            const select = document.getElementById('trade-date-filter');
+            if(!select) return;
+            const currentVal = select.value || 'ALL';
+
+            const months = new Set();
+            allTradesData.forEach(t => {
+                let dStr = (t.status === 'CLOSED' && t.sell_date) ? t.sell_date : t.buy_date;
+                if(dStr && dStr.length >= 7) months.add(dStr.substring(0, 7));
+            });
+
+            let html = `
+                <option value="ALL">Wszystkie Daty</option>
+                <option value="THIS_MONTH">Bieżący miesiąc</option>
+                <option value="LAST_MONTH">Poprzedni miesiąc</option>
+                <option value="THIS_YEAR">Bieżący rok</option>
+                <option value="LAST_YEAR">Poprzedni rok</option>
+                <optgroup label="Archiwum (Miesiące)">
+            `;
+
+            Array.from(months).sort().reverse().forEach(m => {
+                html += `<option value="${m}">${m}</option>`;
+            });
+            html += `</optgroup>`;
+
+            select.innerHTML = html;
+            if(Array.from(select.options).some(o => o.value === currentVal)) select.value = currentVal;
+        }
+
         function handleTradesFilter() { 
-            const s = document.getElementById('trade-search').value.toLowerCase(); const stat = document.getElementById('trade-status-filter').value;
-            filteredTradesData = allTradesData.filter(t => ((t.ticker || '').toLowerCase().includes(s)) && (stat==='OPEN' ? t.status==='OPEN' : t.status==='CLOSED'));
+            const s = document.getElementById('trade-search').value.toLowerCase(); 
+            const stat = document.getElementById('trade-status-filter').value;
+            const cur = document.getElementById('trade-cur-filter').value;
+            const dateF = document.getElementById('trade-date-filter').value;
+
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            filteredTradesData = allTradesData.filter(t => {
+                const textMatch = ((t.ticker || '').toLowerCase().includes(s)) || ((t.stock_name || '').toLowerCase().includes(s));
+                const statMatch = (stat === 'ALL') || (t.status === stat);
+                const curMatch = (cur === 'ALL') || (t.currency === cur);
+
+                let dateMatch = true;
+                if (dateF !== 'ALL') {
+                    let dStr = (t.status === 'CLOSED' && t.sell_date) ? t.sell_date : t.buy_date;
+                    if (!dStr) {
+                        dateMatch = false;
+                    } else {
+                        const d = new Date(dStr);
+                        const dMonth = d.getMonth();
+                        const dYear = d.getFullYear();
+
+                        if (dateF === 'THIS_MONTH') dateMatch = (dYear === currentYear && dMonth === currentMonth);
+                        else if (dateF === 'LAST_MONTH') {
+                            let tMonth = currentMonth - 1; let tYear = currentYear;
+                            if (tMonth < 0) { tMonth = 11; tYear--; }
+                            dateMatch = (dYear === tYear && dMonth === tMonth);
+                        } 
+                        else if (dateF === 'THIS_YEAR') dateMatch = (dYear === currentYear);
+                        else if (dateF === 'LAST_YEAR') dateMatch = (dYear === currentYear - 1);
+                        else dateMatch = dStr.startsWith(dateF);
+                    }
+                }
+                return textMatch && statMatch && curMatch && dateMatch;
+            });
             currentTradePage = 1;
             renderTradesTable(); 
-        }
+            }
         
-        function renderTradesTable() {
+            function renderTradesTable() {
             const tb = document.getElementById('trades-table-body'); tb.innerHTML = '';
             
             let sortedTrades = [...filteredTradesData];
@@ -1561,25 +1635,108 @@
                 return tradeSortDir==='asc' ? va-vb : vb-va;
             });
 
+            // Zmienne do nowej stopki z Sumą
+            let totalProfWaluta = {};
+            let totalProfPln = 0;
+            let totalProg = 0;
+            let totalValidProgCount = 0;
+
+            sortedTrades.forEach(item => {
+                const s = item.stats;
+                if(s.profPln) totalProfPln += s.profPln;
+                if(item.currency) totalProfWaluta[item.currency] = (totalProfWaluta[item.currency] || 0) + (s.prof || 0);
+                if(item.status === 'OPEN' && !isNaN(s.prog) && isFinite(s.prog)) {
+                    totalProg += s.prog;
+                    totalValidProgCount++;
+                }
+            });
+
             const start = (currentTradePage-1)*tradePageSize;
             const maxPage = Math.ceil(sortedTrades.length / tradePageSize) || 1;
+            const pageData = sortedTrades.slice(start, start + tradePageSize);
 
-            sortedTrades.slice(start, start + tradePageSize).forEach(item => {
+            pageData.forEach(item => {
                 const s = item.stats;
                 const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
+                
+                // Nowy, klikalny tekst Dźwigni:
+                const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage})" title="Kliknij, aby zmieniń dźwignię">x${item.leverage}</span>`;
+
                 tb.innerHTML += `<tr>
                     <td>${item.buy_date}<br><small>#${item.id}</small></td>
                     <td><strong style="color:var(--accent);">${item.ticker}</strong><br><small>${item.stock_name}</small></td>
-                    <td class="sensitive">${item.spent.toFixed(2)}${item.currency}<br><small>(x${item.leverage})</small></td>
+                    <td class="sensitive">
+                        ${item.spent.toFixed(2)} ${item.currency} <small>(${levHtml})</small><br>
+                        <span style="color:#cdd6f4; font-weight:bold;">${s.spentPln.toFixed(2)} PLN</span> <small style="color:var(--text-muted);">(FX: ${s.usedFx.toFixed(2)})</small>
+                    </td>
                     <td class="sensitive">WE: ${item.buy_price}$<br>TR: <b>${s.cp}$</b></td>
                     <td class="sensitive"><b>${s.rr.toFixed(1)}</b><br><span style="color:#fcd535;">SL: ${s.dsl.toFixed(2)}$</span></td>
                     <td class="sensitive" style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.prof.toFixed(2)} ${item.currency}</b></td>
                     <td class="sensitive" style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.profPln.toFixed(2)} PLN</b></td>
                     <td><div style="background:var(--bg-input); height:8px; border-radius:4px;"><div style="width:${s.pd}%; background:${s.pc}; height:100%;"></div></div></td>
-                    <td><button class="btn-edit" onclick="openEditModal('trade', ${item.id})">✎</button> ${actionHtml}</td>
+                    <td><button class="btn-edit" onclick="openEditModal('trade', ${item.id})">✎</button> ${actionHtml} <button class="btn-delete" onclick="deleteTrade(${item.id})" style="padding: 3px 8px; margin-left:5px;">Usuń</button></td>
                 </tr>`;
             });
+
+            // Sumaryczny wiersz stopki
+            if(sortedTrades.length > 0) {
+                let profWalutaStr = Object.keys(totalProfWaluta).map(cur => {
+                    let val = totalProfWaluta[cur];
+                    let col = val >= 0 ? '#0ecb81' : '#f6465d';
+                    return `<span style="color:${col};">${val.toFixed(2)} ${cur}</span>`;
+                }).join('<br>');
+                let avgProgStr = totalValidProgCount > 0 ? ((totalProg / totalValidProgCount) * 100).toFixed(1) + '%' : '-';
+
+                tb.innerHTML += `<tr style="background-color: rgba(255,255,255,0.05); border-top: 2px solid #555;">
+                    <td colspan="5" style="text-align:right; font-weight:bold; color:var(--text-main);">Suma dla wybranego filtru:</td>
+                    <td class="sensitive" style="font-weight:bold; line-height: 1.4;">${profWalutaStr || '-'}</td>
+                    <td class="sensitive" style="font-weight:bold; color:${totalProfPln>=0?'var(--success)':'var(--danger)'};">${totalProfPln.toFixed(2)} PLN</td>
+                    <td class="sensitive" style="font-weight:bold; text-align:center;">Śr. Progres: <br><span style="color:var(--accent); font-size:1.1em;">${avgProgStr}</span></td>
+                    <td></td>
+                </tr>`;
+            } else {
+                tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--text-muted);">Brak danych.</td></tr>`;
+            }
+
             document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage} z ${maxPage}`;
+        }
+
+        async function deleteTrade(id) {
+            if(!confirm("Na pewno usunąć tę pozycję z bazy? Operacja jest nieodwracalna!")) return;
+            try {
+                await fetch(`${API_BASE_URL}/api/trades/delete`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: id})
+                });
+                fetchTradesEntries(true);
+            } catch(e) {
+                alert('Błąd usuwania transakcji.');
+            }
+        }
+
+        async function editTradeLeverage(id, currentLev) {
+            let newLev = prompt("Podaj nową wartość dźwigni (np. 1 dla akcji, 5 dla CFD):", currentLev);
+            if (newLev === null || newLev.trim() === '') return;
+            newLev = parseInt(newLev);
+            if (isNaN(newLev) || newLev < 1) {
+                alert("Nieprawidłowa wartość dźwigni.");
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/edit`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: id, leverage: newLev})
+                });
+                if (res.ok) {
+                    fetchTradesEntries(true);
+                } else {
+                    alert("Błąd podczas aktualizacji dźwigni.");
+                }
+            } catch(e) {
+                console.error("Błąd edycji dźwigni:", e);
+            }
         }
 
         function changeTradePage(d) { 
