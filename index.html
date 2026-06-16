@@ -1731,7 +1731,7 @@
                 const pd = s.pd || 0;
                 const pc = s.pc || 'gray';
 
-                const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
+                const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span> <button class="btn-edit" onclick="reopenTrade(${item.id})" style="padding: 2px 6px; margin-left: 5px; border-color: var(--text-muted); color: var(--text-muted);" title="Cofnij zamknięcie">⟲</button>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
                 
                 const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage || 1})" title="Kliknij, aby zmienić dźwignię">x${item.leverage || 1}</span>`;
 
@@ -1810,6 +1810,32 @@
                 }
             } catch(e) {
                 console.error("Błąd edycji dźwigni:", e);
+            }
+        }
+
+        async function reopenTrade(id) {
+            if(!confirm("Czy na pewno chcesz anulować zamknięcie tej pozycji i przywrócić ją do aktywnych (OPEN)?")) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/edit`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: id, 
+                        status: 'OPEN', 
+                        sell_price: null, 
+                        sell_date: null, 
+                        sell_fx_rate: null,
+                        cfd_cost: 0
+                    })
+                });
+                if(res.ok) {
+                    fetchTradesEntries(true);
+                } else {
+                    alert("Wystąpił błąd podczas przywracania pozycji.");
+                }
+            } catch(e) {
+                console.error("Błąd przywracania pozycji:", e);
+                alert("Błąd połączenia z serwerem.");
             }
         }
 
