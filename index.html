@@ -1614,8 +1614,10 @@
             renderTradesTable(); 
             }
         
-            function renderTradesTable() {
-            const tb = document.getElementById('trades-table-body'); tb.innerHTML = '';
+        function renderTradesTable() {
+            const tb = document.getElementById('trades-table-body'); 
+            if (!tb) return;
+            tb.innerHTML = '';
             
             let sortedTrades = [...filteredTradesData];
             sortedTrades.forEach(t => { t.stats = calculateTradeStats(t); });
@@ -1642,7 +1644,7 @@
             let totalValidProgCount = 0;
 
             sortedTrades.forEach(item => {
-                const s = item.stats;
+                const s = item.stats || {};
                 if(s.profPln) totalProfPln += s.profPln;
                 if(item.currency) totalProfWaluta[item.currency] = (totalProfWaluta[item.currency] || 0) + (s.prof || 0);
                 if(item.status === 'OPEN' && !isNaN(s.prog) && isFinite(s.prog)) {
@@ -1656,24 +1658,35 @@
             const pageData = sortedTrades.slice(start, start + tradePageSize);
 
             pageData.forEach(item => {
-                const s = item.stats;
+                // KULOODPORNE PRZYPISANIE - chroni przed wyrzuceniem błędu (undefined)
+                const s = item.stats || {};
+                const spent = item.spent || 0;
+                const spentPln = s.spentPln || 0;
+                const usedFx = s.usedFx || 1;
+                const rr = s.rr || 0;
+                const dsl = s.dsl || 0;
+                const prof = s.prof || 0;
+                const profPln = s.profPln || 0;
+                const cp = s.cp || 0;
+                const pd = s.pd || 0;
+                const pc = s.pc || 'gray';
+
                 const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
                 
-                // Nowy, klikalny tekst Dźwigni:
-                const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage})" title="Kliknij, aby zmieniń dźwignię">x${item.leverage}</span>`;
+                const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage || 1})" title="Kliknij, aby zmienić dźwignię">x${item.leverage || 1}</span>`;
 
                 tb.innerHTML += `<tr>
-                    <td>${item.buy_date}<br><small>#${item.id}</small></td>
-                    <td><strong style="color:var(--accent);">${item.ticker}</strong><br><small>${item.stock_name}</small></td>
+                    <td>${item.buy_date || '-'}<br><small>#${item.id}</small></td>
+                    <td><strong style="color:var(--accent);">${item.ticker || '-'}</strong><br><small>${item.stock_name || ''}</small></td>
                     <td class="sensitive">
-                        ${item.spent.toFixed(2)} ${item.currency} <small>(${levHtml})</small><br>
-                        <span style="color:#cdd6f4; font-weight:bold;">${s.spentPln.toFixed(2)} PLN</span> <small style="color:var(--text-muted);">(FX: ${s.usedFx.toFixed(2)})</small>
+                        ${spent.toFixed(2)} ${item.currency || 'USD'} <small>(${levHtml})</small><br>
+                        <span style="color:#cdd6f4; font-weight:bold;">${spentPln.toFixed(2)} PLN</span> <small style="color:var(--text-muted);">(FX: ${usedFx.toFixed(2)})</small>
                     </td>
-                    <td class="sensitive">WE: ${item.buy_price}$<br>TR: <b>${s.cp}$</b></td>
-                    <td class="sensitive"><b>${s.rr.toFixed(1)}</b><br><span style="color:#fcd535;">SL: ${s.dsl.toFixed(2)}$</span></td>
-                    <td class="sensitive" style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.prof.toFixed(2)} ${item.currency}</b></td>
-                    <td class="sensitive" style="color:${s.prof>=0?'#0ecb81':'#f6465d'};"><b>${s.profPln.toFixed(2)} PLN</b></td>
-                    <td><div style="background:var(--bg-input); height:8px; border-radius:4px;"><div style="width:${s.pd}%; background:${s.pc}; height:100%;"></div></div></td>
+                    <td class="sensitive">WE: ${item.buy_price || 0}$<br>TR: <b>${cp}$</b></td>
+                    <td class="sensitive"><b>${rr.toFixed(1)}</b><br><span style="color:#fcd535;">SL: ${dsl.toFixed(2)}$</span></td>
+                    <td class="sensitive" style="color:${prof>=0?'#0ecb81':'#f6465d'};"><b>${prof.toFixed(2)} ${item.currency || 'USD'}</b></td>
+                    <td class="sensitive" style="color:${profPln>=0?'#0ecb81':'#f6465d'};"><b>${profPln.toFixed(2)} PLN</b></td>
+                    <td><div style="background:var(--bg-input); height:8px; border-radius:4px;"><div style="width:${pd}%; background:${pc}; height:100%;"></div></div></td>
                     <td><button class="btn-edit" onclick="openEditModal('trade', ${item.id})">✎</button> ${actionHtml} <button class="btn-delete" onclick="deleteTrade(${item.id})" style="padding: 3px 8px; margin-left:5px;">Usuń</button></td>
                 </tr>`;
             });
@@ -1681,7 +1694,7 @@
             // Sumaryczny wiersz stopki
             if(sortedTrades.length > 0) {
                 let profWalutaStr = Object.keys(totalProfWaluta).map(cur => {
-                    let val = totalProfWaluta[cur];
+                    let val = totalProfWaluta[cur] || 0;
                     let col = val >= 0 ? '#0ecb81' : '#f6465d';
                     return `<span style="color:${col};">${val.toFixed(2)} ${cur}</span>`;
                 }).join('<br>');
@@ -1698,7 +1711,8 @@
                 tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--text-muted);">Brak danych.</td></tr>`;
             }
 
-            document.getElementById('trade-page-info').innerText = `Strona ${currentTradePage} z ${maxPage}`;
+            const pageInfo = document.getElementById('trade-page-info');
+            if (pageInfo) pageInfo.innerText = `Strona ${currentTradePage} z ${maxPage}`;
         }
 
         async function deleteTrade(id) {
