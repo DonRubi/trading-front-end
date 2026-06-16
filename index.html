@@ -339,8 +339,10 @@
             </div>
             <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🔔 Wymuś sprawdzenie alertów</button> 
             <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen</button> 
+            
+            <button onclick="fixHistoricalFxRates()" style="background-color: var(--accent); color: #000; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🛠️ Nadpisz kursy '4.0' w Supabase</button>
         </div>
-        <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div> 
+        <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div>
         <div class="service-section" style="margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
     <h3 style="margin-top: 0;">Szybki podgląd zakresu dziennego (Yahoo Live)</h3>
     
@@ -1891,6 +1893,33 @@
         async function addDividend(e) { e.preventDefault(); const tid = document.getElementById('div-trade-id').value; const date = document.getElementById('div-date').value; const amt = document.getElementById('div-amount').value; try { await fetch(`${API_BASE_URL}/api/trades/dividend/add`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({trade_id: parseInt(tid), dividend_date: date, amount: parseFloat(amt)}) }); document.getElementById('div-amount').value = ''; fetchTradesEntries(true); alert("Dywidenda dodana!"); } catch(err) {} }
         async function forceAlertsCheck() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Uruchamianie silnika alertów...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`); const result = await res.json(); out.innerHTML = `✅ <strong>Gotowe.</strong> Aktywowane: ${result.alerts_triggered || 0}`; } catch(e) { out.innerHTML = `❌ Błąd.`; } }
 
+        async function fixHistoricalFxRates() {
+            if(!confirm("Czy na pewno chcesz przeszukać bazę Supabase i nadpisać sztuczne wartości kursu '4.0' faktycznymi danymi z bazy YTD z dni otwarcia/zamknięcia?")) return;
+            const out = document.getElementById('service-output'); 
+            out.style.display = 'block'; 
+            out.innerHTML = '⏳ Trwa skanowanie Supabase i aktualizowanie wierszy...'; 
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/service/fix-fx-rates`, { method: 'POST' });
+                const data = await res.json();
+                if(res.ok) {
+                    out.innerHTML = `✅ <strong>Sukces!</strong> ${data.message}`;
+                    
+                    // Wymuszenie odświeżenia tabel w pamięci przeglądarki (żebyś widział efekt)
+                    await fetchTradesEntries(true);
+                    try { 
+                        const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); 
+                        depositsDataArray = await rD.json() || []; 
+                    } catch(e){}
+                    
+                    calculateAndRenderSummary();
+                } else {
+                    out.innerHTML = `❌ Błąd z serwera: ${data.message}`;
+                }
+            } catch(e) {
+                out.innerHTML = `❌ Błąd połączenia z serwerem.`;
+            }
+        }
+    
         // --- Analiza Techniczna ---
         function switchTechTab(tab) { document.querySelectorAll('#technicalanalysis-module .tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('#technicalanalysis-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-' + tab).classList.add('active'); }
         function calculateHarmonics(e) { e.preventDefault(); const x = parseFloat(document.getElementById('ha-x').value); const a = parseFloat(document.getElementById('ha-a').value); const b = parseFloat(document.getElementById('ha-b').value); const c = parseFloat(document.getElementById('ha-c').value); const xa = Math.abs(a - x); const ab = Math.abs(b - a); const bc = Math.abs(c - b); const isBullish = a > x; const dirMultiplier = isBullish ? -1 : 1; const bRetracement = ab / xa; const cRetracement = bc / ab; let resultsHTML = ''; const patterns = [ { name: 'Gartley', bTarget: 0.618, dRetXa: 0.786, dExtBcMin: 1.272, dExtBcMax: 1.618 }, { name: 'Bat', bTarget: 0.50, dRetXa: 0.886, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Butterfly', bTarget: 0.786, dRetXa: 1.272, dExtBcMin: 1.618, dExtBcMax: 2.618 }, { name: 'Crab', bTarget: 0.50, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 }, { name: 'Deep Crab', bTarget: 0.886, dRetXa: 1.618, dExtBcMin: 2.24, dExtBcMax: 3.618 } ]; let foundMatch = false; patterns.forEach(pat => { const isBMatch = (Math.abs(bRetracement - pat.bTarget) <= 0.08) || (pat.name === 'Bat' && bRetracement >= 0.382 && bRetracement <= 0.52) || (pat.name === 'Crab' && bRetracement >= 0.382 && bRetracement <= 0.618); if(isBMatch) { foundMatch = true; const dTargetByXA = a + (xa * pat.dRetXa * dirMultiplier); const dTargetByBC_Min = c + (bc * pat.dExtBcMin * dirMultiplier); const dTargetByBC_Max = c + (bc * pat.dExtBcMax * dirMultiplier); resultsHTML += ` <div class="kpi-card" style="border-color: var(--accent);"> <h4 style="color:var(--accent); font-weight:bold; font-size:1.1em;">Zidentyfikowano: ${pat.name}</h4> <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom:10px;"> Zniesienie B wynosi ${(bRetracement).toFixed(3)} XA (Oczekiwano ok. ${pat.bTarget})<br> Zniesienie C wynosi ${(cRetracement).toFixed(3)} AB </div> <div style="font-size: 0.9em; margin-bottom: 5px;">Idealny Punkt D (wzgl. XA): <b style="color:#fff;">${dTargetByXA.toFixed(2)}</b></div> <div style="font-size: 0.9em;">Strefa PRZ (wzgl. BC): <b style="color:var(--success);">${dTargetByBC_Min.toFixed(2)} - ${dTargetByBC_Max.toFixed(2)}</b></div> <div class="value sensitive" style="margin-top:10px; font-size:1.2rem; color:var(--accent);">Strefa Wejścia:<br>${Math.min(dTargetByXA, dTargetByBC_Min).toFixed(2)} do ${Math.max(dTargetByXA, dTargetByBC_Max).toFixed(2)}</div> </div> `; } }); if(!foundMatch) { resultsHTML = `<div style="grid-column: 1 / -1; color: var(--danger); text-align: center; padding: 20px; border: 1px dashed var(--danger); border-radius: 8px;"> Obecna struktura nie mieści się w tolerancjach formacji Harmonicznych. </div>`; } document.getElementById('ha-results').innerHTML = resultsHTML; }
