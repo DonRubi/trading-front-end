@@ -2071,18 +2071,42 @@
                 const res = await fetch(`${API_BASE_URL}/api/cron/update-prices`); 
                 const result = await res.json(); 
                 
-                const total = result.total_tickers || 0;
-                const updated = result.updated_tickers || 0;
-                const timeNow = new Date().toLocaleString('pl-PL');
-                
-                const logMsg = `Ostatnia aktualizacja: <strong style="color:var(--text-main);">${timeNow}</strong> <br> Pobrano ceny dla: <strong style="color:${updated === total && total > 0 ? 'var(--success)' : 'var(--accent)'};">${updated} z ${total}</strong> spółek.`;
-                localStorage.setItem('last_price_update', logMsg);
-                
-                const logEl = document.getElementById('last-price-update-log');
-                if(logEl) logEl.innerHTML = logMsg;
+                if(res.ok) {
+                    const total = result.total_tickers || 0;
+                    const updated = result.updated_tickers || 0;
+                    const timeNow = new Date().toLocaleString('pl-PL');
+                    
+                    const logMsg = `Ostatnia aktualizacja: <strong style="color:var(--text-main);">${timeNow}</strong> <br> Pobrano ceny dla: <strong style="color:${updated === total && total > 0 ? 'var(--success)' : 'var(--accent)'};">${updated} z ${total}</strong> spółek.`;
+                    localStorage.setItem('last_price_update', logMsg);
+                    
+                    const logEl = document.getElementById('last-price-update-log');
+                    if(logEl) logEl.innerHTML = logMsg;
 
-                out.innerHTML = `✅ <strong>Gotowe.</strong> Zaktualizowano ${updated}/${total}.`; 
-            } catch(e) { out.innerHTML = `❌ Błąd.`; } 
+                    out.innerHTML = `✅ <strong>Gotowe.</strong> Zaktualizowano ${updated}/${total}. Odświeżam tabele...`; 
+                    
+                    // --- KLUCZOWA ZMIANA: Odświeżamy pamięć przeglądarki ---
+                    await loadDatabase(); 
+                    
+                    // W zależności od tego gdzie jesteśmy, przeliczamy tabelę by uwzględniła nowe ceny Pre-Market:
+                    if(document.getElementById('form-module').style.display === 'block') {
+                        fetchFormEntries(true);
+                    } else if(document.getElementById('tradeslist-module').style.display === 'block') {
+                        fetchTradesEntries(true);
+                    } else if(document.getElementById('summary-module').style.display === 'block') {
+                        initSummaryModule();
+                    } else if(document.getElementById('database-module').style.display === 'block') {
+                        renderMobileList();
+                    }
+                    
+                    setTimeout(() => { out.innerHTML = `✅ <strong>Gotowe.</strong> Zaktualizowano ${updated}/${total}.`; }, 2000);
+
+                } else {
+                    out.innerHTML = `❌ Błąd z serwera: ${result.message || 'Brak szczegółów'}`; 
+                }
+            } catch(e) { 
+                out.innerHTML = `❌ Błąd połączenia z serwerem.`; 
+                console.error(e);
+            } 
         }
 
         async function forceDatabasePricesUpdate(event) { 
