@@ -1894,17 +1894,27 @@
         async function forceAlertsCheck() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Uruchamianie silnika alertów...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`); const result = await res.json(); out.innerHTML = `✅ <strong>Gotowe.</strong> Aktywowane: ${result.alerts_triggered || 0}`; } catch(e) { out.innerHTML = `❌ Błąd.`; } }
 
         async function fixHistoricalFxRates() {
+            console.log("[1] Kliknięto przycisk naprawy bazy.");
             if(!confirm("Czy na pewno chcesz przeszukać bazę Supabase i nadpisać sztuczne wartości kursu '4.0' faktycznymi danymi z bazy YTD z dni otwarcia/zamknięcia?")) return;
+            
+            console.log("[2] Użytkownik potwierdził intencję. Pokazuję komunikat ładowania.");
             const out = document.getElementById('service-output'); 
             out.style.display = 'block'; 
             out.innerHTML = '⏳ Trwa skanowanie Supabase i aktualizowanie wierszy...'; 
+            
             try {
+                console.log("[3] Wysyłam żądanie POST do serwera...");
                 const res = await fetch(`${API_BASE_URL}/api/service/fix-fx-rates`, { method: 'POST' });
+                console.log("[4] Serwer odpowiedział. Status HTTP:", res.status);
+                
                 const data = await res.json();
+                
                 if(res.ok) {
+                    console.log("[5] Serwer zwrócił sukces:", data.message);
                     out.innerHTML = `✅ <strong>Sukces!</strong> ${data.message}`;
                     
-                    // Wymuszenie odświeżenia tabel w pamięci przeglądarki (żebyś widział efekt)
+                    // Wymuszenie odświeżenia tabel w pamięci przeglądarki
+                    console.log("[6] Odświeżam lokalne tabele...");
                     await fetchTradesEntries(true);
                     try { 
                         const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); 
@@ -1912,10 +1922,13 @@
                     } catch(e){}
                     
                     calculateAndRenderSummary();
+                    console.log("[7] Widok odświeżony pomyślnie.");
                 } else {
+                    console.error("[!] Błąd z serwera:", data.message);
                     out.innerHTML = `❌ Błąd z serwera: ${data.message}`;
                 }
             } catch(e) {
+                console.error("[!] Błąd połączenia z serwerem Render:", e);
                 out.innerHTML = `❌ Błąd połączenia z serwerem.`;
             }
         }
