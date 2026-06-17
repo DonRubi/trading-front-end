@@ -456,6 +456,7 @@
             <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen</button> 
             
             <button onclick="fixHistoricalFxRates()" style="background-color: var(--accent); color: #000; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🛠️ Nadpisz kursy '4.0' w Supabase</button>
+            <button onclick="forceCurrencyUpdate()" style="background-color: var(--accent); color: #000; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; margin-top: 5px;">🔄 Przelicz i napraw waluty wg Giełd (Baza)</button>
         </div>
         <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div>
         <div class="service-section" style="margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
@@ -827,7 +828,9 @@
                         <div class="form-group"><label>Wydano Gotówki</label><input type="number" step="0.01" id="edit-tr-spent" value="${item.spent}"></div>
                     </div>
                     <div class="form-row">
+                        <div class="form-row">
                         <div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="0.01" min="0.01" id="edit-tr-lev" value="${item.leverage || 1}"></div>
+                        <div class="form-group"><label>Waluta Rozliczenia</label><select id="edit-tr-cur"><option value="USD" ${item.currency==='USD'?'selected':''}>USD</option><option value="PLN" ${item.currency==='PLN'?'selected':''}>PLN</option><option value="EUR" ${item.currency==='EUR'?'selected':''}>EUR</option></select></div>
                         <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" id="edit-tr-tp" value="${item.tp}"></div>
                         <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" id="edit-tr-sl" value="${item.sl}"></div>
                     </div>
@@ -2478,6 +2481,31 @@
                 }
             } catch(e) {
                 console.error("[!] Błąd połączenia z serwerem Render:", e);
+                out.innerHTML = `❌ Błąd połączenia z serwerem.`;
+            }
+        }
+
+        async function forceCurrencyUpdate() {
+            if(!confirm("Czy na pewno chcesz przeskanować całą bazę (Focus i Trades) i przypisać na nowo waluty zgodnie z aktualnym słownikiem giełd?")) return;
+            
+            const out = document.getElementById('service-output'); 
+            out.style.display = 'block'; 
+            out.innerHTML = '⏳ Trwa skanowanie i nadpisywanie walut w bazie danych...'; 
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/service/update-currencies`, { method: 'POST' });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    out.innerHTML = `✅ <strong>Sukces!</strong> ${data.message}`;
+                    // Odświeżamy dane w pamięci przeglądarki
+                    await fetchFocusEntries(true);
+                    await fetchTradesEntries(true);
+                    calculateAndRenderSummary();
+                } else {
+                    out.innerHTML = `❌ Błąd z serwera: ${data.message}`;
+                }
+            } catch(e) {
                 out.innerHTML = `❌ Błąd połączenia z serwerem.`;
             }
         }
