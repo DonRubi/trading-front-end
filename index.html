@@ -1914,10 +1914,14 @@
         }
 
         async function editTradeLeverage(id, currentLev) {
-            let newLev = prompt("Podaj nową wartość dźwigni (np. 1 dla akcji, 5 dla CFD):", currentLev);
+            let newLev = prompt("Podaj nową wartość dźwigni (np. 1 dla akcji, 0.5 dla CFD/Krypto):", currentLev);
             if (newLev === null || newLev.trim() === '') return;
-            newLev = parseInt(newLev);
-            if (isNaN(newLev) || newLev < 1) {
+            
+            // ZMIANA: Zezwalamy na ułamki i automatycznie zamieniamy polski przecinek na kropkę
+            newLev = parseFloat(newLev.replace(',', '.'));
+            
+            // ZMIANA: Zmieniono blokadę z < 1 na <= 0, aby przepuścić np. 0.5 lub 0.01
+            if (isNaN(newLev) || newLev <= 0) {
                 alert("Nieprawidłowa wartość dźwigni.");
                 return;
             }
