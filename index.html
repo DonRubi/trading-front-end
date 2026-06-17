@@ -330,6 +330,80 @@
             <div id="db-list-container"></div> 
             <div class="pagination-container"><button class="btn-pag" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="ticker-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('database', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="ticker-next-btn" onclick="changeTickerPage(1)">Nast →</button></div> 
         </div> 
+        <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;"> 
+            <h4 style="color: var(--accent); margin-bottom: 15px;">📖 Słownik Tickerów (Jak poprawnie dodawać instrumenty do bazy)</h4>
+            <div class="table-responsive">
+                <table class="macro-custom-table" style="width:100%; font-size: 0.85em;">
+                    <thead>
+                        <tr>
+                            <th>Rynek / Giełda</th>
+                            <th>Przedrostek (TradingView)</th>
+                            <th>Przykład Wpisu</th>
+                            <th>Rozliczenie (Waluta)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Polska (GPW)</td>
+                            <td><code>GPW:</code></td>
+                            <td><strong>GPW:CDR</strong> (CD Projekt)</td>
+                            <td style="color:var(--success); font-weight:bold;">PLN</td>
+                        </tr>
+                        <tr>
+                            <td>Wlk. Brytania (Londyn)</td>
+                            <td><code>LSE:</code></td>
+                            <td><strong>LSE:VOD</strong> (Vodafone)</td>
+                            <td style="color:var(--success); font-weight:bold;">PLN (Celowe)</td>
+                        </tr>
+                        <tr>
+                            <td>Niemcy (XETRA)</td>
+                            <td><code>XETR:</code></td>
+                            <td><strong>XETR:SAP</strong> (SAP)</td>
+                            <td style="color:#89b4fa; font-weight:bold;">EUR</td>
+                        </tr>
+                        <tr>
+                            <td>Niemcy (Frankfurt)</td>
+                            <td><code>FRA:</code> lub <code>FWB:</code></td>
+                            <td><strong>FRA:BMW</strong> (BMW)</td>
+                            <td style="color:#89b4fa; font-weight:bold;">EUR</td>
+                        </tr>
+                        <tr>
+                            <td>Niemcy (Monachium)</td>
+                            <td><code>GETTEX:</code> lub <code>MUN:</code></td>
+                            <td><strong>MUN:MUV2</strong> (Munich Re)</td>
+                            <td style="color:#89b4fa; font-weight:bold;">EUR</td>
+                        </tr>
+                        <tr>
+                            <td>Francja (Paryż)</td>
+                            <td><code>PA:</code>, <code>EPA:</code> lub <code>EURONEXT:</code></td>
+                            <td><strong>EPA:MC</strong> (LVMH)</td>
+                            <td style="color:#89b4fa; font-weight:bold;">EUR</td>
+                        </tr>
+                        <tr>
+                            <td>Finlandia (Helsinki)</td>
+                            <td><code>HE:</code> lub <code>OMXHEL:</code></td>
+                            <td><strong>HE:NOKIA</strong> (Nokia)</td>
+                            <td style="color:#89b4fa; font-weight:bold;">EUR</td>
+                        </tr>
+                        <tr>
+                            <td>USA (NYSE / NASDAQ)</td>
+                            <td><code>NYSE:</code> lub <code>NASDAQ:</code> (albo brak)</td>
+                            <td><strong>AAPL</strong> lub <strong>NASDAQ:AAPL</strong></td>
+                            <td style="color:#fcd535; font-weight:bold;">USD</td>
+                        </tr>
+                        <tr>
+                            <td>Kryptowaluty</td>
+                            <td><code>BINANCE:</code>, <code>CRYPTO:</code> itp.</td>
+                            <td><strong>BINANCE:BTCUSDT</strong></td>
+                            <td style="color:#fcd535; font-weight:bold;">USD</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p style="font-size: 0.8em; color: var(--text-muted); margin-top: 10px; line-height: 1.4;">
+                * System automatycznie obcina końcówki w kryptowalutach (np. USDT zamienia na parę do USD) i tłumaczy wszystkie przedrostki na format czytelny dla serwerów Yahoo Finance. Dla klasycznych rynków akcyjnych w USA dodawanie przedrostka nie jest wymagane.
+            </p>
+        </div>
     </section>
 
     <section id="service-module" class="app-module"> 
