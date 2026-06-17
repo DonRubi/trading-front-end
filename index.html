@@ -1260,14 +1260,14 @@
             if (!select) return; const levels = [1.272, 1.618, 2.000, 2.618]; const currentSelected = select.value; select.innerHTML = ''; 
             levels.forEach(lvl => {
                 let optionText = lvl.toFixed(3);
-                if (!isNaN(start) && !isNaN(peak)) { let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * lvl : peak - (start - peak) * lvl; optionText += ` (cena: ${calculatedPrice.toFixed(2)})`; }
+                if (!isNaN(start) && !isNaN(peak)) { let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * (lvl -1) : peak - (start - peak) * (lvl - 1); optionText += ` (cena: ${calculatedPrice.toFixed(2)})`; }
                 const opt = document.createElement('option'); opt.value = lvl.toString(); opt.textContent = optionText; if (lvl.toString() === currentSelected) opt.selected = true; select.appendChild(opt);
             });
         }
         function applyFibo() {
             const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const level = parseFloat(document.getElementById('fibo-level').value); const direction = document.getElementById('form-direction').value;
             if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
-            const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * level : peak - (start - peak) * level; document.getElementById('form-tp').value = tp.toFixed(2); toggleFibo();
+            const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * (level - 1) : peak - (start - peak) * (level - 1); document.getElementById('form-tp').value = tp.toFixed(2); toggleFibo();
         }
         function updateFormTvLink() { const ticker = document.getElementById('form-ticker').value; const linkEl = document.getElementById('form-tv-link'); if (ticker) { linkEl.href = getTradingViewLink(ticker); linkEl.style.display = 'inline-block'; } }
 
