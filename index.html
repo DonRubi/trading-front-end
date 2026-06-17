@@ -347,14 +347,18 @@
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top:10px;"> 
             <h4 style="margin-bottom: 5px;">Ręczne wywołania (CRON)</h4> 
             <div style="display:flex; gap:10px; margin-bottom: 10px; flex-wrap: wrap;">
-            <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="last-price-update-log">
-                <strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>
-                Brak danych w pamięci przeglądarki
-            </div>
-            <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="auto-price-update-log">
-                <strong style="color:#89b4fa;">Automatyczna aktualizacja (CRON):</strong><br>
-                Ładowanie danych z serwera...
-            </div>
+                <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="last-price-update-log">
+                    <strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>
+                    Brak danych w pamięci przeglądarki
+                </div>
+                <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="auto-price-update-log">
+                    <strong style="color:#89b4fa;">Automatyczna aktualizacja (CRON):</strong><br>
+                    Ładowanie danych z serwera...
+                </div>
+                <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="system-health-log">
+                    <strong style="color:#fcd535;">Monitor Aplikacji (Health Check):</strong><br>
+                    Skanowanie systemów...
+                </div>
             </div>
             <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🔔 Wymuś sprawdzenie alertów</button> 
             <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen</button> 
@@ -363,24 +367,24 @@
         </div>
         <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div>
         <div class="service-section" style="margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
-    <h3 style="margin-top: 0;">Szybki podgląd zakresu dziennego (Yahoo Live)</h3>
-    
-    <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
-        <input type="text" id="tickerInput" placeholder="Wpisz ticker (np. GPW:CDR, BABA)..." 
-               style="padding: 8px; border-radius: 4px; border: 1px solid #aaa; width: 250px; text-transform: uppercase;">
-        <button onclick="checkTickerLive(document.getElementById('tickerInput').value)" 
-                style="padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            Sprawdź kurs
-        </button>
-    </div>
-    
-    <div style="font-size: 0.9em; color: #555;">
-        Szybkie linki: 
-        <span onclick="checkTickerLive('GPW:CDR')" style="color: #007bff; cursor: pointer; text-decoration: underline; margin-left: 5px;">
-            GPW:CDR (CD Projekt)
-        </span>
-    </div>
-</div>
+            <h3 style="margin-top: 0;">Szybki podgląd zakresu dziennego (Yahoo Live)</h3>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                <input type="text" id="tickerInput" placeholder="Wpisz ticker (np. GPW:CDR, BABA)..." 
+                       style="padding: 8px; border-radius: 4px; border: 1px solid #aaa; width: 250px; text-transform: uppercase;">
+                <button onclick="checkTickerLive(document.getElementById('tickerInput').value)" 
+                        style="padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Sprawdź kurs
+                </button>
+            </div>
+            
+            <div style="font-size: 0.9em; color: #555;">
+                Szybkie linki: 
+                <span onclick="checkTickerLive('GPW:CDR')" style="color: #007bff; cursor: pointer; text-decoration: underline; margin-left: 5px;">
+                    GPW:CDR (CD Projekt)
+                </span>
+            </div>
+        </div>
     </section>
 
     <section id="focuslist-module" class="app-module"> 
@@ -2170,6 +2174,48 @@
                         autoEl.innerHTML = `<strong style="color:#89b4fa;">Automatyczna aktualizacja (CRON):</strong><br>Ostatnia: <strong style="color:var(--text-main);">${autoData.time}</strong> <br> Pobrano ceny dla: <strong style="color:${autoData.updated === autoData.total && autoData.total > 0 ? 'var(--success)' : 'var(--accent)'};">${autoData.updated} z ${autoData.total}</strong> spółek.`;
                     } else {
                         autoEl.innerHTML = `<strong style="color:#89b4fa;">Automatyczna aktualizacja (CRON):</strong><br>Czekam na pierwsze wywołanie przez bota po restarcie serwera...`;
+                    }
+                }
+            } catch(e) {}
+            // Pobieranie statusu HEALTH CHECK
+            try {
+                const healthRes = await fetch(`${API_BASE_URL}/api/cron/health`);
+                const healthData = await healthRes.json();
+                const healthEl = document.getElementById('system-health-log');
+                
+                if (healthEl) {
+                    if (Object.keys(healthData).length === 0) {
+                        healthEl.innerHTML = `<strong style="color:#fcd535;">Monitor Aplikacji:</strong><br>Zaczekaj na pierwsze cykle automatyczne...`;
+                    } else {
+                        let isAllGood = true;
+                        let htmlStatus = `<strong style="color:#fcd535;">Monitor Aplikacji:</strong><br>`;
+                        
+                        for (let job in healthData) {
+                            let item = healthData[job];
+                            let stale = false;
+                            
+                            // Obliczanie czasu (odróżnienie starych wpisów)
+                            if (item.last_success) {
+                                let lastSuccessTime = new Date(item.last_success.replace(' ', 'T') + '+01:00').getTime();
+                                if ((Date.now() - lastSuccessTime) > 2 * 3600 * 1000) stale = true; // ponad 2h
+                            } else { stale = true; }
+                            
+                            if (stale || item.failures >= 3) {
+                                isAllGood = false;
+                                let msg = stale ? "Przekroczono limit 2h!" : `${item.failures} błędy z rzędu!`;
+                                htmlStatus += `<span style="color:var(--danger); font-weight:bold;">✗ ${job}</span> <small>(${msg})</small><br>`;
+                            } else {
+                                htmlStatus += `<span style="color:var(--success); font-weight:bold;">✓ ${job}</span> <small>(OK)</small><br>`;
+                            }
+                        }
+                        
+                        if (isAllGood) {
+                            healthEl.innerHTML = htmlStatus + `<div style="margin-top:5px; color:var(--success);">✅ Wszystkie systemy stabilne.</div>`;
+                            healthEl.style.borderColor = "var(--success)";
+                        } else {
+                            healthEl.innerHTML = htmlStatus + `<div style="margin-top:5px; color:var(--danger);">⚠️ Wymagana interwencja!</div>`;
+                            healthEl.style.borderColor = "var(--danger)";
+                        }
                     }
                 }
             } catch(e) {}
