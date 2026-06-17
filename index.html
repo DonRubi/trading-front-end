@@ -1187,7 +1187,7 @@
                         <td style="color:${statusColor}; font-weight:bold;">${status}</td>
                         <td class="sensitive" style="color:${diffColor}; font-weight:bold;">${diffStr}</td>
                         <td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${reasonsCount}/5</td>
-                        <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a> <button class="btn-edit" onclick="openEditModal('form', '${item.entry_id}')">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
+                        <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a> <button class="btn-edit" onclick="copyFormEntry('${item.entry_id}')" title="Kopiuj do formularza">📋</button> <button class="btn-edit" onclick="openEditModal('form', '${item.entry_id}')">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
                     </tr>`;
                 } catch(e) { console.error("Error drawing form row", e); }
             });
@@ -1253,6 +1253,33 @@
         async function deleteAdvancedFormEntry(id) { if(!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/form/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); fetchFormEntries(true); } catch(e) {} }
         async function updateFormEntryField(id, field, val) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: id, field: field, value: val }) }); fetchFormEntries(true); } catch(e){} }
 
+        function copyFormEntry(id) {
+            // Szukamy odpowiedniego wpisu w bazie pobranej przez aplikację
+            const item = formEntries.find(x => x.entry_id === id);
+            if (!item) return;
+
+            // Przepisywanie danych do pól formularza
+            document.getElementById('form-ticker').value = item.ticker;
+            document.getElementById('form-direction').value = item.direction || 'DBR';
+            document.getElementById('form-priority').value = item.priority || 0;
+            document.getElementById('form-start').value = item.start_zone || '';
+            document.getElementById('form-end').value = item.end_zone || '';
+            document.getElementById('form-tp').value = item.take_profit || '';
+            
+            // Celowe czyszczenie pól: Punkt wejścia oraz Powody
+            document.getElementById('form-entry').value = '';
+            for(let i = 1; i <= 5; i++) {
+                const reasonEl = document.getElementById('form-reason-' + i);
+                if (reasonEl) reasonEl.value = '';
+            }
+
+            // Aktualizacja przycisku z linkiem do TradingView obok selecta
+            updateFormTvLink();
+
+            // Automatyczne przewinięcie ekranu gładko do góry (do formularza)
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    
         // --- ASYSTENT FIBO ---
         function toggleFibo() { const drawer = document.getElementById('fibo-drawer'); drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; if (drawer.style.display === 'block') updateFiboLabels(); }
         function updateFiboLabels() {
