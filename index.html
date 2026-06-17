@@ -2057,7 +2057,7 @@
                     <td class="sensitive">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td>
                     <td style="color:#a6e3a1; font-weight:bold;">${scoreText}</td>
                     <td><a href="${tvLink}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 Link</a></td>
-                    <td><button onclick="deleteAlert('${item.id}')" class="btn-delete" style="padding:4px 8px;">Usuń</button></td>
+                    <td><button onclick="deleteAlert(${item.id})" class="btn-delete" style="padding:4px 8px;">Usuń</button></td>
                 </tr>`;
             });
             document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${maxPage}`;
@@ -2071,8 +2071,24 @@
             renderAlertsTable(); 
         }
 
-        async function deleteAlert(id) { try { await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); loadAlertHistory(); } catch(e) {} }
-
+        async function deleteAlert(id) { 
+            if(!confirm("Czy na pewno chcesz usunąć ten alert z historii?")) return;
+            try { 
+                const res = await fetch(`${API_BASE_URL}/api/alerts/history/delete`, { 
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({id: id}) 
+                }); 
+                if(res.ok) {
+                    loadAlertHistory(); 
+                } else {
+                    alert("Wystąpił błąd podczas usuwania alertu na serwerze.");
+                }
+            } catch(e) { 
+                alert("Błąd połączenia z serwerem.");
+            } 
+        }
+    
         // --- SKRÓCONE NARZĘDZIA POMOCNICZE ---
         function renderDepositsTable() { const tb = document.getElementById('s-dep-table'); if(!depositsDataArray || depositsDataArray.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak wpłat.</td></tr>'; return; } tb.innerHTML = depositsDataArray.map(x => `<tr><td>${x.deposit_date || x.created_at ? (x.deposit_date || x.created_at).split('T')[0] : '-'}</td><td class="sensitive" style="font-weight:bold;">${Number(x.amount || 0).toFixed(2)} ${x.currency || 'PLN'}</td><td style="color:var(--text-muted);">${x.currency || 'PLN'}</td><td class="sensitive" style="color:var(--success); font-weight:bold;">${Number(x.amount_pln || x.amount || 0).toFixed(2)} PLN</td><td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td></tr>`).join(''); }
         function renderSummaryClosed() { const fMonth = document.getElementById('s-cls-month-filter').value; const fCur = document.getElementById('s-cls-cur-filter').value; const fLev = document.getElementById('s-cls-lev-filter').value; const closedByMonth = {}; const closedByCurr = {}; const closedByLev = {}; let filteredPnlPln = 0; allTradesData.forEach(trade => { try { const s = calculateTradeStats(trade); if (!s.isClosed) return; const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty'; const curr = trade.currency || 'USD'; const lev = parseInt(trade.leverage) || 1; if (fMonth !== 'ALL' && month !== fMonth) return; if (fCur !== 'ALL' && curr !== fCur) return; if (fLev === '>1' && lev <= 1) return; if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return; filteredPnlPln += s.profPln; if(!closedByMonth[month]) closedByMonth[month] = 0; closedByMonth[month] += s.profPln; if(!closedByCurr[curr]) closedByCurr[curr] = 0; closedByCurr[curr] += s.profPln; if(!closedByLev[lev]) closedByLev[lev] = 0; closedByLev[lev] += s.profPln; } catch(e) {} }); const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML=''; Object.keys(closedByMonth).sort().reverse().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML=''; Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML=''; Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const totalEl = document.getElementById('s-cls-filtered-total'); if(totalEl) { totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN'; totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)'; } }
