@@ -1368,7 +1368,7 @@
             document.getElementById('focus-date').valueAsDate = new Date();
         }
 
-        // Nowa funkcja wywoływana po wybraniu Tickera
+        // Nowa funkcja wywoływana po wybraniu Tickera (Z uwzględnieniem filtra Mute)
         function onFocusTickerChange() {
             const selectedTicker = document.getElementById('focus-ticker-select').value;
             const formSelect = document.getElementById('focus-form-id');
@@ -1379,13 +1379,21 @@
                 return;
             }
 
-            const entries = formEntriesGlobal.filter(e => e.ticker === selectedTicker);
+            // NOWOŚĆ: Filtrujemy tylko te wpisy, które NIE SĄ wyciszone (mute != 1)
+            const entries = formEntriesGlobal.filter(e => e.ticker === selectedTicker && e.mute !== 1 && e.mute !== "1");
+            
             formSelect.innerHTML = '<option value="">Wybierz Setup...</option>';
-            entries.forEach(e => {
-                const dateAdded = e.created_at ? new Date(e.created_at).toLocaleDateString('pl-PL') : '-';
-                const entryPrice = e.entry_point ? `${parseFloat(e.entry_point).toFixed(2)}$` : 'Brak';
-                formSelect.innerHTML += `<option value="${e.entry_id}">${e.entry_id} | Wejście: ${entryPrice} (Dodano: ${dateAdded})</option>`;
-            });
+            
+            // Komunikat, gdyby wszystkie setupy dla danej spółki okazały się wyciszone
+            if (entries.length === 0) {
+                formSelect.innerHTML = '<option value="">Brak aktywnych setupów (Wyciszone)</option>';
+            } else {
+                entries.forEach(e => {
+                    const dateAdded = e.created_at ? new Date(e.created_at).toLocaleDateString('pl-PL') : '-';
+                    const entryPrice = e.entry_point ? `${parseFloat(e.entry_point).toFixed(2)}$` : 'Brak';
+                    formSelect.innerHTML += `<option value="${e.entry_id}">${e.entry_id} | Wejście: ${entryPrice} (Dodano: ${dateAdded})</option>`;
+                });
+            }
             onFocusIdChange(); 
         }
 
