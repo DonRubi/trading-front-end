@@ -741,6 +741,14 @@
         let tradeSortKey = 'buy_date', tradeSortDir = 'desc';
         let focusListSortKey = 'created_at', focusListSortDir = 'desc';
 
+        // --- GLOBALNY POMOCNIK PAGINACJI ---
+        function updatePageInfo(elementId, currentPage, maxPage, totalRows) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.innerHTML = `Strona ${currentPage} z ${maxPage} <span style="color:var(--accent); margin-left:8px; font-size:0.9em;">(Wierszy: ${totalRows})</span>`;
+            }
+        }
+
         // --- LOCAL CACHING ---
         function getCachedData(key) {
             const data = localStorage.getItem(key);
@@ -954,7 +962,7 @@
             const totalPages = Math.ceil(macroDataArray.length / macroPageSize) || 1;
             const start = (currentMacroPage - 1) * macroPageSize;
             tbody.innerHTML = macroDataArray.slice(start, start + macroPageSize).map(row => `<tr><td class="macro-val-date">${row.date || '-'}</td><td class="macro-val-currency sensitive">${row.eurpln || '-'}</td><td class="macro-val-currency sensitive">${row.usdpln || '-'}</td><td class="macro-val-vix">${row.vix || '-'}</td><td style="font-weight: 500;" class="sensitive">${row.sp500 || '-'}</td><td class="macro-val-time">${row.updated_at || '-'}</td></tr>`).join('');
-            document.getElementById('macro-page-info').innerText = `Strona ${currentMacroPage} z ${totalPages}`;
+            updatePageInfo('macro-page-info', currentMacroPage, totalPages, macroDataArray.length);
         }
 
         function changeMacroPage(dir) { 
@@ -983,7 +991,7 @@
             const start = (currentTickerPage - 1) * tickerPageSize;
             const maxPage = Math.ceil(tickerDataArray.length / tickerPageSize) || 1;
             container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `<div class="data-card"><div class="data-card-info"><h4>${item.ticker}</h4><p>${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style="display: flex; gap:5px;"><span class="price-tag sensitive">${item.price !== null ? item.price + '$' : '...'}</span><button class="btn-edit" onclick="openEditModal('ticker', '${item.ticker}')">Edytuj</button><button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button></div></div>`).join('');
-            document.getElementById('ticker-page-info').innerText = `Strona ${currentTickerPage} z ${maxPage}`;
+            updatePageInfo('ticker-page-info', currentTickerPage, maxPage, tickerDataArray.length);
         }
 
         function changeTickerPage(dir) { 
@@ -1226,7 +1234,7 @@
                     </tr>`;
                 } catch(e) { console.error("Error drawing form row", e); }
             });
-            document.getElementById('form-page-info').innerText = `Strona ${formCurrentPage} z ${maxPage}`;
+            updatePageInfo('form-page-info', formCurrentPage, maxPage, filteredFormEntries.length);
         }
 
         function changeFormPage(d) { 
@@ -1459,7 +1467,7 @@
             filteredFocusArray.slice(start, start + focusPageSize).forEach(i => {
                 tb.innerHTML += `<tr><td>#${i.id}</td><td>${new Date(i.created_at).toLocaleDateString('pl-PL')}</td><td>${i.entry_id}</td><td>${i.ticker}</td><td>${Number(i.points_total).toFixed(1)}</td><td style="color:#0ecb81;">${(i.final_ratio*100).toFixed(0)}%</td><td class="sensitive" style="color:#89b4fa;">${i.allocated_pct.toFixed(1)}%</td><td class="sensitive">${i.allocated_cash} ${i.currency}</td><td><button class="btn-edit" onclick="openEditModal('focus', ${i.id})">✎</button><button class="btn-delete" onclick="deleteFocusEntry(${i.id})">✖</button></td></tr>`;
             });
-            document.getElementById('focus-page-info').innerText = `Strona ${currentFocusPage} z ${maxPage}`;
+            updatePageInfo('focus-page-info', currentFocusPage, maxPage, filteredFocusArray.length);
         }
 
         function changeFocusPage(d) { 
@@ -1640,7 +1648,7 @@
                 } catch(e) { console.error("Render row fail", e); }
             }); 
             tb.innerHTML = htmlStr;
-            document.getElementById('focuslist-page-info').innerText = `Strona ${currentFocusListPage} z ${maxPage}`; 
+            updatePageInfo('focuslist-page-info', currentFocusListPage, maxPage, filteredFocusListEntries.length); 
         }
         
         function changeFocusListPage(d) { 
@@ -1952,8 +1960,7 @@
                 tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--text-muted);">Brak danych.</td></tr>`;
             }
 
-            const pageInfo = document.getElementById('trade-page-info');
-            if (pageInfo) pageInfo.innerText = `Strona ${currentTradePage} z ${maxPage}`;
+            updatePageInfo('trade-page-info', currentTradePage, maxPage, sortedTrades.length);
         }
 
         async function deleteTrade(id) {
@@ -2335,7 +2342,7 @@
                     <td><button onclick="deleteAlert(${item.id})" class="btn-delete" style="padding:4px 8px;">Usuń</button></td>
                 </tr>`;
             });
-            document.getElementById('alert-page-info').innerText = `Strona ${currentAlertPage} z ${maxPage}`;
+            updatePageInfo('alert-page-info', currentAlertPage, maxPage, filteredAlertsData.length);
         }
 
         function changeAlertPage(d) { 
