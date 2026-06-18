@@ -182,6 +182,10 @@
                     </div>
                     <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);"><div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div><div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div><div class="form-group"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div><div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div><div class="form-group"><label>Max Wyd.</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div></div>
                     <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Komentarz</label><input type="text" id="trade-comment" placeholder="Napisz coś o tym wejściu..." required></div>
+                        <div class="form-group"><label>Kwadrans przed zamknięciem?</label><select id="trade-last15"><option value="0" selected>Nie (0 pkt)</option><option value="1">Tak (+1 Pkt do Score)</option></select></div>
+                    </div>
                     <div class="form-row"><div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div><div class="form-group"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div></div>
                     <div class="form-row"><div class="form-group"><label>Wydano gotówki</label><input type="number" step="0.01" id="trade-spent" required></div><div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="0.01" min="1" id="trade-leverage" value="1" required></div></div>
                     <input type="hidden" id="trade-tp"><input type="hidden" id="trade-sl"><input type="hidden" id="trade-score">
@@ -204,12 +208,19 @@
                     <select id="trade-sell-date-filter" onchange="handleTradesFilter()">
                         <option value="ALL">Wszystkie Daty Zamknięcia</option>
                     </select>
+                    <select id="trade-last15-filter" onchange="handleTradesFilter()">
+                        <option value="ALL">Wszystkie (Kwadrans)</option>
+                        <option value="1">Tylko zagrania w ost. kwadransie</option>
+                        <option value="0">Poza ostatnim kwadransem</option>
+                    </select>
                 </div>
                 <div class="table-responsive">
                     <table id="journal-table">
                         <thead><tr>
                             <th onclick="handleTradeSort('buy_date')">Data/ID ↕</th>
                             <th onclick="handleTradeSort('ticker')">Spółka ↕</th>
+                            <th>Komentarz</th>
+                            <th onclick="handleTradeSort('last_15_min')">Kwadrans ↕</th>
                             <th onclick="handleTradeSort('spent')">Zainwestowano ↕</th>
                             <th onclick="handleTradeSort('buy_price')">Ceny (Wejście/Obecnie) ↕</th>
                             <th onclick="handleTradeSort('rr')">R:R | SL / TP ↕</th>
@@ -1713,7 +1724,13 @@
                 return;
             }
 
-            const entries = focusDataArray.filter(f => f.ticker === selectedTicker);
+            // Ograniczenie wyświetlania setupów do tych z ostatnich 14 dni
+            const entries = focusDataArray.filter(f => {
+                if (f.ticker !== selectedTicker) return false;
+                if (!f.created_at) return true; // Dla najstarszych wpisów bez daty
+                const diffDays = (new Date() - new Date(f.created_at)) / (1000 * 60 * 60 * 24);
+                return diffDays <= 14;
+            });
             focusSelect.innerHTML = '<option value="">Wybierz analizę...</option>';
             entries.forEach(f => {
                 const dateAdded = f.created_at ? new Date(f.created_at).toLocaleDateString('pl-PL') : '-';
@@ -1758,7 +1775,26 @@
                 document.getElementById('trade-name').value = tData && tData.stock_name ? tData.stock_name : '';
             } catch(e){} 
         }
-    async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: spent, leverage: lev, currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(true); } else alert('Błąd.'); } catch(e) { console.error(e); } }
+    async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const baseScore = parseFloat(document.getElementById('trade-score').value) || 0;
+            const last15 = parseInt(document.getElementById('trade-last15').value) || 0;
+            
+            const data = { 
+                focus_id: document.getElementById('trade-focus-id').value, 
+                form_id: document.getElementById('trade-form-id').value, 
+                ticker: document.getElementById('trade-ticker').value, 
+                direction: document.getElementById('trade-direction').value, 
+                stock_name: document.getElementById('trade-name').value, 
+                buy_date: document.getElementById('trade-buy-date').value, 
+                buy_price: document.getElementById('trade-buy-price').value, 
+                spent: spent, 
+                leverage: lev, 
+                currency: document.getElementById('trade-currency').value, 
+                focus_score: baseScore + last15, // Dodanie bonusowego punktu!
+                tp: document.getElementById('trade-tp').value, 
+                sl: document.getElementById('trade-sl').value,
+                comment: document.getElementById('trade-comment').value,
+                last_15_min: last15
+            }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(true); } else alert('Błąd.'); } catch(e) { console.error(e); } }
 
         async function fetchTradesEntries(forceFresh = false) { 
             if(!forceFresh) {
