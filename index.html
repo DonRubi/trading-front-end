@@ -212,7 +212,7 @@
                             <th onclick="handleTradeSort('ticker')">Spółka ↕</th>
                             <th onclick="handleTradeSort('spent')">Zainwestowano ↕</th>
                             <th onclick="handleTradeSort('buy_price')">Ceny (Wejście/Obecnie) ↕</th>
-                            <th onclick="handleTradeSort('rr')">R:R | Trail SL ↕</th>
+                            <th onclick="handleTradeSort('rr')">R:R | SL / TP ↕</th>
                             <th onclick="handleTradeSort('prof')">Zysk (Waluta) ↕</th>
                             <th onclick="handleTradeSort('profPln')">Zysk PLN ↕</th>
                             <th onclick="handleTradeSort('prog')" style="min-width: 150px;">Progres TP ↕</th>
@@ -483,6 +483,11 @@
     <section id="focuslist-module" class="app-module"> 
         <div class="macro-header-container"> <h3>Lista Obserwowanych (Focus List)</h3> </div> 
         <div class="table-controls"> 
+            <select id="focuslist-mute-filter" onchange="handleFocusListFilter()"> 
+                <option value="ALL">Wszystkie (Wyciszenie)</option> 
+                <option value="0" selected>Aktywne</option> 
+                <option value="1">Wyciszone</option> 
+            </select>
             <select id="focuslist-status-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Statusy</option> <option value="Skupienie">Skupienie</option> <option value="Obserwacja">Obserwacja</option> </select> 
             <select id="focuslist-currency-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Waluty</option> <option value="USD">USD</option> <option value="PLN">PLN</option> <option value="EUR">EUR</option> </select> 
         </div> 
@@ -831,7 +836,9 @@
                         <div class="form-row">
                         <div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="0.01" min="0.01" id="edit-tr-lev" value="${item.leverage || 1}"></div>
                         <div class="form-group"><label>Waluta Rozliczenia</label><select id="edit-tr-cur"><option value="USD" ${item.currency==='USD'?'selected':''}>USD</option><option value="PLN" ${item.currency==='PLN'?'selected':''}>PLN</option><option value="EUR" ${item.currency==='EUR'?'selected':''}>EUR</option></select></div>
+                        <div class="form-row">
                         <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" id="edit-tr-tp" value="${item.tp}"></div>
+                        <div class="form-group"><label>Take Profit Max</label><input type="number" step="0.01" id="edit-tr-tpmax" value="${item.tp_max || ''}" placeholder="Puste jeśli brak"></div>
                         <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" id="edit-tr-sl" value="${item.sl}"></div>
                     </div>
                 `;
@@ -894,7 +901,9 @@
                     buy_price: document.getElementById('edit-tr-buy').value, 
                     spent: document.getElementById('edit-tr-spent').value, 
                     leverage: parseFloat(document.getElementById('edit-tr-lev').value) || 1,
+                    currency: document.getElementById('edit-tr-cur').value,
                     tp: document.getElementById('edit-tr-tp').value, 
+                    tp_max: document.getElementById('edit-tr-tpmax').value || null,
                     sl: document.getElementById('edit-tr-sl').value 
                 };
 
@@ -1481,13 +1490,17 @@
         }
 
         function handleFocusListFilter() { 
+            const mFilter = document.getElementById('focuslist-mute-filter').value;
             const sFilter = document.getElementById('focuslist-status-filter').value; 
             const cFilter = document.getElementById('focuslist-currency-filter').value; 
             filteredFocusListEntries = []; 
 
-            // Pobieramy dane ZAWSZE ze świeżego formEntries (synchronizacja z Form)
             formEntries.forEach(item => { 
                 try {
+                    // Obsługa wyciszenia
+                    const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 0;
+                    if (mFilter !== 'ALL' && muteVal.toString() !== mFilter) return;
+
                     const entry = parseFloat(item.entry_point) || 0; 
                     const sl = parseFloat(item.stop_loss) || 0; 
                     const tp = parseFloat(item.take_profit) || 0; 
@@ -1504,7 +1517,6 @@
                     let status = 'Brak danych'; 
                     const isLong = (item.direction === 'DBR' || item.direction === 'RBR');
                     
-                    // Asymetryczne reguły zaciągnięte z modułu Form!
                     if (!isNaN(diff) && isFinite(diff)) {
                         let isObserwacja = false, isSkupienie = false;
                         
@@ -1521,14 +1533,14 @@
                         else status = Math.abs(diff) > 15 ? 'Ignorowanie' : 'Czekanie';
                     }
                     
-                    // FocusList pokazuje TYLKO Skupienie i Obserwację (lub to co wybrane w filtrze)
                     if (status !== 'Skupienie' && status !== 'Obserwacja') return; 
                     if (sFilter !== 'ALL' && status !== sFilter) return; 
                     
                     const currency = getCurrencyForFrontend(item.ticker); 
                     if (cFilter !== 'ALL' && currency !== cFilter) return; 
                     
-                    filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: diff, calcRR: rr }); 
+                    // ZMIANA: calcDiff przechowuje wartość bezwzględną dla sortowania, a originalDiff zachowuje kierunek
+                    filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: Math.abs(diff), originalDiff: diff, calcRR: rr }); 
                 } catch(err) { console.error("Filter row skip", err); }
             }); 
             
@@ -1568,11 +1580,12 @@
                     const entry = parseFloat(item.entry_point) || 0; 
                     
                     let statusColor = item.calcStatus === 'Skupienie' ? '#0ecb81' : '#848e9c'; 
-                    let diffColor = item.calcDiff >= 0 ? '#0ecb81' : '#f6465d';
+                    let diffColor = item.originalDiff >= 0 ? '#0ecb81' : '#f6465d';
                     
                     let diffStr = '-';
                     if(!isNaN(item.calcDiff) && isFinite(item.calcDiff)) {
-                        diffStr = (item.calcDiff > 0 ? '+' : '') + item.calcDiff.toFixed(2) + '%';
+                        // Wyświetlamy już tylko cyfrę bez znaku minus (kierunek określa kolor)
+                        diffStr = item.calcDiff.toFixed(2) + '%';
                     }
                     let rrStr = (!isNaN(item.calcRR) && isFinite(item.calcRR)) ? item.calcRR.toFixed(2) : '-';
                     
@@ -1852,14 +1865,18 @@
                 const usedFx = s.usedFx || 1;
                 const rr = s.rr || 0;
                 const dsl = s.dsl || 0;
+                const tp = parseFloat(item.tp) || 0;
+                const tpMax = parseFloat(item.tp_max);
                 const prof = s.prof || 0;
                 const profPln = s.profPln || 0;
                 const cp = s.cp || 0;
                 const pd = s.pd || 0;
                 const pc = s.pc || 'gray';
 
+                // Formatyzacja: jeśli jest TP Max, przekreślamy stare TP i wyświetlamy na złoto nowe
+                let tpStr = isNaN(tpMax) ? `TP: ${tp.toFixed(2)}$` : `TP: <strike>${tp.toFixed(2)}$</strike> <b style="color:var(--accent);">${tpMax.toFixed(2)}$</b>`;
+
                 const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span> <button class="btn-edit" onclick="reopenTrade(${item.id})" style="padding: 2px 6px; margin-left: 5px; border-color: var(--text-muted); color: var(--text-muted);" title="Cofnij zamknięcie">⟲</button>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
-                
                 const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage || 1})" title="Kliknij, aby zmienić dźwignię">x${item.leverage || 1}</span>`;
 
                 tb.innerHTML += `<tr>
@@ -1870,7 +1887,7 @@
                         <span style="color:#cdd6f4; font-weight:bold;">${spentPln.toFixed(2)} PLN</span> <small style="color:var(--text-muted);">(FX: ${usedFx.toFixed(2)})</small>
                     </td>
                     <td class="sensitive">WE: ${item.buy_price || 0}$<br>TR: <b>${cp}$</b></td>
-                    <td class="sensitive"><b>${rr.toFixed(1)}</b><br><span style="color:#fcd535;">SL: ${dsl.toFixed(2)}$</span></td>
+                    <td class="sensitive"><b>${rr.toFixed(1)}</b><br><span style="color:#fcd535;">SL: ${dsl.toFixed(2)}$</span><br><span style="color:var(--success); font-size:0.9em;">${tpStr}</span></td>
                     <td class="sensitive" style="color:${prof>=0?'#0ecb81':'#f6465d'};"><b>${prof.toFixed(2)} ${item.currency || 'USD'}</b></td>
                     <td class="sensitive" style="color:${profPln>=0?'#0ecb81':'#f6465d'};"><b>${profPln.toFixed(2)} PLN</b></td>
                     <td><div style="background:var(--bg-input); height:8px; border-radius:4px;"><div style="width:${pd}%; background:${pc}; height:100%;"></div></div></td>
