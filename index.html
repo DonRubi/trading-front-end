@@ -453,7 +453,8 @@
                 </div>
             </div>
             <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🔔 Wymuś sprawdzenie alertów</button> 
-            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen</button> 
+            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen</button>
+            <button onclick="fixTickerNames()" style="background-color: #a6e3a1; color: #000; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; margin-top: 5px;">🏢 Pobierz nazwy spółek z Yahoo (Baza)</button>
             
             <button onclick="fixHistoricalFxRates()" style="background-color: var(--accent); color: #000; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🛠️ Nadpisz kursy '4.0' w Supabase</button>
             <button onclick="forceCurrencyUpdate()" style="background-color: var(--accent); color: #000; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; margin-top: 5px;">🔄 Przelicz i napraw waluty wg Giełd (Baza)</button>
@@ -2532,6 +2533,29 @@
                     out.innerHTML = `❌ Błąd z serwera: ${data.message}`;
                 }
             } catch(e) {
+                out.innerHTML = `❌ Błąd połączenia z serwerem.`;
+            }
+        }
+
+        async function fixTickerNames() {
+            const out = document.getElementById('service-output');
+            out.style.display = 'block';
+            out.innerHTML = '⏳ Trwa łączenie z Yahoo i nadpisywanie bazy... To może potrwać od kilku do kilkunastu sekund.';
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/service/fix-names`, { method: 'POST' });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    out.innerHTML = `✅ <strong>Sukces!</strong> ${data.message}`;
+                    
+                    // Wymuszenie odświeżenia bazy i tabel, aby nazwy od razu się pojawiły!
+                    await loadDatabase(); 
+                    fetchFormEntries(true); 
+                } else {
+                    out.innerHTML = `❌ Błąd z serwera: ${data.message}`;
+                }
+            } catch (e) {
                 out.innerHTML = `❌ Błąd połączenia z serwerem.`;
             }
         }
