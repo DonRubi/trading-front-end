@@ -2554,23 +2554,32 @@
         async function fixTickerNames() {
             const out = document.getElementById('service-output');
             out.style.display = 'block';
-            out.innerHTML = '⏳ Trwa łączenie z Yahoo i nadpisywanie bazy... To może potrwać od kilku do kilkunastu sekund.';
+            out.innerHTML = '⏳ Łączenie z Yahoo (Przetwarzanie w bezpiecznych, małych paczkach)...';
             
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/service/fix-names`, { method: 'POST' });
-                const data = await res.json();
-                
-                if(res.ok) {
-                    out.innerHTML = `✅ <strong>Sukces!</strong> ${data.message}`;
+            let keepRunning = true;
+            
+            while(keepRunning) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/service/fix-names`, { method: 'POST' });
+                    const data = await res.json();
                     
-                    // Wymuszenie odświeżenia bazy i tabel, aby nazwy od razu się pojawiły!
-                    await loadDatabase(); 
-                    fetchFormEntries(true); 
-                } else {
-                    out.innerHTML = `❌ Błąd z serwera: ${data.message}`;
+                    if(res.ok) {
+                        if(data.remaining > 0) {
+                            out.innerHTML = `⏳ <strong>W toku...</strong> ${data.message}`;
+                        } else {
+                            out.innerHTML = `✅ <strong>Sukces!</strong> Wszystkie spółki w bazie mają już przypisane nazwy.`;
+                            keepRunning = false;
+                            await loadDatabase(); 
+                            fetchFormEntries(true);
+                        }
+                    } else {
+                        out.innerHTML = `❌ Błąd z serwera: ${data.message}`;
+                        keepRunning = false;
+                    }
+                } catch (e) {
+                    out.innerHTML = `❌ Błąd połączenia z serwerem. Zatrzymano proces.`;
+                    keepRunning = false;
                 }
-            } catch (e) {
-                out.innerHTML = `❌ Błąd połączenia z serwerem.`;
             }
         }
     
