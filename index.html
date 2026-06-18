@@ -1103,9 +1103,13 @@
                 return { ...item, diff: rawDiff, rr: rr, score: score, calculatedStatus: calcStatus };
             });
 
-            // 2. FILTROWANIE: Uwzględnienie Mute, Tekstu ORAZ Statusu
+            // 2. FILTROWANIE: Uwzględnienie Mute, Tekstu (Ticker + Nazwa) ORAZ Statusu
             filteredFormEntries = mappedEntries.filter(entry => {
-                const textMatch = (entry.ticker || '').toLowerCase().includes(formFilterText);
+                const tData = tickerDataArray.find(t => t.ticker === entry.ticker);
+                const stockName = tData && tData.stock_name ? tData.stock_name.toLowerCase() : '';
+                const tickerLower = (entry.ticker || '').toLowerCase();
+                
+                const textMatch = tickerLower.includes(formFilterText) || stockName.includes(formFilterText);
                 const muteMatch = muteFilter === 'ALL' ? true : (entry.mute.toString() === muteFilter);
                 const statusMatch = statusFilter === 'ALL' ? true : (entry.calculatedStatus === statusFilter);
                 
@@ -1189,10 +1193,15 @@
                     // Obliczanie Score (Zliczanie ilości powodów)
                     const reasonsCount = Array.isArray(item.reasons) ? item.reasons.length : 0;
                     
+                    // Przypisanie nazwy spółki do wyświetlenia pod tickerem
+                    const tData = tickerDataArray.find(t => t.ticker === item.ticker);
+                    const stockName = tData && tData.stock_name ? tData.stock_name : '';
+                    const stockNameHtml = stockName ? `<br><small style="color:var(--text-muted);">${stockName}</small>` : '';
+
                     tbody.innerHTML += `<tr>
                         <td style="font-weight:bold;">${item.entry_id}</td>
                         <td style="color:var(--text-muted);">${dateFormatted}</td>
-                        <td><strong style="color:var(--accent);">${item.ticker}</strong></td>
+                        <td><strong style="color:var(--accent);">${item.ticker}</strong>${stockNameHtml}</td>
                         <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
                         <td class="sensitive" style="font-weight: 600;">WE: ${entry.toFixed(2)}$</td>
                         <td>${pb}</td><td>${mb}</td>
