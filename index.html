@@ -523,20 +523,33 @@
     <section id="alerthistory-module" class="app-module"> 
         <div class="macro-header-container"> <h3>Historia Wywołanych Alertów</h3> </div> 
         <div class="table-controls"> 
-            <input type="text" id="alert-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleAlertsFilter()"> 
+            <input type="text" id="alert-search" placeholder="🔍 Filtruj po tickerze lub nazwie..." oninput="handleAlertsFilter()"> 
             <select id="alert-type-filter" onchange="handleAlertsFilter()"> 
                 <option value="ALL">Wszystkie typy</option> 
                 <option value="Wejście">Punkt wejścia</option> 
                 <option value="Take Profit">Take Profit</option> 
                 <option value="Stop Loss">Stop Loss</option> 
             </select> 
+            <select id="alert-important-filter" onchange="handleAlertsFilter()">
+                <option value="ALL">Ważność (Wszystkie)</option>
+                <option value="1">⭐ Ważne</option>
+                <option value="0">Nieważne</option>
+            </select>
+            <select id="alert-date-filter" onchange="handleAlertsFilter()">
+                <option value="ALL">Wszystkie daty</option>
+                <option value="TODAY">Dzisiaj</option>
+                <option value="YESTERDAY">Wczoraj (Robocze)</option>
+                <option value="THIS_WEEK">Ten tydzień</option>
+                <option value="LAST_WEEK">Ubiegły tydzień</option>
+                <optgroup id="alert-month-group" label="Archiwum (Miesiące)"></optgroup>
+            </select>
         </div> 
         <div class="table-responsive"> 
             <table class="macro-custom-table" style="width:100%;"> 
-                <thead> <tr> <th>Data Wywołania</th> <th>Typ Alertu</th> <th>Ticker</th> <th>Priorytet</th> <th>Warunek</th> <th>Cena Docelowa</th> <th>Ekstrema Dnia (L/H)</th> <th>Wynik (Score)</th> <th>Wykres TV</th> <th>Akcje</th> </tr> </thead> 
-                <tbody id="alert-history-tbody"> <tr><td colspan="10" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td></tr> </tbody> 
+                <thead> <tr> <th style="width: 50px;">Ważne</th> <th>Data Wywołania</th> <th>Typ Alertu</th> <th>Ticker / Spółka</th> <th>Priorytet</th> <th>Warunek</th> <th>Cena Docelowa</th> <th>Ekstrema Dnia (L/H)</th> <th>Wynik (Score)</th> <th>Wykres TV</th> <th>Akcje</th> </tr> </thead> 
+                <tbody id="alert-history-tbody"> <tr><td colspan="11" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td></tr> </tbody> 
             </table> 
-        </div> 
+        </div>
         <div class="pagination-container"> <button onclick="changeAlertPage(-1)" id="alert-prev-page" class="btn-pag">◀ Poprzednia</button> <div style="display:flex; align-items:center; gap:10px;"><span id="alert-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('alerts', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div> <button onclick="changeAlertPage(1)" id="alert-next-page" class="btn-pag">Następna ▶</button> </div> 
     </section>
 
@@ -2153,39 +2166,125 @@
         // --- ALERTY ---
         async function loadAlertHistory() { 
             try { 
-                // Pobieramy wpisy Form, aby móc sparować powody z wynikiem np. 3/5
                 if(formEntries.length === 0) { 
                     try { 
                         const resF = await fetch(`${API_BASE_URL}/api/form/entries`); 
                         formEntries = await resF.json() || []; 
                     } catch(e){} 
                 }
+                // Potrzebujemy tickerDataArray do nazw spółek
+                if(tickerDataArray.length === 0) await loadDatabase();
+
                 const r = await fetch(`${API_BASE_URL}/api/alerts/history`); 
                 allAlertsData = await r.json(); 
+                
+                populateAlertDateFilter(); // Dynamiczne generowanie listy miesięcy
                 handleAlertsFilter(); 
             } catch(e){} 
         }
+
+        function populateAlertDateFilter() {
+            const monthGroup = document.getElementById('alert-month-group');
+            if (!monthGroup) return;
+            const months = new Set();
+            allAlertsData.forEach(a => { if (a.triggered_at) months.add(a.triggered_at.substring(0, 7)); });
+            monthGroup.innerHTML = '';
+            Array.from(months).sort().reverse().forEach(m => { monthGroup.innerHTML += `<option value="${m}">${m}</option>`; });
+        }
+
+        async function toggleAlertImportant(id, checkbox) {
+            try {
+                await fetch(`${API_BASE_URL}/api/alerts/history/important`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({id: id, is_important: checkbox.checked})
+                });
+                // Zmiana w pamięci by nie musieć przeładowywać całej bazy
+                const item = allAlertsData.find(a => a.id === id);
+                if (item) item.important_since = checkbox.checked ? new Date().toISOString() : null;
+                handleAlertsFilter(); 
+            } catch(e) {
+                checkbox.checked = !checkbox.checked; // Cofa zmianę przy błędzie
+                alert("Błąd połączenia z serwerem.");
+            }
+        }
+
         function handleAlertsFilter() {
             const searchText = (document.getElementById('alert-search').value || '').toLowerCase();
             const typeFilter = document.getElementById('alert-type-filter').value || 'ALL';
+            const impFilter = document.getElementById('alert-important-filter').value || 'ALL';
+            const dateFilter = document.getElementById('alert-date-filter').value || 'ALL';
+
+            // --- Logika Dat ---
+            const now = new Date(); now.setHours(0,0,0,0);
+            
+            // Logika: Wczoraj (Robocze) - omijanie weekendów!
+            let yesterday = new Date(now);
+            if (now.getDay() === 1) yesterday.setDate(now.getDate() - 3); // Jeśli poniedziałek -> zrób Piątek
+            else if (now.getDay() === 0) yesterday.setDate(now.getDate() - 2); // Jeśli niedziela -> zrób Piątek
+            else yesterday.setDate(now.getDate() - 1); // Standardowo 1 dzień wstecz
+
+            // Logika: Tygodnie
+            function getMonday(d) {
+                let m = new Date(d); let day = m.getDay();
+                let diff = m.getDate() - day + (day === 0 ? -6 : 1);
+                m.setDate(diff); m.setHours(0,0,0,0); return m;
+            }
+            let thisMonday = getMonday(new Date());
+            let lastMonday = new Date(thisMonday); lastMonday.setDate(lastMonday.getDate() - 7);
+            let lastSunday = new Date(thisMonday); lastSunday.setDate(lastSunday.getDate() - 1); lastSunday.setHours(23,59,59,999);
+            // ------------------
+
             filteredAlertsData = allAlertsData.filter(a => {
-                const textMatch = (a.ticker || '').toLowerCase().includes(searchText);
+                // 1. Nazwa + Ticker
+                const tData = tickerDataArray.find(t => t.ticker === a.ticker);
+                const sName = tData && tData.stock_name ? tData.stock_name.toLowerCase() : '';
+                const textMatch = (a.ticker || '').toLowerCase().includes(searchText) || sName.includes(searchText);
+                
+                // 2. Typ
                 const aType = a.alert_type || 'Punkt wejścia'; 
-                let typeMatch = false;
-                if (typeFilter === 'ALL') { typeMatch = true; } 
-                else if (typeFilter === 'Wejście') { typeMatch = (aType === 'Wejście' || aType === 'Punkt wejścia'); } 
-                else { typeMatch = (aType === typeFilter); }
-                return textMatch && typeMatch;
+                let typeMatch = (typeFilter === 'ALL') || (aType === typeFilter) || (typeFilter === 'Wejście' && aType === 'Punkt wejścia');
+                
+                // 3. Ważne (Wygasa po 7 dniach!)
+                let isImp = false;
+                if (a.important_since) {
+                    const diffDays = (new Date() - new Date(a.important_since)) / (1000 * 60 * 60 * 24);
+                    if (diffDays <= 7) isImp = true;
+                }
+                let impMatch = (impFilter === 'ALL') || (impFilter === '1' && isImp) || (impFilter === '0' && !isImp);
+
+                // 4. Data
+                let dateMatch = true;
+                if (dateFilter !== 'ALL') {
+                    if (!a.triggered_at) dateMatch = false;
+                    else {
+                        const trDate = new Date(a.triggered_at);
+                        const trDateOnly = new Date(trDate); trDateOnly.setHours(0,0,0,0);
+                        
+                        if (dateFilter === 'TODAY') dateMatch = (trDateOnly.getTime() === now.getTime());
+                        else if (dateFilter === 'YESTERDAY') dateMatch = (trDateOnly.getTime() === yesterday.getTime());
+                        else if (dateFilter === 'THIS_WEEK') dateMatch = (trDate >= thisMonday);
+                        else if (dateFilter === 'LAST_WEEK') dateMatch = (trDate >= lastMonday && trDate <= lastSunday);
+                        else dateMatch = a.triggered_at.startsWith(dateFilter); // Filtrowanie YYYY-MM
+                    }
+                }
+
+                return textMatch && typeMatch && impMatch && dateMatch;
             });
             currentAlertPage = 1; 
             renderAlertsTable();
         }
+
         function renderAlertsTable() {
             const tbody = document.getElementById("alert-history-tbody"); 
             tbody.innerHTML = '';
             
             const start = (currentAlertPage-1)*alertPageSize;
             const maxPage = Math.ceil(filteredAlertsData.length / alertPageSize) || 1;
+
+            if (filteredAlertsData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 20px; color: #777;">Brak wyników dla podanych filtrów.</td></tr>`;
+            }
 
             filteredAlertsData.slice(start, start+alertPageSize).forEach(item => {
                 let aType = item.alert_type || 'Punkt wejścia'; 
@@ -2194,30 +2293,39 @@
                 let typeColor = '#89b4fa'; 
                 if(aType === 'Take Profit') typeColor = '#0ecb81'; 
                 if(aType === 'Stop Loss') typeColor = '#f6465d';
+
+                // --- Generowanie Nazwy Spółki ---
+                const tData = tickerDataArray.find(t => t.ticker === item.ticker);
+                const stockName = tData && tData.stock_name ? tData.stock_name : '';
+                const stockNameHtml = stockName ? `<br><small style="color:var(--text-muted);">${stockName}</small>` : '';
                 
-                // Generowanie danych dla nowych kolumn
+                // --- Obsługa checkboxa (Wygasa po 7 dniach) ---
+                let isImp = false;
+                if (item.important_since) {
+                    const diffDays = (new Date() - new Date(item.important_since)) / (1000 * 60 * 60 * 24);
+                    if (diffDays <= 7) isImp = true;
+                }
+                const checkedAttr = isImp ? 'checked' : '';
+                
                 const prioText = item.priority === 1 ? '<span style="color:#fcd535;">Wysoki</span>' : '<span style="color:var(--text-muted);">Normalny</span>';
                 const condText = item.condition || '-';
                 
-                // --- Wyszukiwanie powodów z formularza dla alertów wejścia ---
+                // --- Wyszukiwanie powodów z formularza ---
                 let reasonsHtml = '';
                 if (aType === 'Punkt wejścia' && item.score > 0) {
-                    // Szukamy pary: ten sam ticker oraz cel pokrywający się z wejściem (tolerancja błędu 0.01 dla ułamków)
                     const matchedForm = formEntries.find(f => f.ticker === item.ticker && Math.abs(parseFloat(f.entry_point || 0) - parseFloat(item.target_price || 0)) < 0.01);
-                    
                     if (matchedForm && Array.isArray(matchedForm.reasons) && matchedForm.reasons.length > 0) {
                         reasonsHtml = `<br><div style="font-size:0.8em; color:var(--text-muted); font-weight:normal; margin-top:4px; text-align:left; line-height: 1.3;">- ` + matchedForm.reasons.join('<br>- ') + `</div>`;
                     }
                 }
                 const scoreText = item.score !== undefined ? `${item.score}/5${reasonsHtml}` : '-';
-                // --------------------------------------------------------------
-                
                 const tvLink = getTradingViewLink(item.ticker);
 
                 tbody.innerHTML += `<tr>
-                    <td>${new Date(item.triggered_at).toLocaleDateString('pl-PL')}</td>
+                    <td><input type="checkbox" onchange="toggleAlertImportant(${item.id}, this)" ${checkedAttr} style="transform: scale(1.3); cursor: pointer; accent-color: var(--accent);"></td>
+                    <td>${new Date(item.triggered_at).toLocaleDateString('pl-PL')}<br><small style="color:var(--text-muted);">${new Date(item.triggered_at).toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'})}</small></td>
                     <td style="color:${typeColor}; font-weight:bold;">${aType}</td>
-                    <td style="color:var(--accent); font-weight:bold;">${item.ticker}</td>
+                    <td><strong style="color:var(--accent);">${item.ticker}</strong>${stockNameHtml}</td>
                     <td>${prioText}</td>
                     <td style="font-weight:bold;">${condText}</td>
                     <td class="sensitive">${Number(item.target_price).toFixed(2)} $</td>
