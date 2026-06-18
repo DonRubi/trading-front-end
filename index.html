@@ -190,7 +190,7 @@
             </div>
             <div class="journal-main">
                 <div class="table-controls">
-                    <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze..." oninput="handleTradesFilter()">
+                    <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze lub nazwie..." oninput="handleTradesFilter()">
                     <select id="trade-status-filter" onchange="handleTradesFilter()"><option value="ALL">Wszystkie Statusy</option><option value="OPEN" selected>Otwarte</option><option value="CLOSED">Zamknięte</option></select>
                     <select id="trade-cur-filter" onchange="handleTradesFilter()">
                         <option value="ALL">Wszystkie Waluty</option>
@@ -1719,9 +1719,9 @@
                     document.getElementById('trade-tp').value = form.take_profit; 
                     document.getElementById('trade-sl').value = form.stop_loss; 
                 } 
-                document.getElementById('trade-name').value = 'Wyszukiwanie...'; 
-                const n = await (await fetch(`${API_BASE_URL}/api/utils/company-name?ticker=${focus.ticker}`)).json(); 
-                document.getElementById('trade-name').value = n.name || ''; 
+                // Ujednolicenie: Pobieramy nazwę natychmiast z naszej globalnej bazy Tickerów
+                const tData = tickerDataArray.find(t => t.ticker === focus.ticker);
+                document.getElementById('trade-name').value = tData && tData.stock_name ? tData.stock_name : '';
             } catch(e){} 
         }
     async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const data = { focus_id: document.getElementById('trade-focus-id').value, form_id: document.getElementById('trade-form-id').value, ticker: document.getElementById('trade-ticker').value, direction: document.getElementById('trade-direction').value, stock_name: document.getElementById('trade-name').value, buy_date: document.getElementById('trade-buy-date').value, buy_price: document.getElementById('trade-buy-price').value, spent: spent, leverage: lev, currency: document.getElementById('trade-currency').value, focus_score: document.getElementById('trade-score').value, tp: document.getElementById('trade-tp').value, sl: document.getElementById('trade-sl').value }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(true); } else alert('Błąd.'); } catch(e) { console.error(e); } }
@@ -1809,7 +1809,13 @@
             }
 
             filteredTradesData = allTradesData.filter(t => {
-                const textMatch = ((t.ticker || '').toLowerCase().includes(s)) || ((t.stock_name || '').toLowerCase().includes(s));
+                // Ujednolicenie: Jeśli brakuje nazwy w transakcji, bierzemy z bazy
+                let sName = t.stock_name || '';
+                if (!sName) {
+                    const tData = tickerDataArray.find(x => x.ticker === t.ticker);
+                    sName = tData && tData.stock_name ? tData.stock_name : '';
+                }
+                const textMatch = ((t.ticker || '').toLowerCase().includes(s)) || (sName.toLowerCase().includes(s));
                 const statMatch = (stat === 'ALL') || (t.status === stat);
                 const curMatch = (cur === 'ALL') || (t.currency === cur);
                 
@@ -1889,9 +1895,17 @@
                 const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span> <button class="btn-edit" onclick="reopenTrade(${item.id})" style="padding: 2px 6px; margin-left: 5px; border-color: var(--text-muted); color: var(--text-muted);" title="Cofnij zamknięcie">⟲</button>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
                 const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage || 1})" title="Kliknij, aby zmienić dźwignię">x${item.leverage || 1}</span>`;
 
+                // Ujednolicenie: dynamiczna nazwa spółki
+                let sName = item.stock_name || '';
+                if (!sName) {
+                    const tData = tickerDataArray.find(t => t.ticker === item.ticker);
+                    sName = tData && tData.stock_name ? tData.stock_name : '';
+                }
+                const nameHtml = sName ? `<br><small style="color:var(--text-muted);">${sName}</small>` : '';
+
                 tb.innerHTML += `<tr>
                     <td>${item.buy_date || '-'}<br><small>#${item.id}</small></td>
-                    <td><strong style="color:var(--accent);">${item.ticker || '-'}</strong><br><small>${item.stock_name || ''}</small></td>
+                    <td><strong style="color:var(--accent);">${item.ticker || '-'}</strong>${nameHtml}</td>
                     <td class="sensitive">
                         ${spent.toFixed(2)} ${item.currency || 'USD'} <small>(${levHtml})</small><br>
                         <span style="color:#cdd6f4; font-weight:bold;">${spentPln.toFixed(2)} PLN</span> <small style="color:var(--text-muted);">(FX: ${usedFx.toFixed(2)})</small>
