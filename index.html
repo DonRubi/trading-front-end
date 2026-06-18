@@ -867,6 +867,10 @@
                 
                 let html = `
                     <div class="form-row">
+                        <div class="form-group"><label>Komentarz</label><input type="text" id="edit-tr-comment" value="${item.comment || ''}" required></div>
+                        <div class="form-group"><label>Ostatni Kwadrans?</label><select id="edit-tr-last15"><option value="0" ${item.last_15_min==0?'selected':''}>Nie</option><option value="1" ${item.last_15_min==1?'selected':''}>Tak (+1 pkt)</option></select></div>
+                    </div>
+                    <div class="form-row">
                         <div class="form-group"><label>Cena Zakupu</label><input type="number" step="0.0001" id="edit-tr-buy" value="${item.buy_price}"></div>
                         <div class="form-group"><label>Wydano Gotówki</label><input type="number" step="0.01" id="edit-tr-spent" value="${item.spent}"></div>
                     </div>
@@ -934,8 +938,18 @@
                 payload = { id: currentEditId, allocated_pct: document.getElementById('edit-fo-pct').value, allocated_cash: document.getElementById('edit-fo-cash').value };
             } else if (currentEditContext === 'trade') {
                 endpoint = '/api/trades/edit';
+                
+                // Automatyczne korygowanie Score jeśli zmieniłeś opcję kwadransa na włączoną lub wyłączoną!
+                const item = allTradesData.find(x => x.id === currentEditId);
+                const oldLast15 = item.last_15_min || 0;
+                const newLast15 = parseInt(document.getElementById('edit-tr-last15').value) || 0;
+                const newScore = (parseFloat(item.focus_score) || 0) - oldLast15 + newLast15;
+
                 payload = { 
                     id: currentEditId, 
+                    comment: document.getElementById('edit-tr-comment').value,
+                    last_15_min: newLast15,
+                    focus_score: newScore, // Bezpiecznie aktualizowany Score w bazie
                     buy_price: document.getElementById('edit-tr-buy').value, 
                     spent: document.getElementById('edit-tr-spent').value, 
                     leverage: parseFloat(document.getElementById('edit-tr-lev').value) || 1,
@@ -1893,7 +1907,12 @@
                 const buyMatch = checkDate(t.buy_date, buyDateF);
                 const sellMatch = checkDate((t.status === 'CLOSED' ? t.sell_date : null), sellDateF);
 
-                return textMatch && statMatch && curMatch && buyMatch && sellMatch;
+                // NOWOŚĆ: Filtr ostatniego kwadransa
+                const l15F = document.getElementById('trade-last15-filter') ? document.getElementById('trade-last15-filter').value : 'ALL';
+                const l15Val = t.last_15_min ? t.last_15_min.toString() : '0';
+                const l15Match = (l15F === 'ALL') || (l15Val === l15F);
+
+                return textMatch && statMatch && curMatch && buyMatch && sellMatch && l15Match;
             });
             
             currentTradePage = 1;
@@ -1918,6 +1937,8 @@
                 else if(tradeSortKey === 'prof') { va = a.stats.prof; vb = b.stats.prof; }
                 else if(tradeSortKey === 'profPln') { va = a.stats.profPln; vb = b.stats.profPln; }
                 else if(tradeSortKey === 'prog') { va = a.stats.prog; vb = b.stats.prog; }
+                // NOWOŚĆ: Logika sortowania dla nowej kolumny "Kwadrans"
+                else if(tradeSortKey === 'last_15_min') { va = a.last_15_min || 0; vb = b.last_15_min || 0; }
                 
                 if(typeof va === 'string') { return tradeSortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
                 return tradeSortDir==='asc' ? va-vb : vb-va;
@@ -1973,9 +1994,15 @@
                 }
                 const nameHtml = sName ? `<br><small style="color:var(--text-muted);">${sName}</small>` : '';
 
+                // NOWOŚĆ: Generowanie HTML dla Komentarza i Ostatniego Kwadransa
+                const commentStr = item.comment ? item.comment : '-';
+                const last15Str = (item.last_15_min == 1) ? '<span style="color:#0ecb81; font-weight:bold;">TAK</span>' : '<span style="color:var(--text-muted);">NIE</span>';
+
                 tb.innerHTML += `<tr>
                     <td>${item.buy_date || '-'}<br><small>#${item.id}</small></td>
                     <td><strong style="color:var(--accent);">${item.ticker || '-'}</strong>${nameHtml}</td>
+                    <td style="max-width:150px; white-space:normal; font-size:0.85em; color:var(--text-main); line-height:1.3;">${commentStr}</td>
+                    <td style="text-align:center;">${last15Str}</td>
                     <td class="sensitive">
                         ${spent.toFixed(2)} ${item.currency || 'USD'} <small>(${levHtml})</small><br>
                         <span style="color:#cdd6f4; font-weight:bold;">${spentPln.toFixed(2)} PLN</span> <small style="color:var(--text-muted);">(FX: ${usedFx.toFixed(2)})</small>
@@ -1998,15 +2025,17 @@
                 }).join('<br>');
                 let avgProgStr = totalValidProgCount > 0 ? ((totalProg / totalValidProgCount) * 100).toFixed(1) + '%' : '-';
 
+                // ZMIANA: colspan zmieniony z 5 na 7 z powodu dodania 2 nowych kolumn
                 tb.innerHTML += `<tr style="background-color: rgba(255,255,255,0.05); border-top: 2px solid #555;">
-                    <td colspan="5" style="text-align:right; font-weight:bold; color:var(--text-main);">Suma dla wybranego filtru:</td>
+                    <td colspan="7" style="text-align:right; font-weight:bold; color:var(--text-main);">Suma dla wybranego filtru:</td>
                     <td class="sensitive" style="font-weight:bold; line-height: 1.4;">${profWalutaStr || '-'}</td>
                     <td class="sensitive" style="font-weight:bold; color:${totalProfPln>=0?'var(--success)':'var(--danger)'};">${totalProfPln.toFixed(2)} PLN</td>
                     <td class="sensitive" style="font-weight:bold; text-align:center;">Śr. Progres: <br><span style="color:var(--accent); font-size:1.1em;">${avgProgStr}</span></td>
                     <td></td>
                 </tr>`;
             } else {
-                tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--text-muted);">Brak danych.</td></tr>`;
+                // ZMIANA: colspan zmieniony na 11 dla pustej tabeli
+                tb.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:20px; color:var(--text-muted);">Brak danych.</td></tr>`;
             }
 
             updatePageInfo('trade-page-info', currentTradePage, maxPage, sortedTrades.length, tradePageSize);
