@@ -1965,7 +1965,6 @@
                 else if(tradeSortKey === 'prof') { va = a.stats.prof; vb = b.stats.prof; }
                 else if(tradeSortKey === 'profPln') { va = a.stats.profPln; vb = b.stats.profPln; }
                 else if(tradeSortKey === 'prog') { va = a.stats.prog; vb = b.stats.prog; }
-                // NOWOŚĆ: Logika sortowania dla wyniku Focus i Kwadransa
                 else if(tradeSortKey === 'focus_score') { va = parseFloat(a.focus_score) || 0; vb = parseFloat(b.focus_score) || 0; }
                 else if(tradeSortKey === 'last_15_min') { va = a.last_15_min || 0; vb = b.last_15_min || 0; }
                 
@@ -1973,7 +1972,6 @@
                 return tradeSortDir==='asc' ? va-vb : vb-va;
             });
 
-            // Zmienne do stopki z Sumą
             let totalProfWaluta = {};
             let totalProfPln = 0;
             let totalSpentWaluta = {}; 
@@ -2029,8 +2027,17 @@
 
                 const commentStr = item.comment ? item.comment : '-';
                 
-                // NOWOŚĆ: Połączony wyświetlacz Wyniku Focus i Kwadransa
-                const focusScoreStr = (item.focus_score !== null && item.focus_score !== undefined) ? `<span style="color:#a6e3a1; font-weight:bold; font-size:1.1em;">⭐ ${Number(item.focus_score).toFixed(1)}</span>` : '-';
+                // NOWOŚĆ: Logika progów i kolorów dla ostatecznego wyniku Focus
+                let fScore = parseFloat(item.focus_score) || 0;
+                let scoreColor = '#f6465d'; // Czerwony (< 15)
+                
+                if (fScore >= 20) {
+                    scoreColor = '#58a6ff'; // Niebieski (>= 20)
+                } else if (fScore >= 15) {
+                    scoreColor = '#0ecb81'; // Zielony (15 - 19.99)
+                }
+
+                const focusScoreStr = (item.focus_score !== null && item.focus_score !== undefined) ? `<span style="color:${scoreColor}; font-weight:bold; font-size:1.1em;">⭐ ${fScore.toFixed(1)}</span>` : '-';
                 const last15Str = (item.last_15_min == 1) ? '<span style="color:#0ecb81; font-weight:bold;">TAK</span>' : '<span style="color:var(--text-muted);">NIE</span>';
 
                 tb.innerHTML += `<tr>
