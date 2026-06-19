@@ -2001,7 +2001,11 @@
                 tb.innerHTML += `<tr>
                     <td>${item.buy_date || '-'}<br><small>#${item.id}</small></td>
                     <td><strong style="color:var(--accent);">${item.ticker || '-'}</strong>${nameHtml}</td>
-                    <td style="max-width:150px; white-space:normal; font-size:0.85em; color:var(--text-main); line-height:1.3;">${commentStr}</td>
+                    <td style="max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.85em; color:var(--text-main); cursor:pointer; transition:0.2s;" 
+                        onclick="this.style.whiteSpace = this.style.whiteSpace === 'normal' ? 'nowrap' : 'normal'; this.style.color = this.style.whiteSpace === 'normal' ? 'var(--accent)' : 'var(--text-main)';" 
+                        title="Kliknij, aby rozwinąć/zwinąć">
+                        ${commentStr}
+                    </td>
                     <td style="text-align:center;">${last15Str}</td>
                     <td class="sensitive">
                         ${spent.toFixed(2)} ${item.currency || 'USD'} <small>(${levHtml})</small><br>
