@@ -1623,7 +1623,10 @@
                 let items = grouped[ticker];
                 let entries = items.map(i => parseFloat(i.entry_point) || 0);
                 let diffs = items.map(i => i.originalDiff || 0);
+                // Pobieramy wartości bezwzględne (Math.abs), żeby znaleźć to najbliżej zera
+                let absDiffs = items.map(i => i.calcDiff !== undefined ? i.calcDiff : Math.abs(i.originalDiff || 0)); 
                 let rrs = items.map(i => i.calcRR || 0);
+                
                 return {
                     ticker: ticker,
                     items: items,
@@ -1631,6 +1634,7 @@
                     maxEntry: Math.max(...entries),
                     minDiff: Math.min(...diffs),
                     maxDiff: Math.max(...diffs),
+                    closestDiff: Math.min(...absDiffs), // <--- Oś sortowania (najbliżej 0)
                     minRR: Math.min(...rrs),
                     maxRR: Math.max(...rrs),
                     currency: items[0].calcCurrency,
@@ -1655,7 +1659,7 @@
                 let va, vb;
                 if(focusListSortKey === 'created_at') { va = new Date(a.latestDate); vb = new Date(b.latestDate); }
                 else if(focusListSortKey === 'entry_point') { va = a.maxEntry; vb = b.maxEntry; }
-                else if(focusListSortKey === 'calcDiff') { va = Math.abs(a.maxDiff); vb = Math.abs(b.maxDiff); }
+                else if(focusListSortKey === 'calcDiff') { va = a.closestDiff; vb = b.closestDiff; }
                 else if(focusListSortKey === 'calcRR') { va = a.maxRR; vb = b.maxRR; }
                 else if(focusListSortKey === 'ticker') { va = a.ticker; vb = b.ticker; }
                 else { va = a.items[0][focusListSortKey]; vb = b.items[0][focusListSortKey]; }
