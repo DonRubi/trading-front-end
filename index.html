@@ -2296,7 +2296,8 @@
                 if(Array.from(monthSet).includes(currentMonthVal)) monthSelect.value = currentMonthVal;
             }
             renderSummaryClosed();
-            fetch(`${API_BASE_URL}/api/portfolio/roi/save`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({roi_pct: roiPct}) }).then(() => { drawSummaryChart(); }).catch(e => { drawSummaryChart(); });
+            // Po prostu rysujemy wykres, baza danych jest bezpieczna i zarządzana przez CRON
+            drawSummaryChart();
         }
 
         function renderSummaryOpen() {
