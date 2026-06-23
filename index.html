@@ -1608,10 +1608,35 @@
                     const currency = getCurrencyForFrontend(item.ticker); 
                     if (cFilter !== 'ALL' && currency !== cFilter) return; 
                     
-                    // ZMIANA: calcDiff przechowuje wartość bezwzględną dla sortowania, a originalDiff zachowuje kierunek
                     filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: Math.abs(diff), originalDiff: diff, calcRR: rr }); 
                 } catch(err) { console.error("Filter row skip", err); }
             }); 
+            
+            // NOWOŚĆ: Grupowanie po Tickerze i wyliczanie ekstremów
+            let grouped = {};
+            filteredFocusListEntries.forEach(item => {
+                if (!grouped[item.ticker]) grouped[item.ticker] = [];
+                grouped[item.ticker].push(item);
+            });
+
+            window.groupedFocusListEntries = Object.keys(grouped).map(ticker => {
+                let items = grouped[ticker];
+                let entries = items.map(i => parseFloat(i.entry_point) || 0);
+                let diffs = items.map(i => i.originalDiff || 0);
+                let rrs = items.map(i => i.calcRR || 0);
+                return {
+                    ticker: ticker,
+                    items: items,
+                    minEntry: Math.min(...entries),
+                    maxEntry: Math.max(...entries),
+                    minDiff: Math.min(...diffs),
+                    maxDiff: Math.max(...diffs),
+                    minRR: Math.min(...rrs),
+                    maxRR: Math.max(...rrs),
+                    currency: items[0].calcCurrency,
+                    latestDate: items.reduce((latest, curr) => (!latest || new Date(curr.created_at) > new Date(latest)) ? curr.created_at : latest, null)
+                };
+            });
             
             currentFocusListPage = 1; 
             renderFocusListTable(); 
@@ -1620,43 +1645,65 @@
         function renderFocusListTable() { 
             const tb = document.getElementById('focuslist-table-body'); 
             if (!tb) return; 
-            if (filteredFocusListEntries.length === 0) { 
+            if (!window.groupedFocusListEntries || window.groupedFocusListEntries.length === 0) { 
                 tb.innerHTML = `<tr><td colspan="16" style="text-align:center; padding:20px; color:var(--text-muted);">Brak wpisów.</td></tr>`; 
                 document.getElementById('focuslist-page-info').innerText = 'Strona 0 z 0'; 
                 return; 
             } 
             
-            filteredFocusListEntries.sort((a,b) => {
+            window.groupedFocusListEntries.sort((a,b) => {
                 let va, vb;
-                if(focusListSortKey === 'created_at') { va = new Date(a.created_at); vb = new Date(b.created_at); }
-                else if(focusListSortKey === 'entry_point') { va = parseFloat(a.entry_point) || 0; vb = parseFloat(b.entry_point) || 0; }
-                else if(focusListSortKey === 'priority') { va = a.priority || 0; vb = b.priority || 0; }
-                else if(focusListSortKey === 'mute') { va = a.mute || 0; vb = b.mute || 0; }
-                else { va = a[focusListSortKey]; vb = b[focusListSortKey]; }
+                if(focusListSortKey === 'created_at') { va = new Date(a.latestDate); vb = new Date(b.latestDate); }
+                else if(focusListSortKey === 'entry_point') { va = a.maxEntry; vb = b.maxEntry; }
+                else if(focusListSortKey === 'calcDiff') { va = Math.abs(a.maxDiff); vb = Math.abs(b.maxDiff); }
+                else if(focusListSortKey === 'calcRR') { va = a.maxRR; vb = b.maxRR; }
+                else if(focusListSortKey === 'ticker') { va = a.ticker; vb = b.ticker; }
+                else { va = a.items[0][focusListSortKey]; vb = b.items[0][focusListSortKey]; }
 
                 if(typeof va === 'string') { return focusListSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
                 return focusListSortDir === 'asc' ? va - vb : vb - va;
             });
 
             const start = (currentFocusListPage - 1) * focusListPageSize; 
-            const maxPage = Math.ceil(filteredFocusListEntries.length / focusListPageSize) || 1;
-            const pageData = filteredFocusListEntries.slice(start, start + focusListPageSize); 
+            const maxPage = Math.ceil(window.groupedFocusListEntries.length / focusListPageSize) || 1;
+            const pageData = window.groupedFocusListEntries.slice(start, start + focusListPageSize); 
             let htmlStr = '';
 
-            pageData.forEach(item => { 
-                try {
-                    const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-'; 
+            pageData.forEach(group => { 
+                const cleanTicker = group.ticker.replace(/[^a-zA-Z0-9]/g, '_');
+                const dateStr = group.latestDate ? new Date(group.latestDate).toLocaleDateString('pl-PL') : '-'; 
+                
+                // Budowanie wartości Min-Max
+                let entryStr = group.minEntry === group.maxEntry ? group.minEntry.toFixed(2) : `${group.minEntry.toFixed(2)} - ${group.maxEntry.toFixed(2)}`;
+                let rrStr = group.minRR === group.maxRR ? group.minRR.toFixed(2) : `${group.minRR.toFixed(2)} - ${group.maxRR.toFixed(2)}`;
+                let diffStr = group.minDiff === group.maxDiff ? group.minDiff.toFixed(2)+'%' : `${group.minDiff.toFixed(2)}% do ${group.maxDiff.toFixed(2)}%`;
+                
+                // Inteligentne kolorowanie grupowego dystansu
+                let diffColor = (group.minDiff >= 0) ? '#0ecb81' : ((group.maxDiff < 0) ? '#f6465d' : '#fcd535');
+
+                // WIERSZ NADRZĘDNY (HEADER Z TICKEREM)
+                htmlStr += `<tr style="background-color: rgba(255,255,255,0.05); cursor: pointer; border-top: 2px solid var(--border-color);" onclick="toggleFocusGroup('${cleanTicker}')">
+                    <td style="white-space: nowrap;">${dateStr}</td>
+                    <td style="font-weight:bold; color:var(--accent); font-size:1.1em; white-space:nowrap;"><span id="icon-${cleanTicker}" style="margin-right:5px;">➕</span> ${group.ticker}</td>
+                    <td style="font-weight:bold;">${group.currency}</td>
+                    <td>-</td>
+                    <td class="sensitive" style="font-weight: 600; color: #cdd6f4;">${entryStr}</td>
+                    <td>-</td><td>-</td>
+                    <td style="color:var(--text-muted); font-weight:bold;">Zbiorczy</td>
+                    <td class="sensitive" style="color:${diffColor}; font-weight:bold;">${diffStr}</td>
+                    <td class="sensitive" style="color:#cdd6f4;">${rrStr}</td>
+                    <td colspan="5" style="text-align:center; color:var(--text-muted); font-style:italic;">Ukryte zagrania: <b style="color:var(--text-main);">${group.items.length}</b> (Kliknij aby rozwinąć)</td>
+                    <td><a href="${getTradingViewLink(group.ticker)}" target="_blank" style="text-decoration:none; color:var(--accent);" onclick="event.stopPropagation();">📈 TV</a></td>
+                </tr>`;
+
+                // WIERSZE DZIECI (POSZCZEGÓLNE ZAGRANIA)
+                group.items.forEach(item => {
+                    const childDate = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-'; 
                     const entry = parseFloat(item.entry_point) || 0; 
-                    
                     let statusColor = item.calcStatus === 'Skupienie' ? '#0ecb81' : '#848e9c'; 
-                    let diffColor = item.originalDiff >= 0 ? '#0ecb81' : '#f6465d';
-                    
-                    let diffStr = '-';
-                    if(!isNaN(item.calcDiff) && isFinite(item.calcDiff)) {
-                        // Wyświetlamy już tylko cyfrę bez znaku minus (kierunek określa kolor)
-                        diffStr = item.calcDiff.toFixed(2) + '%';
-                    }
-                    let rrStr = (!isNaN(item.calcRR) && isFinite(item.calcRR)) ? item.calcRR.toFixed(2) : '-';
+                    let childDiffColor = item.originalDiff >= 0 ? '#0ecb81' : '#f6465d';
+                    let childDiffStr = (!isNaN(item.calcDiff) && isFinite(item.calcDiff)) ? item.calcDiff.toFixed(2) + '%' : '-';
+                    let childRrStr = (!isNaN(item.calcRR) && isFinite(item.calcRR)) ? item.calcRR.toFixed(2) : '-';
                     
                     const pb = item.priority === 1 ? `<span style="color: #fcd535;">Wysoki</span>` : `<span style="color: var(--text-muted);">Norm</span>`; 
                     const mb = item.mute === 1 ? `<span style="color: var(--danger);">🔕</span>` : `<span style="color: var(--success);">🔔</span>`; 
@@ -1665,32 +1712,32 @@
                     const r3 = (item.reasons && item.reasons[2]) ? item.reasons[2] : '-'; 
                     const r4 = (item.reasons && item.reasons[3]) ? item.reasons[3] : '-'; 
                     const r5 = (item.reasons && item.reasons[4]) ? item.reasons[4] : '-'; 
-                    
-                    htmlStr += `<tr>
-                        <td style="white-space: nowrap;">${dateStr}</td>
-                        <td style="font-weight:bold; color:var(--accent);">${item.ticker}</td>
-                        <td style="font-weight:bold;">${item.calcCurrency}</td>
+
+                    htmlStr += `<tr class="child-of-${cleanTicker}" style="display:none; background-color: rgba(0,0,0,0.2);">
+                        <td style="white-space: nowrap; padding-left: 20px;">└ ${childDate}</td>
+                        <td style="color:var(--text-muted);"><small>#${item.entry_id}</small></td>
+                        <td>-</td>
                         <td>${item.direction}</td>
                         <td class="sensitive" style="font-weight: 600;">${entry.toFixed(2)}</td>
                         <td>${pb}</td><td>${mb}</td>
                         <td style="color:${statusColor}; font-weight:bold;">${item.calcStatus}</td>
-                        <td class="sensitive" style="color:${diffColor}; font-weight:bold;">${diffStr}</td>
-                        <td class="sensitive">${rrStr}</td>
+                        <td class="sensitive" style="color:${childDiffColor}; font-weight:bold;">${childDiffStr}</td>
+                        <td class="sensitive">${childRrStr}</td>
                         <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r1}">${r1}</td>
                         <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r2}">${r2}</td>
                         <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r3}">${r3}</td>
                         <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r4}">${r4}</td>
                         <td style="font-size: 0.8em; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r5}">${r5}</td>
-                        <td><a href="${getTradingViewLink(item.ticker)}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 TV</a></td>
-                    </tr>`; 
-                } catch(e) { console.error("Render row fail", e); }
+                        <td><button class="btn-edit" onclick="copyFormEntry('${item.entry_id}'); openModule('form-module', 'Form');" title="Kopiuj do Formularza">📋 Klonuj</button></td>
+                    </tr>`;
+                });
             }); 
             tb.innerHTML = htmlStr;
-            updatePageInfo('focuslist-page-info', currentFocusListPage, maxPage, filteredFocusListEntries.length, focusListPageSize); 
+            updatePageInfo('focuslist-page-info', currentFocusListPage, maxPage, window.groupedFocusListEntries.length, focusListPageSize); 
         }
         
         function changeFocusListPage(d) { 
-            const maxPage = Math.ceil(filteredFocusListEntries.length / focusListPageSize) || 1;
+            const maxPage = Math.ceil((window.groupedFocusListEntries?.length || 1) / focusListPageSize) || 1;
             currentFocusListPage += d; 
             if(currentFocusListPage < 1) currentFocusListPage = 1;
             if(currentFocusListPage > maxPage) currentFocusListPage = maxPage;
@@ -2890,6 +2937,24 @@
             console.error("Błąd połączenia:", e);
         }
     }
+
+    window.toggleFocusGroup = function(cleanTicker) {
+            const rows = document.querySelectorAll('.child-of-' + cleanTicker);
+            const icon = document.getElementById('icon-' + cleanTicker);
+            let isHidden = false;
+            
+            rows.forEach(r => {
+                if(r.style.display === 'none') {
+                    r.style.display = 'table-row';
+                    isHidden = false;
+                } else {
+                    r.style.display = 'none';
+                    isHidden = true;
+                }
+            });
+            
+            if(icon) icon.innerText = isHidden ? '➕' : '➖';
+        };
     
         // --- Start Aplikacji ---
         openDashboard();
