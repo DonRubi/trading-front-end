@@ -820,6 +820,27 @@
             <button onclick="document.getElementById('campaign-modal').style.display='none'" style="margin-top:20px; width:100%; background:var(--bg-input); color:#fff; border:1px solid #45475a; padding:12px; border-radius:6px; cursor:pointer;">Zamknij</button>
         </div>
     </div>
+
+    <div id="notes-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; padding: 15px;">
+    <div style="background:var(--bg-card); padding:25px; border-radius:12px; width:100%; max-width:650px; border:1px solid #89b4fa; max-height: 90vh; overflow-y: auto;">
+        <h3 style="color:#89b4fa; margin-bottom:5px;">Notatnik Otwierania i Prowadzenia Pozycji</h3>
+        <p style="color:var(--text-muted); font-size:0.85em; margin-bottom:15px;">Zapisz fundamenty, katalizatory lub wiadomości. AI skonfrontuje je z reżimem makro z DailyBrief.</p>
+        
+        <input type="hidden" id="notes-trade-id">
+        <textarea id="notes-textarea" placeholder="Wklej artykuły, raporty z zysków (Earnings) lub opisz swoje przemyślenia: np. 'Spółka silna jakościowo, uran zbliża się do punktu zwrotnego, oczekuję absorpcji dołka...'" style="width:100%; height:180px; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; color:#fff; padding:12px; font-size:0.95em; resize:vertical; outline:none;"></textarea>
+        
+        <div style="margin-top:15px; display:flex; gap:10px;">
+            <button onclick="saveAndAuditNotes()" style="flex:2; padding:12px; background:#89b4fa; color:#11111b; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">💾 Zapisz i Wywołaj Audyt Makro</button>
+            <button onclick="document.getElementById('notes-modal').style.display='none'" style="flex:1; padding:12px; background:var(--bg-input); color:#fff; border:1px solid #45475a; border-radius:6px; cursor:pointer;">Anuluj</button>
+        </div>
+
+        <div id="notes-ai-results" style="margin-top:20px; display:none; border-top:1px dashed var(--border-color); padding-top:15px;">
+            <h4 style="color:var(--accent); margin-bottom:10px;">🛡️ Werdykt Techno-Fundamentalny AI:</h4>
+            <div id="notes-ai-content" style="color:var(--text-main); line-height:1.6; font-size:0.95em; background:rgba(255,255,255,0.02); padding:12px; border-radius:6px;"></div>
+        </div>
+    </div>
+</div>
+    
 <script>
         const API_BASE_URL = 'https://kuba-quant-desk.onrender.com';
         let isPrivacyMode = false;
@@ -3317,6 +3338,73 @@
         if(origOnTradeFocusChange) await origOnTradeFocusChange();
         setTimeout(checkAIBehavioralAlerts, 100);
     };
+
+    async function openNotesModal(tradeId) {
+    document.getElementById('notes-trade-id').value = tradeId;
+    document.getElementById('notes-textarea').value = '';
+    document.getElementById('notes-ai-results').style.display = 'none';
+    document.getElementById('notes-ai-content').innerHTML = '';
+    document.getElementById('notes-modal').style.display = 'flex';
+
+    // Pobieramy zapisaną wcześniej notatkę z bazy (jeśli istnieje)
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/trades/notes/get`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trade_id: tradeId })
+        });
+        const data = await res.json();
+        if (data.status === 'success' && data.notes) {
+            document.getElementById('notes-textarea').value = data.notes;
+        }
+    } catch (e) { console.error("Błąd pobierania notatek:", e); }
+}
+
+    async function saveAndAuditNotes() {
+        const tradeId = document.getElementById('notes-trade-id').value;
+        const txt = document.getElementById('notes-textarea').value.trim();
+    
+        const resultsDiv = document.getElementById('notes-ai-results');
+        const contentDiv = document.getElementById('notes-ai-content');
+    
+        resultsDiv.style.display = 'block';
+        contentDiv.innerHTML = "⏳ AI analizuje korelację Twojej tezy z reżimem płynności z DailyBrief... Proszę czekać.";
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/ai/techno-fundamental-audit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trade_id: parseInt(tradeId), notes: txt })
+            });
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                const audit = data.audit;
+            
+                // Mapowanie struktury odpowiedzi
+                const alignment = audit.macro_alignment || "Brak analizy";
+                const warning = audit.market_phase_warning || "Brak danych";
+                const verdict = audit.actionable_verdict || "Brak werdyktu";
+
+                let badgeColor = "var(--accent)";
+                if (verdict.includes("Ewakuuj")) badgeColor = "var(--danger)";
+                if (verdict.includes("Buduj") || verdict.includes("Kupuj")) badgeColor = "var(--success)";
+
+                contentDiv.innerHTML = `
+                    <div style="margin-bottom: 12px;"><b>Zbieżność z Makro (DailyBrief):</b><br>${alignment}</div>
+                    <div style="margin-bottom: 12px;"><b>Faza Rynku i Gotówka:</b><br>${warning}</div>
+                    <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:6px; border-left:4px solid ${badgeColor}; margin-top:15px;">
+                        <strong>Rekomendowany ruch:</strong> <span style="color:${badgeColor}; font-weight:bold;">${verdict}</span>
+                    </div>
+                `;
+            } else {
+                contentDiv.innerHTML = `❌ Błąd silnika AI: ${data.message}`;
+            }
+        } catch (e) {
+            contentDiv.innerHTML = `❌ Błąd połączenia z serwerem.`;
+            console.error(e);
+        }
+    }
 
     // --- Start Aplikacji ---
     loadAiProfileFromServer(); // Pobiera profil z serwera na starcie
