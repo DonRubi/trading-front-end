@@ -557,7 +557,23 @@
         </div> 
         <div class="table-responsive"> 
             <table class="macro-custom-table" style="width:100%;"> 
-                <thead> <tr> <th style="width: 50px;">Ważne</th> <th>Data Wywołania</th> <th>Typ Alertu</th> <th>Ticker / Spółka</th> <th>Priorytet</th> <th>Warunek</th> <th>Cena Docelowa</th> <th>Ekstrema Dnia (L/H)</th> <th>Wynik (Score)</th> <th>Wykres TV</th> <th>Akcje</th> </tr> </thead> 
+                <thead> 
+                    <tr> 
+                        <th style="width: 50px;">Ważne</th> 
+                        <th onclick="handleAlertsSort('triggered_at')" style="cursor:pointer;">Data Wywołania ↕</th> 
+                        <th>Typ Alertu</th> 
+                        <th>Ticker / Spółka</th> 
+                        <th>Priorytet</th> 
+                        <th>Warunek</th> 
+                        <th>Cena Docelowa</th> 
+                        <th>Cena Bieżąca</th>
+                        <th onclick="handleAlertsSort('calcDiff')" style="cursor:pointer;">Dystans % ↕</th>
+                        <th>Ekstrema Dnia (L/H)</th> 
+                        <th>Wynik (Score)</th> 
+                        <th>Wykres TV</th> 
+                        <th>Akcje</th> 
+                    </tr> 
+                </thead> 
                 <tbody id="alert-history-tbody"> <tr><td colspan="11" style="text-align: center; padding: 20px; color: #777;">Ładowanie historii...</td></tr> </tbody> 
             </table> 
         </div>
@@ -751,6 +767,14 @@
         let focusSortKey = 'id', focusSortDir = 'desc';
         let tradeSortKey = 'buy_date', tradeSortDir = 'desc';
         let focusListSortKey = 'created_at', focusListSortDir = 'desc';
+        // --- NOWOŚĆ: Zmienne dla sortowania alertów ---
+        let alertSortKey = 'triggered_at', alertSortDir = 'desc';
+
+        function handleAlertsSort(key) {
+            alertSortDir = (alertSortKey === key && alertSortDir === 'desc') ? 'asc' : 'desc';
+            alertSortKey = key;
+            handleAlertsFilter();
+        }
 
         // --- GLOBALNY POMOCNIK PAGINACJI ---
         function updatePageInfo(elementId, currentPage, maxPage, totalRows, pageSize) {
@@ -2403,36 +2427,54 @@
             const impFilter = document.getElementById('alert-important-filter').value || 'ALL';
             const dateFilter = document.getElementById('alert-date-filter').value || 'ALL';
 
-            // --- Logika Dat ---
-            const now = new Date(); now.setHours(0,0,0,0);
+            const now = new Date();
+            now.setHours(0,0,0,0);
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDay() === 1 ? now.getDate() - 3 : now.getDate() - 1);
             
-            // Logika: Wczoraj (Robocze) - omijanie weekendów!
-            let yesterday = new Date(now);
-            if (now.getDay() === 1) yesterday.setDate(now.getDate() - 3); // Jeśli poniedziałek -> zrób Piątek
-            else if (now.getDay() === 0) yesterday.setDate(now.getDate() - 2); // Jeśli niedziela -> zrób Piątek
-            else yesterday.setDate(now.getDate() - 1); // Standardowo 1 dzień wstecz
-
-            // Logika: Tygodnie
             function getMonday(d) {
-                let m = new Date(d); let day = m.getDay();
-                let diff = m.getDate() - day + (day === 0 ? -6 : 1);
-                m.setDate(diff); m.setHours(0,0,0,0); return m;
+                d = new Date(d);
+                var day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1);
+                m = new Date(d.setDate(diff));
+                m.setHours(0,0,0,0);
+                return m;
             }
             let thisMonday = getMonday(new Date());
-            let lastMonday = new Date(thisMonday); lastMonday.setDate(lastMonday.getDate() - 7);
-            let lastSunday = new Date(thisMonday); lastSunday.setDate(lastSunday.getDate() - 1); lastSunday.setHours(23,59,59,999);
-            // ------------------
+            let lastMonday = new Date(thisMonday);
+            lastMonday.setDate(lastMonday.getDate() - 7);
+            let lastSunday = new Date(thisMonday);
+            lastSunday.setDate(lastSunday.getDate() - 1);
+            lastSunday.setHours(23,59,59,999);
 
-            filteredAlertsData = allAlertsData.filter(a => {
+            // 1. ZMAPUJ DANE (dodajemy bieżącą cenę i dystans)
+            let mappedAlertsData = allAlertsData.map(a => {
+                const tData = tickerDataArray.find(t => t.ticker === a.ticker);
+                const currentPrice = tData && tData.price ? parseFloat(tData.price) : 0;
+                const targetPrice = parseFloat(a.target_price) || 0;
+                
+                let originalDiff = 0;
+                if (targetPrice !== 0 && currentPrice !== 0) {
+                    originalDiff = (((currentPrice - targetPrice) / targetPrice) * 100);
+                }
+                
+                return {
+                    ...a,
+                    currentPrice: currentPrice,
+                    originalDiff: originalDiff,
+                    absDiff: Math.abs(originalDiff)
+                };
+            });
+
+            filteredAlertsData = mappedAlertsData.filter(a => {
                 // 1. Nazwa + Ticker
                 const tData = tickerDataArray.find(t => t.ticker === a.ticker);
                 const sName = tData && tData.stock_name ? tData.stock_name.toLowerCase() : '';
                 const textMatch = (a.ticker || '').toLowerCase().includes(searchText) || sName.includes(searchText);
-                
+
                 // 2. Typ
-                const aType = a.alert_type || 'Punkt wejścia'; 
+                const aType = a.alert_type || 'Punkt wejścia';
                 let typeMatch = (typeFilter === 'ALL') || (aType === typeFilter) || (typeFilter === 'Wejście' && aType === 'Punkt wejścia');
-                
+
                 // 3. Ważne (Wygasa po 7 dniach!)
                 let isImp = false;
                 if (a.important_since) {
@@ -2447,19 +2489,30 @@
                     if (!a.triggered_at) dateMatch = false;
                     else {
                         const trDate = new Date(a.triggered_at);
-                        const trDateOnly = new Date(trDate); trDateOnly.setHours(0,0,0,0);
-                        
+                        const trDateOnly = new Date(trDate);
+                        trDateOnly.setHours(0,0,0,0);
                         if (dateFilter === 'TODAY') dateMatch = (trDateOnly.getTime() === now.getTime());
                         else if (dateFilter === 'YESTERDAY') dateMatch = (trDateOnly.getTime() === yesterday.getTime());
                         else if (dateFilter === 'THIS_WEEK') dateMatch = (trDate >= thisMonday);
                         else if (dateFilter === 'LAST_WEEK') dateMatch = (trDate >= lastMonday && trDate <= lastSunday);
-                        else dateMatch = a.triggered_at.startsWith(dateFilter); // Filtrowanie YYYY-MM
+                        else dateMatch = a.triggered_at.startsWith(dateFilter);
                     }
                 }
-
                 return textMatch && typeMatch && impMatch && dateMatch;
             });
-            currentAlertPage = 1; 
+
+            // 2. SORTOWANIE (Uwzględnia absolutny dystans najbliżej zera)
+            filteredAlertsData.sort((a,b) => {
+                let va, vb;
+                if (alertSortKey === 'triggered_at') { va = new Date(a.triggered_at); vb = new Date(b.triggered_at); }
+                else if (alertSortKey === 'calcDiff') { va = a.absDiff; vb = b.absDiff; }
+                else { va = a[alertSortKey]; vb = b[alertSortKey]; }
+                
+                if (typeof va === 'string') return alertSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+                return alertSortDir === 'asc' ? va - vb : vb - va;
+            });
+
+            currentAlertPage = 1;
             renderAlertsTable();
         }
 
@@ -2509,6 +2562,14 @@
                 const scoreText = item.score !== undefined ? `${item.score}/5${reasonsHtml}` : '-';
                 const tvLink = getTradingViewLink(item.ticker);
 
+                // --- NOWOŚĆ: Generowanie stringów z kolorami dla Ceny i Dystansu ---
+                const currentPriceStr = item.currentPrice ? item.currentPrice.toFixed(2) + ' $' : '-';
+                let diffColor = item.originalDiff >= 0 ? '#0ecb81' : '#f6465d';
+                let diffStr = '-';
+                if (item.currentPrice && item.target_price) {
+                    diffStr = (item.originalDiff > 0 ? '+' : '') + item.originalDiff.toFixed(2) + '%';
+                }
+
                 tbody.innerHTML += `<tr>
                     <td><input type="checkbox" onchange="toggleAlertImportant(${item.id}, this)" ${checkedAttr} style="transform: scale(1.3); cursor: pointer; accent-color: var(--accent);"></td>
                     <td>${new Date(item.triggered_at).toLocaleDateString('pl-PL')}<br><small style="color:var(--text-muted);">${new Date(item.triggered_at).toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'})}</small></td>
@@ -2517,12 +2578,14 @@
                     <td>${prioText}</td>
                     <td style="font-weight:bold;">${condText}</td>
                     <td class="sensitive">${Number(item.target_price).toFixed(2)} $</td>
+                    <td class="sensitive" style="font-weight: 600; color: #cdd6f4;">${currentPriceStr}</td>
+                    <td class="sensitive" style="color:${diffColor}; font-weight:bold;">${diffStr}</td>
                     <td class="sensitive">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td>
-                    <td style="color:#a6e3a1; font-weight:bold;">${scoreText}</td>
-                    <td><a href="${tvLink}" target="_blank" style="color:var(--accent); text-decoration:none;">📈 Link</a></td>
-                    <td><button onclick="deleteAlert(${item.id})" class="btn-delete" style="padding:4px 8px;">Usuń</button></td>
+                    <td style="font-weight:bold;">${scoreText}</td>
+                    <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 TV</a></td>
+                    <td><button class="btn-delete" onclick="deleteAlertHistory(${item.id})">Usuń</button></td>
                 </tr>`;
-            });
+                    });
             updatePageInfo('alert-page-info', currentAlertPage, maxPage, filteredAlertsData.length, alertPageSize);
         }
 
