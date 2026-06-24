@@ -3206,19 +3206,27 @@
             
             if (data.status === 'success') {
                 const ai = data.review;
+                
+                // BEZPIECZNE MAPOWANIE: Wyciągamy dane bez względu na to, czy serwer dał klucze po polsku czy angielsku
+                const rating = ai.rating || ai.ocena_skutecznosci || "Brak oceny";
+                const diagnosis = ai.campaign_diagnosis || ai.diagnoza_procesu || "Brak danych";
+                const psychology = ai.psychology_check || ai.werdykt_psychologiczny || "Brak danych";
+                const tip = ai.optimization_tip || ai.sugestia_optymalizacji || ai.sugestia_optymalizacyjna || "Brak wskazówek";
+
                 content.innerHTML = `
-                    <div style="font-size: 1.2em; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Ocena skuteczności: <b style="color:var(--accent); font-size: 1.2em;">${ai.rating}</b></div>
-                    <div style="margin-bottom:15px;"><b style="color:var(--success);">Diagnoza procesu (Smart Money vs Hazard):</b><br>${ai.campaign_diagnosis}</div>
-                    <div style="margin-bottom:15px;"><b style="color:#89b4fa;">Werdykt psychologiczny wyjścia:</b><br>${ai.psychology_check}</div>
+                    <div style="font-size: 1.2em; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Ocena skuteczności: <b style="color:var(--accent); font-size: 1.2em;">${rating}</b></div>
+                    <div style="margin-bottom:15px;"><b style="color:var(--success);">Diagnoza procesu (Smart Money vs Hazard):</b><br>${diagnosis}</div>
+                    <div style="margin-bottom:15px;"><b style="color:#89b4fa;">Werdykt psychologiczny wyjścia:</b><br>${psychology}</div>
                     <div style="background: rgba(201,148,0,0.1); padding:15px; border-radius:6px; border-left: 4px solid var(--accent); margin-top: 20px;">
-                        <b style="color:var(--accent);">Wskazówka optymalizacyjna:</b><br>${ai.optimization_tip}
+                        <b style="color:var(--accent);">Wskazówka optymalizacyjna:</b><br>${tip}
                     </div>
                 `;
             } else {
-                content.innerHTML = `❌ Błąd silnika AI: ${data.message}`;
+                content.innerHTML = `❌ Błąd silnika AI: ${data.message || 'Brak szczegółów'}`;
             }
         } catch (e) {
-            content.innerHTML = `❌ Błąd połączenia z serwerem.`;
+            content.innerHTML = `❌ Błąd połączenia z serwerem lub błąd parsowania danych.`;
+            console.error(e);
         }
     }
     
