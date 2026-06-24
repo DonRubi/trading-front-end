@@ -2014,26 +2014,7 @@
         else alert('Błąd.'); 
     } catch(e) { console.error(e); } 
 }
-            const last15 = parseInt(document.getElementById('trade-last15').value) || 0;
             
-            const data = { 
-                focus_id: document.getElementById('trade-focus-id').value, 
-                form_id: document.getElementById('trade-form-id').value, 
-                ticker: document.getElementById('trade-ticker').value, 
-                direction: document.getElementById('trade-direction').value, 
-                stock_name: document.getElementById('trade-name').value, 
-                buy_date: document.getElementById('trade-buy-date').value, 
-                buy_price: document.getElementById('trade-buy-price').value, 
-                spent: spent, 
-                leverage: lev, 
-                currency: document.getElementById('trade-currency').value, 
-                focus_score: baseScore + last15, // Dodanie bonusowego punktu!
-                tp: document.getElementById('trade-tp').value, 
-                sl: document.getElementById('trade-sl').value,
-                comment: document.getElementById('trade-comment').value,
-                last_15_min: last15
-            }; try { const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(true); } else alert('Błąd.'); } catch(e) { console.error(e); } }
-
         async function fetchTradesEntries(forceFresh = false) { 
             if(!forceFresh) {
                 const cached = getCachedData('trades_cache');
