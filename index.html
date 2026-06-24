@@ -2090,7 +2090,13 @@
 
                 let tpStr = isNaN(tpMax) ? `TP: ${tp.toFixed(2)}$` : `TP: <strike>${tp.toFixed(2)}$</strike> <b style="color:var(--accent);">${tpMax.toFixed(2)}$</b>`;
 
-                const actionHtml = s.isClosed ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span> <button class="btn-edit" onclick="reopenTrade(${item.id})" style="padding: 2px 6px; margin-left: 5px; border-color: var(--text-muted); color: var(--text-muted);" title="Cofnij zamknięcie">⟲</button>` : `<button class="btn-delete" onclick="openCloseModal(${item.id})">Sprzedaj</button>`;
+                // MODYFIKACJA KROKU 2.3: Dodanie Wyckoff/SMC Copilota do akcji pozycji otwartych
+                const actionHtml = item.status === 'CLOSED' 
+                    ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span> <button class="btn-edit" onclick="reopenTrade(${item.id})" style="padding: 2px 6px; margin-left: 5px; border-color: var(--text-muted); color: var(--text-muted);" title="Cofnij zamknięcie">⟲</button>` 
+                    : `<div style="display: flex; flex-direction: column; gap: 5px;">
+                        <button class="btn-edit" onclick="runAiExitCopilot('${item.ticker}', ${item.buy_price})" style="background-color: #5b21b6; border-color: #7c3aed; color: #eaecef; font-weight: bold; font-size: 0.85em; padding: 4px 8px;" title="Analiza Wyckoff / Siła Relatywna S&P500 przez AI">🤖 Audyt wyjścia AI</button>
+                        <button class="btn-delete" onclick="openCloseModal(${item.id})" style="padding: 4px 8px;">Sprzedaj</button>
+                       </div>`;
                 const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage || 1})" title="Kliknij, aby zmienić dźwignię">x${item.leverage || 1}</span>`;
 
                 let sName = item.stock_name || '';
@@ -3023,6 +3029,25 @@
             
             if(icon) icon.innerText = isHidden ? '➕' : '➖';
         };
+
+    async function runAiExitCopilot(ticker, buyPrice) {
+    alert(`🤖 AI analizuje SMC i fazę Wyckoffa dla ${ticker}... Czekaj (ok. 10 sekund).`);
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/ai/evaluate-exit`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticker: ticker, buy_price: buyPrice })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            const ai = data.analysis;
+            alert(`--- AUDYT ZAMKNIĘCIA (Wyckoff/SMC) ---\n\n` +
+                  `📊 Faza: ${ai.wyckoff_phase}\n` +
+                  `⚖️ Siła RS: ${ai.relative_strength}\n` +
+                  `💡 Płynność SMC: ${ai.smart_money_verdict}\n\n` +
+                  `🔥 REKOMENDACJA: ${ai.action}`);
+        } else { alert("Błąd AI: " + data.message); }
+    } catch (e) { alert("Błąd połączenia z serwerem AI."); }
+    };
     
         // --- Start Aplikacji ---
         openDashboard();
