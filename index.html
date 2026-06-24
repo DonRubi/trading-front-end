@@ -235,6 +235,11 @@
                 </form>
             </div>
             <div class="journal-main">
+                <div style="margin-bottom: 15px; padding: 15px; background: rgba(2, 132, 199, 0.1); border: 1px solid #0284c7; border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <strong style="color: #0284c7; font-size: 1.1em;">Analiza Post-Trade:</strong>
+                    <input type="text" id="campaign-audit-ticker" placeholder="Wpisz ticker kampanii (np. DNN)" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; min-width: 250px;">
+                    <button onclick="runCampaignAudit()" style="padding: 10px 20px; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">🔍 Audyt AI całej kampanii</button>
+                </div>
                 <div class="table-controls">
                     <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze lub nazwie..." oninput="handleTradesFilter()">
                     <select id="trade-status-filter" onchange="handleTradesFilter()"><option value="ALL">Wszystkie Statusy</option><option value="OPEN" selected>Otwarte</option><option value="CLOSED">Zamknięte</option></select>
@@ -801,6 +806,15 @@
                 <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
                 <button onclick="confirmSell()" style="flex:1; background:var(--success); color:#fff; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">Księguj Zysk</button>
             </div>
+        </div>
+    </div>
+    <div id="campaign-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; padding: 15px;">
+        <div style="background:var(--bg-card); padding:25px; border-radius:12px; width:100%; max-width:600px; border:1px solid var(--accent); max-height: 90vh; overflow-y: auto;">
+            <h3 style="color:var(--accent); margin-bottom:15px;" id="campaign-title">Audyt Kampanii AI</h3>
+            <div id="campaign-content" style="color: var(--text-main); line-height: 1.6; font-size: 0.95em;">
+                Ładowanie analizy...
+            </div>
+            <button onclick="document.getElementById('campaign-modal').style.display='none'" style="margin-top:20px; width:100%; background:var(--bg-input); color:#fff; border:1px solid #45475a; padding:12px; border-radius:6px; cursor:pointer;">Zamknij</button>
         </div>
     </div>
 <script>
@@ -3172,6 +3186,41 @@
         } else { alert("Błąd AI: " + data.message); }
     } catch (e) { alert("Błąd połączenia z serwerem AI."); }
     };
+
+    async function runCampaignAudit() {
+        const ticker = document.getElementById('campaign-audit-ticker').value.trim().toUpperCase();
+        if (!ticker) return alert("Wpisz ticker!");
+        
+        const modal = document.getElementById('campaign-modal');
+        const content = document.getElementById('campaign-content');
+        modal.style.display = 'flex';
+        content.innerHTML = "⏳ AI analizuje pełną historię zagrań i intencje rynkowe... to potrwa kilka sekund.";
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/ai/campaign-review`, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticker: ticker })
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                const ai = data.review;
+                content.innerHTML = `
+                    <div style="font-size: 1.2em; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Ocena skuteczności: <b style="color:var(--accent); font-size: 1.2em;">${ai.rating}</b></div>
+                    <div style="margin-bottom:15px;"><b style="color:var(--success);">Diagnoza procesu (Smart Money vs Hazard):</b><br>${ai.campaign_diagnosis}</div>
+                    <div style="margin-bottom:15px;"><b style="color:#89b4fa;">Werdykt psychologiczny wyjścia:</b><br>${ai.psychology_check}</div>
+                    <div style="background: rgba(201,148,0,0.1); padding:15px; border-radius:6px; border-left: 4px solid var(--accent); margin-top: 20px;">
+                        <b style="color:var(--accent);">Wskazówka optymalizacyjna:</b><br>${ai.optimization_tip}
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `❌ Błąd silnika AI: ${data.message}`;
+            }
+        } catch (e) {
+            content.innerHTML = `❌ Błąd połączenia z serwerem.`;
+        }
+    }
     
     // --- TRENER BEHAWIORALNY AI ---
     window.latestAiAnalysis = null;
