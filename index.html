@@ -76,11 +76,24 @@
                     <div class="form-group"><label>Powody wejścia (Opcjonalne)</label><input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2..."><input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3..."><input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4..."><input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5..."><datalist id="reasons-list"></datalist></div>
                     <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
                 </form>
-                <button type="button" onclick="toggleFibo()" style="background: none; border: 1px solid var(--accent); color: var(--accent); margin-top: 15px; width: 100%; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: bold;">📐 Otwórz Asystenta Fibo</button>
-                <div id="fibo-drawer" style="display:none; margin-top: 10px; padding: 15px; background: rgba(201,148,0,0.05); border: 1px solid var(--accent); border-radius: 8px;">
-                    <div class="form-row"><div class="form-group"><label>Początek impulsu</label><input type="number" id="fibo-start" step="0.01" oninput="updateFiboLabels()"></div><div class="form-group"><label>Szczyt impulsu</label><input type="number" id="fibo-peak" step="0.01" oninput="updateFiboLabels()"></div></div>
-                    <div class="form-group"><label>Zewnętrzne zniesienie (Cel)</label><select id="fibo-level"><option value="1.000">1.000 - Płynność Zewnętrzna</option><option value="1.130">1.130 - Liquidity Sweep</option><option value="1.272">1.272 - Klasyczny TP1</option><option value="1.414">1.414 - Rozszerzenie TP2</option><option value="1.618">1.618 - Max Swing TP3</option></select></div>
-                    <button type="button" onclick="applyFibo()" style="width:100%; background:var(--accent); color:#000; border-radius:6px; padding:10px; border:none; font-weight:bold; cursor:pointer;">Zastosuj do Take Profit</button>
+                <button type="button" onclick="toggleLiquidityHunter()" style="background: none; border: 1px solid #89b4fa; color: #89b4fa; margin-top: 15px; width: 100%; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: bold; transition: 0.2s;">🧲 Otwórz Łowcę Płynności (Liquidity Hunter)</button>
+                <div id="liquidity-drawer" style="display:none; margin-top: 10px; padding: 15px; background: rgba(137, 180, 250, 0.05); border: 1px solid #89b4fa; border-radius: 8px;">
+                    <div class="form-group">
+                        <label style="color:#89b4fa; font-weight:bold;">Cel Główny (Historyczny Szczyt / Dołek / POC)</label>
+                        <input type="number" id="liq-target" step="0.01" placeholder="np. 154.50" oninput="updateLiquidityLabels()">
+                    </div>
+                    <div class="form-group">
+                        <label>Taktyka realizacji (Smart Money)</label>
+                        <select id="liq-strategy" onchange="updateLiquidityLabels()">
+                            <option value="frontrun">Front-run (Wyjdź 1.5% przed ścianą / szczytem)</option>
+                            <option value="exact">Perfect Touch (Równo w cel / Środek FVG)</option>
+                            <option value="sweep">Liquidity Sweep (Zbierz Stop Lossy: +1% za szczytem)</option>
+                        </select>
+                    </div>
+                    <div id="liq-preview" style="margin-top: 10px; margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted); text-align: center;">
+                        Wpisz poziom docelowej płynności...
+                    </div>
+                    <button type="button" onclick="applyLiquidity()" style="width:100%; background:#89b4fa; color:#11111b; border-radius:6px; padding:10px; border:none; font-weight:bold; cursor:pointer;">Ustaw jako Take Profit</button>
                 </div>
             </div>
             <div class="journal-main">
@@ -830,8 +843,9 @@
         <textarea id="notes-textarea" placeholder="Wklej artykuły, raporty z zysków (Earnings) lub opisz swoje przemyślenia: np. 'Spółka silna jakościowo, uran zbliża się do punktu zwrotnego, oczekuję absorpcji dołka...'" style="width:100%; height:180px; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; color:#fff; padding:12px; font-size:0.95em; resize:vertical; outline:none;"></textarea>
         
         <div style="margin-top:15px; display:flex; gap:10px;">
-            <button onclick="saveAndAuditNotes()" style="flex:2; padding:12px; background:#89b4fa; color:#11111b; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">💾 Zapisz i Wywołaj Audyt Makro</button>
-            <button onclick="document.getElementById('notes-modal').style.display='none'" style="flex:1; padding:12px; background:var(--bg-input); color:#fff; border:1px solid #45475a; border-radius:6px; cursor:pointer;">Anuluj</button>
+            <button onclick="saveNotesOnly(event)" style="flex:1; padding:12px; background:var(--success); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; transition: 0.2s;">💾 Zapisz</button>
+            <button onclick="auditNotesOnly()" style="flex:1; padding:12px; background:#89b4fa; color:#11111b; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">🤖 Analizuj Makro</button>
+            <button onclick="document.getElementById('notes-modal').style.display='none'" style="flex:1; padding:12px; background:var(--bg-input); color:#fff; border:1px solid #45475a; border-radius:6px; cursor:pointer;">Zamknij</button>
         </div>
 
         <div id="notes-ai-results" style="margin-top:20px; display:none; border-top:1px dashed var(--border-color); padding-top:15px;">
@@ -1487,33 +1501,57 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     
-        // --- ASYSTENT FIBO ---
-        function toggleFibo() { const drawer = document.getElementById('fibo-drawer'); drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; if (drawer.style.display === 'block') updateFiboLabels(); }
-        function updateFiboLabels() {
-            const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const direction = document.getElementById('form-direction').value; const select = document.getElementById('fibo-level');
-            if (!select) return; 
-            const levels = [
-                { val: 1.000, label: "Płynność Zewnętrzna (EQH/EQL)" },
-                { val: 1.130, label: "Liquidity Sweep (Stop Hunt)" },
-                { val: 1.272, label: "Klasyczny TP1" },
-                { val: 1.414, label: "Rozszerzenie TP2" },
-                { val: 1.618, label: "Max Swing TP3" }
-            ]; 
-            const currentSelected = select.value; select.innerHTML = ''; 
-            levels.forEach(lvl => {
-                let optionText = `${lvl.val.toFixed(3)} - ${lvl.label}`;
-                if (!isNaN(start) && !isNaN(peak)) { 
-                    let calculatedPrice = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * (lvl.val - 1) : peak - (start - peak) * (lvl.val - 1); 
-                    optionText += ` (${calculatedPrice.toFixed(2)}$)`; 
-                }
-                const opt = document.createElement('option'); opt.value = lvl.val.toString(); opt.textContent = optionText; if (lvl.val.toString() === currentSelected) opt.selected = true; select.appendChild(opt);
-            });
+        // --- ŁOWCA PŁYNNOŚCI (Zastępuje Fibo) ---
+        function toggleLiquidityHunter() { 
+            const drawer = document.getElementById('liquidity-drawer'); 
+            drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; 
+            if (drawer.style.display === 'block') updateLiquidityLabels(); 
         }
-        function applyFibo() {
-            const start = parseFloat(document.getElementById('fibo-start').value); const peak = parseFloat(document.getElementById('fibo-peak').value); const level = parseFloat(document.getElementById('fibo-level').value); const direction = document.getElementById('form-direction').value;
-            if(isNaN(start) || isNaN(peak)) return alert('Podaj poprawne wartości dla początku i szczytu trendu.');
-            const tp = (direction === 'DBR' || direction === 'RBR') ? peak + (peak - start) * (level - 1) : peak - (start - peak) * (level - 1); document.getElementById('form-tp').value = tp.toFixed(2); toggleFibo();
+
+        function updateLiquidityLabels() {
+            const target = parseFloat(document.getElementById('liq-target').value);
+            const strategy = document.getElementById('liq-strategy').value;
+            const direction = document.getElementById('form-direction').value;
+            const preview = document.getElementById('liq-preview');
+
+            if (isNaN(target)) {
+                preview.innerHTML = "Wpisz poziom docelowej płynności...";
+                return;
+            }
+
+            const isLong = (direction === 'DBR' || direction === 'RBR');
+            let finalTp = target;
+
+            // Wyliczanie taktyki (Mnożniki uwzględniają kierunek pozycji)
+            if (strategy === 'frontrun') {
+                finalTp = isLong ? target * 0.985 : target * 1.015; // 1.5% przed celem
+            } else if (strategy === 'sweep') {
+                finalTp = isLong ? target * 1.01 : target * 0.99;   // 1% za celem (wybicie stopów)
+            }
+
+            preview.innerHTML = `Ostateczny cel Smart Money: <br><b style="color:var(--success); font-size: 1.3em;">${finalTp.toFixed(2)} $</b>`;
         }
+
+        function applyLiquidity() {
+            const target = parseFloat(document.getElementById('liq-target').value);
+            const strategy = document.getElementById('liq-strategy').value;
+            const direction = document.getElementById('form-direction').value;
+            
+            if(isNaN(target)) return alert('Podaj poprawny poziom płynności (Cel Główny).');
+
+            const isLong = (direction === 'DBR' || direction === 'RBR');
+            let finalTp = target;
+
+            if (strategy === 'frontrun') {
+                finalTp = isLong ? target * 0.985 : target * 1.015;
+            } else if (strategy === 'sweep') {
+                finalTp = isLong ? target * 1.01 : target * 0.99;
+            }
+
+            document.getElementById('form-tp').value = finalTp.toFixed(2); 
+            toggleLiquidityHunter();
+        }
+
         function updateFormTvLink() { const ticker = document.getElementById('form-ticker').value; const linkEl = document.getElementById('form-tv-link'); if (ticker) { linkEl.href = getTradingViewLink(ticker); linkEl.style.display = 'inline-block'; } }
 
         // --- FOCUS MODULE ---
@@ -3363,13 +3401,45 @@
     } catch (e) { console.error("Błąd pobierania notatek:", e); }
 }
 
-    async function saveAndAuditNotes() {
+    async function saveNotesOnly(event) {
         const tradeId = document.getElementById('notes-trade-id').value;
         const txt = document.getElementById('notes-textarea').value.trim();
-    
+        const btn = event.currentTarget;
+        const origText = btn.innerHTML;
+        
+        btn.innerHTML = "⏳ Zapis...";
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/trades/notes/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trade_id: parseInt(tradeId), notes: txt })
+            });
+            if (res.ok) {
+                btn.innerHTML = "✅ Zapisano";
+                btn.style.background = "#059669"; // Ciemniejszy zielony dla efektu kliknięcia
+                setTimeout(() => { 
+                    btn.innerHTML = origText; 
+                    btn.style.background = "var(--success)"; 
+                    btn.disabled = false; 
+                }, 1500);
+            } else {
+                throw new Error("Błąd serwera");
+            }
+        } catch (e) {
+            btn.innerHTML = "❌ Błąd";
+            setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000);
+        }
+    }
+
+    async function auditNotesOnly() {
+        const tradeId = document.getElementById('notes-trade-id').value;
+        const txt = document.getElementById('notes-textarea').value.trim();
+        
         const resultsDiv = document.getElementById('notes-ai-results');
         const contentDiv = document.getElementById('notes-ai-content');
-    
+        
         resultsDiv.style.display = 'block';
         contentDiv.innerHTML = "⏳ AI analizuje korelację Twojej tezy z reżimem płynności z DailyBrief... Proszę czekać.";
 
@@ -3383,8 +3453,6 @@
 
             if (data.status === 'success') {
                 const audit = data.audit;
-            
-                // Mapowanie struktury odpowiedzi
                 const alignment = audit.macro_alignment || "Brak analizy";
                 const warning = audit.market_phase_warning || "Brak danych";
                 const verdict = audit.actionable_verdict || "Brak werdyktu";
