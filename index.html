@@ -191,6 +191,33 @@
                     <div class="ai-size-suggestion" style="margin-top: 8px; font-size: 0.85em; color: var(--accent-hover); font-weight: bold;"></div>
                 </div>
                 <form id="trade-form" onsubmit="submitTradeForm(event)">
+                    <div class="form-row" style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 5px;">
+                        <div class="form-group">
+                            <label style="color:var(--accent);">Typ Raty (Plan)</label>
+                            <select id="trade-tranche">
+                                <option value="Zwiad">Zwiad (Scout Entry)</option>
+                                    <option value="Core" selected>Główne wejście (Core)</option>
+                                       <option value="Uśrednienie (Technika)">Uśrednienie w dół (Technika)</option>
+                                       <option value="Uśrednienie (Fundamenty)">Uśrednienie w dół (Fundamenty)</option>
+                                       <option value="Piramidowanie">Piramidowanie (Dokładka na plusie)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Ruch wywołany Newsem?</label>
+                            <select id="trade-news">
+                                <option value="0" selected>Nie / Normalny rynek</option>
+                                <option value="1">Tak (Raport / Wydarzenie)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>CVD / Order Flow przy wejściu</label>
+                        <select id="trade-cvd-delta">
+                                <option value="Pozytywna">Silnie Pozytywna (Absorpcja w knocie)</option>
+                                <option value="Neutralna" selected>Neutralna / Typowa</option>
+                                <option value="Negatywna">Silnie Negatywna (Agresywna dystrybucja)</option>
+                        </select>
+                    </div>
                     <div class="form-row">
                         <div class="form-group"><label>Wybierz Ticker</label><select id="trade-ticker-select" onchange="onTradeTickerChange()"><option value="">Ładowanie...</option></select></div>
                         <div class="form-group"><label>Analiza Focus (ID)</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Najpierw wybierz ticker...</option></select></div>
@@ -352,7 +379,16 @@
         <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="focuslist-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('focuslist', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div> 
         <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;"> 
             <h3>Baza Tickerów</h3> 
-            <div class="form-row" style="margin-top:15px;"> <div class="form-group" style="flex:2;"><input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. AAPL)"></div> <div class="form-group" style="flex:1;"><button onclick="addTicker()" class="btn-submit" style="height:100%;">Dodaj</button></div> </div> 
+            <div class="form-row" style="margin-top:15px;"> 
+    <div class="form-group" style="flex:2;"><input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. AAPL)"></div> 
+    <div class="form-group" style="flex:2;">
+        <select id="new-ticker-conviction" style="height: 100%; padding: 12px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px;">
+            <option value="Inwestycja (Core)">Inwestycja (Mocne fundamenty)</option>
+            <option value="Spekulacja" selected>Spekulacja (Tylko technika)</option>
+        </select>
+    </div>
+    <div class="form-group" style="flex:1;"><button onclick="addTicker()" class="btn-submit" style="height:100%;">Dodaj</button></div> 
+</div> 
             <div id="db-list-container"></div> 
             <div class="pagination-container"><button class="btn-pag" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="ticker-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('database', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="ticker-next-btn" onclick="changeTickerPage(1)">Nast →</button></div> 
         </div> 
@@ -751,7 +787,15 @@
 
             <div class="form-group">
                 <label style="color:var(--success);">Ile % pozycji sprzedajesz? <br><small style="color:var(--text-muted); font-weight:normal;">Wpisz jako procent (np. 50%), ułamek (np. 1/3) lub 1.</small></label>
-                <input type="text" id="sell-fraction" value="1" placeholder="np. 0.5, 50%, 1/3, 23/41">
+                <div class="form-group" style="margin-top: 15px;">
+                    <label style="color:var(--accent);">Powód wyjścia z pozycji</label>
+                    <select id="sell-reason" style="width: 100%; padding: 10px; background: #11111b; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
+                        <option value="Zrealizowany TP/SL">Zrealizowany TP / SL (Zgodnie z planem)</option>
+                        <option value="Przyspieszony TP">Przyspieszony TP (Oznaki dystrybucji na wykresie)</option>
+                        <option value="Ewakuacja (Strach)">Ręczna ewakuacja (Psychologia: Strach przed stratą / FOMO)</option>
+                        <option value="Ewakuacja (Fundamenty)">Ewakuacja (Złamanie tezy fundamentalnej / SoW)</option>
+                    </select>
+                </div>
             </div>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
@@ -1106,7 +1150,20 @@
             }
         }
 
-        async function addTicker() { const t = document.getElementById('new-ticker').value.trim().toUpperCase(); if (!t) return; try { await fetch(`${API_BASE_URL}/api/database/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); document.getElementById('new-ticker').value = ''; loadDatabase(); } catch (e) {} }
+        async function addTicker() { 
+            const t = document.getElementById('new-ticker').value.trim().toUpperCase(); 
+            const conv = document.getElementById('new-ticker-conviction').value;
+            if (!t) return; 
+            try { 
+                await fetch(`${API_BASE_URL}/api/database/add`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ ticker: t, conviction: conv }) 
+                }); 
+                document.getElementById('new-ticker').value = ''; 
+                loadDatabase(); 
+           } catch (e) {} 
+        }
         async function removeTicker(t) { if (!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); loadDatabase(); } catch (e) {} }
 
         // --- FORM MODULE ---
@@ -1918,7 +1975,45 @@
                 document.getElementById('trade-name').value = tData && tData.stock_name ? tData.stock_name : '';
             } catch(e){} 
         }
-    async function submitTradeForm(e) { e.preventDefault(); const spent = parseFloat(document.getElementById('trade-spent').value); const lev = parseInt(document.getElementById('trade-leverage').value); const maxSpendStr = document.getElementById('trade-max-spend').value; const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } const baseScore = parseFloat(document.getElementById('trade-score').value) || 0;
+    async function submitTradeForm(e) { 
+    e.preventDefault(); 
+    const spent = parseFloat(document.getElementById('trade-spent').value); 
+    const lev = parseInt(document.getElementById('trade-leverage').value); 
+    const maxSpendStr = document.getElementById('trade-max-spend').value; 
+    const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); 
+    if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } 
+    
+    const baseScore = parseFloat(document.getElementById('trade-score').value) || 0;
+    const last15 = parseInt(document.getElementById('trade-last15').value) || 0;
+            
+    const data = { 
+        focus_id: document.getElementById('trade-focus-id').value, 
+        form_id: document.getElementById('trade-form-id').value, 
+        ticker: document.getElementById('trade-ticker').value, 
+        direction: document.getElementById('trade-direction').value, 
+        stock_name: document.getElementById('trade-name').value, 
+        buy_date: document.getElementById('trade-buy-date').value, 
+        buy_price: document.getElementById('trade-buy-price').value, 
+        spent: spent, 
+        leverage: lev, 
+        currency: document.getElementById('trade-currency').value, 
+        focus_score: baseScore + last15, 
+        tp: document.getElementById('trade-tp').value, 
+        sl: document.getElementById('trade-sl').value,
+        comment: document.getElementById('trade-comment').value,
+        last_15_min: last15,
+        tranche_type: document.getElementById('trade-tranche').value,
+        news_event: parseInt(document.getElementById('trade-news').value),
+        cvd_delta: document.getElementById('trade-cvd-delta').value
+    }; 
+    try { 
+        const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ 
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) 
+        }); 
+        if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(true); } 
+        else alert('Błąd.'); 
+    } catch(e) { console.error(e); } 
+}
             const last15 = parseInt(document.getElementById('trade-last15').value) || 0;
             
             const data = { 
@@ -2719,8 +2814,30 @@
         // Modal functions
         function openCloseModal(id) { document.getElementById('sell-modal').style.display = 'flex'; document.getElementById('sell-trade-id').value = id; document.getElementById('sell-date').valueAsDate = new Date(); document.getElementById('sell-price').value = ''; document.getElementById('sell-fraction').value = '1'; const trade = allTradesData.find(t => t.id === id); if(trade && trade.leverage > 1) { document.getElementById('sell-cfd-group').style.display = 'block'; document.getElementById('sell-cfd-cost').value = '0'; } else { document.getElementById('sell-cfd-group').style.display = 'none'; document.getElementById('sell-cfd-cost').value = '0'; } }
         function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
-        async function confirmSell() { const id = document.getElementById('sell-trade-id').value; const price = parseFloat(document.getElementById('sell-price').value); const date = document.getElementById('sell-date').value; const cfdCost = parseFloat(document.getElementById('sell-cfd-cost').value) || 0; const fracStr = document.getElementById('sell-fraction').value.trim(); if(!price || isNaN(price)) return alert('Błąd ceny!'); let fraction = 1.0; if(fracStr.includes('%')) { fraction = parseFloat(fracStr.replace('%', '')) / 100.0; } else if(fracStr.includes('/')) { const parts = fracStr.split('/'); fraction = parseFloat(parts[0]) / parseFloat(parts[1]); } else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; } try { await fetch(`${API_BASE_URL}/api/trades/close`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost }) }); closeSellModal(); fetchTradesEntries(true); } catch(e) {} }
-
+        async function confirmSell() { 
+            const id = document.getElementById('sell-trade-id').value; 
+            const price = parseFloat(document.getElementById('sell-price').value); 
+            const date = document.getElementById('sell-date').value; 
+            const cfdCost = parseFloat(document.getElementById('sell-cfd-cost').value) || 0; 
+            const exitReason = document.getElementById('sell-reason').value;
+            const fracStr = document.getElementById('sell-fraction').value.trim(); 
+    
+            if(!price || isNaN(price)) return alert('Błąd ceny!'); 
+            let fraction = 1.0; 
+            if(fracStr.includes('%')) { fraction = parseFloat(fracStr.replace('%', '')) / 100.0; } 
+            else if(fracStr.includes('/')) { const parts = fracStr.split('/'); fraction = parseFloat(parts[0]) / parseFloat(parts[1]); } 
+            else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; } 
+    
+            try { 
+                await fetch(`${API_BASE_URL}/api/trades/close`, { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost, exit_reason: exitReason }) 
+                }); 
+                closeSellModal(); 
+                fetchTradesEntries(true); 
+            } catch(e) {} 
+        }
         async function loadDailyBriefs() { try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); } } catch (error) {} }
         
         async function loadServiceModule() { 
