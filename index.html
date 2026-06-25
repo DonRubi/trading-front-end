@@ -1717,7 +1717,7 @@
         const formId = document.getElementById('focus-form-id').value;
         if(!formId) return alert("Musisz najpierw wybrać Setup (ID Form)!");
 
-        // 1. Wyliczanie punktów na podstawie aktualnie ustawionych suwaków/selectów w formularzu
+        // 1. Zliczanie punktów z suwaków Focus (Pula: Max 12 pkt)
         const candle = parseFloat(document.getElementById('focus-candle').value) || 0;
         const volume = parseFloat(document.getElementById('focus-volume').value) || 0;
         const gap = parseFloat(document.getElementById('focus-gap').value) || 0;
@@ -1727,14 +1727,13 @@
         const index = parseFloat(document.getElementById('focus-index').value) || 0;
         const htf = parseFloat(document.getElementById('focus-htf').value) || 0;
 
-        const pointsTotal = candle + volume + gap + calendar + cvd + vix + index + htf;
-        const maxPossiblePoints = 12.0; // Maksymalna dostępna pula punktów w Twoim systemie (1+1+1+1+3+2+2+1)
-        const finalRatio = pointsTotal / maxPossiblePoints;
+        let pointsTotal = candle + volume + gap + calendar + cvd + vix + index + htf;
 
-        // 2. Szukanie powiązanego setupu z Formularza i wyliczanie R:R
+        // 2. Szukanie powiązanego setupu z Formularza
         const entry = formEntriesGlobal.find(f => f.entry_id === formId);
         let rrStr = "Brak setupu";
         let sizeStr = "-";
+        const maxPossiblePoints = 25.0; // Pula dostosowana do logiki backendu
 
         if(entry) {
             const entPrice = parseFloat(entry.entry_point) || 0;
@@ -1742,34 +1741,49 @@
             const tpPrice = parseFloat(entry.take_profit) || 0;
             const mod = (entry.direction === 'DBR' || entry.direction === 'RBR') ? 1 : -1;
             
-            // Wyliczanie R:R
+            // Wyliczanie Risk/Reward
+            let rrVal = 0;
             if (entPrice - slPrice !== 0) {
-                const rrVal = ((tpPrice - entPrice) * mod) / ((entPrice - slPrice) * mod);
+                rrVal = ((tpPrice - entPrice) * mod) / ((entPrice - slPrice) * mod);
                 rrStr = `1 : ${rrVal.toFixed(2)}`;
             } else {
                 rrStr = "Błąd (Cena WE = SL)";
             }
 
-            // Wyliczanie rozmiaru pozycji w oparciu o Twój mnożnik konta (alokacja %)
-            // System bazuje na przypisaniu max 20% wartości pozycji docelowej jako stawki bazowej
-            const maxAllocationPct = 20.0; 
-            const allocatedPct = finalRatio * maxAllocationPct;
+            // 3. Doliczanie punktów z Formularza (Zgodnie z backendem)
+            const reasonsCount = Array.isArray(entry.reasons) ? entry.reasons.length : 0;
+            pointsTotal += (reasonsCount * 2.0); // Max 10 pkt
             
-            // Pobieramy walutę przypisaną do instrumentu
-            const currency = entry.ticker && (entry.ticker.includes('GPW:') || entry.ticker.endsWith('.WA')) ? 'PLN' : 'USD';
+            if (rrVal > 4.0) pointsTotal += 2.0;
+            else if (rrVal > 2.5) pointsTotal += 1.0;
             
-            // Dynamicznie symulujemy gotówkę w oparciu o przelicznik konta (np. baza 1000$ lub 4000 PLN z Twojego backendu)
-            // Wyświetlamy sam suchy procent alokacji oraz orientacyjną notację
-            sizeStr = `${allocatedPct.toFixed(1)}% limitu gotówki kapitału`;
-        }
+            if (parseInt(entry.priority) === 1) pointsTotal += 1.0; // Max 1 pkt
 
-        // 3. Wyświetlenie wyników w oknie podglądu
-        document.getElementById('prev-focus-ratio').innerText = `${(finalRatio * 100).toFixed(0)}%`;
-        document.getElementById('prev-focus-size').innerText = sizeStr;
-        document.getElementById('prev-focus-rr').innerText = rrStr;
-        
-        // Pokazanie schowanego wcześniej kontenera
-        document.getElementById('focus-preview-box').style.display = 'block';
+            // Wyliczenie ostatecznej siły setupu
+            const finalRatio = pointsTotal / maxPossiblePoints;
+
+            // 4. Odtworzenie Logiki Alokacji Kapitału (Zależnie od reżimu walutowego)
+            const currency = getCurrencyForFrontend(entry.ticker);
+            let baseCapital = 2500; // Domyślna pula bazowa (w walucie obcej)
+            if (currency === 'PLN') baseCapital = 10000; // Domyślna pula bazowa (w PLN)
+
+            // Kaskadowe wyliczanie sugerowanego zaangażowania (1-3%)
+            let allocPct = 0.0;
+            if (finalRatio >= 0.8) allocPct = 3.0;
+            else if (finalRatio >= 0.6) allocPct = 2.0;
+            else if (finalRatio >= 0.5) allocPct = 1.0;
+
+            const allocatedCash = baseCapital * (allocPct / 100);
+            
+            sizeStr = `<span style="color:#eaecef; font-weight:bold;">${allocatedCash.toFixed(2)} ${currency}</span> <small style="color:var(--text-muted); font-weight:normal; margin-left:5px;">(${allocPct.toFixed(1)}% z puli ${baseCapital} ${currency})</small>`;
+            
+            // 5. Wyświetlenie wyników w oknie podglądu
+            document.getElementById('prev-focus-ratio').innerHTML = `<span style="color:#eaecef;">${pointsTotal.toFixed(1)} / 25 pkt</span> <span style="color:#0ecb81; margin-left:8px; font-weight:bold;">(${(finalRatio * 100).toFixed(0)}%)</span>`;
+            document.getElementById('prev-focus-size').innerHTML = sizeStr;
+            document.getElementById('prev-focus-rr').innerText = rrStr;
+            
+            document.getElementById('focus-preview-box').style.display = 'block';
+            }
         }
         
         async function submitFocusForm(e) { 
