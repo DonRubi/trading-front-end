@@ -1711,13 +1711,30 @@
         
         async function deleteFocusEntry(id) { try { await fetch(`${API_BASE_URL}/api/focus/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); fetchFocusEntries(true); } catch(e){} }
 
-        function calculateFocusPreview(e) {
+        async function calculateFocusPreview(e) {
         if(e) e.preventDefault();
         
         const formId = document.getElementById('focus-form-id').value;
         if(!formId) return alert("Musisz najpierw wybrać Setup (ID Form)!");
 
-        // 1. Zliczanie punktów (identyczna logika jak w backendzie)
+        // 1. ZABEZPIECZENIE: Sprawdzenie czy dane portfela są załadowane
+        if (depositsDataArray.length === 0 || allTradesData.length === 0) {
+            console.log("Dane portfela puste, pobieram w locie...");
+            try {
+                // Pobieramy dane w locie, jeśli nie zostały wcześniej zainicjalizowane
+                const [dRes, tRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/portfolio/deposits`),
+                    fetch(`${API_BASE_URL}/api/trades/entries`)
+                ]);
+                depositsDataArray = await dRes.json() || [];
+                allTradesData = await tRes.json() || [];
+            } catch (err) {
+                console.error("Błąd pobierania danych portfela do kalkulacji:", err);
+                return alert("Nie udało się pobrać danych portfela. Sprawdź połączenie z serwerem.");
+            }
+        }
+
+        // 2. Zliczanie punktów (skala 25 pkt)
         const candle = parseFloat(document.getElementById('focus-candle').value) || 0;
         const volume = parseFloat(document.getElementById('focus-volume').value) || 0;
         const gap = parseFloat(document.getElementById('focus-gap').value) || 0;
@@ -1741,22 +1758,7 @@
 
         const finalRatio = pointsTotal / 25.0;
 
-        // 2. Wyliczenie bazowej alokacji (przed limitem)
-        let rawAlloc = 0.0;
-        if (finalRatio >= 0.8) rawAlloc = 3.0;
-        else if (finalRatio >= 0.6) rawAlloc = 2.0;
-        else if (finalRatio >= 0.5) rawAlloc = 1.0;
-
-        // 3. ODTWORZENIE LIMITU Z BACKENDU (Suma dotychczasowych alokacji w tym tickerze)
-        // Pobieramy sumę allocated_pct dla tego tickera z obecnej listy focusDataArray
-        const currentExp = focusDataArray
-            .filter(f => f.ticker === entry.ticker)
-            .reduce((sum, f) => sum + (parseFloat(f.allocated_pct) || 0), 0);
-
-        // Zastosowanie identycznego warunku "bezpiecznika" jak w app.py
-        let finalAlloc = (currentExp + rawAlloc > 10.0) ? Math.max(0.0, 10.0 - currentExp) : rawAlloc;
-
-        // 4. Kapitał (zgodnie z logiką backendu: Depozyty + Zamknięte PnL)
+        // 3. Matematyka kapitału (Zgodna z backendem)
         const totalDepositsPln = depositsDataArray.reduce((acc, d) => acc + (parseFloat(d.amount_pln) || 0), 0);
         const totalClosedPnlPln = allTradesData.filter(t => t.status === 'CLOSED').reduce((acc, t) => {
             const s = calculateTradeStats(t);
@@ -1764,23 +1766,33 @@
         }, 0);
         const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
 
-        // 5. Waluta i FX
+        // 4. Wyliczenie alokacji i bezpiecznika (Max 10% na ticker)
+        let rawAlloc = 0.0;
+        if (finalRatio >= 0.8) rawAlloc = 3.0;
+        else if (finalRatio >= 0.6) rawAlloc = 2.0;
+        else if (finalRatio >= 0.5) rawAlloc = 1.0;
+
+        const currentExp = focusDataArray
+            .filter(f => f.ticker === entry.ticker)
+            .reduce((sum, f) => sum + (parseFloat(f.allocated_pct) || 0), 0);
+
+        let finalAlloc = (currentExp + rawAlloc > 10.0) ? Math.max(0.0, 10.0 - currentExp) : rawAlloc;
+
+        // 5. FX
         const targetCurrency = getCurrencyForFrontend(entry.ticker);
-        // Uwaga: Funkcja JS nie ma dostępu do get_live_fx_rate() z Pythona, więc używamy przybliżonego kursu 
-        // LUB jeśli masz to w JS, użyj swojej funkcji pobierającej FX. 
-        // Tutaj dla spójności z backendem (jeśli backend nie używa świeżego FX w API, a z bazy):
         let fx_rate = 1.0;
+        // Jeśli masz funkcję get_live_fx_rate w JS, użyj jej tutaj. Jeśli nie, zostaw przybliżenie
         if (targetCurrency === 'USD') fx_rate = 4.0; 
         if (targetCurrency === 'EUR') fx_rate = 4.3;
 
         const allocatedCash = ((finalAlloc / 100.0) * currentCapitalPln) / fx_rate;
-
+        
         // 6. Renderowanie
         document.getElementById('prev-focus-ratio').innerHTML = `<span style="color:#eaecef;">${pointsTotal.toFixed(1)} / 25 pkt</span> <span style="color:#0ecb81; margin-left:8px; font-weight:bold;">(${(finalRatio * 100).toFixed(0)}%)</span>`;
         document.getElementById('prev-focus-size').innerHTML = `<span style="color:#eaecef; font-weight:bold;">${allocatedCash.toFixed(2)} ${targetCurrency}</span> <small style="color:var(--text-muted);">(Limit: ${finalAlloc.toFixed(1)}% z ${currentCapitalPln.toFixed(0)} PLN)</small>`;
         document.getElementById('prev-focus-rr').innerText = `1 : ${rrVal.toFixed(2)}`;
         document.getElementById('focus-preview-box').style.display = 'block';
-        }
+    }
         
         async function submitFocusForm(e) { 
             e.preventDefault(); 
