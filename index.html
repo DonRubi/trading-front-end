@@ -2855,7 +2855,7 @@
                     <td class="sensitive">L:${Number(item.day_low).toFixed(2)} | H:${Number(item.day_high).toFixed(2)}</td>
                     <td style="font-weight:bold;">${scoreText}</td>
                     <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 TV</a></td>
-                    <td><button class="btn-delete" onclick="deleteAlertHistory(${item.id})">Usuń</button></td>
+                    <td><button class="btn-delete" onclick="deleteAlert(${item.id})">Usuń</button></td>
                 </tr>`;
                     });
             updatePageInfo('alert-page-info', currentAlertPage, maxPage, filteredAlertsData.length, alertPageSize);
