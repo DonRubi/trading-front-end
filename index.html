@@ -1717,7 +1717,7 @@
         const formId = document.getElementById('focus-form-id').value;
         if(!formId) return alert("Musisz najpierw wybrać Setup (ID Form)!");
 
-        // 1. Zliczanie punktów z suwaków Focus (Pula: Max 12 pkt)
+        // 1. Zliczanie punktów z suwaków Focus (Max 12 pkt)
         const candle = parseFloat(document.getElementById('focus-candle').value) || 0;
         const volume = parseFloat(document.getElementById('focus-volume').value) || 0;
         const gap = parseFloat(document.getElementById('focus-gap').value) || 0;
@@ -1731,60 +1731,52 @@
 
         // 2. Szukanie powiązanego setupu z Formularza
         const entry = formEntriesGlobal.find(f => f.entry_id === formId);
-        let rrStr = "Brak setupu";
-        let sizeStr = "-";
-        const maxPossiblePoints = 25.0; // Pula dostosowana do logiki backendu
+        if(!entry) return alert("Nie znaleziono setupu!");
 
-        if(entry) {
-            const entPrice = parseFloat(entry.entry_point) || 0;
-            const slPrice = parseFloat(entry.stop_loss) || 0;
-            const tpPrice = parseFloat(entry.take_profit) || 0;
-            const mod = (entry.direction === 'DBR' || entry.direction === 'RBR') ? 1 : -1;
-            
-            // Wyliczanie Risk/Reward
-            let rrVal = 0;
-            if (entPrice - slPrice !== 0) {
-                rrVal = ((tpPrice - entPrice) * mod) / ((entPrice - slPrice) * mod);
-                rrStr = `1 : ${rrVal.toFixed(2)}`;
-            } else {
-                rrStr = "Błąd (Cena WE = SL)";
-            }
+        // 3. Doliczanie punktów z Formularza (Tak jak w backendzie: reasons * 2.0 + RR + priority)
+        const rrVal = ((parseFloat(entry.take_profit) - parseFloat(entry.entry_point)) * (['DBR', 'RBR'].includes(entry.direction) ? 1 : -1)) / 
+                      ((parseFloat(entry.entry_point) - parseFloat(entry.stop_loss)) * (['DBR', 'RBR'].includes(entry.direction) ? 1 : -1));
+        
+        pointsTotal += (Array.isArray(entry.reasons) ? entry.reasons.length * 2.0 : 0);
+        if (rrVal > 4.0) pointsTotal += 2.0;
+        else if (rrVal > 2.5) pointsTotal += 1.0;
+        if (parseInt(entry.priority) === 1) pointsTotal += 1.0;
 
-            // 3. Doliczanie punktów z Formularza (Zgodnie z backendem)
-            const reasonsCount = Array.isArray(entry.reasons) ? entry.reasons.length : 0;
-            pointsTotal += (reasonsCount * 2.0); // Max 10 pkt
-            
-            if (rrVal > 4.0) pointsTotal += 2.0;
-            else if (rrVal > 2.5) pointsTotal += 1.0;
-            
-            if (parseInt(entry.priority) === 1) pointsTotal += 1.0; // Max 1 pkt
+        // 4. Matematyka backendowa (Dynamiczne wyliczanie kapitału)
+        const finalRatio = pointsTotal / 25.0; // Skala do 25 pkt
+        
+        // Sumowanie depozytów (PLN)
+        const totalDepositsPln = depositsDataArray.reduce((acc, d) => acc + (parseFloat(d.amount_pln) || 0), 0);
+        // Sumowanie PnL z zamkniętych pozycji (PLN)
+        const totalClosedPnlPln = allTradesData.filter(t => t.status === 'CLOSED').reduce((acc, t) => {
+            const s = calculateTradeStats(t);
+            return acc + (s.profPln || 0);
+        }, 0);
+        
+        const currentCapitalPln = totalDepositsPln + totalClosedPnlPln;
 
-            // Wyliczenie ostatecznej siły setupu
-            const finalRatio = pointsTotal / maxPossiblePoints;
+        // 5. Wyliczenie alokacji (Alloc)
+        let alloc = 0.0;
+        if (finalRatio >= 0.8) alloc = 3.0;
+        else if (finalRatio >= 0.6) alloc = 2.0;
+        else if (finalRatio >= 0.5) alloc = 1.0;
+        
+        // 6. Przeliczenie na docelową walutę (Zgodnie z backendem)
+        const targetCurrency = getCurrencyForFrontend(entry.ticker);
+        // Używamy prostego mnożnika dla FX jeśli live nie jest dostępny, 
+        // ale backend bierze get_live_fx_rate(). Uprościmy tutaj do "1" dla PLN lub przybliżonego kursu
+        let fx_rate = 1.0;
+        if (targetCurrency === 'USD') fx_rate = 4.0; // Przybliżony kurs do podglądu
+        if (targetCurrency === 'EUR') fx_rate = 4.3;
 
-            // 4. Odtworzenie Logiki Alokacji Kapitału (Zależnie od reżimu walutowego)
-            const currency = getCurrencyForFrontend(entry.ticker);
-            let baseCapital = 2500; // Domyślna pula bazowa (w walucie obcej)
-            if (currency === 'PLN') baseCapital = 10000; // Domyślna pula bazowa (w PLN)
-
-            // Kaskadowe wyliczanie sugerowanego zaangażowania (1-3%)
-            let allocPct = 0.0;
-            if (finalRatio >= 0.8) allocPct = 3.0;
-            else if (finalRatio >= 0.6) allocPct = 2.0;
-            else if (finalRatio >= 0.5) allocPct = 1.0;
-
-            const allocatedCash = baseCapital * (allocPct / 100);
-            
-            sizeStr = `<span style="color:#eaecef; font-weight:bold;">${allocatedCash.toFixed(2)} ${currency}</span> <small style="color:var(--text-muted); font-weight:normal; margin-left:5px;">(${allocPct.toFixed(1)}% z puli ${baseCapital} ${currency})</small>`;
-            
-            // 5. Wyświetlenie wyników w oknie podglądu
-            document.getElementById('prev-focus-ratio').innerHTML = `<span style="color:#eaecef;">${pointsTotal.toFixed(1)} / 25 pkt</span> <span style="color:#0ecb81; margin-left:8px; font-weight:bold;">(${(finalRatio * 100).toFixed(0)}%)</span>`;
-            document.getElementById('prev-focus-size').innerHTML = sizeStr;
-            document.getElementById('prev-focus-rr').innerText = rrStr;
-            
-            document.getElementById('focus-preview-box').style.display = 'block';
-            }
-        }
+        const allocatedCash = ((alloc / 100.0) * currentCapitalPln) / fx_rate;
+        
+        // 7. Renderowanie
+        document.getElementById('prev-focus-ratio').innerHTML = `<span style="color:#eaecef;">${pointsTotal.toFixed(1)} / 25 pkt</span> <span style="color:#0ecb81; margin-left:8px; font-weight:bold;">(${(finalRatio * 100).toFixed(0)}%)</span>`;
+        document.getElementById('prev-focus-size').innerHTML = `<span style="color:#eaecef; font-weight:bold;">${allocatedCash.toFixed(2)} ${targetCurrency}</span> <small style="color:var(--text-muted);">(${alloc.toFixed(1)}% z ${currentCapitalPln.toFixed(0)} PLN)</small>`;
+        document.getElementById('prev-focus-rr').innerText = `1 : ${rrVal.toFixed(2)}`;
+        document.getElementById('focus-preview-box').style.display = 'block';
+    }
         
         async function submitFocusForm(e) { 
             e.preventDefault(); 
