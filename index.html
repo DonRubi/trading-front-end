@@ -112,7 +112,7 @@
                         <option value="Ignorowanie">🔴 Ignorowanie</option>
                         <option value="Brak danych">Brak danych</option>
                     </select>
-                    <select id="priority-filter" onchange="handleAllFilters()">
+                    <select id="priority-filter" onchange="applyFormFilterAndSort()">
                         <option value="ALL">Wszystkie</option>
                         <option value="1">⭐ Tylko Priorytet</option>
                     </select>
@@ -582,7 +582,7 @@
             </select>
             <select id="focuslist-status-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Statusy</option> <option value="Skupienie">Skupienie</option> <option value="Obserwacja">Obserwacja</option> </select> 
             <select id="focuslist-currency-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Waluty</option> <option value="USD">USD</option> <option value="PLN">PLN</option> <option value="EUR">EUR</option> </select> 
-            <select id="priority-filter" onchange="handleAllFilters()">
+            <select id="focuslist-prio-filter" onchange="handleFocusListFilter()">
                 <option value="ALL">Wszystkie</option>
                 <option value="1">⭐ Tylko Priorytet</option>
             </select>
@@ -638,7 +638,7 @@
                 <option value="LAST_WEEK">Ubiegły tydzień</option>
                 <optgroup id="alert-month-group" label="Archiwum (Miesiące)"></optgroup>
             </select>
-            <select id="priority-filter" onchange="handleAllFilters()">
+            <select id="alert-prio-ticker-filter" onchange="handleAlertsFilter()">
                 <option value="ALL">Wszystkie</option>
                 <option value="1">⭐ Tylko Priorytet</option>
             </select>
@@ -1182,7 +1182,7 @@
                  </div>
                     <div style="display: flex; gap:10px; align-items:center;">
                         <label style="font-size: 0.75rem; cursor:pointer; color: ${item.is_priority ? 'var(--accent)' : 'var(--text-muted)'};">
-                        <input type="checkbox" ${item.is_priority ? 'checked' : ''} onchange="toggleTickerPriority('${item.ticker}', this)"> ⚡
+                            <input type="checkbox" ${item.is_priority ? 'checked' : ''} onchange="toggleTickerPriority('${item.ticker}', this)"> ⚡
                         </label>
                         <span class="price-tag sensitive">${item.price !== null ? item.price + '$' : '...'}</span>
                         <button class="btn-edit" onclick="openEditModal('ticker', '${item.ticker}')">✎</button>
@@ -1201,6 +1201,20 @@
             renderMobileList(); 
         }
 
+        async function toggleTickerPriority(ticker, checkbox) {
+            try {
+                await fetch(`${API_BASE_URL}/api/database/toggle-priority`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ticker: ticker, is_priority: checkbox.checked })
+                });
+                await loadDatabase(); // Odśwież dane
+            } catch(e) { 
+                alert("Błąd zapisu priorytetu"); 
+                checkbox.checked = !checkbox.checked;
+            }
+        }
+    
         function toggleAllRows(module, btn) {
             let isAll = false;
             // 1. Zmiana limitu wyświetlań w zależności od modułu (99999 to limit "Pokaż wszystko")
@@ -1311,10 +1325,9 @@
         function applyFormFilterAndSort() {
             const muteFilter = document.getElementById('form-mute-filter').value;
             const statusFilter = document.getElementById('form-status-filter') ? document.getElementById('form-status-filter').value : 'ALL';
-            // --- NOWE --- Pobranie wartości filtra priorytetu
             const prioFilter = document.getElementById('priority-filter') ? document.getElementById('priority-filter').value : 'ALL';
     
-            // 1. MAPOWANIE: Obliczanie wszystkich wartości (w tym statusu) przed filtrowaniem
+            // 1. MAPOWANIE
             let mappedEntries = formEntries.map(item => {
                 const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); 
                 const mod = isLong ? 1 : -1;
@@ -1333,7 +1346,7 @@
                 let calcStatus = 'Brak danych';
                 if (entry !== 0 && !isNaN(rawDiff) && isFinite(rawDiff)) {
                     let isObserwacja = false, isSkupienie = false;
-            
+                
                     if (isLong) {
                         if (realDiff >= -5 && realDiff <= 10) isObserwacja = true;
                         if (realDiff >= -3 && realDiff <= 10 && item.priority === 1) isSkupienie = true;
@@ -1355,13 +1368,12 @@
                 const tData = tickerDataArray.find(t => t.ticker === entry.ticker);
                 const stockName = tData && tData.stock_name ? tData.stock_name.toLowerCase() : '';
                 const tickerLower = (entry.ticker || '').toLowerCase();
-            
+        
                 const textMatch = tickerLower.includes(formFilterText) || stockName.includes(formFilterText);
                 const muteMatch = muteFilter === 'ALL' ? true : (entry.mute.toString() === muteFilter);
                 const statusMatch = statusFilter === 'ALL' ? true : (entry.calculatedStatus === statusFilter);
         
-                // --- NOWE --- Logika priorytetu
-                // Jeśli filtr priorytetu jest na '1', sprawdzamy czy tData w ogóle istnieje i czy ma ustawione is_priority na true
+                // Logika priorytetu
                 const isPriority = tData ? (tData.is_priority === true) : false;
                 const prioMatch = (prioFilter === 'ALL') || (prioFilter === '1' && isPriority);
         
@@ -2757,8 +2769,7 @@
             const typeFilter = document.getElementById('alert-type-filter').value || 'ALL';
             const impFilter = document.getElementById('alert-important-filter').value || 'ALL';
             const dateFilter = document.getElementById('alert-date-filter').value || 'ALL';
-            // --- NOWA ZMIENNA: Filtr priorytetu tickera ---
-            const prioTickerFilter = document.getElementById('alert-prio-ticker-filter').value || 'ALL';
+            const prioTickerFilter = document.getElementById('alert-prio-ticker-filter') ? document.getElementById('alert-prio-ticker-filter').value : 'ALL';
 
             const now = new Date();
             now.setHours(0,0,0,0);
@@ -2799,7 +2810,6 @@
             });
 
             filteredAlertsData = mappedAlertsData.filter(a => {
-                // --- LOGIKA FILTRÓW ---
                 const tData = tickerDataArray.find(t => t.ticker === a.ticker);
         
                 // 1. Nazwa + Ticker
@@ -2810,7 +2820,7 @@
                 const aType = a.alert_type || 'Punkt wejścia';
                 let typeMatch = (typeFilter === 'ALL') || (aType === typeFilter) || (typeFilter === 'Wejście' && aType === 'Punkt wejścia');
 
-                // 3. Ważne (Wygasa po 7 dniach!)
+                // 3. Ważne
                 let isImp = false;
                 if (a.important_since) {
                     const diffDays = (new Date() - new Date(a.important_since)) / (1000 * 60 * 60 * 24);
@@ -2818,11 +2828,11 @@
                 }
                 let impMatch = (impFilter === 'ALL') || (impFilter === '1' && isImp) || (impFilter === '0' && !isImp);
 
-                // --- NOWOŚĆ: Logika priorytetu tickera ---
-                const isTickerPriority = tData ? tData.is_priority : false;
+                // 4. Priorytet Tickera
+                const isTickerPriority = tData ? (tData.is_priority === true) : false;
                 let prioMatch = (prioTickerFilter === 'ALL') || (prioTickerFilter === '1' && isTickerPriority);
 
-                // 4. Data
+                // 5. Data
                 let dateMatch = true;
                 if (dateFilter !== 'ALL') {
                     if (!a.triggered_at) dateMatch = false;
@@ -2837,7 +2847,6 @@
                         else dateMatch = a.triggered_at.startsWith(dateFilter);
                     }
                 }
-                // Dodajemy prioMatch do warunku zwracanego
                 return textMatch && typeMatch && impMatch && dateMatch && prioMatch;
             });
 
