@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
@@ -111,6 +111,10 @@
                         <option value="Czekanie">🟡 Czekanie</option>
                         <option value="Ignorowanie">🔴 Ignorowanie</option>
                         <option value="Brak danych">Brak danych</option>
+                    </select>
+                    <select id="priority-filter" onchange="handleAllFilters()">
+                        <option value="ALL">Wszystkie</option>
+                        <option value="1">⭐ Tylko Priorytet</option>
                     </select>
                 </div>
                 <div class="table-responsive">
@@ -578,6 +582,10 @@
             </select>
             <select id="focuslist-status-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Statusy</option> <option value="Skupienie">Skupienie</option> <option value="Obserwacja">Obserwacja</option> </select> 
             <select id="focuslist-currency-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Waluty</option> <option value="USD">USD</option> <option value="PLN">PLN</option> <option value="EUR">EUR</option> </select> 
+            <select id="priority-filter" onchange="handleAllFilters()">
+                <option value="ALL">Wszystkie</option>
+                <option value="1">⭐ Tylko Priorytet</option>
+            </select>
         </div> 
         <div class="table-responsive"> 
             <table class="macro-custom-table" style="width:100%; font-size: 0.85em;"> 
@@ -629,6 +637,10 @@
                 <option value="THIS_WEEK">Ten tydzień</option>
                 <option value="LAST_WEEK">Ubiegły tydzień</option>
                 <optgroup id="alert-month-group" label="Archiwum (Miesiące)"></optgroup>
+            </select>
+            <select id="priority-filter" onchange="handleAllFilters()">
+                <option value="ALL">Wszystkie</option>
+                <option value="1">⭐ Tylko Priorytet</option>
             </select>
         </div> 
         <div class="table-responsive"> 
@@ -1162,7 +1174,22 @@
             const container = document.getElementById('db-list-container'); container.innerHTML = ''; if (tickerDataArray.length === 0) return;
             const start = (currentTickerPage - 1) * tickerPageSize;
             const maxPage = Math.ceil(tickerDataArray.length / tickerPageSize) || 1;
-            container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `<div class="data-card"><div class="data-card-info"><h4>${item.ticker}</h4><p>${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p></div><div style="display: flex; gap:5px;"><span class="price-tag sensitive">${item.price !== null ? item.price + '$' : '...'}</span><button class="btn-edit" onclick="openEditModal('ticker', '${item.ticker}')">Edytuj</button><button class="btn-delete" onclick="removeTicker('${item.ticker}')">Usuń</button></div></div>`).join('');
+            container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `
+                <div class="data-card">
+                    <div class="data-card-info">
+                        <h4>${item.ticker}</h4>
+                        <p>${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p>
+                 </div>
+                    <div style="display: flex; gap:10px; align-items:center;">
+                        <label style="font-size: 0.75rem; cursor:pointer; color: ${item.is_priority ? 'var(--accent)' : 'var(--text-muted)'};">
+                        <input type="checkbox" ${item.is_priority ? 'checked' : ''} onchange="toggleTickerPriority('${item.ticker}', this)"> ⚡
+                        </label>
+                        <span class="price-tag sensitive">${item.price !== null ? item.price + '$' : '...'}</span>
+                        <button class="btn-edit" onclick="openEditModal('ticker', '${item.ticker}')">✎</button>
+                        <button class="btn-delete" onclick="removeTicker('${item.ticker}')">✖</button>
+                    </div>
+                  </div>
+            `).join('');
             updatePageInfo('ticker-page-info', currentTickerPage, maxPage, tickerDataArray.length, tickerPageSize);
         }
 
@@ -1225,6 +1252,20 @@
         }
         async function removeTicker(t) { if (!confirm('Usunąć?')) return; try { await fetch(`${API_BASE_URL}/api/database/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t }) }); loadDatabase(); } catch (e) {} }
 
+        async function toggleTickerPriority(ticker, checkbox) {
+            try {
+                await fetch(`${API_BASE_URL}/api/database/toggle-priority`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ticker: ticker, is_priority: checkbox.checked })
+                });
+                await loadDatabase(); // Odświeża listę
+            } catch(e) { 
+                alert("Błąd zapisu priorytetu"); 
+                checkbox.checked = !checkbox.checked; // Cofnij wizualnie
+            }
+        }
+    
         // --- FORM MODULE ---
         function handleFormSort(key) {
             formSortDir = (formSortKey === key && formSortDir === 'desc') ? 'asc' : 'desc';
@@ -1269,9 +1310,10 @@
         
         function applyFormFilterAndSort() {
             const muteFilter = document.getElementById('form-mute-filter').value;
-            // Pobieramy wartość nowego filtra statusów
             const statusFilter = document.getElementById('form-status-filter') ? document.getElementById('form-status-filter').value : 'ALL';
-            
+            // --- NOWE --- Pobranie wartości filtra priorytetu
+            const prioFilter = document.getElementById('priority-filter') ? document.getElementById('priority-filter').value : 'ALL';
+    
             // 1. MAPOWANIE: Obliczanie wszystkich wartości (w tym statusu) przed filtrowaniem
             let mappedEntries = formEntries.map(item => {
                 const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); 
@@ -1279,20 +1321,19 @@
                 const entry = parseFloat(item.entry_point) || 0; 
                 const sl = parseFloat(item.stop_loss) || 0; 
                 const tp = parseFloat(item.take_profit) || 0;
-                
+        
                 const rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
                 const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
                 const cp = tm && tm.price ? tm.price : entry; 
-                
+        
                 const rawDiff = entry !== 0 ? (((cp - entry) / entry) * 100 * mod) : 0;
                 const realDiff = entry !== 0 ? (((cp - entry) / entry) * 100) : 0;
                 const score = Array.isArray(item.reasons) ? item.reasons.length : 0;
 
-                // Wyliczanie statusu "w locie" na potrzeby nowego filtra
                 let calcStatus = 'Brak danych';
                 if (entry !== 0 && !isNaN(rawDiff) && isFinite(rawDiff)) {
                     let isObserwacja = false, isSkupienie = false;
-                    
+            
                     if (isLong) {
                         if (realDiff >= -5 && realDiff <= 10) isObserwacja = true;
                         if (realDiff >= -3 && realDiff <= 10 && item.priority === 1) isSkupienie = true;
@@ -1306,21 +1347,25 @@
                     else calcStatus = Math.abs(rawDiff) > 15 ? 'Ignorowanie' : 'Czekanie';
                 }
 
-                // Zwracamy obiekt ze wstrzykniętymi danymi, łącznie ze statusem
                 return { ...item, diff: rawDiff, rr: rr, score: score, calculatedStatus: calcStatus };
             });
 
-            // 2. FILTROWANIE: Uwzględnienie Mute, Tekstu (Ticker + Nazwa) ORAZ Statusu
+            // 2. FILTROWANIE
             filteredFormEntries = mappedEntries.filter(entry => {
                 const tData = tickerDataArray.find(t => t.ticker === entry.ticker);
                 const stockName = tData && tData.stock_name ? tData.stock_name.toLowerCase() : '';
                 const tickerLower = (entry.ticker || '').toLowerCase();
-                
+            
                 const textMatch = tickerLower.includes(formFilterText) || stockName.includes(formFilterText);
                 const muteMatch = muteFilter === 'ALL' ? true : (entry.mute.toString() === muteFilter);
                 const statusMatch = statusFilter === 'ALL' ? true : (entry.calculatedStatus === statusFilter);
-                
-                return textMatch && muteMatch && statusMatch;
+        
+                // --- NOWE --- Logika priorytetu
+                // Jeśli filtr priorytetu jest na '1', sprawdzamy czy tData w ogóle istnieje i czy ma ustawione is_priority na true
+                const isPriority = tData ? (tData.is_priority === true) : false;
+                const prioMatch = (prioFilter === 'ALL') || (prioFilter === '1' && isPriority);
+        
+                return textMatch && muteMatch && statusMatch && prioMatch;
             });
 
             // 3. SORTOWANIE
@@ -1838,6 +1883,7 @@
             const mFilter = document.getElementById('focuslist-mute-filter').value;
             const sFilter = document.getElementById('focuslist-status-filter').value; 
             const cFilter = document.getElementById('focuslist-currency-filter').value; 
+            const pFilter = document.getElementById('focuslist-prio-filter') ? document.getElementById('focuslist-prio-filter').value : 'ALL';
             filteredFocusListEntries = []; 
 
             formEntries.forEach(item => { 
@@ -1882,7 +1928,12 @@
                     if (sFilter !== 'ALL' && status !== sFilter) return; 
                     
                     const currency = getCurrencyForFrontend(item.ticker); 
-                    if (cFilter !== 'ALL' && currency !== cFilter) return; 
+                    if (cFilter !== 'ALL' && currency !== cFilter) return;
+                    
+                    if (pFilter === '1') {
+                        const tData = tickerDataArray.find(t => t.ticker === item.ticker);
+                        if (!tData || !tData.is_priority) return; // Jeśli filtr na "1", a nie ma priorytetu - pomiń
+                    }
                     
                     filteredFocusListEntries.push({ ...item, calcStatus: status, calcCurrency: currency, calcDiff: Math.abs(diff), originalDiff: diff, calcRR: rr }); 
                 } catch(err) { console.error("Filter row skip", err); }
@@ -2706,16 +2757,18 @@
             const typeFilter = document.getElementById('alert-type-filter').value || 'ALL';
             const impFilter = document.getElementById('alert-important-filter').value || 'ALL';
             const dateFilter = document.getElementById('alert-date-filter').value || 'ALL';
+            // --- NOWA ZMIENNA: Filtr priorytetu tickera ---
+            const prioTickerFilter = document.getElementById('alert-prio-ticker-filter').value || 'ALL';
 
             const now = new Date();
             now.setHours(0,0,0,0);
             const yesterday = new Date(now);
             yesterday.setDate(now.getDay() === 1 ? now.getDate() - 3 : now.getDate() - 1);
-            
+    
             function getMonday(d) {
                 d = new Date(d);
                 var day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1);
-                m = new Date(d.setDate(diff));
+                let m = new Date(d.setDate(diff));
                 m.setHours(0,0,0,0);
                 return m;
             }
@@ -2726,17 +2779,17 @@
             lastSunday.setDate(lastSunday.getDate() - 1);
             lastSunday.setHours(23,59,59,999);
 
-            // 1. ZMAPUJ DANE (dodajemy bieżącą cenę i dystans)
+            // 1. ZMAPUJ DANE
             let mappedAlertsData = allAlertsData.map(a => {
                 const tData = tickerDataArray.find(t => t.ticker === a.ticker);
                 const currentPrice = tData && tData.price ? parseFloat(tData.price) : 0;
                 const targetPrice = parseFloat(a.target_price) || 0;
-                
+        
                 let originalDiff = 0;
                 if (targetPrice !== 0 && currentPrice !== 0) {
                     originalDiff = (((currentPrice - targetPrice) / targetPrice) * 100);
                 }
-                
+        
                 return {
                     ...a,
                     currentPrice: currentPrice,
@@ -2746,8 +2799,10 @@
             });
 
             filteredAlertsData = mappedAlertsData.filter(a => {
-                // 1. Nazwa + Ticker
+                // --- LOGIKA FILTRÓW ---
                 const tData = tickerDataArray.find(t => t.ticker === a.ticker);
+        
+                // 1. Nazwa + Ticker
                 const sName = tData && tData.stock_name ? tData.stock_name.toLowerCase() : '';
                 const textMatch = (a.ticker || '').toLowerCase().includes(searchText) || sName.includes(searchText);
 
@@ -2762,6 +2817,10 @@
                     if (diffDays <= 7) isImp = true;
                 }
                 let impMatch = (impFilter === 'ALL') || (impFilter === '1' && isImp) || (impFilter === '0' && !isImp);
+
+                // --- NOWOŚĆ: Logika priorytetu tickera ---
+                const isTickerPriority = tData ? tData.is_priority : false;
+                let prioMatch = (prioTickerFilter === 'ALL') || (prioTickerFilter === '1' && isTickerPriority);
 
                 // 4. Data
                 let dateMatch = true;
@@ -2778,16 +2837,17 @@
                         else dateMatch = a.triggered_at.startsWith(dateFilter);
                     }
                 }
-                return textMatch && typeMatch && impMatch && dateMatch;
+                // Dodajemy prioMatch do warunku zwracanego
+                return textMatch && typeMatch && impMatch && dateMatch && prioMatch;
             });
 
-            // 2. SORTOWANIE (Uwzględnia absolutny dystans najbliżej zera)
+            // 2. SORTOWANIE
             filteredAlertsData.sort((a,b) => {
                 let va, vb;
                 if (alertSortKey === 'triggered_at') { va = new Date(a.triggered_at); vb = new Date(b.triggered_at); }
                 else if (alertSortKey === 'calcDiff') { va = a.absDiff; vb = b.absDiff; }
                 else { va = a[alertSortKey]; vb = b[alertSortKey]; }
-                
+        
                 if (typeof va === 'string') return alertSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
                 return alertSortDir === 'asc' ? va - vb : vb - va;
             });
