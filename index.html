@@ -875,7 +875,7 @@
 </div>
     
 <script>
-        const API_BASE_URL = 'https://kuba-quant-desk.onrender.com';
+        const API_BASE_URL = 'https://quant-desk-backend-dr8n.onrender.com';
         let isPrivacyMode = false;
         
         let tickerDataArray = [], currentTickerPage = 1, tickerPageSize = 20;
@@ -3364,7 +3364,7 @@
 
     async function checkTickerLive(ticker) {
         try {
-            const response = await fetch(`https://kuba-quant-desk.onrender.com/api/utils/ticker-data?ticker=${ticker}`);
+            const response = await fetch(`https://quant-desk-backend-dr8n.onrender.com/api/utils/ticker-data?ticker=${ticker}`);
             const data = await response.json();
             
             if (data.status === "error") {
