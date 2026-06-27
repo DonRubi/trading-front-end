@@ -843,14 +843,49 @@
             </div>
         </div>
     </div>
-    <div id="campaign-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; padding: 15px;">
-        <div style="background:var(--bg-card); padding:25px; border-radius:12px; width:100%; max-width:600px; border:1px solid var(--accent); max-height: 90vh; overflow-y: auto;">
-            <h3 style="color:var(--accent); margin-bottom:15px;" id="campaign-title">Audyt Kampanii AI</h3>
-            <div id="campaign-content" style="color: var(--text-main); line-height: 1.6; font-size: 0.95em;">
-                Ładowanie analizy...
-            </div>
-            <button onclick="document.getElementById('campaign-modal').style.display='none'" style="margin-top:20px; width:100%; background:var(--bg-input); color:#fff; border:1px solid #45475a; padding:12px; border-radius:6px; cursor:pointer;">Zamknij</button>
+    <div id="campaign-module" class="module-container" style="display: none;">
+    <div class="module-header flex-between">
+        <h2>Drzewo Scenariuszy Kampanii</h2>
+        <div class="campaign-filters flex-gap">
+            <select id="camp-status-filter" class="form-control">
+                <option value="ALL">Wszystkie Statusy</option>
+                <option value="OPEN" selected>Otwarte Kampanie</option>
+                <option value="CLOSED">Zamknięte Kampanie</option>
+            </select>
+            <select id="camp-currency-filter" class="form-control">
+                <option value="ALL">Wszystkie Waluty</option>
+                <option value="USD">Tylko USD</option>
+                <option value="EUR">Tylko EUR</option>
+                <option value="PLN">Tylko PLN</option>
+            </select>
+            <button id="btn-highlight-actionable" class="btn btn-warning">⚡ Akcja na Dziś</button>
         </div>
+    </div>
+    
+    <div id="campaign-list" class="grid-container">
+        </div>
+    </div>
+
+    <div id="edit-node-modal" class="modal">
+    <div class="modal-content">
+        <h3>Edycja Kafelka <span id="edit-node-id-label"></span></h3>
+        <input type="hidden" id="edit-node-uuid">
+        
+        <label>Zmień Cel Cenowy / Strefę:</label>
+        <select id="edit-node-form-id" class="form-control mb-1"></select> <label>Wymagany Focus Score:</label>
+        <input type="number" id="edit-node-focus" class="form-control mb-1">
+        
+        <label>Obowiązkowy powód modyfikacji (min. 15 znaków):</label>
+        <textarea id="edit-node-reason" class="form-control mb-1" rows="3" placeholder="Np. Cena odzyskała AVWAP, przesuwam strefę wyżej..."></textarea>
+        
+        <div class="checkbox-container alert alert-danger">
+            <input type="checkbox" id="edit-node-delete-descendants">
+            <label for="edit-node-delete-descendants"><strong>Kaskadowe Usuwanie:</strong> Zaznacz, jeśli chcesz usunąć wszystkie kolejne kafelki w tej ścieżce (mogą nie korelować ze zmianą).</label>
+        </div>
+        
+        <button id="btn-save-node-edit" class="btn btn-primary mt-1">Zapisz i Zaloguj Zmianę</button>
+        <button onclick="document.getElementById('edit-node-modal').style.display='none'" class="btn btn-secondary mt-1">Anuluj</button>
+    </div>
     </div>
 
     <div id="notes-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; padding: 15px;">
@@ -3638,6 +3673,101 @@
             console.error(e);
         }
     }
+
+    // Pomocnicza funkcja generująca link do TradingView
+function getTradingViewLink(ticker) {
+    let tvTicker = ticker.toUpperCase();
+    if (!tvTicker.includes(':')) {
+        // Podstawowe dopasowania dla czystych tickerów jak ORCL czy TSLA
+        if (/^[A-Z]{1,5}$/.test(tvTicker)) tvTicker = `NYSE:${tvTicker}`; 
+    }
+    return `https://www.tradingview.com/chart/?symbol=${tvTicker}`;
+}
+
+// Funkcja renderująca graf kampanii
+function renderCampaignTree(campaignData) {
+    const listContainer = document.getElementById('campaign-list');
+    listContainer.innerHTML = '';
+
+    campaignData.forEach(camp => {
+        const trade = camp.base_trade;
+        const nodes = camp.graph_nodes;
+        
+        // Budowa kontenera
+        const campCard = document.createElement('div');
+        campCard.className = `card campaign-card currency-${trade.currency} status-${trade.status}`;
+        
+        // Generowanie szybkiego linku TV
+        const tvLink = getTradingViewLink(trade.ticker);
+        
+        let html = `
+            <div class="card-header flex-between">
+                <h4>${trade.ticker} <a href="${tvLink}" target="_blank" class="tv-badge">📺 TV</a></h4>
+                <span class="badge ${trade.status === 'OPEN' ? 'badge-success' : 'badge-dark'}">${trade.status}</span>
+            </div>
+            <div class="campaign-graph-grid">
+                <div class="path-column path-standard">
+                    <h5>Ścieżka BAZOWA</h5>
+                    ${renderNodesHTML(nodes.filter(n => n.path_type === 'STANDARD'))}
+                </div>
+                <div class="path-column path-alternative">
+                    <h5>Ścieżka ALTERNATYWNA</h5>
+                    ${renderNodesHTML(nodes.filter(n => n.path_type === 'ALTERNATIVE'))}
+                </div>
+            </div>
+        `;
+        campCard.innerHTML = html;
+        listContainer.appendChild(campCard);
+    });
+}
+
+function renderNodesHTML(pathNodes) {
+    if (pathNodes.length === 0) return `<p class="text-muted">Brak zaplanowanych kroków.</p>`;
+    
+    return pathNodes.map(node => `
+        <div class="graph-node ${node.status === 'EXECUTED' ? 'node-active' : 'node-pending'}" data-target="${node.target_price}">
+            <div class="node-id">${node.node_id}</div>
+            <div class="node-action"><strong>${node.action_type}</strong> @ ${node.target_price}$</div>
+            <div class="node-budget">Budżet: ${node.allocated_budget_pct}%</div>
+            ${node.status === 'PENDING' ? `<button onclick="openEditNodeModal('${node.id}', '${node.node_id}')" class="btn btn-sm btn-outline">Edytuj ✏️</button>` : `<span class="badge-done">Zrealizowano ✔️</span>`}
+        </div>
+    `).join('');
+}
+
+// Obsługa "Akcji na dziś"
+document.getElementById('btn-highlight-actionable').addEventListener('click', async () => {
+    // 1. Zbieramy wszystkie tickery z widocznych kampanii
+    // 2. Strzał do naszego endpointu /api/utils/ticker-data po dzienne zakresy dla każdego
+    // 3. Jeśli day_low <= target_price <= day_high, dodajemy klasę CSS .highlight-node z czerwoną, pulsującą obwódką
+    alert("Funkcja przeskoczy przez kafelki i podświetli te, które zostały dzisiaj naruszone cenowo!");
+});
+
+// Zapis edycji kafelka z uwzględnieniem pop-upa "Delete Descendants"
+document.getElementById('btn-save-node-edit').addEventListener('click', async () => {
+    const reason = document.getElementById('edit-node-reason').value;
+    if (reason.length < 15) {
+        alert("Musisz opisać powód zmiany w co najmniej 15 znakach, aby przejść audyt!");
+        return;
+    }
+    
+    const payload = {
+        id: document.getElementById('edit-node-uuid').value,
+        edit_reason: reason,
+        delete_descendants: document.getElementById('edit-node-delete-descendants').checked,
+        target_price: parseFloat(document.getElementById('edit-node-form-id').value), // Bierzemy cenę ze zmapowanego Form Entry
+        required_focus_score: parseFloat(document.getElementById('edit-node-focus').value)
+    };
+
+    const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    if(result.status === 'success') {
+        document.getElementById('edit-node-modal').style.display = 'none';
+        // Odśwież graf
+        loadCampaigns();
+    }
+    });
 
     // --- Start Aplikacji ---
     loadAiProfileFromServer(); // Pobiera profil z serwera na starcie
