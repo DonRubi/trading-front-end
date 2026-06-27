@@ -3919,43 +3919,98 @@ function renderCampaignTree(campaignData) {
     });
 }
 
-// Otwieranie Modalu Nowego Kroku
+// --- BRAKUJĄCA FUNKCJA RYSOWANIA KAFELKÓW ---
+function renderNodesList(pathNodes) {
+    if(pathNodes.length === 0) return `<p style="color:var(--text-muted); font-size:0.85em; font-style:italic; margin: 10px 0;">Brak zaplanowanych kroków.</p>`;
+    return pathNodes.map(node => {
+        const isExecuted = node.status === 'EXECUTED';
+        return `
+            <div class="campaign-node-item" data-node-id="${node.id}" data-target-price="${node.target_price}" style="background:var(--bg-input); padding:15px; border-radius:8px; margin-bottom:10px; border-left:4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position:relative;">
+                <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
+                    <strong style="color:var(--text-main); font-size:1.02em;">Węzeł ${node.node_id}</strong>
+                    <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
+                </div>
+                <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
+                    <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
+                </div>
+                <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
+                    Budżet transzy: <b>${node.allocated_budget_pct}%</b> | Focus > <b>${node.required_focus_score}</b>
+                </div>
+                ${node.step_rationale ? `<div style="font-size:0.82em; color:var(--accent); font-style:italic; margin-top:8px; background: rgba(201,148,0,0.08); padding: 8px; border-radius: 4px; border-left: 2px solid var(--accent);">📝 "${node.step_rationale}"</div>` : ''}
+                ${!isExecuted ? `<div style="margin-top: 10px; text-align: right;"><button onclick="alert('Edycja dostępna w nowym kreatorze po aktualizacji backendu.')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button></div>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+
+// --- NOWA LOGIKA OTWIERANIA KREATORA (WIZARD) ---
+// Ta funkcja zastępuje starą openAddNodeModal
 async function openAddNodeModal(tradeId, ticker, pathType) {
-    document.getElementById('add-node-trade-id').value = tradeId;
-    document.getElementById('add-node-ticker').value = ticker;
-    document.getElementById('add-node-path').value = pathType;
-    document.getElementById('add-node-path-label').innerText = pathType === 'STANDARD' ? 'Bazowy' : 'Alternatywny (Ratunkowy)';
-    document.getElementById('add-node-reason').value = '';
+    document.getElementById('nw-trade-id').value = tradeId;
+    document.getElementById('nw-ticker').value = ticker;
+    document.getElementById('nw-path').value = pathType;
+    document.getElementById('nw-path-label').innerText = pathType === 'STANDARD' ? 'Bazowy' : 'Alternatywny';
     
-    const fId = document.getElementById('add-node-form-id');
-    fId.innerHTML = '<option value="">⏳ Ładowanie setupów z Form...</option>';
+    // Reset wartości
+    document.getElementById('nw-action-type').value = 'ADD_TRANCHE';
+    document.getElementById('nw-reason').value = '';
+    document.getElementById('nw-target-price').value = '';
     
-    document.getElementById('add-node-modal').style.display = 'flex';
-    
-    try {
-        if (!formEntries || formEntries.length === 0) {
-            const res = await fetch(`${API_BASE_URL}/api/form/entries`);
-            formEntries = await res.json() || [];
-        }
-        
-        const setups = formEntries.filter(f => f.ticker === ticker);
-        fId.innerHTML = '';
-        
-        if (setups.length === 0) {
-            fId.innerHTML = '<option value="">Brak wolnych stref dla tego tickera w module Form</option>';
-        } else {
-            setups.forEach(f => {
-                const opt = document.createElement('option');
-                const price = f.entry_point || f.entry_price || 0;
-                opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(price) });
-                opt.innerText = `[Form ID: ${f.entry_id}] ${f.direction} @ ${parseFloat(price).toFixed(2)}$`;
-                fId.appendChild(opt);
-            });
-        }
-    } catch(e) {
-        console.error("Błąd ładowania stref do modalu:", e);
-        fId.innerHTML = '<option value="">Brak połączenia / Błąd serwera</option>';
+    // Uruchomienie przełącznika widoków z dodanego wcześniej HTML
+    if (typeof toggleWizardFields === "function") {
+        toggleWizardFields();
     }
+
+    // 1. ŁADOWANIE STREF DO UŚREDNIANIA (Z modułu Form)
+    const fId = document.getElementById('nw-form-id');
+    fId.innerHTML = '<option value="">⏳ Ładowanie stref...</option>';
+    
+    if (typeof formEntries === 'undefined' || !formEntries || formEntries.length === 0) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/form/entries`);
+            window.formEntries = await res.json() || [];
+        } catch(e) { console.error(e); }
+    }
+    
+    const setups = (window.formEntries || []).filter(f => f.ticker === ticker);
+    fId.innerHTML = setups.length === 0 ? '<option value="">Brak zaplanowanych stref w module Form</option>' : '';
+    setups.forEach(f => {
+        const price = f.entry_point || f.entry_price || 0;
+        const opt = document.createElement('option');
+        opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(price) });
+        opt.innerText = `[${f.entry_id}] ${f.direction} @ ${parseFloat(price).toFixed(2)}$`;
+        fId.appendChild(opt);
+    });
+
+    // 2. ŁADOWANIE DOSTĘPNYCH TRANSZ DO ZAMKNIĘCIA (Checkboxy TP/SL)
+    const tList = document.getElementById('nw-tranches-list');
+    tList.innerHTML = '';
+    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
+    
+    if (camp) {
+        // Zawsze pozwalamy zamknąć pozycję bazową
+        tList.innerHTML += `
+            <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;">
+                <input type="checkbox" class="tranche-checkbox" value="BASE" checked>
+                <span><b>Pozycja Bazowa (Krok 1)</b> - Wejście: <span style="color:var(--accent);">${camp.base_trade.buy_price}$</span></span>
+            </label>
+        `;
+        
+        // Szukamy już ZREALIZOWANYCH uśrednień (ADD_TRANCHE z flagą EXECUTED) z aktualnej ścieżki
+        const executedNodes = (camp.graph_nodes || []).filter(n => n.status === 'EXECUTED' && n.action_type === 'ADD_TRANCHE');
+        
+        executedNodes.forEach(n => {
+            tList.innerHTML += `
+                <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;">
+                    <input type="checkbox" class="tranche-checkbox" value="${n.node_id}">
+                    <span><b>Węzeł ${n.node_id}</b> (DCA) - Wejście: <span style="color:var(--accent);">${n.target_price}$</span></span>
+                </label>
+            `;
+        });
+    }
+
+    document.getElementById('node-wizard-modal').style.display = 'flex';
 }
 
 // Zatwierdzanie nowego węzła (wysyłka do bazy)
