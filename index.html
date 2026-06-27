@@ -4013,48 +4013,68 @@ async function openAddNodeModal(tradeId, ticker, pathType) {
     document.getElementById('node-wizard-modal').style.display = 'flex';
 }
 
-// Zatwierdzanie nowego węzła (wysyłka do bazy)
+// Ostateczna wersja zapisywania kroku z uwzględnieniem Checkboxów!
 async function submitNewNode() {
-    const tradeId = parseInt(document.getElementById('add-node-trade-id').value);
-    const pathType = document.getElementById('add-node-path').value;
-    const formVal = document.getElementById('add-node-form-id').value;
-    const reason = document.getElementById('add-node-reason').value.trim();
+    const tradeId = parseInt(document.getElementById('nw-trade-id').value);
+    const pathType = document.getElementById('nw-path').value;
+    const actionType = document.getElementById('nw-action-type').value;
+    const reason = document.getElementById('nw-reason').value.trim();
+    const focusScore = parseFloat(document.getElementById('nw-focus').value) || 0;
     
-    if (!formVal) {
-        alert("Wybierz powiązaną strefę (Setup). Jeśli pole jest puste, najpierw utwórz strefę w module Form.");
-        return;
+    // Zabezpieczenie przed błędem, gdy dropdown CVD nie istnieje na starszych setupach
+    const cvdDropdown = document.getElementById('nw-cvd');
+    const cvdStatus = cvdDropdown ? cvdDropdown.value : 'Dowolne';
+
+    let formEntryId = null;
+    let targetPrice = 0;
+    let allocatedBudgetPct = 0;
+    let linkedTranches = [];
+
+    // Logika warunkowa w zależności od tego co ułożyłeś w Modalu
+    if (actionType === 'ADD_TRANCHE') {
+        const formVal = document.getElementById('nw-form-id').value;
+        if (!formVal) return alert("Wybierz strefę docelową z modułu Form.");
+        
+        const formData = JSON.parse(formVal);
+        formEntryId = formData.entry_id;
+        targetPrice = parseFloat(formData.price);
+        allocatedBudgetPct = parseFloat(document.getElementById('nw-budget').value) || 0;
+    } else {
+        // Logika zamykania (TP / SL) - czytamy zaznaczone checkboxy
+        const checkboxes = document.querySelectorAll('.tranche-checkbox:checked');
+        checkboxes.forEach(cb => linkedTranches.push(cb.value)); // Zbiera np. ['BASE', 'A1']
+        
+        if (linkedTranches.length === 0) return alert("Musisz zaznaczyć co najmniej jedną transzę, którą chcesz zamknąć.");
+        
+        targetPrice = parseFloat(document.getElementById('nw-target-price').value);
+        if (!targetPrice || targetPrice <= 0) return alert("Podaj prawidłową cenę docelową w dolarach.");
     }
-    
-    const formData = JSON.parse(formVal);
-    const btn = document.getElementById('btn-save-new-node');
-    btn.innerHTML = "⏳ Zapis..."; 
+
+    const btn = document.getElementById('btn-save-wizard');
+    btn.innerHTML = "⏳ Zapisuję..."; 
     btn.disabled = true;
 
+    // Pobranie istniejących kafelków
     const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
-    let currentNodes = [];
-    let newIdNum = 1;
+    let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
     
-    if (camp && camp.graph_nodes) {
-        // Zachowujemy stare kroki, żeby nie nadpisać wyczyszczonego grafu
-        currentNodes = [...camp.graph_nodes];
-        const samePathNodes = currentNodes.filter(n => n.path_type === pathType);
-        newIdNum = samePathNodes.length + 1;
-    }
-
-    const prefix = pathType === 'STANDARD' ? 'A' : 'B';
-    const nodeIdStr = `${prefix}${newIdNum}`;
+    // Generowanie ID (np. "A2" lub "B1")
+    const samePathNodes = currentNodes.filter(n => n.path_type === pathType);
+    const newIdNum = samePathNodes.length + 1;
+    const nodeIdStr = `${pathType === 'STANDARD' ? 'A' : 'B'}${newIdNum}`;
 
     const newNode = {
         node_id: nodeIdStr,
         parent_node_ids: [],
         path_type: pathType,
-        form_entry_id: formData.entry_id,
-        action_type: document.getElementById('add-node-action').value,
-        target_price: parseFloat(formData.price),
-        allocated_budget_pct: parseFloat(document.getElementById('add-node-budget').value) || 0,
-        required_focus_score: parseFloat(document.getElementById('add-node-focus').value) || 0,
-        required_cvd_status: document.getElementById('add-node-cvd').value,
+        form_entry_id: formEntryId,
+        action_type: actionType,
+        target_price: targetPrice,
+        allocated_budget_pct: allocatedBudgetPct,
+        required_focus_score: focusScore,
+        required_cvd_status: cvdStatus,
         step_rationale: reason,
+        linked_tranches: linkedTranches, // Wysyłamy tablicę do Supabase!
         status: "PENDING"
     };
     
@@ -4062,22 +4082,77 @@ async function submitNewNode() {
 
     try {
         const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, {
-            method: "POST", 
-            headers: { "Content-Type": "application/json" }, 
+            method: "POST", headers: { "Content-Type": "application/json" }, 
             body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes })
         });
         const r = await res.json();
         if(r.status === 'success') {
-            document.getElementById('add-node-modal').style.display = 'none';
-            loadCampaigns();
+            document.getElementById('node-wizard-modal').style.display = 'none';
+            loadCampaigns(); // Odświeża wizualny graf!
         } else {
             alert(r.message);
         }
     } catch(e) { 
-        alert("Błąd zapisu węzła. Sprawdź logi serwera."); 
+        alert("Błąd zapisu kroku. Sprawdź serwer."); 
     } finally { 
-        btn.innerHTML = "Dodaj Krok"; 
-        btn.disabled = false; 
+        btn.innerHTML = "Zapisz Krok"; btn.disabled = false; 
+    }
+}
+
+// Akcja na Dziś (Prawdziwa komunikacja z backendem)
+async function highlightActionableNodes() {
+    // 1. Zbieramy trade_id dla aktualnie wyświetlanych kampanii
+    if (globalCampaignCache.length === 0) return alert("Brak widocznych kampanii do sprawdzenia.");
+    const visibleTradeIds = globalCampaignCache.map(c => c.base_trade.id);
+    
+    const btn = document.querySelector('.btn-submit[onclick="highlightActionableNodes()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "⏳ Skanuję rynek...";
+    
+    try {
+        // 2. Odpytujemy nasz nowy szybki endpoint w Pythonie
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/check-actionable`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ trade_ids: visibleTradeIds })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            const actionableUuids = data.actionable_uuids || [];
+            let count = 0;
+            
+            // 3. Resetujemy podświetlenia
+            const nodes = document.querySelectorAll('.campaign-node-item');
+            nodes.forEach(n => { n.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'; n.style.transform = 'none'; });
+            
+            // 4. Podświetlamy, jeśli kafel jest zapalony przez Yahoo I NALEŻY do aktywnej ścieżki
+            globalCampaignCache.forEach(camp => {
+                const campNodes = camp.graph_nodes || [];
+                const hasExecAlt = campNodes.some(n => n.path_type === 'ALTERNATIVE' && n.status === 'EXECUTED');
+                const activePath = hasExecAlt ? 'ALTERNATIVE' : 'STANDARD';
+                
+                campNodes.forEach(node => {
+                    // Warunek: węzeł należy do aktywnej ścieżki (nie odciętej gałęzi) ORAZ backend powiedział, że dzisiaj został naruszony
+                    if (node.path_type === activePath && actionableUuids.includes(node.id)) {
+                        const nodeElement = document.querySelector(`.campaign-node-item[data-node-id="${node.id}"]`);
+                        if (nodeElement) {
+                            nodeElement.style.boxShadow = '0 0 18px var(--accent)';
+                            nodeElement.style.transform = 'scale(1.03)';
+                            nodeElement.style.transition = 'all 0.3s ease';
+                            count++;
+                        }
+                    }
+                });
+            });
+            
+            if (count > 0) alert(`Znaleziono ${count} węzłów decyzyjnych w aktywnych ścieżkach, które zostały dzisiaj przetestowane cenowo!`);
+            else alert("Brak akcji na dziś. Żaden węzeł w aktywnych ścieżkach nie osiągnął wyznaczonej strefy cenowej.");
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Wystąpił błąd podczas sprawdzania cen z Yahoo.");
+    } finally {
+        btn.innerHTML = originalText;
     }
 }
 
@@ -4155,22 +4230,6 @@ async function submitNodeEdit() {
     }
 }
 
-async function highlightActionableNodes() {
-    const nodes = document.querySelectorAll('.campaign-node-item');
-    let count = 0;
-    for(let node of nodes) {
-        node.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'; // reset
-        node.style.transform = 'none';
-        const statusText = node.innerHTML;
-        if(statusText.includes('Oczekuje')) {
-            node.style.boxShadow = '0 0 15px var(--accent)';
-            node.style.transform = 'scale(1.02)';
-            node.style.transition = 'all 0.3s ease';
-            count++;
-        }
-    }
-    alert(`Podświetlono wszystkie aktualnie oczekujące punkty decyzyjne w otwartych kampaniach!`);
-}
 // Dynamiczne przełączanie kreatora kafelków
 function toggleWizardFields() {
     const action = document.getElementById('nw-action-type').value;
