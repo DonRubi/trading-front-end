@@ -812,10 +812,13 @@
     </div>
     
     <div id="sell-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; padding: 15px;">
-        <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:400px; border:1px solid var(--border-color);">
-            <h3 style="color:var(--accent); margin-bottom:15px;">Zamknięcie Pozycji (Kalkulator)</h3>
-            <input type="hidden" id="sell-trade-id">
-            <div class="form-group"><label>Data Sprzedaży</label><input type="date" id="sell-date"></div>
+    <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:400px; border:1px solid var(--border-color);">
+        <h3 style="color:var(--accent); margin-bottom:15px;">Zamknięcie Pozycji (Kalkulator)</h3>
+        
+        <div id="trade-plan-warning" style="display: none; margin-bottom: 15px; border-radius: 6px; font-size: 0.9em; line-height: 1.4;"></div>
+        
+        <input type="hidden" id="sell-trade-id">
+        <div class="form-group"><label>Data Sprzedaży</label><input type="date" id="sell-date"></div>
             <div class="form-group"><label>Cena Sprzedaży z platformy</label><input type="number" step="0.0001" id="sell-price" placeholder="np. 154.32"></div>
             
             <div class="form-group" id="sell-cfd-group" style="display:none; border: 1px dashed var(--danger); padding: 10px; border-radius: 6px; margin-bottom: 10px;">
@@ -3111,8 +3114,57 @@
         function calculateTradeStats(item) { try { const isClosed = (item.status === 'CLOSED' || item.sell_date != null); const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1; const tm = tickerDataArray.find(t => t.ticker === item.ticker); const buyPrice = parseFloat(item.buy_price) || 0; let cp = buyPrice; if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } else if (tm && tm.price) { cp = parseFloat(tm.price); } const spent = parseFloat(item.spent) || 0; const lev = parseInt(item.leverage) || 1; const val = spent * lev; const cfdCost = parseFloat(item.cfd_cost) || 0; const div = parseFloat(item.dividend) || 0; let prof = 0; if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; } const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1)); const profPln = prof * usedFx; const valPln = val * usedFx; const tp = parseFloat(item.tp) || 0; const sl = parseFloat(item.sl) || 0; let rr = 0; if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); } let prog = 0; if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); } let dsl = sl; if (prog >= 1) dsl = tp; else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); let pd = prog * 100; let pc = 'var(--success)'; if (pd < 0) { pc = 'var(--danger)'; if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } else { pd = 0; } } if (pd > 100) pd = 100; return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx }; } catch (error) { return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; } }
 
         // Modal functions
-        function openCloseModal(id) { document.getElementById('sell-modal').style.display = 'flex'; document.getElementById('sell-trade-id').value = id; document.getElementById('sell-date').valueAsDate = new Date(); document.getElementById('sell-price').value = ''; document.getElementById('sell-fraction').value = '1'; const trade = allTradesData.find(t => t.id === id); if(trade && trade.leverage > 1) { document.getElementById('sell-cfd-group').style.display = 'block'; document.getElementById('sell-cfd-cost').value = '0'; } else { document.getElementById('sell-cfd-group').style.display = 'none'; document.getElementById('sell-cfd-cost').value = '0'; } }
-        function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
+        function openCloseModal(id) { 
+        document.getElementById('sell-modal').style.display = 'flex'; 
+        document.getElementById('sell-trade-id').value = id; 
+        document.getElementById('sell-date').valueAsDate = new Date(); 
+        document.getElementById('sell-price').value = ''; 
+        document.getElementById('sell-fraction').value = '1'; 
+    
+        const trade = allTradesData.find(t => t.id === id); 
+    
+        // --- 🛡️ INTEGRACJA STRAŻNIKA DYSCYPLINY ---
+        if (trade) {
+            // Obliczamy bieżącą cenę za pomocą istniejącej funkcji
+            const stats = calculateTradeStats(trade);
+            const currentPrice = stats.cp;
+        
+            // Pytamy strażnika o zgodność z planem (Akcja typu: 'SELL')
+            const validation = validateTradeAgainstPlan(id, 'SELL', currentPrice);
+        
+            const warningDiv = document.getElementById('trade-plan-warning');
+            if (warningDiv) {
+                warningDiv.style.display = 'block';
+                warningDiv.innerHTML = validation.message;
+            
+            // Dynamiczne stylowanie na podstawie werdyktu
+            if (validation.type === 'danger') {
+                warningDiv.style.color = 'var(--danger)';
+                warningDiv.style.borderLeft = '4px solid var(--danger)';
+                warningDiv.style.background = 'rgba(246, 70, 93, 0.1)';
+            } else if (validation.type === 'warning') {
+                warningDiv.style.color = 'var(--accent)';
+                warningDiv.style.borderLeft = '4px solid var(--accent)';
+                warningDiv.style.background = 'rgba(201, 148, 0, 0.1)';
+            } else {
+                warningDiv.style.color = 'var(--success)';
+                warningDiv.style.borderLeft = '4px solid var(--success)';
+                warningDiv.style.background = 'rgba(14, 203, 129, 0.1)';
+            }
+            warningDiv.style.padding = "12px";
+            }
+        }
+        // ----------------------------------------
+
+        if(trade && trade.leverage > 1) { 
+        document.getElementById('sell-cfd-group').style.display = 'block'; 
+        document.getElementById('sell-cfd-cost').value = '0'; 
+        } else { 
+        document.getElementById('sell-cfd-group').style.display = 'none'; 
+        document.getElementById('sell-cfd-cost').value = '0'; 
+        } 
+      }
+    function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
         async function confirmSell() { 
             const id = document.getElementById('sell-trade-id').value; 
             const price = parseFloat(document.getElementById('sell-price').value); 
