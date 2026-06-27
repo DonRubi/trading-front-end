@@ -867,7 +867,7 @@
 
     <!-- Inteligentny Kreator Kroku Kampanii -->
     <div id="node-wizard-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 15px;">
-    <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:500px; border:1px solid var(--accent);">
+    <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:500px; border:1px solid var(--accent); max-height: 90vh; overflow-y: auto;">
         <h3 style="color:var(--accent); margin-bottom:15px;" id="nw-title">Planuj Krok (<span id="nw-path-label"></span>)</h3>
         
         <input type="hidden" id="nw-trade-id">
@@ -883,7 +883,13 @@
             </select>
         </div>
 
-        <!-- SEKCJA A: UŚREDNIANIE (Pokaż Formularze) -->
+        <div class="form-group mb-1" style="background:rgba(255,255,255,0.03); padding:10px; border-radius:6px; border:1px dashed #89b4fa; margin-top: 10px;">
+            <label style="color:#89b4fa; font-weight:bold;">🔗 Drzewo Genealogiczne (Rodzice):</label>
+            <p style="font-size:0.8em; color:var(--text-muted); margin-bottom:8px;">Z jakiego kroku wynika ten etap? (Zaznacz dwa, aby połączyć ścieżki)</p>
+            <div id="nw-parents-list" style="display:flex; flex-direction:column; gap:6px; max-height: 100px; overflow-y: auto;">
+                </div>
+        </div>
+
         <div id="nw-section-add" style="display:block; background:rgba(14,203,129,0.05); padding:10px; border-radius:6px; border:1px solid rgba(14,203,129,0.2); margin-top:10px;">
             <label style="color:var(--success);">Wybierz strefę docelową z modułu Form:</label>
             <select id="nw-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select>
@@ -900,19 +906,16 @@
             </div>
         </div>
 
-        <!-- SEKCJA B: ZAMYKANIE (Pokaż Checkboxy Transz do redukcji) -->
         <div id="nw-section-close" style="display:none; background:rgba(246,70,93,0.05); padding:10px; border-radius:6px; border:1px solid rgba(246,70,93,0.2); margin-top:10px;">
-            <label style="color:var(--text-main);">Zaznacz, które transze chcesz zamknąć w tym kroku:</label>
-            <div id="nw-tranches-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-                <!-- Tu dynamicznie pojawią się checkboxy (Pozycja Bazowa + Poprzednie Kafelki) -->
-            </div>
+            <label style="color:var(--text-main);">Zaznacz, które transze chcesz ZAMKNĄĆ w tym kroku:</label>
+            <div id="nw-tranches-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height: 120px; overflow-y: auto;">
+                </div>
             <div style="margin-top:15px;">
                 <label>Cena docelowa zamknięcia ($):</label>
                 <input type="number" step="0.01" id="nw-target-price" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
             </div>
         </div>
 
-        <!-- Wspólne zabezpieczenia -->
         <div class="form-group" style="margin-top: 15px;">
             <label>Warunek Makro (Focus Score > X):</label>
             <input type="number" id="nw-focus" value="15" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
@@ -3960,41 +3963,52 @@ function renderCampaignTree(campaignData) {
     });
 }
 
+// --- RYSOWANIE KAFELKÓW (Z Drzewem, Pieniędzmi i Przyciskiem Focus) ---
 function renderNodesList(pathNodes, maxBudgetCurrency, currency, tradeId) {
     if(pathNodes.length === 0) return `<p style="color:var(--text-muted); font-size:0.85em; font-style:italic; margin: 10px 0;">Brak zaplanowanych kroków.</p>`;
     return pathNodes.map(node => {
         const isExecuted = node.status === 'EXECUTED';
         
-        // --- NOWOŚĆ: Wyliczanie wartości transzy w walucie ---
-        const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
+        // Wyliczanie realnej wartości fiat (np. 1540.50 PLN lub USD)
+        const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * (maxBudgetCurrency || 0);
         
-        // --- NOWOŚĆ: Przycisk Focus tylko dla otwarcia transzy ---
+        // Logika przycisku Focus (tylko dla otwarcia transzy, która jest zaplanowana)
         let focusBtn = '';
         if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
             focusBtn = `<button onclick="goToFocusFromNode('${tradeId}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px; transition:0.2s;" onmouseover="this.style.background='rgba(14,203,129,0.1)';" onmouseout="this.style.background='transparent';">🎯 Analiza Focus</button>`;
         }
 
+        // Informacja o rodzicach dla widoku drzewa genealogicznego
+        const parentsStr = Array.isArray(node.parent_node_ids) && node.parent_node_ids.length > 0 
+            ? node.parent_node_ids.join(' + ') 
+            : 'BASE (Start)';
+
         return `
-            <div class="campaign-node-item" data-node-id="${node.id}" data-target-price="${node.target_price}" style="background:var(--bg-input); padding:15px; border-radius:8px; margin-bottom:10px; border-left:4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position:relative;">
+            <div class="campaign-node-item" data-node-id="${node.id}" data-target-price="${node.target_price}" style="background:var(--bg-input); padding:22px 15px 15px 15px; border-radius:8px; margin-bottom:18px; border-left:4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position:relative; margin-top:15px;">
+                
+                <div style="position:absolute; top:-12px; left:10px; background:var(--bg-card); padding:2px 10px; border:1px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; border-radius:12px; font-size:0.75em; color:var(--text-muted); box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    🔗 Wynika z: <b style="color:var(--text-main);">${parentsStr}</b>
+                </div>
+
                 <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
-                    <strong style="color:var(--text-main); font-size:1.02em;">Węzeł ${node.node_id}</strong>
+                    <strong style="color:var(--text-main); font-size:1.05em;">Węzeł ${node.node_id}</strong>
                     <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
                 </div>
                 <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
                     <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
                 </div>
                 <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
-                    Budżet transzy: <b style="color:#cdd6f4;">${node.allocated_budget_pct}% (<span style="color:var(--success);">${fiatValue.toFixed(2)} ${currency}</span>)</b> | Focus > <b>${node.required_focus_score}</b>
+                    Amunicja: <b style="color:#cdd6f4;">${node.allocated_budget_pct}% (<span style="color:var(--success);">${fiatValue.toFixed(2)} ${currency}</span>)</b> | Focus > <b>${node.required_focus_score}</b>
                 </div>
                 ${node.step_rationale ? `<div style="font-size:0.82em; color:var(--accent); font-style:italic; margin-top:8px; background: rgba(201,148,0,0.08); padding: 8px; border-radius: 4px; border-left: 2px solid var(--accent);">📝 "${node.step_rationale}"</div>` : ''}
-                ${!isExecuted ? `<div style="margin-top: 10px; text-align: right;">${focusBtn}<button onclick="alert('Edycja dostępna w nowym kreatorze po aktualizacji backendu.')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button></div>` : ''}
+                ${!isExecuted ? `<div style="margin-top: 10px; text-align: right;">${focusBtn}<button onclick="alert('Edycja w nowym kreatorze aktywna wkrótce.')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button></div>` : ''}
             </div>
         `;
     }).join('');
 }
 
 
-// --- NOWA LOGIKA OTWIERANIA KREATORA (WIZARD) ---
+// --- ŁADOWANIE KREATORA (Wybór Rodziców i Oczekujących Transz) ---
 async function openAddNodeModal(tradeId, ticker, pathType) {
     document.getElementById('nw-trade-id').value = tradeId;
     document.getElementById('nw-ticker').value = ticker;
@@ -4007,18 +4021,14 @@ async function openAddNodeModal(tradeId, ticker, pathType) {
     
     if (typeof toggleWizardFields === "function") toggleWizardFields();
 
+    // 1. Ładowanie stref z Form
     const fId = document.getElementById('nw-form-id');
     fId.innerHTML = '<option value="">⏳ Ładowanie stref...</option>';
-    
     if (typeof formEntries === 'undefined' || !formEntries || formEntries.length === 0) {
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/form/entries`);
-            window.formEntries = await res.json() || [];
-        } catch(e) { console.error(e); }
+        try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); window.formEntries = await res.json() || []; } catch(e) {}
     }
-    
     const setups = (window.formEntries || []).filter(f => f.ticker === ticker);
-    fId.innerHTML = setups.length === 0 ? '<option value="">Brak zaplanowanych stref w module Form</option>' : '';
+    fId.innerHTML = setups.length === 0 ? '<option value="">Brak zaplanowanych stref w Form</option>' : '';
     setups.forEach(f => {
         const price = f.entry_point || f.entry_price || 0;
         const opt = document.createElement('option');
@@ -4027,36 +4037,47 @@ async function openAddNodeModal(tradeId, ticker, pathType) {
         fId.appendChild(opt);
     });
 
-    const tList = document.getElementById('nw-tranches-list');
-    tList.innerHTML = '';
     const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
     
+    // 2. Transze do zamknięcia (Pokazujemy WSZYSTKIE, nawet te PENDING)
+    const tList = document.getElementById('nw-tranches-list');
+    tList.innerHTML = '';
     if (camp) {
-        tList.innerHTML += `
-            <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;">
-                <input type="checkbox" class="tranche-checkbox" value="BASE" checked>
-                <span><b>Pozycja Bazowa (Krok 1)</b> - Wejście: <span style="color:var(--accent);">${camp.base_trade.buy_price}$</span></span>
-            </label>
-        `;
-        
-        // --- NOWOŚĆ: Szukamy WSZYSTKICH węzłów dodających transze na tej samej ścieżce
-        const pathNodesForCheckbox = (camp.graph_nodes || []).filter(n => n.path_type === pathType && n.action_type === 'ADD_TRANCHE');
-        
-        pathNodesForCheckbox.forEach(n => {
+        tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="BASE" checked><span><b>Pozycja Bazowa (Start)</b> - Wejście: <span style="color:var(--accent);">${camp.base_trade.buy_price}$</span></span></label>`;
+        // Usunięty filtr na "EXECUTED" - teraz widzisz też transze z przyszłości!
+        const dcaNodes = (camp.graph_nodes || []).filter(n => n.action_type === 'ADD_TRANCHE');
+        dcaNodes.forEach(n => {
             const statusLabel = n.status === 'EXECUTED' ? '(Zrealizowana)' : '(Zaplanowana)';
-            tList.innerHTML += `
-                <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;">
-                    <input type="checkbox" class="tranche-checkbox" value="${n.node_id}">
-                    <span><b>Węzeł ${n.node_id}</b> ${statusLabel} - Wejście: <span style="color:var(--accent);">${n.target_price}$</span></span>
-                </label>
-            `;
+            tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="${n.node_id}"><span><b>Węzeł ${n.node_id}</b> ${statusLabel} - Cel: <span style="color:var(--accent);">${n.target_price}$</span></span></label>`;
+        });
+    }
+
+    // 3. Drzewo Genealogiczne (Z kim łączymy nowy kafelek?)
+    const pList = document.getElementById('nw-parents-list');
+    pList.innerHTML = '';
+    if (camp) {
+        pList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; cursor:pointer; font-size:0.9em;"><input type="checkbox" class="parent-checkbox" value="BASE"><span style="color:var(--accent);">Pozycja Bazowa (Start)</span></label>`;
+        (camp.graph_nodes || []).forEach(n => {
+            pList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; cursor:pointer; font-size:0.9em;"><input type="checkbox" class="parent-checkbox" value="${n.node_id}"><span style="color:var(--text-main);">Węzeł ${n.node_id} (${n.action_type})</span></label>`;
         });
     }
 
     document.getElementById('node-wizard-modal').style.display = 'flex';
+    
+    // Auto-zaznaczanie ostatniego rodzica w danej ścieżce
+    setTimeout(() => {
+        const pCheckboxes = document.querySelectorAll('.parent-checkbox');
+        let foundDefault = false;
+        const pathNodes = (camp.graph_nodes || []).filter(n => n.path_type === pathType);
+        if (pathNodes.length > 0) {
+            const lastNode = pathNodes[pathNodes.length - 1];
+            pCheckboxes.forEach(cb => { if(cb.value === lastNode.node_id) { cb.checked = true; foundDefault = true; } });
+        }
+        if(!foundDefault) pCheckboxes.forEach(cb => { if(cb.value === 'BASE') cb.checked = true; });
+    }, 50);
 }
 
-// Ostateczna wersja zapisywania kroku z uwzględnieniem Checkboxów!
+// --- ZAPISYWANIE NOWEGO WĘZŁA (Z relacjami drzewa) ---
 async function submitNewNode() {
     const tradeId = parseInt(document.getElementById('nw-trade-id').value);
     const pathType = document.getElementById('nw-path').value;
@@ -4064,51 +4085,43 @@ async function submitNewNode() {
     const reason = document.getElementById('nw-reason').value.trim();
     const focusScore = parseFloat(document.getElementById('nw-focus').value) || 0;
     
-    // Zabezpieczenie przed błędem, gdy dropdown CVD nie istnieje na starszych setupach
     const cvdDropdown = document.getElementById('nw-cvd');
     const cvdStatus = cvdDropdown ? cvdDropdown.value : 'Dowolne';
 
-    let formEntryId = null;
-    let targetPrice = 0;
-    let allocatedBudgetPct = 0;
-    let linkedTranches = [];
+    // Odczyt wybranej struktury drzewa genealogicznego
+    let parentNodeIds = [];
+    document.querySelectorAll('.parent-checkbox:checked').forEach(cb => parentNodeIds.push(cb.value));
+    if (parentNodeIds.length === 0) return alert("Musisz zaznaczyć przynajmniej jednego 'Rodzica' (krok z którego wynika ta akcja) w strukturze drzewa.");
 
-    // Logika warunkowa w zależności od tego co ułożyłeś w Modalu
+    let formEntryId = null; let targetPrice = 0; let allocatedBudgetPct = 0; let linkedTranches = [];
+
     if (actionType === 'ADD_TRANCHE') {
         const formVal = document.getElementById('nw-form-id').value;
         if (!formVal) return alert("Wybierz strefę docelową z modułu Form.");
-        
         const formData = JSON.parse(formVal);
         formEntryId = formData.entry_id;
         targetPrice = parseFloat(formData.price);
         allocatedBudgetPct = parseFloat(document.getElementById('nw-budget').value) || 0;
     } else {
-        // Logika zamykania (TP / SL) - czytamy zaznaczone checkboxy
-        const checkboxes = document.querySelectorAll('.tranche-checkbox:checked');
-        checkboxes.forEach(cb => linkedTranches.push(cb.value)); // Zbiera np. ['BASE', 'A1']
-        
+        document.querySelectorAll('.tranche-checkbox:checked').forEach(cb => linkedTranches.push(cb.value)); 
         if (linkedTranches.length === 0) return alert("Musisz zaznaczyć co najmniej jedną transzę, którą chcesz zamknąć.");
-        
         targetPrice = parseFloat(document.getElementById('nw-target-price').value);
         if (!targetPrice || targetPrice <= 0) return alert("Podaj prawidłową cenę docelową w dolarach.");
     }
 
     const btn = document.getElementById('btn-save-wizard');
-    btn.innerHTML = "⏳ Zapisuję..."; 
-    btn.disabled = true;
+    btn.innerHTML = "⏳ Zapisuję..."; btn.disabled = true;
 
-    // Pobranie istniejących kafelków
     const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
     let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
     
-    // Generowanie ID (np. "A2" lub "B1")
     const samePathNodes = currentNodes.filter(n => n.path_type === pathType);
     const newIdNum = samePathNodes.length + 1;
     const nodeIdStr = `${pathType === 'STANDARD' ? 'A' : 'B'}${newIdNum}`;
 
     const newNode = {
         node_id: nodeIdStr,
-        parent_node_ids: [],
+        parent_node_ids: parentNodeIds, // 🔗 Supabase zapisze tablicę rodziców!
         path_type: pathType,
         form_entry_id: formEntryId,
         action_type: actionType,
@@ -4117,7 +4130,7 @@ async function submitNewNode() {
         required_focus_score: focusScore,
         required_cvd_status: cvdStatus,
         step_rationale: reason,
-        linked_tranches: linkedTranches, // Wysyłamy tablicę do Supabase!
+        linked_tranches: linkedTranches,
         status: "PENDING"
     };
     
@@ -4131,15 +4144,40 @@ async function submitNewNode() {
         const r = await res.json();
         if(r.status === 'success') {
             document.getElementById('node-wizard-modal').style.display = 'none';
-            loadCampaigns(); // Odświeża wizualny graf!
-        } else {
-            alert(r.message);
+            loadCampaigns(); 
+        } else alert(r.message);
+    } catch(e) { alert("Błąd zapisu kroku. Sprawdź serwer."); } 
+    finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+}
+
+// --- LOGIKA NAWIGACJI DO FOCUS ---
+function goToFocusFromNode(tradeId, formEntryId, nodeId) {
+    // Sprawdzamy czy krok dostał sygnał z rynków Live
+    if (!window.activeActionableNodes || !window.activeActionableNodes.includes(nodeId)) {
+        if (!confirm("⚠️ Ten węzeł NIE ZOSTAŁ dzisiaj przetestowany na wykresie cenowym. Chcesz wykonać przedwczesną analizę Focus wbrew rynkowi?")) {
+            return; 
         }
-    } catch(e) { 
-        alert("Błąd zapisu kroku. Sprawdź serwer."); 
-    } finally { 
-        btn.innerHTML = "Zapisz Krok"; btn.disabled = false; 
     }
+
+    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
+    if(!camp) return;
+    
+    // Przenosimy użytkownika i otwieramy Focus
+    openModule('focus-module', 'Focus');
+    
+    // Automatyczne wypełnianie formularza Focus z lekkim opóźnieniem
+    setTimeout(() => {
+        const tSelect = document.getElementById('focus-ticker-select');
+        tSelect.value = camp.base_trade.ticker;
+        onFocusTickerChange(); 
+        
+        setTimeout(() => {
+            const fSelect = document.getElementById('focus-form-id');
+            fSelect.value = formEntryId;
+            onFocusIdChange(); 
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 150); 
+    }, 150);
 }
 
 // --- STRAŻNIK DYSCYPLINY (Walidator Planu) ---
