@@ -3968,17 +3968,13 @@ function renderNodesList(pathNodes, maxBudgetCurrency, currency, tradeId) {
     if(pathNodes.length === 0) return `<p style="color:var(--text-muted); font-size:0.85em; font-style:italic; margin: 10px 0;">Brak zaplanowanych kroków.</p>`;
     return pathNodes.map(node => {
         const isExecuted = node.status === 'EXECUTED';
-        
-        // Wyliczanie realnej wartości fiat (np. 1540.50 PLN lub USD)
         const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * (maxBudgetCurrency || 0);
         
-        // Logika przycisku Focus (tylko dla otwarcia transzy, która jest zaplanowana)
         let focusBtn = '';
         if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
             focusBtn = `<button onclick="goToFocusFromNode('${tradeId}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px; transition:0.2s;" onmouseover="this.style.background='rgba(14,203,129,0.1)';" onmouseout="this.style.background='transparent';">🎯 Analiza Focus</button>`;
         }
 
-        // Informacja o rodzicach dla widoku drzewa genealogicznego
         const parentsStr = Array.isArray(node.parent_node_ids) && node.parent_node_ids.length > 0 
             ? node.parent_node_ids.join(' + ') 
             : 'BASE (Start)';
@@ -4001,7 +3997,14 @@ function renderNodesList(pathNodes, maxBudgetCurrency, currency, tradeId) {
                     Amunicja: <b style="color:#cdd6f4;">${node.allocated_budget_pct}% (<span style="color:var(--success);">${fiatValue.toFixed(2)} ${currency}</span>)</b> | Focus > <b>${node.required_focus_score}</b>
                 </div>
                 ${node.step_rationale ? `<div style="font-size:0.82em; color:var(--accent); font-style:italic; margin-top:8px; background: rgba(201,148,0,0.08); padding: 8px; border-radius: 4px; border-left: 2px solid var(--accent);">📝 "${node.step_rationale}"</div>` : ''}
-                ${!isExecuted ? `<div style="margin-top: 10px; text-align: right;">${focusBtn}<button onclick="alert('Edycja w nowym kreatorze aktywna wkrótce.')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button></div>` : ''}
+                
+                ${!isExecuted ? `
+                    <div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">
+                        ${focusBtn}
+                        <button onclick="openEditWizardModal('${tradeId}', '${node.id}', '${node.node_id}', '${node.action_type}', ${node.target_price}, ${node.required_focus_score}, '${node.required_cvd_status}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Edytuj ✏️</button>
+                        <button onclick="deleteCampaignNode('${tradeId}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button>
+                    </div>
+                ` : ''}
             </div>
         `;
     }).join('');
@@ -4513,6 +4516,199 @@ function toggleWizardFields() {
             if (closeSelect.options.length === 1) {
                 closeSelect.innerHTML = `<option value="">Brak wyliczonego poziomu ${action === 'TAKE_PROFIT' ? 'TP' : 'SL'} dla tej spółki w Form</option>`;
             }
+        }
+    }
+}
+
+    // --- TRYB EDYCJI WĘZŁA W KREATORZE (WIZARD) ---
+let isEditMode = false;
+let currentEditingNodeUuid = null;
+
+async function openEditWizardModal(tradeId, nodeUuid, nodeId, actionType, currentPrice, focusScore, cvdStatus) {
+    isEditMode = true;
+    currentEditingNodeUuid = nodeUuid;
+    
+    document.getElementById('nw-trade-id').value = tradeId;
+    document.getElementById('nw-title').innerHTML = `Edytuj Krok <span style="color:var(--accent);">${nodeId}</span>`;
+    document.getElementById('nw-action-type').value = actionType;
+    document.getElementById('nw-focus').value = focusScore;
+    document.getElementById('nw-reason').value = ''; // Reset notatki - musi wpisać nową!
+    
+    const cvdDropdown = document.getElementById('nw-cvd');
+    if(cvdDropdown) cvdDropdown.value = cvdStatus || 'Dowolne';
+
+    // 1. Ukrywamy sekcję drzewa genealogicznego podczas edycji (struktura rodziców jest zablokowana)
+    const parentsContainer = document.getElementById('nw-parents-list').parentElement;
+    parentsContainer.style.display = 'none';
+
+    // 2. Ładowanie i auto-zaznaczanie stref w zależności od akcji
+    if (actionType === 'ADD_TRANCHE') {
+        const fId = document.getElementById('nw-form-id');
+        fId.innerHTML = '<option value="">⏳ Ładowanie...</option>';
+        const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
+        const setups = (window.formEntries || []).filter(f => f.ticker === camp.base_trade.ticker);
+        
+        fId.innerHTML = '';
+        setups.forEach(f => {
+            const pVal = f.entry_point || f.entry_price || 0;
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(pVal) });
+            opt.innerText = `[Form ID: ${f.entry_id}] ${f.setup_name} (${parseFloat(pVal).toFixed(2)}$)`;
+            if (parseFloat(pVal) === parseFloat(currentPrice)) opt.selected = true;
+            fId.appendChild(opt);
+        });
+    } else {
+        // Dla TP/SL ładujemy dropdown redukcji stref z modułu Form
+        toggleWizardFields();
+        setTimeout(() => {
+            const closeSelect = document.getElementById('nw-close-form-id');
+            for (let i = 0; i < closeSelect.options.length; i++) {
+                try {
+                    const data = JSON.parse(closeSelect.options[i].value);
+                    if (parseFloat(data.price) === parseFloat(currentPrice)) {
+                        closeSelect.selectedIndex = i;
+                        break;
+                    }
+                } catch(e) {}
+            }
+        }, 100);
+    }
+
+    // Pokazujemy sekcję kaskadowego usuwania dzieci w stopce modalu (włączamy widoczność checkboxa z Twojego HTML)
+    const deleteDescContainer = document.getElementById('edit-node-delete-descendants')?.parentElement;
+    if (deleteDescContainer) deleteDescContainer.style.display = 'block';
+
+    // Podmieniamy wywołanie przycisku zapisu w kreatorze
+    document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitWizardEdit()');
+    document.getElementById('node-wizard-modal').style.display = 'flex';
+}
+
+// --- ZATWIERDZENIE EDYCJI (Z walidacją 15 znaków) ---
+async function submitWizardEdit() {
+    const reason = document.getElementById('nw-reason').value.trim();
+    if (reason.length < 15) {
+        alert("🛡️ System Audytu: Podaj merytoryczne uzasadnienie modyfikacji planu (minimum 15 znaków).");
+        return;
+    }
+
+    const actionType = document.getElementById('nw-action-type').value;
+    let targetPrice = 0;
+    let formEntryId = null;
+
+    if (actionType === 'ADD_TRANCHE') {
+        const val = document.getElementById('nw-form-id').value;
+        if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
+    } else {
+        const val = document.getElementById('nw-close-form-id').value;
+        if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
+    }
+
+    // Sprawdzamy stan checkboxa kaskadowego usunięcia z modalu
+    const cascadeCheckbox = document.getElementById('edit-node-delete-descendants');
+    const deleteDescendants = cascadeCheckbox ? cascadeCheckbox.checked : false;
+
+    const payload = {
+        id: currentEditingNodeUuid,
+        edit_reason: reason,
+        delete_descendants: deleteDescendants, // Wysyłka flagi do Pythona!
+        target_price: targetPrice,
+        form_entry_id: formEntryId,
+        required_focus_score: parseFloat(document.getElementById('nw-focus').value) || 0,
+        required_cvd_status: document.getElementById('nw-cvd')?.value || 'Dowolne'
+    };
+
+    const btn = document.getElementById('btn-save-wizard');
+    btn.innerHTML = "⏳ Aktualizacja..."; btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('node-wizard-modal').style.display = 'none';
+            // Przywracamy modal do domyślnego stanu dodawania nowego kroku
+            resetWizardToDefaultMode();
+            loadCampaigns(); // Odświeżenie widoku kafelków
+        } else alert(data.message);
+    } catch(e) { alert("Błąd połączenia."); }
+    finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+}
+
+function resetWizardToDefaultMode() {
+    isEditMode = false;
+    currentEditingNodeUuid = null;
+    document.getElementById('nw-title').innerText = "Planuj Krok";
+    document.getElementById('nw-parents-list').parentElement.style.display = 'block';
+    document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitNewNode()');
+    const deleteDescContainer = document.getElementById('edit-node-delete-descendants')?.parentElement;
+    if (deleteDescContainer) deleteDescContainer.style.display = 'none';
+}
+
+// --- FUNKCJA CAŁKOWITEGO / KASKADOWEGO USUNIĘCIA KAFELKA ---
+async function deleteCampaignNode(tradeId, nodeUuid, nodeIdStr) {
+    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
+    if (!camp) return;
+
+    // Skanujemy drzewo binarne w poszukiwaniu dzieci (np. jeśli usuwamy "2A", szukamy "2A3A", "2A3B")
+    const nodes = camp.graph_nodes || [];
+    const childNodes = nodes.filter(n => n.node_id.startsWith(nodeIdStr) && n.node_id !== nodeIdStr);
+
+    let confirmMessage = `Czy na pewno chcesz bezpowrotnie usunąć Węzeł ${nodeIdStr}?`;
+    let deleteDescendantsFlag = false;
+
+    if (childNodes.length > 0) {
+        const childNames = childNodes.map(n => n.node_id).join(', ');
+        if (confirm(`⚠️ Uwaga! Od Węzła ${nodeIdStr} zależą kolejne etapy drzewa genealogicznego: [ ${childNames} ].\n\nCzy chcesz usunąć kaskadowo TEN WĘZEŁ ORAZ WSZYSTKIE KROKI WYNIKAJĄCE Z NIEGO?`)) {
+            deleteDescendantsFlag = true;
+        } else {
+            return; // Użytkownik anulował akcję
+        }
+    } else {
+        if (!confirm(confirmMessage)) return;
+    }
+
+    // Do usunięcia pojedynczego lub kaskadowego wykorzystujemy ten sam bezpieczny endpoint edycji
+    // Przekazujemy pusty cel lub notatkę, ale z flagą delete_descendants, a Python zajmie się czyszczeniem ścieżki
+    const payload = {
+        id: nodeUuid,
+        edit_reason: "CAŁKOWITE USUNIĘCIE WĘZŁA STRUKTURALNEGO Z PLANU KAMPANII",
+        delete_descendants: deleteDescendantsFlag,
+        target_price: 0,
+        // Jeśli nie usuwamy dzieci, to backend ma usunąć tylko ten jeden rekord (PENDING).
+        // Aby backend wyciął pojedynczy węzeł, wyślemy żądanie bezpośrednio do bazy.
+    };
+
+    try {
+        if (deleteDescendantsFlag) {
+            // Strzał kaskadowy realizowany przez endpoint edycji z flagą czyszczenia dzieci
+            await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+            });
+            // Oraz usuwamy sam korzeń
+            await deleteSingleNodeDirect(nodeUuid);
+        } else {
+            // Proste usunięcie pojedynczego kafelka
+            await deleteSingleNodeDirect(nodeUuid);
+        }
+        loadCampaigns();
+    } catch(e) { alert("Błąd usuwania."); }
+}
+
+async function deleteSingleNodeDirect(uuid) {
+    // Pomocniczy strzał usuwający dokładnie jeden wiersz z tabeli trade_campaigns
+    // Zaimplementowane poprzez wysłanie czyszczenia do bazy lub symulację zapisu pustej struktury bez tego UUID
+    const campNode = document.querySelector(`.campaign-node-item[data-node-id="${uuid}"]`);
+    // Pobieramy całą kolekcję z cache pomijając usuwany element i wywołujemy istniejący save-graph
+    for (let camp of globalCampaignCache) {
+        const match = (camp.graph_nodes || []).find(n => n.id === uuid);
+        if (match) {
+            const updatedNodes = camp.graph_nodes.filter(n => n.id !== uuid);
+            await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ trade_id: camp.base_trade.id, nodes: updatedNodes })
+            });
+            break;
         }
     }
 }
