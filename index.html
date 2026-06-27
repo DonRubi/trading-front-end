@@ -4008,93 +4008,133 @@ function renderNodesList(pathNodes, maxBudgetCurrency, currency, tradeId) {
 }
 
 
-// --- ŁADOWANIE KREATORA ---
+// ==========================================
+//    POPRAWIONA LOGIKA DRZEWA BINARNEGO (WIZARD)
+// ==========================================
+
 async function openAddNodeModal(tradeId, ticker, pathType) {
     document.getElementById('nw-trade-id').value = tradeId;
     document.getElementById('nw-ticker').value = ticker;
-    document.getElementById('nw-path').value = pathType;
-    document.getElementById('nw-path-label').innerText = pathType === 'STANDARD' ? 'Bazowy' : 'Alternatywny';
+    document.getElementById('nw-path').value = pathType; // pathType to 'STANDARD' (kolumna lewa) lub 'ALTERNATIVE' (kolumna prawa)
+    
+    // Konwencjonalny tytuł dla kontekstu kolumny
+    document.getElementById('nw-path-label').innerText = pathType === 'STANDARD' ? 'Ścieżka Główna' : 'Ścieżka Alternatywna';
     
     document.getElementById('nw-action-type').value = 'ADD_TRANCHE';
     document.getElementById('nw-reason').value = '';
     
-    // 1. Ładowanie stref z Form (Do pamięci podręcznej)
+    // 1. Gwarancja załadowania stref z modułu Form
     const fId = document.getElementById('nw-form-id');
     fId.innerHTML = '<option value="">⏳ Ładowanie stref...</option>';
     if (typeof formEntries === 'undefined' || !formEntries || formEntries.length === 0) {
-        try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); window.formEntries = await res.json() || []; } catch(e) {}
+        try { 
+            const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
+            window.formEntries = await res.json() || []; 
+        } catch(e) { console.error("Błąd pobierania bazy stref Form:", e); }
     }
     
-    // Inicjalizacja pól (Musi odbyć się PO załadowaniu Form!)
-    if (typeof toggleWizardFields === "function") toggleWizardFields();
-
+    // Inicjalizacja opcji w dropdownie formularzy dla uśredniania (ADD_TRANCHE)
     const setups = (window.formEntries || []).filter(f => f.ticker === ticker);
     fId.innerHTML = setups.length === 0 ? '<option value="">Brak zaplanowanych stref w Form</option>' : '';
     setups.forEach(f => {
         const price = f.entry_point || f.entry_price || 0;
         const opt = document.createElement('option');
         opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(price) });
-        opt.innerText = `[${f.entry_id}] ${f.direction} @ ${parseFloat(price).toFixed(2)}$`;
+        opt.innerText = `[Form ID: ${f.entry_id}] ${f.setup_name || 'Setup'} @ ${parseFloat(price).toFixed(2)}$`;
         fId.appendChild(opt);
     });
 
     const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
-    
-    // 2. Transze do zamknięcia (Pokazujemy WSZYSTKIE, nawet te PENDING)
-    const tList = document.getElementById('nw-tranches-list');
-    tList.innerHTML = '';
-    if (camp) {
-        tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="BASE" checked><span><b>Pozycja Bazowa (Start)</b> - Wejście: <span style="color:var(--accent);">${camp.base_trade.buy_price}$</span></span></label>`;
-        const dcaNodes = (camp.graph_nodes || []).filter(n => n.action_type === 'ADD_TRANCHE');
-        dcaNodes.forEach(n => {
-            const statusLabel = n.status === 'EXECUTED' ? '(Zrealizowana)' : '(Zaplanowana)';
-            tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="${n.node_id}"><span><b>Węzeł ${n.node_id}</b> ${statusLabel} - Wejście: <span style="color:var(--accent);">${n.target_price}$</span></span></label>`;
-        });
-    }
+    const nodes = camp ? (camp.graph_nodes || []) : [];
 
-    // 3. Drzewo Genealogiczne (Z kim łączymy nowy kafelek?)
+    // 2. GENEROWANIE LISTY RODZICÓW Z SUWAKIEM (Domyślnie zaznaczamy ostatni węzeł z klikniętej kolumny)
     const pList = document.getElementById('nw-parents-list');
-    pList.innerHTML = '';
-    if (camp) {
-        pList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; cursor:pointer; font-size:0.9em;"><input type="checkbox" class="parent-checkbox" value="BASE"><span style="color:var(--accent);">Pozycja Bazowa (Start)</span></label>`;
-        (camp.graph_nodes || []).forEach(n => {
-            pList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; cursor:pointer; font-size:0.9em;"><input type="checkbox" class="parent-checkbox" value="${n.node_id}"><span style="color:var(--text-main);">Węzeł ${n.node_id} (${n.action_type})</span></label>`;
-        });
-    }
-
-    document.getElementById('node-wizard-modal').style.display = 'flex';
+    // Wymuszamy styl kontenera z suwakiem, aby nic nie wykraczało poza ramki modalu
+    pList.parentElement.style.maxHeight = "130px";
+    pList.parentElement.style.overflowY = "auto";
+    pList.parentElement.style.padding = "5px";
+    pList.parentElement.style.background = "rgba(0, 0, 0, 0.2)";
+    pList.parentElement.style.borderRadius = "6px";
     
-    // Auto-zaznaczanie ostatniego rodzica
+    pList.innerHTML = `
+        <label style="display:flex; gap:10px; align-items:center; cursor:pointer; font-size:0.9em; padding:4px 0;">
+            <input type="radio" name="parent-node" class="parent-radio" value="BASE">
+            <span style="color:var(--accent); font-weight:bold;">Pozycja Bazowa (Krok 1)</span>
+        </label>
+    `;
+    
+    // Pobieramy węzły pasujące do wybranej kolumny (STANDARD / ALTERNATIVE)
+    const columnNodes = nodes.filter(n => n.path_type === pathType);
+    
+    nodes.forEach(n => {
+        pList.innerHTML += `
+            <label style="display:flex; gap:10px; align-items:center; cursor:pointer; font-size:0.9em; padding:4px 0;">
+                <input type="radio" name="parent-node" class="parent-radio" value="${n.node_id}">
+                <span style="color:var(--text-main);">Węzeł <b style="color:var(--accent);">${n.node_id}</b> (${n.action_type})</span>
+            </label>
+        `;
+    });
+
+    // AUTO-ZAZNACZENIE DOMYŚLNEGO RODZICA (Krok bezpośrednio pod wybranym węzłem)
     setTimeout(() => {
-        const pCheckboxes = document.querySelectorAll('.parent-checkbox');
-        let foundDefault = false;
-        const pathNodes = (camp.graph_nodes || []).filter(n => n.path_type === pathType);
-        if (pathNodes.length > 0) {
-            const lastNode = pathNodes[pathNodes.length - 1];
-            pCheckboxes.forEach(cb => { if(cb.value === lastNode.node_id) { cb.checked = true; foundDefault = true; } });
+        const radios = document.querySelectorAll('.parent-radio');
+        if (columnNodes.length > 0) {
+            // Jeśli w kolumnie są już kroki, zaznaczamy chronologicznie ostatni z nich
+            const lastNode = columnNodes[columnNodes.length - 1];
+            radios.forEach(r => { if(r.value === lastNode.node_id) r.checked = true; });
+        } else {
+            // Jeśli kolumna jest pusta, domyślnym korzeniem jest pozycja bazowa
+            radios.forEach(r => { if(r.value === 'BASE') r.checked = true; });
         }
-        if(!foundDefault) pCheckboxes.forEach(cb => { if(cb.value === 'BASE') cb.checked = true; });
     }, 50);
+
+    // 3. Generowanie listy transz, które można redukować (Dla akcji TP / SL)
+    const tList = document.getElementById('nw-tranches-list');
+    tList.style.maxHeight = "100px";
+    tList.style.overflowY = "auto";
+    tList.innerHTML = `
+        <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.04); padding:6px; border-radius:4px; cursor:pointer;">
+            <input type="checkbox" class="tranche-checkbox" value="BASE" checked>
+            <span><b>Pozycja Bazowa (Start)</b> @ ${camp ? camp.base_trade.buy_price : 0}$</span>
+        </label>
+    `;
+    
+    // Pokazujemy WSZYSTKIE transze (zarówno oczekujące, jak i zrealizowane), aby móc z góry zaplanować ich zamknięcie
+    nodes.filter(n => n.action_type === 'ADD_TRANCHE').forEach(n => {
+        tList.innerHTML += `
+            <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.04); padding:6px; border-radius:4px; cursor:pointer;">
+                <input type="checkbox" class="tranche-checkbox" value="${n.node_id}">
+                <span><b>Transza ${n.node_id}</b> @ ${n.target_price}$</span>
+            </label>
+        `;
+    });
+
+    // Przełącz pola widoku w zależności od wybranej akcji
+    toggleWizardFields();
+    
+    document.getElementById('node-wizard-modal').style.display = 'flex';
 }
 
-// --- ZAPISYWANIE NOWEGO WĘZŁA ---
+// --- INTELIGENTNE BUDOWANIE STRUKTURY DRZEWA BINARNEGO (Kroki typu 2A3B) ---
 async function submitNewNode() {
     const tradeId = parseInt(document.getElementById('nw-trade-id').value);
     const pathType = document.getElementById('nw-path').value;
     const actionType = document.getElementById('nw-action-type').value;
     const reason = document.getElementById('nw-reason').value.trim();
     const focusScore = parseFloat(document.getElementById('nw-focus').value) || 0;
-    
     const cvdDropdown = document.getElementById('nw-cvd');
     const cvdStatus = cvdDropdown ? cvdDropdown.value : 'Dowolne';
 
-    let parentNodeIds = [];
-    document.querySelectorAll('.parent-checkbox:checked').forEach(cb => parentNodeIds.push(cb.value));
-    if (parentNodeIds.length === 0) return alert("Musisz zaznaczyć przynajmniej jednego 'Rodzica' w strukturze drzewa.");
+    // Pobranie wybranego rodzica (Radio zamiast Checkboxa daje 100% pewności)
+    const selectedParentRadio = document.querySelector('.parent-radio:checked');
+    if (!selectedParentRadio) return alert("Wybierz węzeł nadrzędny w strukturze drzewa scenariuszy.");
+    const parentId = selectedParentRadio.value;
 
-    let formEntryId = null; let targetPrice = 0; let allocatedBudgetPct = 0; let linkedTranches = [];
+    let formEntryId = null; 
+    let targetPrice = 0; 
+    let allocatedBudgetPct = 0; 
+    let linkedTranches = [];
 
-    // ROZWIDLENIE LOGIKI POBIERANIA DANYCH
     if (actionType === 'ADD_TRANCHE') {
         const formVal = document.getElementById('nw-form-id').value;
         if (!formVal) return alert("Wybierz strefę docelową z modułu Form.");
@@ -4103,33 +4143,55 @@ async function submitNewNode() {
         targetPrice = parseFloat(formData.price);
         allocatedBudgetPct = parseFloat(document.getElementById('nw-budget').value) || 0;
     } else {
-        // TP lub SL
         document.querySelectorAll('.tranche-checkbox:checked').forEach(cb => linkedTranches.push(cb.value)); 
-        if (linkedTranches.length === 0) return alert("Musisz zaznaczyć co najmniej jedną transzę, którą chcesz zamknąć.");
+        if (linkedTranches.length === 0) return alert("Zaznacz, które transze zamykasz na tym poziomie.");
         
         const closeVal = document.getElementById('nw-close-form-id').value;
-        if (!closeVal) return alert(`Wybierz poziom docelowy ${actionType === 'TAKE_PROFIT' ? 'TP' : 'SL'} z listy! Jeśli jest pusta, uzupełnij brakujące poziomy w module Form.`);
-        
+        if (!closeVal) return alert("Wybierz zdefiniowany wcześniej poziom TP/SL z listy rozwijanej.");
         const closeData = JSON.parse(closeVal);
-        formEntryId = closeData.entry_id; // Powiązujemy ID formularza, z którego pobraliśmy TP/SL
+        formEntryId = closeData.entry_id;
         targetPrice = parseFloat(closeData.price);
     }
 
-    const btn = document.getElementById('btn-save-wizard');
-    btn.innerHTML = "⏳ Zapisuję..."; btn.disabled = true;
-
     const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
     let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
-    
-    const samePathNodes = currentNodes.filter(n => n.path_type === pathType);
-    const newIdNum = samePathNodes.length + 1;
-    const nodeIdStr = `${pathType === 'STANDARD' ? 'A' : 'B'}${newIdNum}`;
+
+    // --- GENERATOR NAZW DLA DRZEWA BINARNEGO ---
+    let nextStepNumber = 2; // Po pierwszej inwestycji domyślnym krokiem jest krok 2
+    let pathSuffix = 'A'; // Domyślnie ramię A dla lewej kolumny, B dla prawej
+    if (pathType === 'ALTERNATIVE') pathSuffix = 'B';
+
+    if (parentId !== 'BASE') {
+        // Jeśli rodzicem jest np. węzeł "2A", to nasz nowy krok wyznacza poziom 3
+        // Wyciągamy cyfry z nazwy rodzica, aby określić aktualną głębokość drzewa
+        const parentDigits = parentId.match(/\d+/g);
+        if (parentDigits && parentDigits.length > 0) {
+            nextStepNumber = parseInt(parentDigits[parentDigits.length - 1]) + 1;
+        }
+    }
+
+    if (nextStepNumber > 5) {
+        return alert("Osiągnięto limit struktury. Drzewo scenariuszy kampanii może mieć maksymalnie 5 poziomów głębokości.");
+    }
+
+    // Budujemy unikalne, binarne ID węzła, np. "2A" lub "2A3B"
+    let generatedNodeId = '';
+    if (parentId === 'BASE') {
+        generatedNodeId = `${nextStepNumber}${pathSuffix}`;
+    } else {
+        generatedNodeId = `${parentId}${nextStepNumber}${pathSuffix}`;
+    }
+
+    // Sprawdzamy duplikaty
+    if (currentNodes.some(n => n.node_id === generatedNodeId)) {
+        return alert(`Węzeł o nazwie ${generatedNodeId} już istnieje w strukturze tego drzewa. Wybierz innego rodzica.`);
+    }
 
     const newNode = {
-        node_id: nodeIdStr,
-        parent_node_ids: parentNodeIds, 
+        node_id: generatedNodeId,
+        parent_node_ids: [parentId], // Rodzic zapisany w tablicy tekstowej
         path_type: pathType,
-        form_entry_id: formEntryId, 
+        form_entry_id: formEntryId,
         action_type: actionType,
         target_price: targetPrice,
         allocated_budget_pct: allocatedBudgetPct,
@@ -4142,18 +4204,28 @@ async function submitNewNode() {
     
     currentNodes.push(newNode);
 
+    const btn = document.getElementById('btn-save-wizard');
+    btn.innerHTML = "⏳ Zapis w Supabase..."; btn.disabled = true;
+
     try {
         const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, {
-            method: "POST", headers: { "Content-Type": "application/json" }, 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
             body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes })
         });
         const r = await res.json();
         if(r.status === 'success') {
             document.getElementById('node-wizard-modal').style.display = 'none';
             loadCampaigns(); 
-        } else alert(r.message);
-    } catch(e) { alert("Błąd zapisu kroku. Sprawdź serwer."); } 
-    finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+        } else {
+            alert(r.message);
+        }
+    } catch(e) { 
+        alert("Błąd komunikacji z serwerem Render."); 
+    } finally { 
+        btn.innerHTML = "Zapisz Krok"; 
+        btn.disabled = false; 
+    }
 }
 
 // --- LOGIKA NAWIGACJI DO FOCUS ---
@@ -4391,7 +4463,7 @@ async function submitNodeEdit() {
     }
 }
 
-// Dynamiczne przełączanie kreatora kafelków
+// --- ZWERYFIKOWANA LOGIKA POBIERANIA TP/SL Z MODUŁU FORM ---
 function toggleWizardFields() {
     const action = document.getElementById('nw-action-type').value;
     const secAdd = document.getElementById('nw-section-add');
@@ -4405,48 +4477,41 @@ function toggleWizardFields() {
         secAdd.style.display = 'none';
         secClose.style.display = 'block';
         
-        // Kolorystyka
-        if (action === 'TAKE_PROFIT') {
-            secClose.style.background = 'rgba(14,203,129,0.05)';
-            secClose.style.borderColor = 'rgba(14,203,129,0.2)';
-        } else {
-            secClose.style.background = 'rgba(246,70,93,0.05)';
-            secClose.style.borderColor = 'rgba(246,70,93,0.2)';
-        }
+        // Zmiana tła dla rozróżnienia intencji
+        secClose.style.background = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
+        secClose.style.borderColor = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
 
-        // --- AUTOMATYCZNE ŁADOWANIE TP/SL Z FORM ---
         const closeSelect = document.getElementById('nw-close-form-id');
-        closeSelect.innerHTML = '<option value="">Wybierz wyliczony poziom...</option>';
+        closeSelect.innerHTML = '<option value="">Wybierz poziom z Formularza...</option>';
         
         const setups = (window.formEntries || []).filter(f => f.ticker === ticker);
         
         if (setups.length === 0) {
-            closeSelect.innerHTML = '<option value="">Brak zaplanowanych stref w module Form</option>';
+            closeSelect.innerHTML = '<option value="">Brak pasujących analiz w module Form</option>';
         } else {
             setups.forEach(f => {
-                let targetPrice = 0;
-                let labelPrefix = '';
+                let extractedPrice = 0;
+                let label = '';
                 
-                // Szukamy odpowiedniej wartości w zależności od akcji
+                // POPRAWKA LOGIKI: Bezpieczne pobieranie kluczy obiektów Supabase
                 if (action === 'TAKE_PROFIT') {
-                    targetPrice = f.take_profit || f.tp || f.target_price || 0;
-                    labelPrefix = '🎯 TP';
+                    extractedPrice = f.take_profit || f.tp || f.target_price || 0;
+                    label = `🎯 TP: ${parseFloat(extractedPrice).toFixed(2)}$`;
                 } else if (action === 'STOP_LOSS') {
-                    targetPrice = f.stop_loss || f.sl || 0;
-                    labelPrefix = '🛑 SL';
+                    extractedPrice = f.stop_loss || f.sl || 0;
+                    label = `🛑 SL: ${parseFloat(extractedPrice).toFixed(2)}$`;
                 }
                 
-                if (parseFloat(targetPrice) > 0) {
+                if (parseFloat(extractedPrice) > 0) {
                     const opt = document.createElement('option');
-                    // Pakujemy ID formularza oraz cenę w jeden JSON, by backend to powiązał
-                    opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(targetPrice) });
-                    opt.innerText = `[Form ID: ${f.entry_id}] ${labelPrefix}: ${parseFloat(targetPrice).toFixed(2)}$`;
+                    opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(extractedPrice) });
+                    opt.innerText = `[Form: ${f.entry_id}] ${f.setup_name || 'Setup'} -> ${label}`;
                     closeSelect.appendChild(opt);
                 }
             });
             
             if (closeSelect.options.length === 1) {
-                closeSelect.innerHTML = `<option value="">Brak zdefiniowanych poziomów ${action === 'TAKE_PROFIT' ? 'Take Profit' : 'Stop Loss'} w Form</option>`;
+                closeSelect.innerHTML = `<option value="">Brak wyliczonego poziomu ${action === 'TAKE_PROFIT' ? 'TP' : 'SL'} dla tej spółki w Form</option>`;
             }
         }
     }
