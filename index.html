@@ -3998,12 +3998,18 @@ function renderCampaignTree(campaignData) {
     });
 }
 
+// --- REKURENCYJNE RYSOWANIE KAFELKÓW WSZERZ (Z pełnymi danymi i przyciskami) ---
 function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive) {
     if (showOnlyActive && !activePathIds.includes(nodeId)) return '';
 
     let node;
     if (nodeId === 'BASE') {
-        node = { id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', target_price: trade.buy_price, status: 'EXECUTED', allocated_budget_pct: (trade.spent / maxBudgetCurrency)*100 };
+        node = { 
+            id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', 
+            target_price: trade.buy_price, status: 'EXECUTED', 
+            allocated_budget_pct: (trade.spent / maxBudgetCurrency)*100,
+            required_focus_score: 0, required_cvd_status: 'Dowolne', step_rationale: ''
+        };
     } else {
         node = allNodes.find(n => n.node_id === nodeId);
     }
@@ -4012,7 +4018,6 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
     const isExecuted = node.status === 'EXECUTED';
     const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
     
-    // Używa nowej wersji kalkulatora
     const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency);
     const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
     const pnlSign = pnlFiat > 0 ? '+' : '';
@@ -4026,7 +4031,7 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
         <div class="campaign-node-item" data-node-id="${node.id}" style="background:var(--bg-input); padding:15px; border-radius:8px; border-top: 4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width:280px; text-align:left; position:relative; opacity: ${showOnlyActive && !activePathIds.includes(nodeId) ? '0.4' : '1'};">
             
             <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id}</strong>
+                <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id === 'BASE' ? 'Pozycja Bazowa' : 'Węzeł ' + node.node_id}</strong>
                 <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
             </div>
             
@@ -4034,9 +4039,27 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
                 <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
             </div>
             
-            <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
-                Amunicja: <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b>
+            <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px; display:flex; flex-direction:column; gap:4px;">
+                <div style="display:flex; justify-content:space-between;">
+                    <span>Amunicja:</span>
+                    <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span>Focus Score:</span>
+                    <b style="color:#cdd6f4;">> ${node.required_focus_score || 0} pkt</b>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span>Kondycja CVD:</span>
+                    <b style="color:#cdd6f4;">${node.required_cvd_status || 'Dowolne'}</b>
+                </div>
             </div>
+
+            ${node.step_rationale ? `
+                <details style="margin-top:8px; font-size:0.82em; background: rgba(0,0,0,0.2); padding:6px; border-radius:4px; border:1px solid #333;">
+                    <summary style="cursor:pointer; color:var(--accent); font-weight:bold; outline:none;">📝 Rozwiń notatkę / tezę</summary>
+                    <div style="margin-top:6px; padding:8px; background: rgba(201,148,0,0.08); border-radius:4px; border-left: 2px solid var(--accent); color:var(--text-main); white-space:pre-wrap;">${node.step_rationale}</div>
+                </details>
+            ` : ''}
 
             <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
                 <span style="font-size: 0.75em; color: var(--text-muted);">Skumulowany wynik na tym etapie:</span><br>
@@ -4046,15 +4069,15 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
             ${!isExecuted && nodeId !== 'BASE' ? `
                 <div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">
                     ${focusBtn}
-                    <button onclick="openEditWizardModal('${trade.id}', '${node.id}', '${node.node_id}', '${node.action_type}', ${node.target_price}, ${node.required_focus_score}, '${node.required_cvd_status}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Edytuj ✏️</button>
+                    <button onclick="openEditWizardModal('${trade.id}', '${node.id}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button>
                     <button onclick="deleteCampaignNode('${trade.id}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button>
                 </div>
             ` : ''}
 
             ${(activePathIds.includes(nodeId) || !showOnlyActive) ? `
                 <div style="display:flex; gap:10px; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);">
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em;">➕ Wariant A</button>
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em;">➕ Wariant B</button>
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant A</button>
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant B</button>
                 </div>
             ` : ''}
         </div>
@@ -4422,114 +4445,164 @@ async function submitNodeEdit() {
     }
 }
 
-// --- ZWERYFIKOWANA LOGIKA POBIERANIA TP/SL Z MODUŁU FORM ---
-function toggleWizardFields() {
-    const action = document.getElementById('nw-action-type').value;
-    const secAdd = document.getElementById('nw-section-add');
-    const secClose = document.getElementById('nw-section-close');
-    const ticker = document.getElementById('nw-ticker').value;
-
-    if (action === 'ADD_TRANCHE') {
-        secAdd.style.display = 'block';
-        secClose.style.display = 'none';
-    } else {
-        secAdd.style.display = 'none';
-        secClose.style.display = 'block';
-        
-        // Zmiana tła dla rozróżnienia intencji
-        secClose.style.background = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
-        secClose.style.borderColor = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
-
-        const closeSelect = document.getElementById('nw-close-form-id');
-        closeSelect.innerHTML = '<option value="">Wybierz poziom z Formularza...</option>';
-        
-        const setups = (window.formEntries || []).filter(f => f.ticker === ticker);
-        
-        if (setups.length === 0) {
-            closeSelect.innerHTML = '<option value="">Brak pasujących analiz w module Form</option>';
-        } else {
-            setups.forEach(f => {
-                let extractedPrice = 0;
-                let label = '';
-                
-                // POPRAWKA LOGIKI: Bezpieczne pobieranie kluczy obiektów Supabase
-                if (action === 'TAKE_PROFIT') {
-                    extractedPrice = f.take_profit || f.tp || f.target_price || 0;
-                    label = `🎯 TP: ${parseFloat(extractedPrice).toFixed(2)}$`;
-                } else if (action === 'STOP_LOSS') {
-                    extractedPrice = f.stop_loss || f.sl || 0;
-                    label = `🛑 SL: ${parseFloat(extractedPrice).toFixed(2)}$`;
-                }
-                
-                if (parseFloat(extractedPrice) > 0) {
-                    const opt = document.createElement('option');
-                    opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(extractedPrice) });
-                    opt.innerText = `[Form: ${f.entry_id}] ${f.setup_name || 'Setup'} -> ${label}`;
-                    closeSelect.appendChild(opt);
-                }
-            });
-            
-            if (closeSelect.options.length === 1) {
-                closeSelect.innerHTML = `<option value="">Brak wyliczonego poziomu ${action === 'TAKE_PROFIT' ? 'TP' : 'SL'} dla tej spółki w Form</option>`;
-            }
-        }
+// --- NOWOŚĆ: Szukanie "przodków" na ścieżce (Dla TP/SL) ---
+function getAncestors(parentId, allNodes) {
+    let ancestors = new Set(['BASE']);
+    let currentId = parentId;
+    while(currentId && currentId !== 'BASE') {
+        ancestors.add(currentId);
+        let n = allNodes.find(x => x.node_id === currentId);
+        if (n && n.parent_node_ids && n.parent_node_ids.length > 0) {
+            currentId = n.parent_node_ids[0];
+        } else break;
     }
+    return Array.from(ancestors);
 }
 
-// --- TRYB EDYCJI WĘZŁA ---
+// --- POMOCNICZE WYPEŁNIANIE LIST ROZWIJANYCH ---
+async function loadFormSetupsToSelect(selectId, ticker, targetPriceToSelect = null, tpSlType = null) {
+    const sel = document.getElementById(selectId);
+    if(!sel) return;
+    sel.innerHTML = '<option value="">⏳ Ładowanie...</option>';
+    if (!window.formEntries || window.formEntries.length === 0) {
+        try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); window.formEntries = await res.json() || []; } catch(e){}
+    }
+    const setups = (window.formEntries || []).filter(f => f.ticker === ticker);
+    sel.innerHTML = setups.length === 0 ? '<option value="">Brak zaplanowanych stref w Form</option>' : '';
+    
+    setups.forEach(f => {
+        let extractedPrice = 0; let label = '';
+        if (tpSlType === 'TAKE_PROFIT') {
+            extractedPrice = f.take_profit || f.tp || f.target_price || 0; label = `🎯 TP: ${parseFloat(extractedPrice).toFixed(2)}$`;
+        } else if (tpSlType === 'STOP_LOSS') {
+            extractedPrice = f.stop_loss || f.sl || 0; label = `🛑 SL: ${parseFloat(extractedPrice).toFixed(2)}$`;
+        } else {
+            extractedPrice = f.entry_point || f.entry_price || 0; label = `Wejście @ ${parseFloat(extractedPrice).toFixed(2)}$`;
+        }
+
+        if (parseFloat(extractedPrice) > 0) {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(extractedPrice) });
+            opt.innerText = `[Form: ${f.entry_id}] ${f.setup_name || 'Setup'} -> ${label}`;
+            if (targetPriceToSelect !== null && Math.abs(parseFloat(extractedPrice) - parseFloat(targetPriceToSelect)) < 0.001) opt.selected = true;
+            sel.appendChild(opt);
+        }
+    });
+}
+
+function populateTranchesList(tradeId, parentId, selectedTranches = []) {
+    const tList = document.getElementById('nw-tranches-list');
+    if(!tList) return;
+    tList.innerHTML = '';
+    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
+    if (!camp) return;
+
+    // Filtrujemy kafelki tylko do tych, które doprowadziły nas do tego miejsca na wykresie!
+    const validAncestors = getAncestors(parentId, camp.graph_nodes || []);
+
+    const isBaseChecked = selectedTranches.length === 0 || selectedTranches.includes('BASE') ? 'checked' : '';
+    tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="BASE" ${isBaseChecked}><span><b>Pozycja Bazowa (Start)</b></span></label>`;
+    
+    const dcaNodes = (camp.graph_nodes || []).filter(n => n.action_type === 'ADD_TRANCHE' && validAncestors.includes(n.node_id));
+    dcaNodes.forEach(n => {
+        const isChecked = selectedTranches.includes(n.node_id) ? 'checked' : '';
+        tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="${n.node_id}" ${isChecked}><span><b>Węzeł ${n.node_id}</b> @ ${n.target_price}$</span></label>`;
+    });
+}
+
+// --- NIEZAWODNA EDYCJA (Pobiera pełen obiekt z pamięci podręcznej) ---
 let isEditMode = false;
 let currentEditingNodeUuid = null;
 
-async function openEditWizardModal(tradeId, nodeUuid, nodeId, actionType, currentPrice, focusScore, cvdStatus) {
+async function openEditWizardModal(tradeId, nodeUuid) {
+    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
+    if (!camp) return;
+    const node = camp.graph_nodes.find(n => n.id === nodeUuid);
+    if (!node) return;
+
     isEditMode = true;
     currentEditingNodeUuid = nodeUuid;
-    
     document.getElementById('nw-trade-id').value = tradeId;
-    document.getElementById('nw-title').innerHTML = `Edytuj Krok <span style="color:var(--accent);">${nodeId}</span>`;
-    document.getElementById('nw-action-type').value = actionType;
-    document.getElementById('nw-focus').value = focusScore;
-    document.getElementById('nw-reason').value = ''; 
+    document.getElementById('nw-ticker').value = camp.base_trade.ticker;
+    document.getElementById('nw-parent-id').value = (node.parent_node_ids && node.parent_node_ids.length > 0) ? node.parent_node_ids[0] : 'BASE';
+    
+    document.getElementById('nw-title').innerHTML = `Edytuj Krok <span style="color:var(--accent);">${node.node_id}</span>`;
+    document.getElementById('nw-action-type').value = node.action_type;
+    document.getElementById('nw-focus').value = node.required_focus_score || 0;
+    document.getElementById('nw-budget').value = node.allocated_budget_pct || 25;
+    document.getElementById('nw-reason').value = ''; // Wymusza napisanie nowego powodu edycji!
     
     const cvdDropdown = document.getElementById('nw-cvd');
-    if(cvdDropdown) cvdDropdown.value = cvdStatus || 'Dowolne';
+    if(cvdDropdown) cvdDropdown.value = node.required_cvd_status || 'Dowolne';
 
-    // Ładowanie i auto-zaznaczanie stref
-    if (actionType === 'ADD_TRANCHE') {
-        const fId = document.getElementById('nw-form-id');
-        fId.innerHTML = '<option value="">⏳ Ładowanie...</option>';
-        const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
-        const setups = (window.formEntries || []).filter(f => f.ticker === camp.base_trade.ticker);
-        
-        fId.innerHTML = '';
-        setups.forEach(f => {
-            const pVal = f.entry_point || f.entry_price || 0;
-            const opt = document.createElement('option');
-            opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(pVal) });
-            opt.innerText = `[Form: ${f.entry_id}] ${f.setup_name} (${parseFloat(pVal).toFixed(2)}$)`;
-            if (parseFloat(pVal) === parseFloat(currentPrice)) opt.selected = true;
-            fId.appendChild(opt);
-        });
+    if (node.action_type === 'ADD_TRANCHE') {
         document.getElementById('nw-section-add').style.display = 'block';
         document.getElementById('nw-section-close').style.display = 'none';
+        await loadFormSetupsToSelect('nw-form-id', camp.base_trade.ticker, node.target_price, null);
     } else {
-        if (typeof toggleWizardFields === 'function') toggleWizardFields();
-        setTimeout(() => {
-            const closeSelect = document.getElementById('nw-close-form-id');
-            if (closeSelect) {
-                for (let i = 0; i < closeSelect.options.length; i++) {
-                    try {
-                        const data = JSON.parse(closeSelect.options[i].value);
-                        if (parseFloat(data.price) === parseFloat(currentPrice)) {
-                            closeSelect.selectedIndex = i; break;
-                        }
-                    } catch(e) {}
-                }
-            }
-        }, 100);
+        document.getElementById('nw-section-add').style.display = 'none';
+        document.getElementById('nw-section-close').style.display = 'block';
+        document.getElementById('nw-section-close').style.background = node.action_type === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
+        document.getElementById('nw-section-close').style.borderColor = node.action_type === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
+        
+        await loadFormSetupsToSelect('nw-close-form-id', camp.base_trade.ticker, node.target_price, node.action_type);
+        populateTranchesList(tradeId, document.getElementById('nw-parent-id').value, node.linked_tranches || []);
     }
 
     document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitWizardEdit()');
     document.getElementById('node-wizard-modal').style.display = 'flex';
+}
+
+async function submitWizardEdit() {
+    const reason = document.getElementById('nw-reason').value.trim();
+    if (reason.length < 15) return alert("🛡️ Audyt: Podaj merytoryczne uzasadnienie modyfikacji (min. 15 znaków).");
+
+    const actionType = document.getElementById('nw-action-type').value;
+    let targetPrice = 0; let formEntryId = null; let linkedTranches = []; let allocatedBudgetPct = 0;
+
+    if (actionType === 'ADD_TRANCHE') {
+        const val = document.getElementById('nw-form-id').value;
+        if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
+        allocatedBudgetPct = parseFloat(document.getElementById('nw-budget').value) || 0;
+    } else {
+        const val = document.getElementById('nw-close-form-id').value;
+        if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
+        document.querySelectorAll('.tranche-checkbox:checked').forEach(cb => linkedTranches.push(cb.value));
+    }
+
+    const payload = {
+        id: currentEditingNodeUuid,
+        edit_reason: reason,
+        delete_descendants: false, // Usunięcie to usunięcie, edycja zostawia dzieci w spokoju
+        target_price: targetPrice,
+        form_entry_id: formEntryId,
+        allocated_budget_pct: allocatedBudgetPct,
+        linked_tranches: linkedTranches,
+        required_focus_score: parseFloat(document.getElementById('nw-focus').value) || 0,
+        required_cvd_status: document.getElementById('nw-cvd')?.value || 'Dowolne'
+    };
+
+    const btn = document.getElementById('btn-save-wizard');
+    btn.innerHTML = "⏳ Aktualizacja..."; btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('node-wizard-modal').style.display = 'none';
+            resetWizardToDefaultMode();
+            loadCampaigns(); 
+        } else alert(data.message);
+    } catch(e) { alert("Błąd połączenia."); } 
+    finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+}
+
+function resetWizardToDefaultMode() {
+    isEditMode = false; currentEditingNodeUuid = null;
+    document.getElementById('nw-title').innerText = "Planuj Krok";
+    document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitNewNode()');
 }
 
 async function submitWizardEdit() {
@@ -4574,12 +4647,6 @@ async function submitWizardEdit() {
             loadCampaigns(); 
         } else alert(data.message);
     } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
-}
-
-function resetWizardToDefaultMode() {
-    isEditMode = false; currentEditingNodeUuid = null;
-    document.getElementById('nw-title').innerText = "Planuj Krok";
-    document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitNewNode()');
 }
 
 // --- LOGIKA KASKADOWEGO USUWANIA ---
