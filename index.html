@@ -849,7 +849,7 @@
     </div>
     <section id="campaign-module" class="app-module">
     <div class="macro-header-container" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; align-items: center;">
-        <h3>Drzewo Scenariuszy Kampanii</h3>
+        <h3>Drzewo Scenariuszy Kampanii (Symulator)</h3>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
             <input type="text" id="camp-search-filter" placeholder="Szukaj tickera..." oninput="filterCampaigns()" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
             <select id="camp-status-filter" class="form-control" onchange="filterCampaigns()" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
@@ -857,37 +857,31 @@
                 <option value="OPEN" selected>Otwarte</option>
                 <option value="CLOSED">Zamknięte</option>
             </select>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(14,203,129,0.1); padding:8px 12px; border-radius:6px; border:1px solid var(--success);">
+                <input type="checkbox" id="camp-active-path-toggle" onchange="filterCampaigns()" checked>
+                <span style="color:var(--success); font-weight:bold; font-size:0.9em;">Tylko Aktywna Ścieżka</span>
+            </label>
             <button class="btn-submit" style="background: var(--accent); color: #000; padding: 8px 15px; border-radius: 6px; margin: 0;" onclick="highlightActionableNodes()">⚡ Akcja na Dziś</button>
         </div>
     </div>
     
-    <div id="campaign-list" style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 20px;">
+    <div id="campaign-list" style="margin-top: 20px; overflow-x: auto; padding-bottom: 20px;">
         </div>
     </section>
 
-    <!-- Inteligentny Kreator Kroku Kampanii -->
     <div id="node-wizard-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 15px;">
     <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:500px; border:1px solid var(--accent); max-height: 90vh; overflow-y: auto;">
-        <h3 style="color:var(--accent); margin-bottom:15px;" id="nw-title">Planuj Krok (<span id="nw-path-label"></span>)</h3>
+        <h3 style="color:var(--accent); margin-bottom:15px;" id="nw-title">Planuj Krok</h3>
         
         <input type="hidden" id="nw-trade-id">
         <input type="hidden" id="nw-ticker">
-        <input type="hidden" id="nw-path">
-        
-        <div class="form-group mb-1">
-            <label style="color:#89b4fa; font-weight:bold;">1. Co chcesz zrobić w tym kroku?</label>
+        <input type="hidden" id="nw-parent-id"> <input type="hidden" id="nw-variant"> <div class="form-group mb-1">
+            <label style="color:#89b4fa; font-weight:bold;">Jaką akcję chcesz podjąć wariancie <span id="nw-variant-label"></span>?</label>
             <select id="nw-action-type" onchange="toggleWizardFields()" style="width:100%; padding:12px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; font-size:1em;">
                 <option value="ADD_TRANCHE">🟢 Wejdź / Uśrednij (Nowa Transza)</option>
                 <option value="TAKE_PROFIT">🔵 Take Profit (Księguj Zysk)</option>
                 <option value="STOP_LOSS">🔴 Stop Loss (Utnij Stratę)</option>
             </select>
-        </div>
-
-        <div class="form-group mb-1" style="background:rgba(255,255,255,0.03); padding:10px; border-radius:6px; border:1px dashed #89b4fa; margin-top: 10px;">
-            <label style="color:#89b4fa; font-weight:bold;">🔗 Drzewo Genealogiczne (Rodzice):</label>
-            <p style="font-size:0.8em; color:var(--text-muted); margin-bottom:8px;">Z jakiego kroku wynika ten etap? (Zaznacz dwa, aby połączyć ścieżki)</p>
-            <div id="nw-parents-list" style="display:flex; flex-direction:column; gap:6px; max-height: 100px; overflow-y: auto;">
-                </div>
         </div>
 
         <div id="nw-section-add" style="display:block; background:rgba(14,203,129,0.05); padding:10px; border-radius:6px; border:1px solid rgba(14,203,129,0.2); margin-top:10px;">
@@ -908,8 +902,7 @@
 
         <div id="nw-section-close" style="display:none; background:rgba(246,70,93,0.05); padding:10px; border-radius:6px; border:1px solid rgba(246,70,93,0.2); margin-top:10px;">
             <label style="color:var(--text-main);">Zaznacz, które transze chcesz ZAMKNĄĆ w tym kroku:</label>
-            <div id="nw-tranches-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height: 120px; overflow-y: auto;">
-                </div>
+            <div id="nw-tranches-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height: 120px; overflow-y: auto;"></div>
             <div style="margin-top:15px;">
                 <label>Wybierz poziom docelowy z modułu Form:</label>
                 <select id="nw-close-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; font-weight:bold;"></select>
@@ -923,7 +916,7 @@
 
         <div class="form-group" style="margin-top: 10px;">
             <label>Założenia / Komentarz (do audytu AI):</label>
-            <textarea id="nw-reason" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;" placeholder="Wyjaśnij dlaczego planujesz ten ruch..."></textarea>
+            <textarea id="nw-reason" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;" placeholder="Wyjaśnij powód dla wariantu..."></textarea>
         </div>
         
         <div style="margin-top:20px; display:flex; gap:10px;">
@@ -952,7 +945,7 @@
             <div id="notes-ai-content" style="color:var(--text-main); line-height:1.6; font-size:0.95em; background:rgba(255,255,255,0.02); padding:12px; border-radius:6px;"></div>
         </div>
     </div>
-</div>
+    </div>
     
 <script>
         const API_BASE_URL = 'https://quant-desk-backend-dr8n.onrender.com';
@@ -3837,398 +3830,307 @@ function filterCampaigns() {
     renderCampaignTree(filtered);
 }
 
+    // --- FUNKCJA WYZNACZAJĄCA AKTYWNĄ ŚCIEŻKĘ ---
+function getActivePathNodeIds(nodes) {
+    let activeIds = ['BASE'];
+    let currentParent = 'BASE';
+    
+    // Poszukiwanie najgłębszego zrealizowanego węzła i jego bezpośrednich dzieci (opcji)
+    while (true) {
+        const children = nodes.filter(n => n.parent_node_ids && n.parent_node_ids.includes(currentParent));
+        if (children.length === 0) break;
+        
+        const executedChild = children.find(n => n.status === 'EXECUTED');
+        if (executedChild) {
+            activeIds.push(executedChild.node_id);
+            currentParent = executedChild.node_id;
+        } else {
+            // Dodajemy oczekujące warianty pod ostatnim wykonanym krokiem
+            children.forEach(c => activeIds.push(c.node_id));
+            break;
+        }
+    }
+    return activeIds;
+}
+
+// --- KALKULATOR SKUMULOWANEGO PnL (Symulator Węzła) ---
+function calculateCumulativePnL(targetNodeId, allNodes, trade, maxBudget) {
+    const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
+    const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
+    
+    // Budujemy historię chronologiczną od BASE do targetNodeId
+    let path = [];
+    if (targetNodeId !== 'BASE') {
+        let curr = allNodes.find(n => n.node_id === targetNodeId);
+        while (curr) {
+            path.unshift(curr);
+            if (curr.parent_node_ids && curr.parent_node_ids.length > 0 && curr.parent_node_ids[0] !== 'BASE') {
+                curr = allNodes.find(n => n.node_id === curr.parent_node_ids[0]);
+            } else break;
+        }
+    }
+
+    // Stan wirtualnego portfela
+    let tranches = { 'BASE': { price: parseFloat(trade.buy_price), spent: parseFloat(trade.spent) * fxRate } };
+    let realizedPnL = 0;
+
+    for (let i = 0; i < path.length; i++) {
+        const n = path[i];
+        const currentPrice = parseFloat(n.target_price);
+
+        // Jeśli jesteśmy na ostatnim kroku, chcemy poznać wycenę PRZED egzekucją tego kroku
+        if (i === path.length - 1) {
+            let unrealizedPnL = 0;
+            for (const key in tranches) {
+                const t = tranches[key];
+                const shares = t.spent / t.price;
+                unrealizedPnL += (currentPrice - t.price) * shares * directionMod;
+            }
+            return realizedPnL + unrealizedPnL;
+        }
+
+        // Nakładamy zdarzenie historyczne na portfel
+        if (n.action_type === 'ADD_TRANCHE') {
+            const budgetFiat = (parseFloat(n.allocated_budget_pct) / 100) * maxBudget;
+            tranches[n.node_id] = { price: currentPrice, spent: budgetFiat };
+        } else {
+            const linked = n.linked_tranches || [];
+            linked.forEach(tId => {
+                if (tranches[tId]) {
+                    const t = tranches[tId];
+                    const shares = t.spent / t.price;
+                    realizedPnL += (currentPrice - t.price) * shares * directionMod;
+                    delete tranches[tId];
+                }
+            });
+        }
+    }
+    return 0;
+}
+
+// --- GŁÓWNA FUNKCJA RENDERUJĄCA STRUKTURĘ ---
 function renderCampaignTree(campaignData) {
     const container = document.getElementById('campaign-list');
     container.innerHTML = '';
+    const showOnlyActive = document.getElementById('camp-active-path-toggle').checked;
     
     if(campaignData.length === 0) {
-        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryteria filtrów. Zacznij planować pozycje z poziomu dziennika TradesList.</div>`;
+        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryteria filtrów.</div>`;
         return;
     }
 
     campaignData.forEach(camp => {
         const trade = camp.base_trade;
         const nodes = camp.graph_nodes || [];
-        
         const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
-        const firstTrancheSpentPLN = parseFloat(trade.spent || 0) * fxRate;
-        const maxBudgetPLN = parseFloat(camp.max_budget_pln || 0);
+        const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
         
-        // --- NOWOŚĆ: Obliczamy całkowitą dopuszczalną amunicję w oryginalnej walucie tickera
-        const maxBudgetCurrency = maxBudgetPLN / fxRate; 
-        
-        let optimisticPnLPLN = 0;
-        let tacticalPnLPLN = 0;
-        let pessimisticPnLPLN = 0;
-
-        const entryPrice = parseFloat(trade.buy_price || 0);
-        const leverage = parseFloat(trade.leverage || 1);
-        const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
-
-        const targetOP = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'REDUCE') || { target_price: entryPrice * (1 + (0.15 * directionMod)) };
-        if (entryPrice > 0) {
-            const pctGain = ((parseFloat(targetOP.target_price) - entryPrice) / entryPrice) * directionMod;
-            optimisticPnLPLN = firstTrancheSpentPLN * leverage * pctGain;
-        }
-
-        const standardSLNode = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'STOP_LOSS');
-        const deepFormNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'ADD_TRANCHE');
-        const deepTPNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'REDUCE');
-
-        let lossFromFirstTranchePLN = 0;
-        let profitFromDeepTranchePLN = 0;
-
-        if (standardSLNode && entryPrice > 0) {
-            const pctLoss = ((parseFloat(standardSLNode.target_price) - entryPrice) / entryPrice) * directionMod;
-            lossFromFirstTranchePLN = firstTrancheSpentPLN * leverage * pctLoss; 
-        }
-
-        if (deepFormNode && deepTPNode && parseFloat(deepFormNode.target_price) > 0) {
-            const deepEntry = parseFloat(deepFormNode.target_price);
-            const deepExit = parseFloat(deepTPNode.target_price);
-            const deepBudgetPLN = maxBudgetPLN * (parseFloat(deepFormNode.allocated_budget_pct || 25) / 100);
-            
-            const pctDeepGain = ((deepExit - deepEntry) / deepEntry) * directionMod;
-            profitFromDeepTranchePLN = deepBudgetPLN * leverage * pctDeepGain;
-        }
-        tacticalPnLPLN = lossFromFirstTranchePLN + profitFromDeepTranchePLN;
-
-        const finalSLNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'STOP_LOSS') || { target_price: entryPrice * (1 - (0.10 * directionMod)) };
-        if (entryPrice > 0) {
-            const pctMaxLoss1 = ((parseFloat(finalSLNode.target_price) - entryPrice) / entryPrice) * directionMod;
-            const maxLoss1 = firstTrancheSpentPLN * leverage * pctMaxLoss1;
-
-            let maxLoss2 = 0;
-            if (deepFormNode && parseFloat(deepFormNode.target_price) > 0) {
-                const deepEntry = parseFloat(deepFormNode.target_price);
-                const pctMaxLoss2 = ((parseFloat(finalSLNode.target_price) - deepEntry) / deepEntry) * directionMod;
-                const deepBudgetPLN = maxBudgetPLN * (parseFloat(deepFormNode.allocated_budget_pct || 25) / 100);
-                maxLoss2 = deepBudgetPLN * leverage * pctMaxLoss2;
-            }
-            pessimisticPnLPLN = maxLoss1 + maxLoss2;
-        }
-
-        const hasExecutedAlternative = nodes.some(n => n.path_type === 'ALTERNATIVE' && n.status === 'EXECUTED');
-        const activePath = hasExecutedAlternative ? 'ALTERNATIVE' : 'STANDARD';
+        const activePathIds = getActivePathNodeIds(nodes);
 
         const card = document.createElement('div');
-        card.style.background = 'var(--bg-card)';
-        card.style.border = '1px solid var(--border-color)';
-        card.style.borderRadius = '12px';
-        card.style.padding = '20px';
-        card.style.marginBottom = '20px';
+        card.style.background = 'var(--bg-card)'; card.style.border = '1px solid var(--border-color)';
+        card.style.borderRadius = '12px'; card.style.padding = '20px'; card.style.marginBottom = '30px';
         
+        // Nagłówek Kampanii
         card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap:wrap; gap:10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 20px;">
                 <h3 style="margin:0; color:var(--text-main); font-size:1.3em;">
-                    ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal; margin-left:5px;">#ID ${trade.id}</span>
-                    <a href="${getTradingViewLink(trade.ticker)}" target="_blank" style="font-size:0.55em; margin-left:12px; text-decoration:none; background:var(--bg-input); padding:4px 8px; border-radius:4px; color:var(--accent);">📺 TradingView</a>
+                    ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal;">#ID ${trade.id}</span>
                 </h3>
-                <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px; font-weight:bold;">${trade.status}</span>
+                <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px;">${trade.status}</span>
             </div>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px dashed #333;">
-                <div style="text-align: center; border-right: 1px solid var(--border-color); padding: 5px;">
-                    <div style="font-size: 0.8em; color: var(--text-muted);">🟢 Wariant OPTYMISTYCZNY</div>
-                    <div style="font-size: 1.1em; font-weight: bold; color: var(--success); margin-top: 4px;">+${optimisticPnLPLN.toFixed(2)} PLN</div>
-                </div>
-                <div style="text-align: center; border-right: 1px solid var(--border-color); padding: 5px;">
-                    <div style="font-size: 0.8em; color: var(--text-muted);">🔵 Bilans KAMPANII (Taktyczny)</div>
-                    <div style="font-size: 1.1em; font-weight: bold; color: #89b4fa; margin-top: 4px;">${tacticalPnLPLN >= 0 ? '+' : ''}${tacticalPnLPLN.toFixed(2)} PLN</div>
-                </div>
-                <div style="text-align: center; padding: 5px;">
-                    <div style="font-size: 0.8em; color: var(--text-muted);">🔴 Wariant PESYMISTYCZNY</div>
-                    <div style="font-size: 1.1em; font-weight: bold; color: var(--danger); margin-top: 4px;">${pessimisticPnLPLN.toFixed(2)} PLN</div>
-                </div>
-            </div>
-
-            <div style="display:flex; gap:20px; margin-top:20px; flex-wrap: wrap;">
-                <div style="flex:1; min-width:280px; opacity: ${activePath === 'STANDARD' ? '1' : '0.4'}; transition: opacity 0.3s; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border-top: 3px solid #007bff;">
-                    <h4 style="color:#007bff; font-size:1em; margin-top:0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-                        Ścieżka BAZOWA ${activePath === 'STANDARD' ? '<span style="font-size:0.75em; background:rgba(14,203,129,0.15); color:var(--success); padding:2px 6px; border-radius:4px;">⚡ Aktywna</span>' : ''}
-                    </h4>
-                    ${renderNodesList(nodes.filter(n => n.path_type === 'STANDARD'), maxBudgetCurrency, trade.currency, trade.id)}
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', 'STANDARD')" style="width:100%; padding:10px; margin-top:10px; background:transparent; color:#007bff; border:1px dashed #007bff; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.85em;">➕ Dodaj krok bazowy</button>
-                </div>
-                <div style="flex:1; min-width:280px; opacity: ${activePath === 'ALTERNATIVE' ? '1' : '0.4'}; transition: opacity 0.3s; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border-top: 3px solid var(--danger); position:relative;">
-                    <h4 style="color:var(--danger); font-size:1em; margin-top:0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-                        Ścieżka ALTERNATYWNA ${activePath === 'ALTERNATIVE' ? '<span style="font-size:0.75em; background:rgba(14,203,129,0.15); color:var(--success); padding:2px 6px; border-radius:4px;">⚡ Aktywna</span>' : ''}
-                    </h4>
-                    ${renderNodesList(nodes.filter(n => n.path_type === 'ALTERNATIVE'), maxBudgetCurrency, trade.currency, trade.id)}
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', 'ALTERNATIVE')" style="width:100%; padding:10px; margin-top:10px; background:transparent; color:var(--danger); border:1px dashed var(--danger); border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.85em;">➕ Dodaj krok ratunkowy</button>
-                </div>
+            <div style="display:flex; justify-content:center; overflow-x:auto; padding-bottom:20px;">
+                ${buildTreeHTML('BASE', nodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}
             </div>
         `;
         container.appendChild(card);
     });
 }
 
-// --- RYSOWANIE KAFELKÓW (Z Drzewem, Pieniędzmi i Przyciskiem Focus) ---
-function renderNodesList(pathNodes, maxBudgetCurrency, currency, tradeId) {
-    if(pathNodes.length === 0) return `<p style="color:var(--text-muted); font-size:0.85em; font-style:italic; margin: 10px 0;">Brak zaplanowanych kroków.</p>`;
-    return pathNodes.map(node => {
-        const isExecuted = node.status === 'EXECUTED';
-        const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * (maxBudgetCurrency || 0);
-        
-        let focusBtn = '';
-        if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
-            focusBtn = `<button onclick="goToFocusFromNode('${tradeId}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px; transition:0.2s;" onmouseover="this.style.background='rgba(14,203,129,0.1)';" onmouseout="this.style.background='transparent';">🎯 Analiza Focus</button>`;
-        }
+// --- REKURENCYJNE RYSOWANIE KAFELKÓW WSZERZ ---
+function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive) {
+    if (showOnlyActive && !activePathIds.includes(nodeId)) return '';
 
-        const parentsStr = Array.isArray(node.parent_node_ids) && node.parent_node_ids.length > 0 
-            ? node.parent_node_ids.join(' + ') 
-            : 'BASE (Start)';
+    let node;
+    if (nodeId === 'BASE') {
+        node = { id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', target_price: trade.buy_price, status: 'EXECUTED', allocated_budget_pct: (trade.spent * fxRate / maxBudgetCurrency)*100 };
+    } else {
+        node = allNodes.find(n => n.node_id === nodeId);
+    }
+    if (!node) return '';
 
-        return `
-            <div class="campaign-node-item" data-node-id="${node.id}" data-target-price="${node.target_price}" style="background:var(--bg-input); padding:22px 15px 15px 15px; border-radius:8px; margin-bottom:18px; border-left:4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position:relative; margin-top:15px;">
-                
-                <div style="position:absolute; top:-12px; left:10px; background:var(--bg-card); padding:2px 10px; border:1px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; border-radius:12px; font-size:0.75em; color:var(--text-muted); box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                    🔗 Wynika z: <b style="color:var(--text-main);">${parentsStr}</b>
-                </div>
+    const isExecuted = node.status === 'EXECUTED';
+    const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
+    
+    // Obliczanie bieżącego wyniku dla konkretnego kafelka!
+    const pnlPLN = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency * fxRate);
+    const pnlColor = pnlPLN >= 0 ? 'var(--success)' : 'var(--danger)';
+    const pnlSign = pnlPLN > 0 ? '+' : '';
 
-                <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
-                    <strong style="color:var(--text-main); font-size:1.05em;">Węzeł ${node.node_id}</strong>
-                    <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
-                </div>
-                <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
-                    <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
-                </div>
-                <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
-                    Amunicja: <b style="color:#cdd6f4;">${node.allocated_budget_pct}% (<span style="color:var(--success);">${fiatValue.toFixed(2)} ${currency}</span>)</b> | Focus > <b>${node.required_focus_score}</b>
-                </div>
-                ${node.step_rationale ? `<div style="font-size:0.82em; color:var(--accent); font-style:italic; margin-top:8px; background: rgba(201,148,0,0.08); padding: 8px; border-radius: 4px; border-left: 2px solid var(--accent);">📝 "${node.step_rationale}"</div>` : ''}
-                
-                ${!isExecuted ? `
-                    <div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">
-                        ${focusBtn}
-                        <button onclick="openEditWizardModal('${tradeId}', '${node.id}', '${node.node_id}', '${node.action_type}', ${node.target_price}, ${node.required_focus_score}, '${node.required_cvd_status}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Edytuj ✏️</button>
-                        <button onclick="deleteCampaignNode('${tradeId}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button>
-                    </div>
-                ` : ''}
+    let focusBtn = '';
+    if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
+        focusBtn = `<button onclick="goToFocusFromNode('${trade.id}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px; transition:0.2s;">🎯 Focus</button>`;
+    }
+
+    // Wygląd Kafelka
+    const nodeHtml = `
+        <div class="campaign-node-item" data-node-id="${node.id}" style="background:var(--bg-input); padding:15px; border-radius:8px; border-top: 4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width:280px; text-align:left; position:relative; opacity: ${showOnlyActive || activePathIds.includes(nodeId) ? '1' : '0.4'};">
+            
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id}</strong>
+                <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
             </div>
-        `;
-    }).join('');
+            
+            <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
+                <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
+            </div>
+            
+            <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
+                Amunicja: <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b>
+            </div>
+
+            <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-size: 0.75em; color: var(--text-muted);">Skumulowany wynik na tym etapie:</span><br>
+                <strong style="color: ${pnlColor}; font-size: 1.1em;">${pnlSign}${pnlPLN.toFixed(2)} PLN</strong>
+            </div>
+
+            ${!isExecuted && nodeId !== 'BASE' ? `<div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">${focusBtn}<button onclick="deleteCampaignNode('${trade.id}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button></div>` : ''}
+
+            ${(activePathIds.includes(nodeId) || !showOnlyActive) ? `
+                <div style="display:flex; gap:10px; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);">
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant A</button>
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant B</button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    // Rysowanie Dzieci
+    const childrenA = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
+    const childrenB = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
+
+    let childrenHtml = '';
+    if (childrenA.length > 0 || childrenB.length > 0) {
+        childrenHtml = `<div style="display:flex; gap:40px; padding-top:20px; position:relative; margin-top:10px;">`;
+        if (childrenA.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center;">${buildTreeHTML(childrenA[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
+        if (childrenB.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center;">${buildTreeHTML(childrenB[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
+        childrenHtml += `</div>`;
+    }
+
+    return `<div style="display:flex; flex-direction:column; align-items:center;">${nodeHtml}${childrenHtml}</div>`;
 }
 
-
-// ==========================================
-//    POPRAWIONA LOGIKA DRZEWA BINARNEGO (WIZARD)
-// ==========================================
-
-async function openAddNodeModal(tradeId, ticker, pathType) {
+// --- OBSŁUGA MODALU (Automatyczne przydzielanie Rodzica i Wariantu) ---
+async function openAddNodeModal(tradeId, ticker, parentId, variant) {
     document.getElementById('nw-trade-id').value = tradeId;
     document.getElementById('nw-ticker').value = ticker;
-    document.getElementById('nw-path').value = pathType; // pathType to 'STANDARD' (kolumna lewa) lub 'ALTERNATIVE' (kolumna prawa)
+    document.getElementById('nw-parent-id').value = parentId; // Wiem, skąd przyszedłeś!
+    document.getElementById('nw-variant').value = variant;    // Wiem, którym jesteś wariantem!
     
-    // Konwencjonalny tytuł dla kontekstu kolumny
-    document.getElementById('nw-path-label').innerText = pathType === 'STANDARD' ? 'Ścieżka Główna' : 'Ścieżka Alternatywna';
-    
-    document.getElementById('nw-action-type').value = 'ADD_TRANCHE';
+    document.getElementById('nw-title').innerText = `Planuj Krok (Wariant ${variant})`;
+    document.getElementById('nw-variant-label').innerText = variant;
     document.getElementById('nw-reason').value = '';
     
-    // 1. Gwarancja załadowania stref z modułu Form
+    if (typeof toggleWizardFields === "function") toggleWizardFields();
+
+    // 1. Ładowanie stref z Form
     const fId = document.getElementById('nw-form-id');
     fId.innerHTML = '<option value="">⏳ Ładowanie stref...</option>';
     if (typeof formEntries === 'undefined' || !formEntries || formEntries.length === 0) {
-        try { 
-            const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
-            window.formEntries = await res.json() || []; 
-        } catch(e) { console.error("Błąd pobierania bazy stref Form:", e); }
+        try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); window.formEntries = await res.json() || []; } catch(e) {}
     }
-    
-    // Inicjalizacja opcji w dropdownie formularzy dla uśredniania (ADD_TRANCHE)
     const setups = (window.formEntries || []).filter(f => f.ticker === ticker);
     fId.innerHTML = setups.length === 0 ? '<option value="">Brak zaplanowanych stref w Form</option>' : '';
     setups.forEach(f => {
         const price = f.entry_point || f.entry_price || 0;
         const opt = document.createElement('option');
         opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(price) });
-        opt.innerText = `[Form ID: ${f.entry_id}] ${f.setup_name || 'Setup'} @ ${parseFloat(price).toFixed(2)}$`;
+        opt.innerText = `[${f.entry_id}] ${f.direction} @ ${parseFloat(price).toFixed(2)}$`;
         fId.appendChild(opt);
     });
 
-    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
-    const nodes = camp ? (camp.graph_nodes || []) : [];
-
-    // 2. GENEROWANIE LISTY RODZICÓW Z SUWAKIEM (Domyślnie zaznaczamy ostatni węzeł z klikniętej kolumny)
-    const pList = document.getElementById('nw-parents-list');
-    // Wymuszamy styl kontenera z suwakiem, aby nic nie wykraczało poza ramki modalu
-    pList.parentElement.style.maxHeight = "130px";
-    pList.parentElement.style.overflowY = "auto";
-    pList.parentElement.style.padding = "5px";
-    pList.parentElement.style.background = "rgba(0, 0, 0, 0.2)";
-    pList.parentElement.style.borderRadius = "6px";
-    
-    pList.innerHTML = `
-        <label style="display:flex; gap:10px; align-items:center; cursor:pointer; font-size:0.9em; padding:4px 0;">
-            <input type="radio" name="parent-node" class="parent-radio" value="BASE">
-            <span style="color:var(--accent); font-weight:bold;">Pozycja Bazowa (Krok 1)</span>
-        </label>
-    `;
-    
-    // Pobieramy węzły pasujące do wybranej kolumny (STANDARD / ALTERNATIVE)
-    const columnNodes = nodes.filter(n => n.path_type === pathType);
-    
-    nodes.forEach(n => {
-        pList.innerHTML += `
-            <label style="display:flex; gap:10px; align-items:center; cursor:pointer; font-size:0.9em; padding:4px 0;">
-                <input type="radio" name="parent-node" class="parent-radio" value="${n.node_id}">
-                <span style="color:var(--text-main);">Węzeł <b style="color:var(--accent);">${n.node_id}</b> (${n.action_type})</span>
-            </label>
-        `;
-    });
-
-    // AUTO-ZAZNACZENIE DOMYŚLNEGO RODZICA (Krok bezpośrednio pod wybranym węzłem)
-    setTimeout(() => {
-        const radios = document.querySelectorAll('.parent-radio');
-        if (columnNodes.length > 0) {
-            // Jeśli w kolumnie są już kroki, zaznaczamy chronologicznie ostatni z nich
-            const lastNode = columnNodes[columnNodes.length - 1];
-            radios.forEach(r => { if(r.value === lastNode.node_id) r.checked = true; });
-        } else {
-            // Jeśli kolumna jest pusta, domyślnym korzeniem jest pozycja bazowa
-            radios.forEach(r => { if(r.value === 'BASE') r.checked = true; });
-        }
-    }, 50);
-
-    // 3. Generowanie listy transz, które można redukować (Dla akcji TP / SL)
+    // 2. Transze do zamknięcia (Tylko transze wynikające z historii ścieżki do tego momentu)
     const tList = document.getElementById('nw-tranches-list');
-    tList.style.maxHeight = "100px";
-    tList.style.overflowY = "auto";
-    tList.innerHTML = `
-        <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.04); padding:6px; border-radius:4px; cursor:pointer;">
-            <input type="checkbox" class="tranche-checkbox" value="BASE" checked>
-            <span><b>Pozycja Bazowa (Start)</b> @ ${camp ? camp.base_trade.buy_price : 0}$</span>
-        </label>
-    `;
-    
-    // Pokazujemy WSZYSTKIE transze (zarówno oczekujące, jak i zrealizowane), aby móc z góry zaplanować ich zamknięcie
-    nodes.filter(n => n.action_type === 'ADD_TRANCHE').forEach(n => {
-        tList.innerHTML += `
-            <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.04); padding:6px; border-radius:4px; cursor:pointer;">
-                <input type="checkbox" class="tranche-checkbox" value="${n.node_id}">
-                <span><b>Transza ${n.node_id}</b> @ ${n.target_price}$</span>
-            </label>
-        `;
-    });
+    tList.innerHTML = '';
+    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
+    if (camp) {
+        tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="BASE" checked><span><b>Pozycja Bazowa (Start)</b></span></label>`;
+        const dcaNodes = (camp.graph_nodes || []).filter(n => n.action_type === 'ADD_TRANCHE');
+        dcaNodes.forEach(n => {
+            tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="${n.node_id}"><span><b>Węzeł ${n.node_id}</b> @ ${n.target_price}$</span></label>`;
+        });
+    }
 
-    // Przełącz pola widoku w zależności od wybranej akcji
-    toggleWizardFields();
-    
     document.getElementById('node-wizard-modal').style.display = 'flex';
 }
 
-// --- INTELIGENTNE BUDOWANIE STRUKTURY DRZEWA BINARNEGO (Kroki typu 2A3B) ---
+// --- ZAPIS KROKU (Z logiką nazw 2A3B) ---
 async function submitNewNode() {
     const tradeId = parseInt(document.getElementById('nw-trade-id').value);
-    const pathType = document.getElementById('nw-path').value;
+    const parentId = document.getElementById('nw-parent-id').value;
+    const variant = document.getElementById('nw-variant').value; // 'A' lub 'B'
     const actionType = document.getElementById('nw-action-type').value;
     const reason = document.getElementById('nw-reason').value.trim();
-    const focusScore = parseFloat(document.getElementById('nw-focus').value) || 0;
-    const cvdDropdown = document.getElementById('nw-cvd');
-    const cvdStatus = cvdDropdown ? cvdDropdown.value : 'Dowolne';
-
-    // Pobranie wybranego rodzica (Radio zamiast Checkboxa daje 100% pewności)
-    const selectedParentRadio = document.querySelector('.parent-radio:checked');
-    if (!selectedParentRadio) return alert("Wybierz węzeł nadrzędny w strukturze drzewa scenariuszy.");
-    const parentId = selectedParentRadio.value;
-
-    let formEntryId = null; 
-    let targetPrice = 0; 
-    let allocatedBudgetPct = 0; 
-    let linkedTranches = [];
+    
+    let formEntryId = null; let targetPrice = 0; let allocatedBudgetPct = 0; let linkedTranches = [];
 
     if (actionType === 'ADD_TRANCHE') {
         const formVal = document.getElementById('nw-form-id').value;
         if (!formVal) return alert("Wybierz strefę docelową z modułu Form.");
         const formData = JSON.parse(formVal);
-        formEntryId = formData.entry_id;
-        targetPrice = parseFloat(formData.price);
+        formEntryId = formData.entry_id; targetPrice = parseFloat(formData.price);
         allocatedBudgetPct = parseFloat(document.getElementById('nw-budget').value) || 0;
     } else {
         document.querySelectorAll('.tranche-checkbox:checked').forEach(cb => linkedTranches.push(cb.value)); 
-        if (linkedTranches.length === 0) return alert("Zaznacz, które transze zamykasz na tym poziomie.");
-        
+        if (linkedTranches.length === 0) return alert("Zaznacz, które transze zamykasz.");
         const closeVal = document.getElementById('nw-close-form-id').value;
-        if (!closeVal) return alert("Wybierz zdefiniowany wcześniej poziom TP/SL z listy rozwijanej.");
+        if (!closeVal) return alert("Wybierz poziom z modułu Form.");
         const closeData = JSON.parse(closeVal);
-        formEntryId = closeData.entry_id;
-        targetPrice = parseFloat(closeData.price);
+        formEntryId = closeData.entry_id; targetPrice = parseFloat(closeData.price);
     }
 
     const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
     let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
-
-    // --- GENERATOR NAZW DLA DRZEWA BINARNEGO ---
-    let nextStepNumber = 2; // Po pierwszej inwestycji domyślnym krokiem jest krok 2
-    let pathSuffix = 'A'; // Domyślnie ramię A dla lewej kolumny, B dla prawej
-    if (pathType === 'ALTERNATIVE') pathSuffix = 'B';
-
+    
+    // Generowanie logicznej nazwy (np. 2A3B)
+    let nextStepNumber = 2;
     if (parentId !== 'BASE') {
-        // Jeśli rodzicem jest np. węzeł "2A", to nasz nowy krok wyznacza poziom 3
-        // Wyciągamy cyfry z nazwy rodzica, aby określić aktualną głębokość drzewa
-        const parentDigits = parentId.match(/\d+/g);
-        if (parentDigits && parentDigits.length > 0) {
-            nextStepNumber = parseInt(parentDigits[parentDigits.length - 1]) + 1;
-        }
+        const digits = parentId.match(/\d+/g);
+        if (digits && digits.length > 0) nextStepNumber = parseInt(digits[digits.length - 1]) + 1;
     }
+    const generatedNodeId = parentId === 'BASE' ? `${nextStepNumber}${variant}` : `${parentId}${nextStepNumber}${variant}`;
+    
+    // Utrzymanie kompatybilności ścieżki w bazie
+    const pathType = variant === 'A' ? 'STANDARD' : 'ALTERNATIVE'; 
 
-    if (nextStepNumber > 5) {
-        return alert("Osiągnięto limit struktury. Drzewo scenariuszy kampanii może mieć maksymalnie 5 poziomów głębokości.");
-    }
-
-    // Budujemy unikalne, binarne ID węzła, np. "2A" lub "2A3B"
-    let generatedNodeId = '';
-    if (parentId === 'BASE') {
-        generatedNodeId = `${nextStepNumber}${pathSuffix}`;
-    } else {
-        generatedNodeId = `${parentId}${nextStepNumber}${pathSuffix}`;
-    }
-
-    // Sprawdzamy duplikaty
     if (currentNodes.some(n => n.node_id === generatedNodeId)) {
-        return alert(`Węzeł o nazwie ${generatedNodeId} już istnieje w strukturze tego drzewa. Wybierz innego rodzica.`);
+        return alert(`Wariant ${variant} dla tego kroku jest już zajęty. Zmodyfikuj lub usuń stary węzeł.`);
     }
 
     const newNode = {
         node_id: generatedNodeId,
-        parent_node_ids: [parentId], // Rodzic zapisany w tablicy tekstowej
+        parent_node_ids: [parentId],
         path_type: pathType,
         form_entry_id: formEntryId,
         action_type: actionType,
         target_price: targetPrice,
         allocated_budget_pct: allocatedBudgetPct,
-        required_focus_score: focusScore,
-        required_cvd_status: cvdStatus,
+        required_focus_score: parseFloat(document.getElementById('nw-focus').value) || 0,
         step_rationale: reason,
         linked_tranches: linkedTranches,
         status: "PENDING"
     };
     
     currentNodes.push(newNode);
-
     const btn = document.getElementById('btn-save-wizard');
-    btn.innerHTML = "⏳ Zapis w Supabase..."; btn.disabled = true;
+    btn.innerHTML = "⏳ Zapis..."; btn.disabled = true;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, {
-            method: "POST", 
-            headers: { "Content-Type": "application/json" }, 
-            body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes })
-        });
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes }) });
         const r = await res.json();
-        if(r.status === 'success') {
-            document.getElementById('node-wizard-modal').style.display = 'none';
-            loadCampaigns(); 
-        } else {
-            alert(r.message);
-        }
-    } catch(e) { 
-        alert("Błąd komunikacji z serwerem Render."); 
-    } finally { 
-        btn.innerHTML = "Zapisz Krok"; 
-        btn.disabled = false; 
-    }
+        if(r.status === 'success') { document.getElementById('node-wizard-modal').style.display = 'none'; loadCampaigns(); }
+        else alert(r.message);
+    } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
 }
 
 // --- LOGIKA NAWIGACJI DO FOCUS ---
