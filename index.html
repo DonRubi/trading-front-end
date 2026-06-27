@@ -847,15 +847,12 @@
     <section id="campaign-module" class="app-module">
     <div class="macro-header-container" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; align-items: center;">
         <h3>Drzewo Scenariuszy Kampanii</h3>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <input type="text" id="camp-search-filter" placeholder="Szukaj tickera..." oninput="filterCampaigns()" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
             <select id="camp-status-filter" class="form-control" onchange="filterCampaigns()" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
                 <option value="ALL">Wszystkie Statusy</option>
-                <option value="OPEN" selected>Otwarte Kampanie</option>
-                <option value="CLOSED">Zamknięte Kampanie</option>
-            </select>
-            <select id="camp-active-filter" class="form-control" onchange="filterCampaigns()" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
-                <option value="ALL">Wszystkie Ścieżki</option>
-                <option value="ACTIVE">Tylko Aktywne Ścieżki</option>
+                <option value="OPEN" selected>Otwarte</option>
+                <option value="CLOSED">Zamknięte</option>
             </select>
             <button class="btn-submit" style="background: var(--accent); color: #000; padding: 8px 15px; border-radius: 6px; margin: 0;" onclick="highlightActionableNodes()">⚡ Akcja na Dziś</button>
         </div>
@@ -865,19 +862,33 @@
         </div>
     </section>
 
-    <div id="edit-node-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 15px;">
+    <div id="add-node-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 15px;">
     <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:450px; border:1px solid var(--border-color);">
-        <h3 style="color:var(--accent); margin-bottom:15px;">Edycja Kafelka <span id="edit-node-id-label"></span></h3>
-        <input type="hidden" id="edit-node-uuid">
+        <h3 style="color:var(--success); margin-bottom:15px;">Nowy Krok (<span id="add-node-path-label"></span>)</h3>
+        <input type="hidden" id="add-node-trade-id">
+        <input type="hidden" id="add-node-ticker">
+        <input type="hidden" id="add-node-path">
         
         <div class="form-group">
             <label>Powiąż ze strefą z Form / SL / TP:</label>
-            <select id="edit-node-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select> 
+            <select id="add-node-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select> 
         </div>
         
         <div class="form-row" style="margin-top: 10px;">
-            <div class="form-group"><label>Focus Score (Min):</label><input type="number" id="edit-node-focus" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></div>
-            <div class="form-group"><label>Warunek CVD:</label><select id="edit-node-cvd" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
+            <div class="form-group"><label>Typ Akcji:</label>
+            <select id="add-node-action" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
+                <option value="ADD_TRANCHE">Dokupienie (DCA)</option>
+                <option value="REDUCE">Redukcja (Take Profit)</option>
+                <option value="STOP_LOSS">Ewakuacja (Stop Loss)</option>
+                <option value="REVERSE">Odwrócenie / Reset po SL</option>
+            </select></div>
+            <div class="form-group"><label>Budżet (Amunicja %):</label>
+            <input type="number" id="add-node-budget" value="25" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></div>
+        </div>
+
+        <div class="form-row" style="margin-top: 10px;">
+            <div class="form-group"><label>Wymagany Focus Score:</label><input type="number" id="add-node-focus" value="15" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></div>
+            <div class="form-group"><label>Wymagane CVD:</label><select id="add-node-cvd" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
                 <option value="Dowolne">Dowolne</option>
                 <option value="Dodatnie Candle">Dodatnie Candle</option>
                 <option value="Dyw. Candle/Panel">Dyw. Candle/Panel</option>
@@ -885,20 +896,32 @@
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-            <label>Powód zmiany (min. 15 znaków):</label>
-            <textarea id="edit-node-reason" rows="3" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;" placeholder="Wymagane do audytu AI..."></textarea>
-        </div>
-        
-        <div style="background: rgba(246, 70, 93, 0.1); border: 1px solid var(--danger); padding: 10px; margin-top: 15px; border-radius: 6px;">
-            <label style="color:var(--text-main); font-size:0.9em; cursor:pointer; display:flex; gap:10px; align-items:start;">
-                <input type="checkbox" id="edit-node-delete-descendants" style="margin-top: 3px;">
-                <span><strong>Kaskadowe Usuwanie:</strong> Usuń wszystkie kolejne kroki w tej ścieżce, ponieważ mogą przestać korelować z tą zmianą.</span>
-            </label>
+            <label>Notatka / Teza:</label>
+            <textarea id="add-node-reason" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;" placeholder="Np. Uśredniam po zrzucie płynności..."></textarea>
         </div>
         
         <div style="margin-top:20px; display:flex; gap:10px;">
-            <button onclick="document.getElementById('edit-node-modal').style.display='none'" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
-            <button id="btn-save-node-edit" onclick="submitNodeEdit()" style="flex:1; background:var(--accent); color:#000; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">Zapisz i Zaloguj</button>
+            <button onclick="document.getElementById('add-node-modal').style.display='none'" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
+            <button id="btn-save-new-node" onclick="submitNewNode()" style="flex:1; background:var(--success); color:#fff; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">Dodaj Krok</button>
+        </div>
+    </div>
+    </div>
+
+    <div id="edit-node-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 15px;">
+    <div class="modal-content" style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:450px; border:1px solid var(--border-color);">
+        <h3 style="color:var(--accent); margin-bottom:15px;">Edycja Kafelka <span id="edit-node-id-label"></span></h3>
+        <input type="hidden" id="edit-node-uuid">
+        <label>Zmień Cel Cenowy / Strefę z Form:</label>
+        <select id="edit-node-form-id" class="form-control mb-1" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select> 
+        <label style="display:block; margin-top:10px;">Powód zmiany (min. 15 znaków - dla audytu AI):</label>
+        <textarea id="edit-node-reason" class="form-control mb-1" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></textarea>
+        <div style="background: rgba(246, 70, 93, 0.1); border: 1px solid var(--danger); padding: 10px; margin-top: 15px; border-radius: 6px; display:flex; gap:10px;">
+            <input type="checkbox" id="edit-node-delete-descendants" style="margin-top: 3px;">
+            <span style="font-size:0.85em; color:var(--text-main);"><strong>Kaskadowe Usuwanie:</strong> Usuń kolejne kroki w tej ścieżce, ponieważ mogą przestać korelować z tą zmianą.</span>
+        </div>
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button onclick="document.getElementById('edit-node-modal').style.display='none'" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px;">Anuluj</button>
+            <button id="btn-save-node-edit" class="btn btn-primary" style="flex:1; background:var(--accent); color:#000; border:none; padding:12px; border-radius:6px; font-weight:bold;">Zapisz Zmianę</button>
         </div>
     </div>
     </div>
