@@ -4099,6 +4099,49 @@ async function submitNewNode() {
     }
 }
 
+// --- STRAŻNIK DYSCYPLINY (Walidator Planu) ---
+
+function validateTradeAgainstPlan(tradeId, actionType, currentPrice) {
+    // actionType: 'ADD_TRANCHE' (Kupno) lub 'REDUCE' / 'STOP_LOSS' (Sprzedaż)
+    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
+    
+    if (!camp || !camp.graph_nodes || camp.graph_nodes.length === 0) {
+        return { isCompliant: true, message: "Brak zdefiniowanego planu kampanii dla tej pozycji. Grasz bez zabezpieczenia.", type: 'warning' };
+    }
+
+    const nodes = camp.graph_nodes;
+    const hasExecutedAlternative = nodes.some(n => n.path_type === 'ALTERNATIVE' && n.status === 'EXECUTED');
+    const activePath = hasExecutedAlternative ? 'ALTERNATIVE' : 'STANDARD';
+
+    // Pobieramy tylko oczekujące kroki z aktywnej ścieżki
+    const pendingActiveNodes = nodes.filter(n => n.path_type === activePath && n.status === 'PENDING');
+
+    if (pendingActiveNodes.length === 0) {
+        return { isCompliant: false, message: "Plan został w pełni zrealizowany. Każda kolejna akcja to handel poza założeniami.", type: 'danger' };
+    }
+
+    // Szukamy kroku, który pasuje do intencji (Kupno / Sprzedaż)
+    const matchingNode = pendingActiveNodes.find(n => {
+        if (actionType === 'ADD_TRANCHE') return n.action_type === 'ADD_TRANCHE';
+        if (actionType === 'SELL') return n.action_type === 'REDUCE' || n.action_type === 'STOP_LOSS' || n.action_type === 'REVERSE';
+        return false;
+    });
+
+    if (!matchingNode) {
+        return { isCompliant: false, message: `⚠️ Niezgodność z planem! W aktywnej ścieżce (${activePath}) nie zaplanowałeś teraz takiej akcji (${actionType}).`, type: 'danger' };
+    }
+
+    // Sprawdzamy, czy obecna cena rynkowa jest blisko (+/- 1.5%) zaplanowanego celu
+    const target = parseFloat(matchingNode.target_price);
+    const tolerance = target * 0.015; 
+    
+    if (currentPrice > 0 && Math.abs(currentPrice - target) > tolerance) {
+        return { isCompliant: false, message: `⚠️ Pośpiech! Planujesz akcję przy ${currentPrice.toFixed(2)}$, a Twój węzeł ${matchingNode.node_id} zakłada poziom ${target.toFixed(2)}$.`, type: 'danger' };
+    }
+
+    return { isCompliant: true, message: `✅ Akcja w 100% zgodna z aktywną ścieżką (Węzeł ${matchingNode.node_id}).`, type: 'success' };
+}
+
 // Akcja na Dziś (Prawdziwa komunikacja z backendem)
 async function highlightActionableNodes() {
     // 1. Zbieramy trade_id dla aktualnie wyświetlanych kampanii
