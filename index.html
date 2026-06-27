@@ -2507,7 +2507,7 @@
                     <div style="display: flex; gap: 5px;">
                         <button class="btn-delete" onclick="openCloseModal(${item.id})" style="flex:1; padding: 4px 8px;">Sprzedaj</button>
                         <button class="btn-edit" onclick="openNotesModal(${item.id})" style="flex:1; padding: 4px 8px; background: transparent; color: #89b4fa; border: 1px solid #89b4fa;">📝 Notatnik</button>
-                        <button class="btn-edit" onclick="openModule('campaign-module', 'Planner Kampanii');" style="flex:1; padding: 4px 8px; background: transparent; color: var(--accent); border: 1px solid var(--accent);">🧭 Planuj</button>
+                        <button class="btn-edit" onclick="openCampaignPlanner(${item.id}, '${item.ticker}')" style="flex:1; padding: 4px 8px; background: transparent; color: var(--accent); border: 1px solid var(--accent);">🧭 Planuj</button>
                     </div>
                     </div>`;
                 const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage || 1})" title="Kliknij, aby zmienić dźwignię">x${item.leverage || 1}</span>`;
