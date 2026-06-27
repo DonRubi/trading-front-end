@@ -3830,83 +3830,77 @@ function filterCampaigns() {
     renderCampaignTree(filtered);
 }
 
-    // --- FUNKCJA WYZNACZAJĄCA AKTYWNĄ ŚCIEŻKĘ ---
+// --- POPRAWIONY FILTR AKTYWNEJ ŚCIEŻKI (Pokazuje wszystkie potencjalne scenariusze w przód) ---
 function getActivePathNodeIds(nodes) {
-    let activeIds = ['BASE'];
-    let currentParent = 'BASE';
+    let activeIds = new Set(['BASE']);
+    let queue = ['BASE'];
     
-    // Poszukiwanie najgłębszego zrealizowanego węzła i jego bezpośrednich dzieci (opcji)
-    while (true) {
-        const children = nodes.filter(n => n.parent_node_ids && n.parent_node_ids.includes(currentParent));
-        if (children.length === 0) break;
+    while(queue.length > 0) {
+        let current = queue.shift();
+        let children = nodes.filter(n => n.parent_node_ids && n.parent_node_ids.includes(current));
+        if (children.length === 0) continue;
         
-        const executedChild = children.find(n => n.status === 'EXECUTED');
+        let executedChild = children.find(n => n.status === 'EXECUTED');
         if (executedChild) {
-            activeIds.push(executedChild.node_id);
-            currentParent = executedChild.node_id;
+            // Jeśli zrealizowaliśmy wariant A, wariant B umiera (ukrywamy go)
+            activeIds.add(executedChild.node_id);
+            queue.push(executedChild.node_id);
         } else {
-            // Dodajemy oczekujące warianty pod ostatnim wykonanym krokiem
-            children.forEach(c => activeIds.push(c.node_id));
-            break;
+            // Jeśli oba warianty czekają (PENDING), oba są aktywne jako potencjalna przyszłość
+            children.forEach(c => {
+                activeIds.add(c.node_id);
+                queue.push(c.node_id);
+            });
         }
     }
-    return activeIds;
+    return Array.from(activeIds);
 }
 
-// --- KALKULATOR SKUMULOWANEGO PnL (Symulator Węzła) ---
-function calculateNodePnL(targetNodeId, allNodes, trade, maxBudget) {
-    const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
+// --- POPRAWIONY KALKULATOR (Waluta Tickera, brak konwersji na PLN) ---
+function calculateNodePnL(targetNodeId, allNodes, trade, maxBudgetCurrency) {
     const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
-    const leverage = parseFloat(trade.leverage || 1); // Uwzględniamy dźwignię
+    const leverage = parseFloat(trade.leverage || 1);
     
-    // Na samym początku kampanii skumulowany zysk/strata wynosi 0
     if (targetNodeId === 'BASE') return 0;
 
-    // Budujemy historię chronologiczną (ścieżkę) od bazy do aktualnego węzła
     let path = [];
     let curr = allNodes.find(n => n.node_id === targetNodeId);
     while (curr) {
         path.unshift(curr);
         if (curr.parent_node_ids && curr.parent_node_ids.length > 0 && curr.parent_node_ids[0] !== 'BASE') {
             curr = allNodes.find(n => n.node_id === curr.parent_node_ids[0]);
-        } else {
-            break;
-        }
+        } else break;
     }
 
-    // Stan portfela na wejściu w pozycję
-    let tranches = { 'BASE': { price: parseFloat(trade.buy_price), spent: parseFloat(trade.spent) * fxRate } };
+    // trade.spent jest oryginalnie zapisany w bazie w walucie tickera (np. w USD)
+    let tranches = { 'BASE': { price: parseFloat(trade.buy_price), spent: parseFloat(trade.spent || 0) } };
     let realizedPnL = 0;
 
-    // Przechodzimy po węzłach "w dół" drzewa, aktualizując stan transz
     for (let i = 0; i < path.length; i++) {
         const n = path[i];
         const currentPrice = parseFloat(n.target_price);
 
-        // Jeśli to nasz docelowy węzeł -> wyceniamy cały portfel przy tej cenie (PRZED ewentualnym zamknięciem tego kroku)
         if (i === path.length - 1) {
             let unrealizedPnL = 0;
             for (const key in tranches) {
                 const t = tranches[key];
                 const pctChange = ((currentPrice - t.price) / t.price) * directionMod;
-                unrealizedPnL += t.spent * leverage * pctChange; // (Zainwestowane PLN * Dźwignia * %Zmiany)
+                unrealizedPnL += t.spent * leverage * pctChange; 
             }
             return realizedPnL + unrealizedPnL;
         }
 
-        // Jeśli to węzeł historyczny (jesteśmy wyżej w drzewie), "wykonujemy" go i aktualizujemy stan amunicji
         if (n.action_type === 'ADD_TRANCHE') {
-            const budgetFiat = (parseFloat(n.allocated_budget_pct) / 100) * maxBudget;
+            const budgetFiat = (parseFloat(n.allocated_budget_pct) / 100) * maxBudgetCurrency;
             tranches[n.node_id] = { price: currentPrice, spent: budgetFiat };
         } else {
-            // Zamknięcie TP / SL
             const linked = n.linked_tranches || [];
             linked.forEach(tId => {
                 if (tranches[tId]) {
                     const t = tranches[tId];
                     const pctChange = ((currentPrice - t.price) / t.price) * directionMod;
                     realizedPnL += t.spent * leverage * pctChange;
-                    delete tranches[tId]; // Wyrzucamy zamkniętą transzę z aktywnego portfela
+                    delete tranches[tId]; 
                 }
             });
         }
@@ -3914,7 +3908,7 @@ function calculateNodePnL(targetNodeId, allNodes, trade, maxBudget) {
     return 0;
 }
 
-// --- GŁÓWNA FUNKCJA RENDERUJĄCA STRUKTURĘ ---
+// --- GŁÓWNA FUNKCJA RENDERUJĄCA ---
 function renderCampaignTree(campaignData) {
     const container = document.getElementById('campaign-list');
     container.innerHTML = '';
@@ -3930,21 +3924,72 @@ function renderCampaignTree(campaignData) {
         const nodes = camp.graph_nodes || [];
         const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
         const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
-        
         const activePathIds = getActivePathNodeIds(nodes);
+
+        const firstTrancheSpent = parseFloat(trade.spent || 0); // W walucie tickera
+        const entryPrice = parseFloat(trade.buy_price || 0);
+        const leverage = parseFloat(trade.leverage || 1);
+        const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
+
+        let optimisticPnL = 0; let tacticalPnL = 0; let pessimisticPnL = 0;
+
+        // TOP SCENARIUSZE (Też w walucie tickera)
+        const targetOP = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'REDUCE') || { target_price: entryPrice * (1 + (0.15 * directionMod)) };
+        if (entryPrice > 0) optimisticPnL = firstTrancheSpent * leverage * (((parseFloat(targetOP.target_price) - entryPrice) / entryPrice) * directionMod);
+
+        const standardSLNode = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'STOP_LOSS');
+        const deepFormNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'ADD_TRANCHE');
+        const deepTPNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'REDUCE');
+        let loss1 = 0; let profit2 = 0;
+
+        if (standardSLNode && entryPrice > 0) loss1 = firstTrancheSpent * leverage * (((parseFloat(standardSLNode.target_price) - entryPrice) / entryPrice) * directionMod);
+        if (deepFormNode && deepTPNode && parseFloat(deepFormNode.target_price) > 0) {
+            const deepEntry = parseFloat(deepFormNode.target_price);
+            const deepExit = parseFloat(deepTPNode.target_price);
+            const deepBudget = maxBudgetCurrency * (parseFloat(deepFormNode.allocated_budget_pct || 25) / 100);
+            profit2 = deepBudget * leverage * (((deepExit - deepEntry) / deepEntry) * directionMod);
+        }
+        tacticalPnL = loss1 + profit2;
+
+        const finalSLNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'STOP_LOSS') || { target_price: entryPrice * (1 - (0.10 * directionMod)) };
+        if (entryPrice > 0) {
+            const maxLoss1 = firstTrancheSpent * leverage * (((parseFloat(finalSLNode.target_price) - entryPrice) / entryPrice) * directionMod);
+            let maxLoss2 = 0;
+            if (deepFormNode && parseFloat(deepFormNode.target_price) > 0) {
+                const deepEntry = parseFloat(deepFormNode.target_price);
+                const deepBudget = maxBudgetCurrency * (parseFloat(deepFormNode.allocated_budget_pct || 25) / 100);
+                maxLoss2 = deepBudget * leverage * (((parseFloat(finalSLNode.target_price) - deepEntry) / deepEntry) * directionMod);
+            }
+            pessimisticPnL = maxLoss1 + maxLoss2;
+        }
 
         const card = document.createElement('div');
         card.style.background = 'var(--bg-card)'; card.style.border = '1px solid var(--border-color)';
         card.style.borderRadius = '12px'; card.style.padding = '20px'; card.style.marginBottom = '30px';
         
-        // Nagłówek Kampanii
         card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
                 <h3 style="margin:0; color:var(--text-main); font-size:1.3em;">
                     ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal;">#ID ${trade.id}</span>
                 </h3>
                 <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px;">${trade.status}</span>
             </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px dashed #333;">
+                <div style="text-align: center; border-right: 1px solid var(--border-color); padding: 5px;">
+                    <div style="font-size: 0.8em; color: var(--text-muted);">🟢 OPTYMIZM</div>
+                    <div style="font-size: 1.1em; font-weight: bold; color: var(--success); margin-top: 4px;">+${optimisticPnL.toFixed(2)} ${trade.currency}</div>
+                </div>
+                <div style="text-align: center; border-right: 1px solid var(--border-color); padding: 5px;">
+                    <div style="font-size: 0.8em; color: var(--text-muted);">🔵 TAKTYKA (Zrzut)</div>
+                    <div style="font-size: 1.1em; font-weight: bold; color: #89b4fa; margin-top: 4px;">${tacticalPnL >= 0 ? '+' : ''}${tacticalPnL.toFixed(2)} ${trade.currency}</div>
+                </div>
+                <div style="text-align: center; padding: 5px;">
+                    <div style="font-size: 0.8em; color: var(--text-muted);">🔴 KAPITULACJA</div>
+                    <div style="font-size: 1.1em; font-weight: bold; color: var(--danger); margin-top: 4px;">${pessimisticPnL.toFixed(2)} ${trade.currency}</div>
+                </div>
+            </div>
+
             <div style="display:flex; justify-content:center; overflow-x:auto; padding-bottom:20px;">
                 ${buildTreeHTML('BASE', nodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}
             </div>
@@ -3953,13 +3998,12 @@ function renderCampaignTree(campaignData) {
     });
 }
 
-// --- REKURENCYJNE RYSOWANIE KAFELKÓW WSZERZ ---
 function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive) {
     if (showOnlyActive && !activePathIds.includes(nodeId)) return '';
 
     let node;
     if (nodeId === 'BASE') {
-        node = { id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', target_price: trade.buy_price, status: 'EXECUTED', allocated_budget_pct: (trade.spent * fxRate / maxBudgetCurrency)*100 };
+        node = { id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', target_price: trade.buy_price, status: 'EXECUTED', allocated_budget_pct: (trade.spent / maxBudgetCurrency)*100 };
     } else {
         node = allNodes.find(n => n.node_id === nodeId);
     }
@@ -3968,19 +4012,18 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
     const isExecuted = node.status === 'EXECUTED';
     const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
     
-    // Obliczanie bieżącego wyniku dla konkretnego kafelka!
-    const pnlPLN = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency * fxRate);
-    const pnlColor = pnlPLN >= 0 ? 'var(--success)' : 'var(--danger)';
-    const pnlSign = pnlPLN > 0 ? '+' : '';
+    // Używa nowej wersji kalkulatora
+    const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency);
+    const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
+    const pnlSign = pnlFiat > 0 ? '+' : '';
 
     let focusBtn = '';
     if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
         focusBtn = `<button onclick="goToFocusFromNode('${trade.id}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px; transition:0.2s;">🎯 Focus</button>`;
     }
 
-    // Wygląd Kafelka
     const nodeHtml = `
-        <div class="campaign-node-item" data-node-id="${node.id}" style="background:var(--bg-input); padding:15px; border-radius:8px; border-top: 4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width:280px; text-align:left; position:relative; opacity: ${showOnlyActive || activePathIds.includes(nodeId) ? '1' : '0.4'};">
+        <div class="campaign-node-item" data-node-id="${node.id}" style="background:var(--bg-input); padding:15px; border-radius:8px; border-top: 4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width:280px; text-align:left; position:relative; opacity: ${showOnlyActive && !activePathIds.includes(nodeId) ? '0.4' : '1'};">
             
             <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
                 <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id}</strong>
@@ -3997,21 +4040,26 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
 
             <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
                 <span style="font-size: 0.75em; color: var(--text-muted);">Skumulowany wynik na tym etapie:</span><br>
-                <strong style="color: ${pnlColor}; font-size: 1.1em;">${pnlSign}${pnlPLN.toFixed(2)} PLN</strong>
+                <strong style="color: ${pnlColor}; font-size: 1.1em;">${pnlSign}${pnlFiat.toFixed(2)} ${trade.currency}</strong>
             </div>
 
-            ${!isExecuted && nodeId !== 'BASE' ? `<div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">${focusBtn}<button onclick="deleteCampaignNode('${trade.id}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button></div>` : ''}
+            ${!isExecuted && nodeId !== 'BASE' ? `
+                <div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">
+                    ${focusBtn}
+                    <button onclick="openEditWizardModal('${trade.id}', '${node.id}', '${node.node_id}', '${node.action_type}', ${node.target_price}, ${node.required_focus_score}, '${node.required_cvd_status}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Edytuj ✏️</button>
+                    <button onclick="deleteCampaignNode('${trade.id}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button>
+                </div>
+            ` : ''}
 
             ${(activePathIds.includes(nodeId) || !showOnlyActive) ? `
                 <div style="display:flex; gap:10px; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);">
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant A</button>
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant B</button>
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em;">➕ Wariant A</button>
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em;">➕ Wariant B</button>
                 </div>
             ` : ''}
         </div>
     `;
 
-    // Rysowanie Dzieci
     const childrenA = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
     const childrenB = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
 
@@ -4428,7 +4476,7 @@ function toggleWizardFields() {
     }
 }
 
-    // --- TRYB EDYCJI WĘZŁA W KREATORZE (WIZARD) ---
+// --- TRYB EDYCJI WĘZŁA ---
 let isEditMode = false;
 let currentEditingNodeUuid = null;
 
@@ -4440,16 +4488,12 @@ async function openEditWizardModal(tradeId, nodeUuid, nodeId, actionType, curren
     document.getElementById('nw-title').innerHTML = `Edytuj Krok <span style="color:var(--accent);">${nodeId}</span>`;
     document.getElementById('nw-action-type').value = actionType;
     document.getElementById('nw-focus').value = focusScore;
-    document.getElementById('nw-reason').value = ''; // Reset notatki - musi wpisać nową!
+    document.getElementById('nw-reason').value = ''; 
     
     const cvdDropdown = document.getElementById('nw-cvd');
     if(cvdDropdown) cvdDropdown.value = cvdStatus || 'Dowolne';
 
-    // 1. Ukrywamy sekcję drzewa genealogicznego podczas edycji (struktura rodziców jest zablokowana)
-    const parentsContainer = document.getElementById('nw-parents-list').parentElement;
-    parentsContainer.style.display = 'none';
-
-    // 2. Ładowanie i auto-zaznaczanie stref w zależności od akcji
+    // Ładowanie i auto-zaznaczanie stref
     if (actionType === 'ADD_TRANCHE') {
         const fId = document.getElementById('nw-form-id');
         fId.innerHTML = '<option value="">⏳ Ładowanie...</option>';
@@ -4461,37 +4505,33 @@ async function openEditWizardModal(tradeId, nodeUuid, nodeId, actionType, curren
             const pVal = f.entry_point || f.entry_price || 0;
             const opt = document.createElement('option');
             opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(pVal) });
-            opt.innerText = `[Form ID: ${f.entry_id}] ${f.setup_name} (${parseFloat(pVal).toFixed(2)}$)`;
+            opt.innerText = `[Form: ${f.entry_id}] ${f.setup_name} (${parseFloat(pVal).toFixed(2)}$)`;
             if (parseFloat(pVal) === parseFloat(currentPrice)) opt.selected = true;
             fId.appendChild(opt);
         });
+        document.getElementById('nw-section-add').style.display = 'block';
+        document.getElementById('nw-section-close').style.display = 'none';
     } else {
-        // Dla TP/SL ładujemy dropdown redukcji stref z modułu Form
-        toggleWizardFields();
+        if (typeof toggleWizardFields === 'function') toggleWizardFields();
         setTimeout(() => {
             const closeSelect = document.getElementById('nw-close-form-id');
-            for (let i = 0; i < closeSelect.options.length; i++) {
-                try {
-                    const data = JSON.parse(closeSelect.options[i].value);
-                    if (parseFloat(data.price) === parseFloat(currentPrice)) {
-                        closeSelect.selectedIndex = i;
-                        break;
-                    }
-                } catch(e) {}
+            if (closeSelect) {
+                for (let i = 0; i < closeSelect.options.length; i++) {
+                    try {
+                        const data = JSON.parse(closeSelect.options[i].value);
+                        if (parseFloat(data.price) === parseFloat(currentPrice)) {
+                            closeSelect.selectedIndex = i; break;
+                        }
+                    } catch(e) {}
+                }
             }
         }, 100);
     }
 
-    // Pokazujemy sekcję kaskadowego usuwania dzieci w stopce modalu (włączamy widoczność checkboxa z Twojego HTML)
-    const deleteDescContainer = document.getElementById('edit-node-delete-descendants')?.parentElement;
-    if (deleteDescContainer) deleteDescContainer.style.display = 'block';
-
-    // Podmieniamy wywołanie przycisku zapisu w kreatorze
     document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitWizardEdit()');
     document.getElementById('node-wizard-modal').style.display = 'flex';
 }
 
-// --- ZATWIERDZENIE EDYCJI (Z walidacją 15 znaków) ---
 async function submitWizardEdit() {
     const reason = document.getElementById('nw-reason').value.trim();
     if (reason.length < 15) {
@@ -4500,8 +4540,7 @@ async function submitWizardEdit() {
     }
 
     const actionType = document.getElementById('nw-action-type').value;
-    let targetPrice = 0;
-    let formEntryId = null;
+    let targetPrice = 0; let formEntryId = null;
 
     if (actionType === 'ADD_TRANCHE') {
         const val = document.getElementById('nw-form-id').value;
@@ -4511,14 +4550,10 @@ async function submitWizardEdit() {
         if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
     }
 
-    // Sprawdzamy stan checkboxa kaskadowego usunięcia z modalu
-    const cascadeCheckbox = document.getElementById('edit-node-delete-descendants');
-    const deleteDescendants = cascadeCheckbox ? cascadeCheckbox.checked : false;
-
     const payload = {
         id: currentEditingNodeUuid,
         edit_reason: reason,
-        delete_descendants: deleteDescendants, // Wysyłka flagi do Pythona!
+        delete_descendants: false, // Opcjonalnie zablokowane na stałe przy edycji by chronić drzewo
         target_price: targetPrice,
         form_entry_id: formEntryId,
         required_focus_score: parseFloat(document.getElementById('nw-focus').value) || 0,
@@ -4535,68 +4570,45 @@ async function submitWizardEdit() {
         const data = await res.json();
         if (data.status === 'success') {
             document.getElementById('node-wizard-modal').style.display = 'none';
-            // Przywracamy modal do domyślnego stanu dodawania nowego kroku
             resetWizardToDefaultMode();
-            loadCampaigns(); // Odświeżenie widoku kafelków
+            loadCampaigns(); 
         } else alert(data.message);
-    } catch(e) { alert("Błąd połączenia."); }
-    finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+    } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
 }
 
 function resetWizardToDefaultMode() {
-    isEditMode = false;
-    currentEditingNodeUuid = null;
+    isEditMode = false; currentEditingNodeUuid = null;
     document.getElementById('nw-title').innerText = "Planuj Krok";
-    document.getElementById('nw-parents-list').parentElement.style.display = 'block';
     document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitNewNode()');
-    const deleteDescContainer = document.getElementById('edit-node-delete-descendants')?.parentElement;
-    if (deleteDescContainer) deleteDescContainer.style.display = 'none';
 }
 
-// --- FUNKCJA CAŁKOWITEGO / KASKADOWEGO USUNIĘCIA KAFELKA ---
+// --- LOGIKA KASKADOWEGO USUWANIA ---
 async function deleteCampaignNode(tradeId, nodeUuid, nodeIdStr) {
     const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
     if (!camp) return;
 
-    // Skanujemy drzewo binarne w poszukiwaniu dzieci (np. jeśli usuwamy "2A", szukamy "2A3A", "2A3B")
     const nodes = camp.graph_nodes || [];
     const childNodes = nodes.filter(n => n.node_id.startsWith(nodeIdStr) && n.node_id !== nodeIdStr);
 
-    let confirmMessage = `Czy na pewno chcesz bezpowrotnie usunąć Węzeł ${nodeIdStr}?`;
     let deleteDescendantsFlag = false;
 
     if (childNodes.length > 0) {
         const childNames = childNodes.map(n => n.node_id).join(', ');
-        if (confirm(`⚠️ Uwaga! Od Węzła ${nodeIdStr} zależą kolejne etapy drzewa genealogicznego: [ ${childNames} ].\n\nCzy chcesz usunąć kaskadowo TEN WĘZEŁ ORAZ WSZYSTKIE KROKI WYNIKAJĄCE Z NIEGO?`)) {
+        if (confirm(`⚠️ UWAGA KASKADA!\nOd Węzła ${nodeIdStr} zależą kolejne etapy: [ ${childNames} ].\nCzy chcesz usunąć TEN WĘZEŁ ORAZ WSZYSTKIE WYNIKAJĄCE Z NIEGO KROKI?`)) {
             deleteDescendantsFlag = true;
-        } else {
-            return; // Użytkownik anulował akcję
-        }
+        } else return; 
     } else {
-        if (!confirm(confirmMessage)) return;
+        if (!confirm(`Czy na pewno chcesz bezpowrotnie usunąć Węzeł ${nodeIdStr}?`)) return;
     }
-
-    // Do usunięcia pojedynczego lub kaskadowego wykorzystujemy ten sam bezpieczny endpoint edycji
-    // Przekazujemy pusty cel lub notatkę, ale z flagą delete_descendants, a Python zajmie się czyszczeniem ścieżki
-    const payload = {
-        id: nodeUuid,
-        edit_reason: "CAŁKOWITE USUNIĘCIE WĘZŁA STRUKTURALNEGO Z PLANU KAMPANII",
-        delete_descendants: deleteDescendantsFlag,
-        target_price: 0,
-        // Jeśli nie usuwamy dzieci, to backend ma usunąć tylko ten jeden rekord (PENDING).
-        // Aby backend wyciął pojedynczy węzeł, wyślemy żądanie bezpośrednio do bazy.
-    };
 
     try {
         if (deleteDescendantsFlag) {
-            // Strzał kaskadowy realizowany przez endpoint edycji z flagą czyszczenia dzieci
             await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
-                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+                method: "POST", headers: { "Content-Type": "application/json" }, 
+                body: JSON.stringify({ id: nodeUuid, edit_reason: "USUWANIE KASKADOWE", delete_descendants: true, target_price: 0 })
             });
-            // Oraz usuwamy sam korzeń
             await deleteSingleNodeDirect(nodeUuid);
         } else {
-            // Proste usunięcie pojedynczego kafelka
             await deleteSingleNodeDirect(nodeUuid);
         }
         loadCampaigns();
@@ -4604,10 +4616,6 @@ async function deleteCampaignNode(tradeId, nodeUuid, nodeIdStr) {
 }
 
 async function deleteSingleNodeDirect(uuid) {
-    // Pomocniczy strzał usuwający dokładnie jeden wiersz z tabeli trade_campaigns
-    // Zaimplementowane poprzez wysłanie czyszczenia do bazy lub symulację zapisu pustej struktury bez tego UUID
-    const campNode = document.querySelector(`.campaign-node-item[data-node-id="${uuid}"]`);
-    // Pobieramy całą kolekcję z cache pomijając usuwany element i wywołujemy istniejący save-graph
     for (let camp of globalCampaignCache) {
         const match = (camp.graph_nodes || []).find(n => n.id === uuid);
         if (match) {
