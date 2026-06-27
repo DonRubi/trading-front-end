@@ -862,66 +862,67 @@
         </div>
     </section>
 
-    <div id="add-node-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 15px;">
-    <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:450px; border:1px solid var(--border-color);">
-        <h3 style="color:var(--success); margin-bottom:15px;">Nowy Krok (<span id="add-node-path-label"></span>)</h3>
-        <input type="hidden" id="add-node-trade-id">
-        <input type="hidden" id="add-node-ticker">
-        <input type="hidden" id="add-node-path">
+    <!-- Inteligentny Kreator Kroku Kampanii -->
+    <div id="node-wizard-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 15px;">
+    <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:500px; border:1px solid var(--accent);">
+        <h3 style="color:var(--accent); margin-bottom:15px;" id="nw-title">Planuj Krok (<span id="nw-path-label"></span>)</h3>
         
-        <div class="form-group">
-            <label>Powiąż ze strefą z Form / SL / TP:</label>
-            <select id="add-node-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select> 
-        </div>
+        <input type="hidden" id="nw-trade-id">
+        <input type="hidden" id="nw-ticker">
+        <input type="hidden" id="nw-path">
         
-        <div class="form-row" style="margin-top: 10px;">
-            <div class="form-group"><label>Typ Akcji:</label>
-            <select id="add-node-action" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
-                <option value="ADD_TRANCHE">Dokupienie (DCA)</option>
-                <option value="REDUCE">Redukcja (Take Profit)</option>
-                <option value="STOP_LOSS">Ewakuacja (Stop Loss)</option>
-                <option value="REVERSE">Odwrócenie / Reset po SL</option>
-            </select></div>
-            <div class="form-group"><label>Budżet (Amunicja %):</label>
-            <input type="number" id="add-node-budget" value="25" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></div>
+        <div class="form-group mb-1">
+            <label style="color:#89b4fa; font-weight:bold;">1. Co chcesz zrobić w tym kroku?</label>
+            <select id="nw-action-type" onchange="toggleWizardFields()" style="width:100%; padding:12px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; font-size:1em;">
+                <option value="ADD_TRANCHE">🟢 Wejdź / Uśrednij (Nowa Transza)</option>
+                <option value="TAKE_PROFIT">🔵 Take Profit (Księguj Zysk)</option>
+                <option value="STOP_LOSS">🔴 Stop Loss (Utnij Stratę)</option>
+            </select>
         </div>
 
-        <div class="form-row" style="margin-top: 10px;">
-            <div class="form-group"><label>Wymagany Focus Score:</label><input type="number" id="add-node-focus" value="15" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></div>
-            <div class="form-group"><label>Wymagane CVD:</label><select id="add-node-cvd" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
-                <option value="Dowolne">Dowolne</option>
-                <option value="Dodatnie Candle">Dodatnie Candle</option>
-                <option value="Dyw. Candle/Panel">Dyw. Candle/Panel</option>
-            </select></div>
+        <!-- SEKCJA A: UŚREDNIANIE (Pokaż Formularze) -->
+        <div id="nw-section-add" style="display:block; background:rgba(14,203,129,0.05); padding:10px; border-radius:6px; border:1px solid rgba(14,203,129,0.2); margin-top:10px;">
+            <label style="color:var(--success);">Wybierz strefę docelową z modułu Form:</label>
+            <select id="nw-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select>
+            <div style="margin-top:10px;">
+                <label>Budżet (np. 25% maksymalnej amunicji kampanii):</label>
+                <input type="number" id="nw-budget" value="25" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
+            </div>
+            <div style="margin-top:10px;">
+                <label>Zabezpieczenie Order Flow:</label>
+                <select id="nw-cvd" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
+                    <option value="Dowolne">Zaufaj strefie (Blind limit)</option>
+                    <option value="Dodatnie Candle">Czekaj na dodatnią deltę / absorpcję</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- SEKCJA B: ZAMYKANIE (Pokaż Checkboxy Transz do redukcji) -->
+        <div id="nw-section-close" style="display:none; background:rgba(246,70,93,0.05); padding:10px; border-radius:6px; border:1px solid rgba(246,70,93,0.2); margin-top:10px;">
+            <label style="color:var(--text-main);">Zaznacz, które transze chcesz zamknąć w tym kroku:</label>
+            <div id="nw-tranches-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                <!-- Tu dynamicznie pojawią się checkboxy (Pozycja Bazowa + Poprzednie Kafelki) -->
+            </div>
+            <div style="margin-top:15px;">
+                <label>Cena docelowa zamknięcia ($):</label>
+                <input type="number" step="0.01" id="nw-target-price" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
+            </div>
+        </div>
+
+        <!-- Wspólne zabezpieczenia -->
+        <div class="form-group" style="margin-top: 15px;">
+            <label>Warunek Makro (Focus Score > X):</label>
+            <input type="number" id="nw-focus" value="15" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-            <label>Notatka / Teza:</label>
-            <textarea id="add-node-reason" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;" placeholder="Np. Uśredniam po zrzucie płynności..."></textarea>
+            <label>Założenia / Komentarz (do audytu AI):</label>
+            <textarea id="nw-reason" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;" placeholder="Wyjaśnij dlaczego planujesz ten ruch..."></textarea>
         </div>
         
         <div style="margin-top:20px; display:flex; gap:10px;">
-            <button onclick="document.getElementById('add-node-modal').style.display='none'" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
-            <button id="btn-save-new-node" onclick="submitNewNode()" style="flex:1; background:var(--success); color:#fff; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">Dodaj Krok</button>
-        </div>
-    </div>
-    </div>
-
-    <div id="edit-node-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 15px;">
-    <div class="modal-content" style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:450px; border:1px solid var(--border-color);">
-        <h3 style="color:var(--accent); margin-bottom:15px;">Edycja Kafelka <span id="edit-node-id-label"></span></h3>
-        <input type="hidden" id="edit-node-uuid">
-        <label>Zmień Cel Cenowy / Strefę z Form:</label>
-        <select id="edit-node-form-id" class="form-control mb-1" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select> 
-        <label style="display:block; margin-top:10px;">Powód zmiany (min. 15 znaków - dla audytu AI):</label>
-        <textarea id="edit-node-reason" class="form-control mb-1" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></textarea>
-        <div style="background: rgba(246, 70, 93, 0.1); border: 1px solid var(--danger); padding: 10px; margin-top: 15px; border-radius: 6px; display:flex; gap:10px;">
-            <input type="checkbox" id="edit-node-delete-descendants" style="margin-top: 3px;">
-            <span style="font-size:0.85em; color:var(--text-main);"><strong>Kaskadowe Usuwanie:</strong> Usuń kolejne kroki w tej ścieżce, ponieważ mogą przestać korelować z tą zmianą.</span>
-        </div>
-        <div style="margin-top:20px; display:flex; gap:10px;">
-            <button onclick="document.getElementById('edit-node-modal').style.display='none'" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px;">Anuluj</button>
-            <button id="btn-save-node-edit" class="btn btn-primary" style="flex:1; background:var(--accent); color:#000; border:none; padding:12px; border-radius:6px; font-weight:bold;">Zapisz Zmianę</button>
+            <button onclick="document.getElementById('node-wizard-modal').style.display='none'" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
+            <button id="btn-save-wizard" onclick="alert('Zapiszemy to w Kroku 2!')" style="flex:1; background:var(--accent); color:#000; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">Zapisz Krok</button>
         </div>
     </div>
     </div>
@@ -3794,7 +3795,75 @@ function renderCampaignTree(campaignData) {
         const trade = camp.base_trade;
         const nodes = camp.graph_nodes || [];
         
-        // Automatyczne wykrywanie aktywnej ścieżki
+        // Dynamiczne wyciąganie FX Rate z bazy dla poprawnego przeliczenia na PLN
+        const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
+        const firstTrancheSpentPLN = parseFloat(trade.spent || 0) * fxRate;
+        const maxBudgetPLN = parseFloat(camp.max_budget_pln || 0);
+        const availableAmunitionPLN = parseFloat(camp.available_budget_pln || 0);
+
+        // --- APARAT MATEMATYCZNY SYMULATORA PnL NETTO ---
+        let optimisticPnLPLN = 0;
+        let tacticalPnLPLN = 0;
+        let pessimisticPnLPLN = 0;
+
+        // Parametry pozycji bazowej (Krok 1)
+        const entryPrice = parseFloat(trade.buy_price || 0);
+        const leverage = parseFloat(trade.leverage || 1);
+        const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
+
+        // 1. Symulacja Wariantu Optymistycznego (Szybki strzał z pierwszej transzy)
+        // Zakładamy ruch o +15% zabezpieczony na standardowym TP, o ile nie zdefiniowano kafelka TP
+        const targetOP = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'REDUCE') || { target_price: entryPrice * (1 + (0.15 * directionMod)) };
+        if (entryPrice > 0) {
+            const pctGain = ((parseFloat(targetOP.target_price) - entryPrice) / entryPrice) * directionMod;
+            optimisticPnLPLN = firstTrancheSpentPLN * leverage * pctGain;
+        }
+
+        // 2. Symulacja Wariantu Kampanijnego (Zrzut -> Kontrolowany SL -> Odkupienie na dnie)
+        const standardSLNode = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'STOP_LOSS');
+        const deepFormNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'ADD_TRANCHE');
+        const deepTPNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'REDUCE');
+
+        let lossFromFirstTranchePLN = 0;
+        let profitFromDeepTranchePLN = 0;
+
+        // A. Księgujemy techniczną stratę z Kroku 3 (Ewakuacja z pierwszej strefy)
+        if (standardSLNode && entryPrice > 0) {
+            const pctLoss = ((parseFloat(standardSLNode.target_price) - entryPrice) / entryPrice) * directionMod;
+            lossFromFirstTranchePLN = firstTrancheSpentPLN * leverage * pctLoss; // wartość ujemna
+        }
+
+        // B. Księgujemy zysk z transzy ratunkowej na głębokim dnie
+        if (deepFormNode && deepTPNode && parseFloat(deepFormNode.target_price) > 0) {
+            const deepEntry = parseFloat(deepFormNode.target_price);
+            const deepExit = parseFloat(deepTPNode.target_price);
+            const deepBudgetPLN = maxBudgetPLN * (parseFloat(deepFormNode.allocated_budget_pct || 25) / 100);
+            
+            const pctDeepGain = ((deepExit - deepEntry) / deepEntry) * directionMod;
+            profitFromDeepTranchePLN = deepBudgetPLN * leverage * pctDeepGain;
+        }
+        // Całkowity bilans netto kampanii (Zysk z dołu minus zaplanowana strata z góry)
+        tacticalPnLPLN = lossFromFirstTranchePLN + profitFromDeepTranchePLN;
+
+        // 3. Symulacja Wariantu Pesymistycznego (Czarny Scenariusz - Kapitulacja na całej linii)
+        const finalSLNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'STOP_LOSS') || { target_price: entryPrice * (1 - (0.10 * directionMod)) };
+        if (entryPrice > 0) {
+            // Strata z pierwszej transzy jeśli poleciała do samego spodu
+            const pctMaxLoss1 = ((parseFloat(finalSLNode.target_price) - entryPrice) / entryPrice) * directionMod;
+            const maxLoss1 = firstTrancheSpentPLN * leverage * pctMaxLoss1;
+
+            // Strata z transzy uśredniającej (jeśli zdążyła się aktywować przed końcowym SL)
+            let maxLoss2 = 0;
+            if (deepFormNode && parseFloat(deepFormNode.target_price) > 0) {
+                const deepEntry = parseFloat(deepFormNode.target_price);
+                const pctMaxLoss2 = ((parseFloat(finalSLNode.target_price) - deepEntry) / deepEntry) * directionMod;
+                const deepBudgetPLN = maxBudgetPLN * (parseFloat(deepFormNode.allocated_budget_pct || 25) / 100);
+                maxLoss2 = deepBudgetPLN * leverage * pctMaxLoss2;
+            }
+            pessimisticPnLPLN = maxLoss1 + maxLoss2;
+        }
+
+        // Wykrywanie aktywnej ścieżki
         const hasExecutedAlternative = nodes.some(n => n.path_type === 'ALTERNATIVE' && n.status === 'EXECUTED');
         const activePath = hasExecutedAlternative ? 'ALTERNATIVE' : 'STANDARD';
 
@@ -3806,13 +3875,29 @@ function renderCampaignTree(campaignData) {
         card.style.marginBottom = '20px';
         
         card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; color:var(--text-main); font-size:1.3em;">
                     ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal; margin-left:5px;">#ID ${trade.id}</span>
                     <a href="${getTradingViewLink(trade.ticker)}" target="_blank" style="font-size:0.55em; margin-left:12px; text-decoration:none; background:var(--bg-input); padding:4px 8px; border-radius:4px; color:var(--accent);">📺 TradingView</a>
                 </h3>
                 <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px; font-weight:bold;">${trade.status}</span>
             </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px dashed #333;">
+                <div style="text-align: center; border-right: 1px solid var(--border-color); padding: 5px;">
+                    <div style="font-size: 0.8em; color: var(--text-muted);">🟢 Wariant OPTYMISTYCZNY</div>
+                    <div style="font-size: 1.1em; font-weight: bold; color: var(--success); margin-top: 4px;">+${optimisticPnLPLN.toFixed(2)} PLN</div>
+                </div>
+                <div style="text-align: center; border-right: 1px solid var(--border-color); padding: 5px;">
+                    <div style="font-size: 0.8em; color: var(--text-muted);">🔵 Bilans KAMPANII (Taktyczny)</div>
+                    <div style="font-size: 1.1em; font-weight: bold; color: #89b4fa; margin-top: 4px;">${tacticalPnLPLN >= 0 ? '+' : ''}${tacticalPnLPLN.toFixed(2)} PLN</div>
+                </div>
+                <div style="text-align: center; padding: 5px;">
+                    <div style="font-size: 0.8em; color: var(--text-muted);">🔴 Wariant PESYMISTYCZNY</div>
+                    <div style="font-size: 1.1em; font-weight: bold; color: var(--danger); margin-top: 4px;">${pessimisticPnLPLN.toFixed(2)} PLN</div>
+                </div>
+            </div>
+
             <div style="display:flex; gap:20px; margin-top:20px; flex-wrap: wrap;">
                 <div style="flex:1; min-width:280px; opacity: ${activePath === 'STANDARD' ? '1' : '0.4'}; transition: opacity 0.3s; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border-top: 3px solid #007bff;">
                     <h4 style="color:#007bff; font-size:1em; margin-top:0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
@@ -3832,29 +3917,6 @@ function renderCampaignTree(campaignData) {
         `;
         container.appendChild(card);
     });
-}
-
-function renderNodesList(pathNodes) {
-    if(pathNodes.length === 0) return `<p style="color:var(--text-muted); font-size:0.85em; font-style:italic; margin: 10px 0;">Brak zaplanowanych kroków.</p>`;
-    return pathNodes.map(node => {
-        const isExecuted = node.status === 'EXECUTED';
-        return `
-            <div class="campaign-node-item" data-node-id="${node.id}" data-target-price="${node.target_price}" style="background:var(--bg-input); padding:15px; border-radius:8px; margin-bottom:10px; border-left:4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position:relative;">
-                <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
-                    <strong style="color:var(--text-main); font-size:1.02em;">Węzeł ${node.node_id}</strong>
-                    <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
-                </div>
-                <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
-                    <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
-                </div>
-                <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
-                    Budżet transzy: <b>${node.allocated_budget_pct}%</b> | Focus > <b>${node.required_focus_score}</b>
-                </div>
-                ${node.step_rationale ? `<div style="font-size:0.82em; color:var(--accent); font-style:italic; margin-top:8px; background: rgba(201,148,0,0.08); padding: 8px; border-radius: 4px; border-left: 2px solid var(--accent);">📝 "${node.step_rationale}"</div>` : ''}
-                ${!isExecuted ? `<div style="margin-top: 10px; text-align: right;"><button onclick="openEditNodeModal('${node.id}', '${node.node_id}', ${node.target_price}, ${node.required_focus_score})" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button></div>` : ''}
-            </div>
-        `;
-    }).join('');
 }
 
 // Otwieranie Modalu Nowego Kroku
@@ -4053,6 +4115,29 @@ async function highlightActionableNodes() {
         }
     }
     alert(`Podświetlono wszystkie aktualnie oczekujące punkty decyzyjne w otwartych kampaniach!`);
+}
+// Dynamiczne przełączanie kreatora kafelków
+function toggleWizardFields() {
+    const action = document.getElementById('nw-action-type').value;
+    const secAdd = document.getElementById('nw-section-add');
+    const secClose = document.getElementById('nw-section-close');
+
+    if (action === 'ADD_TRANCHE') {
+        secAdd.style.display = 'block';
+        secClose.style.display = 'none';
+    } else {
+        secAdd.style.display = 'none';
+        secClose.style.display = 'block';
+        
+        // Zmiana kolorystyki modalu dla czytelności
+        if (action === 'TAKE_PROFIT') {
+            secClose.style.background = 'rgba(14,203,129,0.05)';
+            secClose.style.borderColor = 'rgba(14,203,129,0.2)';
+        } else {
+            secClose.style.background = 'rgba(246,70,93,0.05)';
+            secClose.style.borderColor = 'rgba(246,70,93,0.2)';
+        }
+    }
 }
 
     // --- Start Aplikacji ---
