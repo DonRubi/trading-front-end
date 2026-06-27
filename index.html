@@ -3847,31 +3847,27 @@ function renderCampaignTree(campaignData) {
         const trade = camp.base_trade;
         const nodes = camp.graph_nodes || [];
         
-        // Dynamiczne wyciąganie FX Rate z bazy dla poprawnego przeliczenia na PLN
         const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
         const firstTrancheSpentPLN = parseFloat(trade.spent || 0) * fxRate;
         const maxBudgetPLN = parseFloat(camp.max_budget_pln || 0);
-        const availableAmunitionPLN = parseFloat(camp.available_budget_pln || 0);
-
-        // --- APARAT MATEMATYCZNY SYMULATORA PnL NETTO ---
+        
+        // --- NOWOŚĆ: Obliczamy całkowitą dopuszczalną amunicję w oryginalnej walucie tickera
+        const maxBudgetCurrency = maxBudgetPLN / fxRate; 
+        
         let optimisticPnLPLN = 0;
         let tacticalPnLPLN = 0;
         let pessimisticPnLPLN = 0;
 
-        // Parametry pozycji bazowej (Krok 1)
         const entryPrice = parseFloat(trade.buy_price || 0);
         const leverage = parseFloat(trade.leverage || 1);
         const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
 
-        // 1. Symulacja Wariantu Optymistycznego (Szybki strzał z pierwszej transzy)
-        // Zakładamy ruch o +15% zabezpieczony na standardowym TP, o ile nie zdefiniowano kafelka TP
         const targetOP = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'REDUCE') || { target_price: entryPrice * (1 + (0.15 * directionMod)) };
         if (entryPrice > 0) {
             const pctGain = ((parseFloat(targetOP.target_price) - entryPrice) / entryPrice) * directionMod;
             optimisticPnLPLN = firstTrancheSpentPLN * leverage * pctGain;
         }
 
-        // 2. Symulacja Wariantu Kampanijnego (Zrzut -> Kontrolowany SL -> Odkupienie na dnie)
         const standardSLNode = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'STOP_LOSS');
         const deepFormNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'ADD_TRANCHE');
         const deepTPNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'REDUCE');
@@ -3879,13 +3875,11 @@ function renderCampaignTree(campaignData) {
         let lossFromFirstTranchePLN = 0;
         let profitFromDeepTranchePLN = 0;
 
-        // A. Księgujemy techniczną stratę z Kroku 3 (Ewakuacja z pierwszej strefy)
         if (standardSLNode && entryPrice > 0) {
             const pctLoss = ((parseFloat(standardSLNode.target_price) - entryPrice) / entryPrice) * directionMod;
-            lossFromFirstTranchePLN = firstTrancheSpentPLN * leverage * pctLoss; // wartość ujemna
+            lossFromFirstTranchePLN = firstTrancheSpentPLN * leverage * pctLoss; 
         }
 
-        // B. Księgujemy zysk z transzy ratunkowej na głębokim dnie
         if (deepFormNode && deepTPNode && parseFloat(deepFormNode.target_price) > 0) {
             const deepEntry = parseFloat(deepFormNode.target_price);
             const deepExit = parseFloat(deepTPNode.target_price);
@@ -3894,17 +3888,13 @@ function renderCampaignTree(campaignData) {
             const pctDeepGain = ((deepExit - deepEntry) / deepEntry) * directionMod;
             profitFromDeepTranchePLN = deepBudgetPLN * leverage * pctDeepGain;
         }
-        // Całkowity bilans netto kampanii (Zysk z dołu minus zaplanowana strata z góry)
         tacticalPnLPLN = lossFromFirstTranchePLN + profitFromDeepTranchePLN;
 
-        // 3. Symulacja Wariantu Pesymistycznego (Czarny Scenariusz - Kapitulacja na całej linii)
         const finalSLNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'STOP_LOSS') || { target_price: entryPrice * (1 - (0.10 * directionMod)) };
         if (entryPrice > 0) {
-            // Strata z pierwszej transzy jeśli poleciała do samego spodu
             const pctMaxLoss1 = ((parseFloat(finalSLNode.target_price) - entryPrice) / entryPrice) * directionMod;
             const maxLoss1 = firstTrancheSpentPLN * leverage * pctMaxLoss1;
 
-            // Strata z transzy uśredniającej (jeśli zdążyła się aktywować przed końcowym SL)
             let maxLoss2 = 0;
             if (deepFormNode && parseFloat(deepFormNode.target_price) > 0) {
                 const deepEntry = parseFloat(deepFormNode.target_price);
@@ -3915,7 +3905,6 @@ function renderCampaignTree(campaignData) {
             pessimisticPnLPLN = maxLoss1 + maxLoss2;
         }
 
-        // Wykrywanie aktywnej ścieżki
         const hasExecutedAlternative = nodes.some(n => n.path_type === 'ALTERNATIVE' && n.status === 'EXECUTED');
         const activePath = hasExecutedAlternative ? 'ALTERNATIVE' : 'STANDARD';
 
@@ -3955,14 +3944,14 @@ function renderCampaignTree(campaignData) {
                     <h4 style="color:#007bff; font-size:1em; margin-top:0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
                         Ścieżka BAZOWA ${activePath === 'STANDARD' ? '<span style="font-size:0.75em; background:rgba(14,203,129,0.15); color:var(--success); padding:2px 6px; border-radius:4px;">⚡ Aktywna</span>' : ''}
                     </h4>
-                    ${renderNodesList(nodes.filter(n => n.path_type === 'STANDARD'))}
+                    ${renderNodesList(nodes.filter(n => n.path_type === 'STANDARD'), maxBudgetCurrency, trade.currency, trade.id)}
                     <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', 'STANDARD')" style="width:100%; padding:10px; margin-top:10px; background:transparent; color:#007bff; border:1px dashed #007bff; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.85em;">➕ Dodaj krok bazowy</button>
                 </div>
                 <div style="flex:1; min-width:280px; opacity: ${activePath === 'ALTERNATIVE' ? '1' : '0.4'}; transition: opacity 0.3s; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border-top: 3px solid var(--danger); position:relative;">
                     <h4 style="color:var(--danger); font-size:1em; margin-top:0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
                         Ścieżka ALTERNATYWNA ${activePath === 'ALTERNATIVE' ? '<span style="font-size:0.75em; background:rgba(14,203,129,0.15); color:var(--success); padding:2px 6px; border-radius:4px;">⚡ Aktywna</span>' : ''}
                     </h4>
-                    ${renderNodesList(nodes.filter(n => n.path_type === 'ALTERNATIVE'))}
+                    ${renderNodesList(nodes.filter(n => n.path_type === 'ALTERNATIVE'), maxBudgetCurrency, trade.currency, trade.id)}
                     <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', 'ALTERNATIVE')" style="width:100%; padding:10px; margin-top:10px; background:transparent; color:var(--danger); border:1px dashed var(--danger); border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.85em;">➕ Dodaj krok ratunkowy</button>
                 </div>
             </div>
@@ -3971,11 +3960,20 @@ function renderCampaignTree(campaignData) {
     });
 }
 
-// --- BRAKUJĄCA FUNKCJA RYSOWANIA KAFELKÓW ---
-function renderNodesList(pathNodes) {
+function renderNodesList(pathNodes, maxBudgetCurrency, currency, tradeId) {
     if(pathNodes.length === 0) return `<p style="color:var(--text-muted); font-size:0.85em; font-style:italic; margin: 10px 0;">Brak zaplanowanych kroków.</p>`;
     return pathNodes.map(node => {
         const isExecuted = node.status === 'EXECUTED';
+        
+        // --- NOWOŚĆ: Wyliczanie wartości transzy w walucie ---
+        const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
+        
+        // --- NOWOŚĆ: Przycisk Focus tylko dla otwarcia transzy ---
+        let focusBtn = '';
+        if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
+            focusBtn = `<button onclick="goToFocusFromNode('${tradeId}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px; transition:0.2s;" onmouseover="this.style.background='rgba(14,203,129,0.1)';" onmouseout="this.style.background='transparent';">🎯 Analiza Focus</button>`;
+        }
+
         return `
             <div class="campaign-node-item" data-node-id="${node.id}" data-target-price="${node.target_price}" style="background:var(--bg-input); padding:15px; border-radius:8px; margin-bottom:10px; border-left:4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position:relative;">
                 <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
@@ -3986,10 +3984,10 @@ function renderNodesList(pathNodes) {
                     <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
                 </div>
                 <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
-                    Budżet transzy: <b>${node.allocated_budget_pct}%</b> | Focus > <b>${node.required_focus_score}</b>
+                    Budżet transzy: <b style="color:#cdd6f4;">${node.allocated_budget_pct}% (<span style="color:var(--success);">${fiatValue.toFixed(2)} ${currency}</span>)</b> | Focus > <b>${node.required_focus_score}</b>
                 </div>
                 ${node.step_rationale ? `<div style="font-size:0.82em; color:var(--accent); font-style:italic; margin-top:8px; background: rgba(201,148,0,0.08); padding: 8px; border-radius: 4px; border-left: 2px solid var(--accent);">📝 "${node.step_rationale}"</div>` : ''}
-                ${!isExecuted ? `<div style="margin-top: 10px; text-align: right;"><button onclick="alert('Edycja dostępna w nowym kreatorze po aktualizacji backendu.')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button></div>` : ''}
+                ${!isExecuted ? `<div style="margin-top: 10px; text-align: right;">${focusBtn}<button onclick="alert('Edycja dostępna w nowym kreatorze po aktualizacji backendu.')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button></div>` : ''}
             </div>
         `;
     }).join('');
@@ -3997,24 +3995,18 @@ function renderNodesList(pathNodes) {
 
 
 // --- NOWA LOGIKA OTWIERANIA KREATORA (WIZARD) ---
-// Ta funkcja zastępuje starą openAddNodeModal
 async function openAddNodeModal(tradeId, ticker, pathType) {
     document.getElementById('nw-trade-id').value = tradeId;
     document.getElementById('nw-ticker').value = ticker;
     document.getElementById('nw-path').value = pathType;
     document.getElementById('nw-path-label').innerText = pathType === 'STANDARD' ? 'Bazowy' : 'Alternatywny';
     
-    // Reset wartości
     document.getElementById('nw-action-type').value = 'ADD_TRANCHE';
     document.getElementById('nw-reason').value = '';
     document.getElementById('nw-target-price').value = '';
     
-    // Uruchomienie przełącznika widoków z dodanego wcześniej HTML
-    if (typeof toggleWizardFields === "function") {
-        toggleWizardFields();
-    }
+    if (typeof toggleWizardFields === "function") toggleWizardFields();
 
-    // 1. ŁADOWANIE STREF DO UŚREDNIANIA (Z modułu Form)
     const fId = document.getElementById('nw-form-id');
     fId.innerHTML = '<option value="">⏳ Ładowanie stref...</option>';
     
@@ -4035,13 +4027,11 @@ async function openAddNodeModal(tradeId, ticker, pathType) {
         fId.appendChild(opt);
     });
 
-    // 2. ŁADOWANIE DOSTĘPNYCH TRANSZ DO ZAMKNIĘCIA (Checkboxy TP/SL)
     const tList = document.getElementById('nw-tranches-list');
     tList.innerHTML = '';
     const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
     
     if (camp) {
-        // Zawsze pozwalamy zamknąć pozycję bazową
         tList.innerHTML += `
             <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;">
                 <input type="checkbox" class="tranche-checkbox" value="BASE" checked>
@@ -4049,14 +4039,15 @@ async function openAddNodeModal(tradeId, ticker, pathType) {
             </label>
         `;
         
-        // Szukamy już ZREALIZOWANYCH uśrednień (ADD_TRANCHE z flagą EXECUTED) z aktualnej ścieżki
-        const executedNodes = (camp.graph_nodes || []).filter(n => n.status === 'EXECUTED' && n.action_type === 'ADD_TRANCHE');
+        // --- NOWOŚĆ: Szukamy WSZYSTKICH węzłów dodających transze na tej samej ścieżce
+        const pathNodesForCheckbox = (camp.graph_nodes || []).filter(n => n.path_type === pathType && n.action_type === 'ADD_TRANCHE');
         
-        executedNodes.forEach(n => {
+        pathNodesForCheckbox.forEach(n => {
+            const statusLabel = n.status === 'EXECUTED' ? '(Zrealizowana)' : '(Zaplanowana)';
             tList.innerHTML += `
                 <label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;">
                     <input type="checkbox" class="tranche-checkbox" value="${n.node_id}">
-                    <span><b>Węzeł ${n.node_id}</b> (DCA) - Wejście: <span style="color:var(--accent);">${n.target_price}$</span></span>
+                    <span><b>Węzeł ${n.node_id}</b> ${statusLabel} - Wejście: <span style="color:var(--accent);">${n.target_price}$</span></span>
                 </label>
             `;
         });
@@ -4196,7 +4187,6 @@ function validateTradeAgainstPlan(tradeId, actionType, currentPrice) {
 
 // Akcja na Dziś (Prawdziwa komunikacja z backendem)
 async function highlightActionableNodes() {
-    // 1. Zbieramy trade_id dla aktualnie wyświetlanych kampanii
     if (globalCampaignCache.length === 0) return alert("Brak widocznych kampanii do sprawdzenia.");
     const visibleTradeIds = globalCampaignCache.map(c => c.base_trade.id);
     
@@ -4205,7 +4195,6 @@ async function highlightActionableNodes() {
     btn.innerHTML = "⏳ Skanuję rynek...";
     
     try {
-        // 2. Odpytujemy nasz nowy szybki endpoint w Pythonie
         const res = await fetch(`${API_BASE_URL}/api/campaigns/check-actionable`, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ trade_ids: visibleTradeIds })
@@ -4214,20 +4203,19 @@ async function highlightActionableNodes() {
         
         if (data.status === 'success') {
             const actionableUuids = data.actionable_uuids || [];
-            let count = 0;
+            // --- NOWOŚĆ: Zapis do pamięci globalnej dla przycisku Focus ---
+            window.activeActionableNodes = actionableUuids; 
             
-            // 3. Resetujemy podświetlenia
+            let count = 0;
             const nodes = document.querySelectorAll('.campaign-node-item');
             nodes.forEach(n => { n.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'; n.style.transform = 'none'; });
             
-            // 4. Podświetlamy, jeśli kafel jest zapalony przez Yahoo I NALEŻY do aktywnej ścieżki
             globalCampaignCache.forEach(camp => {
                 const campNodes = camp.graph_nodes || [];
                 const hasExecAlt = campNodes.some(n => n.path_type === 'ALTERNATIVE' && n.status === 'EXECUTED');
                 const activePath = hasExecAlt ? 'ALTERNATIVE' : 'STANDARD';
                 
                 campNodes.forEach(node => {
-                    // Warunek: węzeł należy do aktywnej ścieżki (nie odciętej gałęzi) ORAZ backend powiedział, że dzisiaj został naruszony
                     if (node.path_type === activePath && actionableUuids.includes(node.id)) {
                         const nodeElement = document.querySelector(`.campaign-node-item[data-node-id="${node.id}"]`);
                         if (nodeElement) {
@@ -4249,6 +4237,40 @@ async function highlightActionableNodes() {
     } finally {
         btn.innerHTML = originalText;
     }
+}
+
+// --- NOWOŚĆ: Funkcja przenosząca i weryfikująca z kafelka do Focus ---
+function goToFocusFromNode(tradeId, formEntryId, nodeId) {
+    // 1. Sprawdzamy, czy krok jest uaktywniony
+    if (!window.activeActionableNodes || !window.activeActionableNodes.includes(nodeId)) {
+        if (!confirm("⚠️ Ten węzeł NIE ZOSTAŁ dzisiaj podświetlony przez system 'Akcji na Dziś' (cena nie dotarła do punktu wejścia). Czy na pewno chcesz wypełnić analizę Focus już teraz wbrew rynkowi?")) {
+            return; 
+        }
+    }
+
+    // 2. Pobieramy ticker z bazy
+    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
+    if(!camp) return;
+    const ticker = camp.base_trade.ticker;
+    
+    // 3. Przełączamy moduł
+    openModule('focus-module', 'Focus');
+    
+    // 4. Po małym opóźnieniu (by DOM się wyrenderował) automatycznie wybieramy spółkę i setup
+    setTimeout(() => {
+        const tSelect = document.getElementById('focus-ticker-select');
+        tSelect.value = ticker;
+        onFocusTickerChange(); // Ta funkcja wygeneruje drugi dropdown z listą form_id
+        
+        setTimeout(() => {
+            const fSelect = document.getElementById('focus-form-id');
+            fSelect.value = formEntryId;
+            onFocusIdChange(); // Ta funkcja wypełni readonly info z Setupu
+            
+            // Lekki scroll na górę do formularza
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 100); 
+    }, 100);
 }
 
 // Obsługa Edycji Kafelka
