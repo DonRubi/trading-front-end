@@ -3742,16 +3742,26 @@ async function loadCampaigns() {
             targetTrades = trades.filter(t => t.status === statusFilter);
         }
 
+        // Zbieramy same identyfikatory
+        const tradeIds = targetTrades.map(t => t.id);
         globalCampaignCache = [];
-        for (let trade of targetTrades) {
-            const campRes = await fetch(`${API_BASE_URL}/api/campaigns/graph-info?trade_id=${trade.id}`);
+        
+        if (tradeIds.length > 0) {
+            // WYSYŁAMY JEDEN ZBIORCZY REQUEST DO SERWERA
+            const campRes = await fetch(`${API_BASE_URL}/api/campaigns/bulk-graph-info`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trade_ids: tradeIds })
+            });
+            
             if (campRes.ok) {
-                const campData = await campRes.json();
-                if (campData.status === 'success') {
-                    globalCampaignCache.push(campData);
+                const data = await campRes.json();
+                if (data.status === 'success') {
+                    globalCampaignCache = data.campaigns;
                 }
             }
         }
+        
         filterCampaigns();
     } catch (e) {
         console.error("Błąd pobierania kampanii:", e);
