@@ -3854,53 +3854,59 @@ function getActivePathNodeIds(nodes) {
 }
 
 // --- KALKULATOR SKUMULOWANEGO PnL (Symulator Węzła) ---
-function calculateCumulativePnL(targetNodeId, allNodes, trade, maxBudget) {
+function calculateNodePnL(targetNodeId, allNodes, trade, maxBudget) {
     const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
     const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
+    const leverage = parseFloat(trade.leverage || 1); // Uwzględniamy dźwignię
     
-    // Budujemy historię chronologiczną od BASE do targetNodeId
+    // Na samym początku kampanii skumulowany zysk/strata wynosi 0
+    if (targetNodeId === 'BASE') return 0;
+
+    // Budujemy historię chronologiczną (ścieżkę) od bazy do aktualnego węzła
     let path = [];
-    if (targetNodeId !== 'BASE') {
-        let curr = allNodes.find(n => n.node_id === targetNodeId);
-        while (curr) {
-            path.unshift(curr);
-            if (curr.parent_node_ids && curr.parent_node_ids.length > 0 && curr.parent_node_ids[0] !== 'BASE') {
-                curr = allNodes.find(n => n.node_id === curr.parent_node_ids[0]);
-            } else break;
+    let curr = allNodes.find(n => n.node_id === targetNodeId);
+    while (curr) {
+        path.unshift(curr);
+        if (curr.parent_node_ids && curr.parent_node_ids.length > 0 && curr.parent_node_ids[0] !== 'BASE') {
+            curr = allNodes.find(n => n.node_id === curr.parent_node_ids[0]);
+        } else {
+            break;
         }
     }
 
-    // Stan wirtualnego portfela
+    // Stan portfela na wejściu w pozycję
     let tranches = { 'BASE': { price: parseFloat(trade.buy_price), spent: parseFloat(trade.spent) * fxRate } };
     let realizedPnL = 0;
 
+    // Przechodzimy po węzłach "w dół" drzewa, aktualizując stan transz
     for (let i = 0; i < path.length; i++) {
         const n = path[i];
         const currentPrice = parseFloat(n.target_price);
 
-        // Jeśli jesteśmy na ostatnim kroku, chcemy poznać wycenę PRZED egzekucją tego kroku
+        // Jeśli to nasz docelowy węzeł -> wyceniamy cały portfel przy tej cenie (PRZED ewentualnym zamknięciem tego kroku)
         if (i === path.length - 1) {
             let unrealizedPnL = 0;
             for (const key in tranches) {
                 const t = tranches[key];
-                const shares = t.spent / t.price;
-                unrealizedPnL += (currentPrice - t.price) * shares * directionMod;
+                const pctChange = ((currentPrice - t.price) / t.price) * directionMod;
+                unrealizedPnL += t.spent * leverage * pctChange; // (Zainwestowane PLN * Dźwignia * %Zmiany)
             }
             return realizedPnL + unrealizedPnL;
         }
 
-        // Nakładamy zdarzenie historyczne na portfel
+        // Jeśli to węzeł historyczny (jesteśmy wyżej w drzewie), "wykonujemy" go i aktualizujemy stan amunicji
         if (n.action_type === 'ADD_TRANCHE') {
             const budgetFiat = (parseFloat(n.allocated_budget_pct) / 100) * maxBudget;
             tranches[n.node_id] = { price: currentPrice, spent: budgetFiat };
         } else {
+            // Zamknięcie TP / SL
             const linked = n.linked_tranches || [];
             linked.forEach(tId => {
                 if (tranches[tId]) {
                     const t = tranches[tId];
-                    const shares = t.spent / t.price;
-                    realizedPnL += (currentPrice - t.price) * shares * directionMod;
-                    delete tranches[tId];
+                    const pctChange = ((currentPrice - t.price) / t.price) * directionMod;
+                    realizedPnL += t.spent * leverage * pctChange;
+                    delete tranches[tId]; // Wyrzucamy zamkniętą transzę z aktywnego portfela
                 }
             });
         }
