@@ -3715,11 +3715,21 @@
         }
     }
 
-    // ==========================================
+// ==========================================
 //    MODUŁ DRZEWA SCENARIUSZY I KAMPANII
 // ==========================================
 
 let globalCampaignCache = [];
+
+// Specjalna funkcja nawigacyjna, która automatycznie filtruje widok pod wybrany ticker
+function openCampaignPlanner(tradeId, ticker) {
+    openModule('campaign-module', 'Planner Kampanii');
+    const searchInput = document.getElementById('camp-search-filter');
+    if (searchInput) {
+        searchInput.value = ticker.toUpperCase();
+    }
+    loadCampaigns();
+}
 
 async function loadCampaigns() {
     try {
@@ -3749,16 +3759,24 @@ async function loadCampaigns() {
 }
 
 function filterCampaigns() {
-    const pathFilter = document.getElementById('camp-active-filter').value;
-    renderCampaignTree(globalCampaignCache, pathFilter);
+    const searchFilter = (document.getElementById('camp-search-filter').value || '').toLowerCase().trim();
+    
+    let filtered = globalCampaignCache.filter(camp => {
+        if (searchFilter) {
+            return camp.base_trade.ticker.toLowerCase().includes(searchFilter);
+        }
+        return true;
+    });
+    
+    renderCampaignTree(filtered);
 }
 
-function renderCampaignTree(campaignData, pathFilter) {
+function renderCampaignTree(campaignData) {
     const container = document.getElementById('campaign-list');
     container.innerHTML = '';
     
     if(campaignData.length === 0) {
-        container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryteria filtrów. Zacznij planować pozycje z modułu TradesList.</div>`;
+        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryteria filtrów. Zacznij planować pozycje z poziomu dziennika TradesList.</div>`;
         return;
     }
 
@@ -3766,67 +3784,174 @@ function renderCampaignTree(campaignData, pathFilter) {
         const trade = camp.base_trade;
         const nodes = camp.graph_nodes || [];
         
-        // Wykrywanie aktywnej ścieżki
+        // Automatyczne wykrywanie aktywnej ścieżki
         const hasExecutedAlternative = nodes.some(n => n.path_type === 'ALTERNATIVE' && n.status === 'EXECUTED');
         const activePath = hasExecutedAlternative ? 'ALTERNATIVE' : 'STANDARD';
-        
-        if (pathFilter === 'ACTIVE' && nodes.length === 0) return; // Ukrywa puste zdefiniowane kampanie na filtrze
 
         const card = document.createElement('div');
         card.style.background = 'var(--bg-card)';
         card.style.border = '1px solid var(--border-color)';
         card.style.borderRadius = '12px';
         card.style.padding = '20px';
+        card.style.marginBottom = '20px';
         
-        let html = `
+        card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
                 <h3 style="margin:0; color:var(--text-main); font-size:1.3em;">
-                    ${trade.ticker} 
-                    <a href="${getTradingViewLink(trade.ticker)}" target="_blank" style="font-size:0.65em; margin-left:10px; text-decoration:none; background:var(--bg-input); padding:4px 8px; border-radius:4px; color:var(--accent);">📺 TradingView</a>
+                    ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal; margin-left:5px;">#ID ${trade.id}</span>
+                    <a href="${getTradingViewLink(trade.ticker)}" target="_blank" style="font-size:0.55em; margin-left:12px; text-decoration:none; background:var(--bg-input); padding:4px 8px; border-radius:4px; color:var(--accent);">📺 TradingView</a>
                 </h3>
-                <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px;">${trade.status}</span>
+                <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px; font-weight:bold;">${trade.status}</span>
             </div>
             <div style="display:flex; gap:20px; margin-top:20px; flex-wrap: wrap;">
-                <div style="flex:1; min-width:280px; opacity: ${activePath === 'STANDARD' ? '1' : '0.4'}; transition: opacity 0.3s; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border-top: 3px solid #007bff;">
-                    <h4 style="color:#007bff; font-size:1em; margin-bottom:12px; display:flex; justify-content:space-between;">
-                        Ścieżka BAZOWA ${activePath === 'STANDARD' ? '<span style="font-size:0.8em; color:var(--success);">⚡ Aktywna</span>' : ''}
+                <div style="flex:1; min-width:280px; opacity: ${activePath === 'STANDARD' ? '1' : '0.4'}; transition: opacity 0.3s; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border-top: 3px solid #007bff;">
+                    <h4 style="color:#007bff; font-size:1em; margin-top:0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                        Ścieżka BAZOWA ${activePath === 'STANDARD' ? '<span style="font-size:0.75em; background:rgba(14,203,129,0.15); color:var(--success); padding:2px 6px; border-radius:4px;">⚡ Aktywna</span>' : ''}
                     </h4>
                     ${renderNodesList(nodes.filter(n => n.path_type === 'STANDARD'))}
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', 'STANDARD')" style="width:100%; padding:10px; margin-top:10px; background:transparent; color:#007bff; border:1px dashed #007bff; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.85em;">➕ Dodaj krok bazowy</button>
                 </div>
-                <div style="flex:1; min-width:280px; opacity: ${activePath === 'ALTERNATIVE' ? '1' : '0.4'}; transition: opacity 0.3s; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border-top: 3px solid var(--danger);">
-                    <h4 style="color:var(--danger); font-size:1em; margin-bottom:12px; display:flex; justify-content:space-between;">
-                        Ścieżka ALTERNATYWNA (Ratunkowa) ${activePath === 'ALTERNATIVE' ? '<span style="font-size:0.8em; color:var(--success);">⚡ Aktywna</span>' : ''}
+                <div style="flex:1; min-width:280px; opacity: ${activePath === 'ALTERNATIVE' ? '1' : '0.4'}; transition: opacity 0.3s; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border-top: 3px solid var(--danger); position:relative;">
+                    <h4 style="color:var(--danger); font-size:1em; margin-top:0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                        Ścieżka ALTERNATYWNA ${activePath === 'ALTERNATIVE' ? '<span style="font-size:0.75em; background:rgba(14,203,129,0.15); color:var(--success); padding:2px 6px; border-radius:4px;">⚡ Aktywna</span>' : ''}
                     </h4>
                     ${renderNodesList(nodes.filter(n => n.path_type === 'ALTERNATIVE'))}
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', 'ALTERNATIVE')" style="width:100%; padding:10px; margin-top:10px; background:transparent; color:var(--danger); border:1px dashed var(--danger); border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.85em;">➕ Dodaj krok ratunkowy</button>
                 </div>
             </div>
         `;
-        card.innerHTML = html;
         container.appendChild(card);
     });
 }
 
 function renderNodesList(pathNodes) {
-    if(pathNodes.length === 0) return `<p style="color:var(--text-muted); font-size:0.9em; font-style:italic;">Brak zaplanowanych kroków. Dodaj nową węzeł z modułu backendu.</p>`;
+    if(pathNodes.length === 0) return `<p style="color:var(--text-muted); font-size:0.85em; font-style:italic; margin: 10px 0;">Brak zaplanowanych kroków.</p>`;
     return pathNodes.map(node => {
         const isExecuted = node.status === 'EXECUTED';
         return `
-            <div class="campaign-node-item" data-node-id="${node.id}" data-target-price="${node.target_price}" style="background:var(--bg-input); padding:15px; border-radius:8px; margin-bottom:10px; border-left:4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                    <strong style="color:var(--text-main); font-size:1.05em;">Węzeł ${node.node_id}</strong>
-                    <span style="font-size:0.85em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
+            <div class="campaign-node-item" data-node-id="${node.id}" data-target-price="${node.target_price}" style="background:var(--bg-input); padding:15px; border-radius:8px; margin-bottom:10px; border-left:4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position:relative;">
+                <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
+                    <strong style="color:var(--text-main); font-size:1.02em;">Węzeł ${node.node_id}</strong>
+                    <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
                 </div>
                 <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
-                    <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.1em;">${node.target_price}$</span>
+                    <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
                 </div>
-                <div style="font-size:0.85em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px;">
+                <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
                     Budżet transzy: <b>${node.allocated_budget_pct}%</b> | Focus > <b>${node.required_focus_score}</b>
                 </div>
-                ${node.step_rationale ? `<div style="font-size:0.85em; color:var(--accent); font-style:italic; margin-top:8px; background: rgba(201,148,0,0.1); padding: 8px; border-radius: 4px;">📝 "${node.step_rationale}"</div>` : ''}
-                ${!isExecuted ? `<div style="margin-top: 10px; text-align: right;"><button onclick="openEditNodeModal('${node.id}', '${node.node_id}', ${node.target_price}, ${node.required_focus_score})" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.85em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj Parametry ✏️</button></div>` : ''}
+                ${node.step_rationale ? `<div style="font-size:0.82em; color:var(--accent); font-style:italic; margin-top:8px; background: rgba(201,148,0,0.08); padding: 8px; border-radius: 4px; border-left: 2px solid var(--accent);">📝 "${node.step_rationale}"</div>` : ''}
+                ${!isExecuted ? `<div style="margin-top: 10px; text-align: right;"><button onclick="openEditNodeModal('${node.id}', '${node.node_id}', ${node.target_price}, ${node.required_focus_score})" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button></div>` : ''}
             </div>
         `;
     }).join('');
+}
+
+// Otwieranie Modalu Nowego Kroku
+async function openAddNodeModal(tradeId, ticker, pathType) {
+    document.getElementById('add-node-trade-id').value = tradeId;
+    document.getElementById('add-node-ticker').value = ticker;
+    document.getElementById('add-node-path').value = pathType;
+    document.getElementById('add-node-path-label').innerText = pathType === 'STANDARD' ? 'Bazowy' : 'Alternatywny (Ratunkowy)';
+    document.getElementById('add-node-reason').value = '';
+    
+    const fId = document.getElementById('add-node-form-id');
+    fId.innerHTML = '<option value="">⏳ Ładowanie setupów z Form...</option>';
+    
+    document.getElementById('add-node-modal').style.display = 'flex';
+    
+    try {
+        if (!formEntries || formEntries.length === 0) {
+            const res = await fetch(`${API_BASE_URL}/api/form/entries`);
+            formEntries = await res.json() || [];
+        }
+        
+        const setups = formEntries.filter(f => f.ticker === ticker);
+        fId.innerHTML = '';
+        
+        if (setups.length === 0) {
+            fId.innerHTML = '<option value="">Brak wolnych stref dla tego tickera w module Form</option>';
+        } else {
+            setups.forEach(f => {
+                const opt = document.createElement('option');
+                const price = f.entry_point || f.entry_price || 0;
+                opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(price) });
+                opt.innerText = `[Form ID: ${f.entry_id}] ${f.direction} @ ${parseFloat(price).toFixed(2)}$`;
+                fId.appendChild(opt);
+            });
+        }
+    } catch(e) {
+        console.error("Błąd ładowania stref do modalu:", e);
+        fId.innerHTML = '<option value="">Brak połączenia / Błąd serwera</option>';
+    }
+}
+
+// Zatwierdzanie nowego węzła (wysyłka do bazy)
+async function submitNewNode() {
+    const tradeId = parseInt(document.getElementById('add-node-trade-id').value);
+    const pathType = document.getElementById('add-node-path').value;
+    const formVal = document.getElementById('add-node-form-id').value;
+    const reason = document.getElementById('add-node-reason').value.trim();
+    
+    if (!formVal) {
+        alert("Wybierz powiązaną strefę (Setup). Jeśli pole jest puste, najpierw utwórz strefę w module Form.");
+        return;
+    }
+    
+    const formData = JSON.parse(formVal);
+    const btn = document.getElementById('btn-save-new-node');
+    btn.innerHTML = "⏳ Zapis..."; 
+    btn.disabled = true;
+
+    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
+    let currentNodes = [];
+    let newIdNum = 1;
+    
+    if (camp && camp.graph_nodes) {
+        // Zachowujemy stare kroki, żeby nie nadpisać wyczyszczonego grafu
+        currentNodes = [...camp.graph_nodes];
+        const samePathNodes = currentNodes.filter(n => n.path_type === pathType);
+        newIdNum = samePathNodes.length + 1;
+    }
+
+    const prefix = pathType === 'STANDARD' ? 'A' : 'B';
+    const nodeIdStr = `${prefix}${newIdNum}`;
+
+    const newNode = {
+        node_id: nodeIdStr,
+        parent_node_ids: [],
+        path_type: pathType,
+        form_entry_id: formData.entry_id,
+        action_type: document.getElementById('add-node-action').value,
+        target_price: parseFloat(formData.price),
+        allocated_budget_pct: parseFloat(document.getElementById('add-node-budget').value) || 0,
+        required_focus_score: parseFloat(document.getElementById('add-node-focus').value) || 0,
+        required_cvd_status: document.getElementById('add-node-cvd').value,
+        step_rationale: reason,
+        status: "PENDING"
+    };
+    
+    currentNodes.push(newNode);
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, {
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes })
+        });
+        const r = await res.json();
+        if(r.status === 'success') {
+            document.getElementById('add-node-modal').style.display = 'none';
+            loadCampaigns();
+        } else {
+            alert(r.message);
+        }
+    } catch(e) { 
+        alert("Błąd zapisu węzła. Sprawdź logi serwera."); 
+    } finally { 
+        btn.innerHTML = "Dodaj Krok"; 
+        btn.disabled = false; 
+    }
 }
 
 // Obsługa Edycji Kafelka
@@ -3839,20 +3964,26 @@ async function openEditNodeModal(uuid, nodeId, price, focus) {
     
     const fId = document.getElementById('edit-node-form-id');
     fId.innerHTML = '<option value="">Ładowanie opcji z Formularzy...</option>';
+    document.getElementById('edit-node-modal').style.display = 'flex';
+    
     try {
-        const res = await fetch(`${API_BASE_URL}/api/form/entries`);
-        const forms = await res.json();
+        if (!formEntries || formEntries.length === 0) {
+            const res = await fetch(`${API_BASE_URL}/api/form/entries`);
+            formEntries = await res.json() || [];
+        }
         fId.innerHTML = '';
-        forms.forEach(f => {
+        formEntries.forEach(f => {
             const opt = document.createElement('option');
-            opt.value = f.entry_price || f.entry_point;
-            opt.innerText = `[Form ID: ${f.entry_id}] ${f.ticker} - Setup @ ${parseFloat(f.entry_price || f.entry_point).toFixed(2)}$`;
-            if(parseFloat(f.entry_price || f.entry_point) === parseFloat(price)) opt.selected = true;
+            const pVal = f.entry_point || f.entry_price || 0;
+            opt.value = pVal;
+            opt.innerText = `[Form ID: ${f.entry_id}] ${f.ticker} - Setup @ ${parseFloat(pVal).toFixed(2)}$`;
+            if(parseFloat(pVal) === parseFloat(price)) opt.selected = true;
             fId.appendChild(opt);
         });
-    } catch(e){ console.error(e); fId.innerHTML = '<option value="">Błąd ładowania Formularzy</option>'; }
-    
-    document.getElementById('edit-node-modal').style.display = 'flex';
+    } catch(e){ 
+        console.error(e); 
+        fId.innerHTML = '<option value="">Błąd ładowania stref</option>'; 
+    }
 }
 
 async function submitNodeEdit() {
@@ -3864,7 +3995,8 @@ async function submitNodeEdit() {
     }
     
     const btn = document.getElementById('btn-save-node-edit');
-    btn.innerHTML = "⏳ Zapis..."; btn.disabled = true;
+    btn.innerHTML = "⏳ Zapis..."; 
+    btn.disabled = true;
 
     const payload = {
         id: document.getElementById('edit-node-uuid').value,
@@ -3877,17 +4009,23 @@ async function submitNodeEdit() {
     
     try {
         const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify(payload)
         });
         const r = await res.json();
         if(r.status === 'success') {
             document.getElementById('edit-node-modal').style.display = 'none';
-            loadCampaigns(); // Odświeża drzewo
+            loadCampaigns();
         } else {
             alert(r.message);
         }
-    } catch(e) { alert("Błąd połączenia z bazą."); }
-    finally { btn.innerHTML = "Zapisz i Zaloguj"; btn.disabled = false; }
+    } catch(e) { 
+        alert("Błąd połączenia z bazą."); 
+    } finally { 
+        btn.innerHTML = "Zapisz Zmianę"; 
+        btn.disabled = false; 
+    }
 }
 
 async function highlightActionableNodes() {
@@ -3895,6 +4033,7 @@ async function highlightActionableNodes() {
     let count = 0;
     for(let node of nodes) {
         node.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'; // reset
+        node.style.transform = 'none';
         const statusText = node.innerHTML;
         if(statusText.includes('Oczekuje')) {
             node.style.boxShadow = '0 0 15px var(--accent)';
