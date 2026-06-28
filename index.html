@@ -4217,92 +4217,43 @@ async function openEditWizardModal(tradeId, nodeUuid) {
     document.getElementById('node-wizard-modal').style.display = 'flex';
 }
 
-async function submitWizardEdit() {
-    const reason = document.getElementById('nw-reason').value.trim();
-    if (reason.length < 15) return alert("🛡️ Audyt: Podaj merytoryczne uzasadnienie modyfikacji (min. 15 znaków).");
-
-    const actionType = document.getElementById('nw-action-type').value;
-    const tradeId = parseInt(document.getElementById('nw-trade-id').value);
-    const parentId = document.getElementById('nw-parent-id').value;
+// --- NOWE FUNKCJE WSPOMAGAJĄCE UI ---
+async function updateCampaignBudget(tradeId) {
+    const val = parseFloat(document.getElementById(`budget-input-${tradeId}`).value);
+    if (val <= 0 || val > 12) return alert("Błąd: Budżet na jedną kampanię nie może przekroczyć 12% Twojego całkowitego kapitału.");
     
-    let targetPrice = 0; let formEntryId = null; let linkedTranches = []; let allocatedBudgetPct = 0;
-    let requiredFocus = 0;
-
-    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
-    let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
-
-    if (actionType === 'ADD_TRANCHE') {
-        const reqBudget = parseFloat(document.getElementById('nw-budget').value) || 0;
-        const fxRate = parseFloat(camp.base_trade.buy_fx_rate || 1.0);
-        const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
-        const baseBudgetPct = (parseFloat(camp.base_trade.spent || 0) / maxBudgetCurrency) * 100;
-        
-        const nodesWithoutCurrent = currentNodes.filter(n => n.id !== currentEditingNodeUuid);
-        const pathBudgetWithoutThis = calculatePathBudget(parentId, nodesWithoutCurrent, baseBudgetPct);
-        
-        if (pathBudgetWithoutThis + reqBudget > 100.1) {
-            return alert(`🛡️ Budżet przekroczony! Zostało max ${(100 - pathBudgetWithoutThis).toFixed(1)}% do wykorzystania.`);
-        }
-        
-        allocatedBudgetPct = reqBudget;
-        requiredFocus = parseFloat(document.getElementById('nw-focus').value) || 0;
-        const val = document.getElementById('nw-form-id').value;
-        if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
-    } else {
-        const selectedTranche = document.getElementById('nw-tranche-select').value;
-        if (!selectedTranche) return alert("Brak transzy do zamknięcia.");
-        linkedTranches = [selectedTranche];
-        
-        const autoResolve = resolveTargetPrice(tradeId, actionType, selectedTranche, currentNodes);
-        if (autoResolve.error) return alert(autoResolve.error);
-        
-        targetPrice = autoResolve.targetPrice;
-        formEntryId = autoResolve.formEntryId;
-        allocatedBudgetPct = 0;
-        requiredFocus = 0;
-    }
-
-    const payload = {
-        id: currentEditingNodeUuid,
-        edit_reason: reason,
-        delete_descendants: false, 
-        target_price: targetPrice,
-        form_entry_id: formEntryId,
-        allocated_budget_pct: allocatedBudgetPct,
-        linked_tranches: linkedTranches,
-        required_focus_score: requiredFocus,
-        required_cvd_status: actionType === 'ADD_TRANCHE' ? (document.getElementById('nw-cvd')?.value || 'Dowolne') : 'Dowolne'
-    };
-
-    const btn = document.getElementById('btn-save-wizard');
-    btn.innerHTML = "⏳ Aktualizacja..."; btn.disabled = true;
+    const btn = document.querySelector(`button[onclick="updateCampaignBudget(${tradeId})"]`);
+    const originalText = btn.innerText;
+    btn.innerText = "⏳"; btn.disabled = true;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/update-budget`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ trade_id: tradeId, budget_pct: val })
         });
-        const data = await res.json();
-        if (data.status === 'success') {
-            document.getElementById('node-wizard-modal').style.display = 'none';
-            resetWizardToDefaultMode();
-            loadCampaigns(); 
-        } else alert(data.message);
-    } catch(e) { alert("Błąd połączenia."); } 
-    finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+        const r = await res.json();
+        if (r.status === 'success') {
+            loadCampaigns(); // Przeładuje widok z nowym limitem!
+        } else alert(r.message);
+    } catch(e) { alert("Błąd zapisu budżetu."); }
+    finally { btn.innerText = originalText; btn.disabled = false; }
 }
 
-function selectOptionByPrice(selectElement, price) {
-    if(!selectElement) return;
-    for (let i = 0; i < selectElement.options.length; i++) {
-        try {
-            const data = JSON.parse(selectElement.options[i].value);
-            if (Math.abs(parseFloat(data.price) - parseFloat(price)) < 0.001) {
-                selectElement.selectedIndex = i; break;
-            }
-        } catch(e) {}
+function toggleChildrenNodes(nodeId) {
+    const container = document.getElementById(`children-container-${nodeId}`);
+    const btn = document.getElementById(`toggle-btn-${nodeId}`);
+    if (!container) return;
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'flex';
+        btn.innerHTML = btn.innerHTML.replace('Rozwiń', 'Zwiń').replace('🔽', '🔼');
+    } else {
+        container.style.display = 'none';
+        btn.innerHTML = btn.innerHTML.replace('Zwiń', 'Rozwiń').replace('🔼', '🔽');
     }
 }
 
+// --- ZAKTUALIZOWANE RYSOWANIE KAMPANII I KAFELKÓW ---
 function renderCampaignTree(campaignData) {
     const container = document.getElementById('campaign-list');
     container.innerHTML = '';
@@ -4325,11 +4276,19 @@ function renderCampaignTree(campaignData) {
         card.style.borderRadius = '12px'; card.style.padding = '20px';
         
         card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; color:var(--text-main); font-size:1.3em;">
                     ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal;">#ID ${trade.id}</span>
                 </h3>
-                <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px;">${trade.status}</span>
+                
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <div style="font-size: 0.85em; color: var(--text-muted); background:rgba(0,0,0,0.3); padding:6px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
+                        Max ryzyko (kapitał): 
+                        <input type="number" id="budget-input-${trade.id}" value="${trade.campaign_budget_pct || 12}" min="0.1" max="12" step="0.5" style="width: 50px; padding: 2px; background: transparent; color: var(--success); border: none; border-bottom: 1px solid var(--accent); border-radius: 0; font-weight: bold; text-align:center; outline:none;"> %
+                        <button onclick="updateCampaignBudget(${trade.id})" style="background:var(--bg-input); border:1px solid #555; color:var(--text-main); padding:2px 8px; margin-left:5px; border-radius:4px; cursor:pointer; font-size:0.9em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#555'">Zapisz</button>
+                    </div>
+                    <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px;">${trade.status}</span>
+                </div>
             </div>
             <div style="display:flex; justify-content:left; overflow-x:auto; padding:20px 0; min-width: 100%; -webkit-overflow-scrolling: touch;">
                 ${buildTreeHTML('BASE', nodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}
@@ -4355,6 +4314,10 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
     const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency);
     const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
     
+    const childrenA = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
+    const childrenB = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
+    const hasChildren = childrenA.length > 0 || childrenB.length > 0;
+
     let focusBtn = '';
     if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
         focusBtn = `<button onclick="goToFocusFromNode('${trade.id}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px;">🎯 Focus</button>`;
@@ -4403,15 +4366,21 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
                     <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em;">➕ Wariant B</button>
                 </div>
             ` : ''}
+            
+            ${hasChildren ? `
+                <div style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); text-align: center;">
+                    <button onclick="toggleChildrenNodes('${node.id}')" id="toggle-btn-${node.id}" style="background:transparent; color:var(--accent); border:none; cursor:pointer; font-size:0.8em; font-weight:bold; outline:none; transition:0.2s;">
+                        Rozwiń kolejne kroki (${childrenA.length + childrenB.length}) 🔽
+                    </button>
+                </div>
+            ` : ''}
         </div>
     `;
 
-    const childrenA = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
-    const childrenB = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
-
     let childrenHtml = '';
-    if (childrenA.length > 0 || childrenB.length > 0) {
-        childrenHtml = `<div style="display:flex; gap:30px; padding-top:20px; position:relative; margin-top:10px; flex-shrink:0;">`;
+    if (hasChildren) {
+        // Kontener dzieci. Domyślnie styl display: none; aby zwinąć widok.
+        childrenHtml = `<div id="children-container-${node.id}" style="display:none; gap:30px; padding-top:20px; position:relative; margin-top:10px; flex-shrink:0;">`;
         if (childrenA.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenA[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
         if (childrenB.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenB[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
         childrenHtml += `</div>`;
@@ -4419,6 +4388,102 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
 
     return `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${nodeHtml}${childrenHtml}</div>`;
 }
+
+// --- ZAKTUALIZOWANA EDYCJA (Wysyłająca typ akcji) ---
+async function submitWizardEdit() {
+    const reason = document.getElementById('nw-reason').value.trim();
+    if (reason.length < 15) return alert("🛡️ Audyt: Podaj merytoryczne uzasadnienie modyfikacji (min. 15 znaków).");
+
+    const actionType = document.getElementById('nw-action-type').value;
+    const tradeId = parseInt(document.getElementById('nw-trade-id').value);
+    const parentId = document.getElementById('nw-parent-id').value;
+    
+    let targetPrice = 0; let formEntryId = null; let linkedTranches = []; let allocatedBudgetPct = 0;
+    let requiredFocus = 0;
+
+    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
+    let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
+
+    if (actionType === 'ADD_TRANCHE') {
+        const reqBudget = parseFloat(document.getElementById('nw-budget').value) || 0;
+        
+        // Dynamiczne wyliczenie pozostałego budżetu podczas edycji (dla dynamicznego MAX limitu)
+        const tradeBudgetPct = float(camp.base_trade.campaign_budget_pct || 12.0);
+        const fxRate = parseFloat(camp.base_trade.buy_fx_rate || 1.0);
+        const totalCap = calculateCurrentCapitalPLN(); // Wymagane jeśli masz to zdefiniowane, jeśli nie - ignoruj poniższe zabezpieczenie
+        
+        // Zostawiamy logikę kalkulacji budżetu tak, jak była:
+        const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
+        const baseBudgetPct = (parseFloat(camp.base_trade.spent || 0) / maxBudgetCurrency) * 100;
+        
+        const nodesWithoutCurrent = currentNodes.filter(n => n.id !== currentEditingNodeUuid);
+        const pathBudgetWithoutThis = calculatePathBudget(parentId, nodesWithoutCurrent, baseBudgetPct);
+        
+        if (pathBudgetWithoutThis + reqBudget > 100.1) {
+            return alert(`🛡️ Budżet przekroczony! Zostało max ${(100 - pathBudgetWithoutThis).toFixed(1)}% do wykorzystania na tej ścieżce.`);
+        }
+        
+        allocatedBudgetPct = reqBudget;
+        requiredFocus = parseFloat(document.getElementById('nw-focus').value) || 0;
+        const val = document.getElementById('nw-form-id').value;
+        if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
+    } else {
+        const selectedTranche = document.getElementById('nw-tranche-select').value;
+        if (!selectedTranche) return alert("Brak transzy do zamknięcia.");
+        linkedTranches = [selectedTranche];
+        
+        const autoResolve = resolveTargetPrice(tradeId, actionType, selectedTranche, currentNodes);
+        if (autoResolve.error) return alert(autoResolve.error);
+        
+        targetPrice = autoResolve.targetPrice;
+        formEntryId = autoResolve.formEntryId;
+        allocatedBudgetPct = 0;
+        requiredFocus = 0;
+    }
+
+    // KLUCZOWE: Wysyłamy nowy `action_type` do serwera Pythona!
+    const payload = {
+        id: currentEditingNodeUuid,
+        edit_reason: reason,
+        action_type: actionType, 
+        delete_descendants: false, 
+        target_price: targetPrice,
+        form_entry_id: formEntryId,
+        allocated_budget_pct: allocatedBudgetPct,
+        linked_tranches: linkedTranches,
+        required_focus_score: requiredFocus,
+        required_cvd_status: actionType === 'ADD_TRANCHE' ? (document.getElementById('nw-cvd')?.value || 'Dowolne') : 'Dowolne'
+    };
+
+    const btn = document.getElementById('btn-save-wizard');
+    btn.innerHTML = "⏳ Aktualizacja..."; btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('node-wizard-modal').style.display = 'none';
+            resetWizardToDefaultMode();
+            loadCampaigns(); 
+        } else alert(data.message);
+    } catch(e) { alert("Błąd połączenia."); } 
+    finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+}
+
+function selectOptionByPrice(selectElement, price) {
+    if(!selectElement) return;
+    for (let i = 0; i < selectElement.options.length; i++) {
+        try {
+            const data = JSON.parse(selectElement.options[i].value);
+            if (Math.abs(parseFloat(data.price) - parseFloat(price)) < 0.001) {
+                selectElement.selectedIndex = i; break;
+            }
+        } catch(e) {}
+    }
+}
+
 
 async function openAddNodeModal(tradeId, ticker, parentId, variant) {
     document.getElementById('nw-trade-id').value = tradeId;
