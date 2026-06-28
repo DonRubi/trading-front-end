@@ -849,7 +849,7 @@
     </div>
     <section id="campaign-module" class="app-module">
     <div class="macro-header-container" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; align-items: center;">
-        <h3>Drzewo Scenariuszy Kampanii (Symulator)</h3>
+        <h3>Drzewo Scenariuszy Kampanii</h3>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
             <input type="text" id="camp-search-filter" placeholder="Szukaj tickera..." oninput="filterCampaigns()" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
             <select id="camp-status-filter" class="form-control" onchange="filterCampaigns()" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
@@ -865,19 +865,22 @@
         </div>
     </div>
     
-    <div id="campaign-list" style="margin-top: 20px; overflow-x: auto; padding-bottom: 20px;">
+    <div id="campaign-list" style="margin-top: 20px; display: flex; flex-direction: column; gap: 20px;">
         </div>
     </section>
 
-    <div id="node-wizard-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 15px;">
-    <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:500px; border:1px solid var(--accent); max-height: 90vh; overflow-y: auto;">
+    <div id="node-wizard-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 10px;">
+    <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:450px; border:1px solid var(--accent); max-height: 90vh; overflow-y: auto;">
         <h3 style="color:var(--accent); margin-bottom:15px;" id="nw-title">Planuj Krok</h3>
         
         <input type="hidden" id="nw-trade-id">
         <input type="hidden" id="nw-ticker">
-        <input type="hidden" id="nw-parent-id"> <input type="hidden" id="nw-variant"> <div class="form-group mb-1">
-            <label style="color:#89b4fa; font-weight:bold;">Jaką akcję chcesz podjąć wariancie <span id="nw-variant-label"></span>?</label>
-            <select id="nw-action-type" onchange="toggleWizardFields()" style="width:100%; padding:12px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; font-size:1em;">
+        <input type="hidden" id="nw-parent-id"> 
+        <input type="hidden" id="nw-variant"> 
+        
+        <div class="form-group mb-1">
+            <label style="color:#89b4fa; font-weight:bold;">Akcja (Wariant <span id="nw-variant-label"></span>):</label>
+            <select id="nw-action-type" onchange="toggleWizardFields()" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; font-size:1em;">
                 <option value="ADD_TRANCHE">🟢 Wejdź / Uśrednij (Nowa Transza)</option>
                 <option value="TAKE_PROFIT">🔵 Take Profit (Księguj Zysk)</option>
                 <option value="STOP_LOSS">🔴 Stop Loss (Utnij Stratę)</option>
@@ -885,10 +888,10 @@
         </div>
 
         <div id="nw-section-add" style="display:block; background:rgba(14,203,129,0.05); padding:10px; border-radius:6px; border:1px solid rgba(14,203,129,0.2); margin-top:10px;">
-            <label style="color:var(--success);">Wybierz strefę docelową z modułu Form:</label>
+            <label style="color:var(--success);">Wybierz strefę wejścia z modułu Form:</label>
             <select id="nw-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select>
             <div style="margin-top:10px;">
-                <label>Budżet (np. 25% maksymalnej amunicji kampanii):</label>
+                <label>Amunicja (% dopuszczalnego budżetu ścieżki):</label>
                 <input type="number" id="nw-budget" value="25" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
             </div>
             <div style="margin-top:10px;">
@@ -901,7 +904,7 @@
         </div>
 
         <div id="nw-section-close" style="display:none; background:rgba(246,70,93,0.05); padding:10px; border-radius:6px; border:1px solid rgba(246,70,93,0.2); margin-top:10px;">
-            <label style="color:var(--text-main);">Zaznacz, które transze chcesz ZAMKNĄĆ w tym kroku:</label>
+            <label style="color:var(--text-main);">Zaznacz transze do ZAMKNIĘCIA w tym kroku:</label>
             <div id="nw-tranches-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height: 120px; overflow-y: auto;"></div>
             <div style="margin-top:15px;">
                 <label>Wybierz poziom docelowy z modułu Form:</label>
@@ -915,8 +918,8 @@
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-            <label>Założenia / Komentarz (do audytu AI):</label>
-            <textarea id="nw-reason" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;" placeholder="Wyjaśnij powód dla wariantu..."></textarea>
+            <label>Notatka / Uzasadnienie decyzji:</label>
+            <textarea id="nw-reason" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;" placeholder="Wyjaśnij powód..."></textarea>
         </div>
         
         <div style="margin-top:20px; display:flex; gap:10px;">
