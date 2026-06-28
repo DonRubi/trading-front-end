@@ -4624,21 +4624,45 @@ async function highlightActionableNodes() {
 }
 
 function goToFocusFromNode(tradeId, formEntryId, nodeId) {
+    // 1. Ostrzeżenie (jeśli węzeł nie został zwalidowany dzisiejszym ruchem ceny)
     if (!window.activeActionableNodes || !window.activeActionableNodes.includes(nodeId)) {
-        if (!confirm("⚠️ Ten węzeł NIE ZOSTAŁ dzisiaj przetestowany na wykresie. Kontynuować audyt wbrew rynkowi?")) return; 
+        if (!confirm("⚠️ Ten węzeł NIE ZOSTAŁ dzisiaj aktywowany cenowo. Kontynuować audyt ręcznie?")) return; 
     }
+    
+    // 2. Pobranie nazwy tickera z pamięci kampanii
     const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
     if(!camp) return;
-    openModule('focus-module', 'Focus');
+    
+    // 3. Przełączenie widoku na moduł Focus
+    if (typeof openModule === 'function') openModule('focus-module', 'Focus');
+    
+    // 4. Kaskadowe wpisywanie danych (z bezpiecznym opóźnieniem na wyrenderowanie DOM)
     setTimeout(() => {
-        document.getElementById('focus-ticker-select').value = camp.base_trade.ticker;
-        onFocusTickerChange(); 
+        // Wypełnianie Tickera
+        const tickerInput = document.getElementById('focus-ticker-select') || document.getElementById('focus-ticker');
+        if (tickerInput) {
+            tickerInput.value = camp.base_trade.ticker;
+            // Wymuszamy natywne zdarzenie, by ewentualne inne funkcje w module Focus zareagowały na zmianę
+            tickerInput.dispatchEvent(new Event('change'));
+            tickerInput.dispatchEvent(new Event('input'));
+            if (typeof onFocusTickerChange === 'function') onFocusTickerChange();
+        }
+        
         setTimeout(() => {
-            document.getElementById('focus-form-id').value = formEntryId;
-            onFocusIdChange(); 
+            // Wypełnianie ID Formularza
+            const formIdInput = document.getElementById('focus-form-id') || document.getElementById('focus-id');
+            if (formIdInput) {
+                formIdInput.value = formEntryId;
+                formIdInput.dispatchEvent(new Event('change'));
+                formIdInput.dispatchEvent(new Event('input'));
+                if (typeof onFocusIdChange === 'function') onFocusIdChange();
+            }
+            
+            // Płynne przewinięcie na samą górę modułu Focus
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 150); 
-    }, 150);
+            
+        }, 200); // 200ms opóźnienia, aby skrypt zdążył załadować listę z Tickerem
+    }, 150); // 150ms opóźnienia na animację zmiany zakładek
 }
 
     // --- Start Aplikacji ---
