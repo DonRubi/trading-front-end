@@ -3820,20 +3820,56 @@ async function loadCampaigns() {
     }
 }
 
+// ==========================================
+//    MODUŁ DRZEWA SCENARIUSZY (FINAL VERSION)
+// ==========================================
+
 function filterCampaigns() {
     const searchFilter = (document.getElementById('camp-search-filter').value || '').toLowerCase().trim();
+    const statusFilter = document.getElementById('camp-status-filter').value;
     
     let filtered = globalCampaignCache.filter(camp => {
-        if (searchFilter) {
-            return camp.base_trade.ticker.toLowerCase().includes(searchFilter);
-        }
+        if (statusFilter !== 'ALL' && camp.base_trade.status !== statusFilter) return false;
+        if (searchFilter && !camp.base_trade.ticker.toLowerCase().includes(searchFilter)) return false;
+        const hasNodes = camp.graph_nodes && camp.graph_nodes.length > 0;
+        if (!searchFilter && !hasNodes) return false;
         return true;
     });
     
     renderCampaignTree(filtered);
 }
 
-// --- POPRAWIONY FILTR AKTYWNEJ ŚCIEŻKI (Pokazuje wszystkie potencjalne scenariusze w przód) ---
+// NOWOŚĆ: Oblicza ile budżetu JEST OBECNIE ZABLOKOWANE na konkretnej ścieżce.
+// System "Odnawialnej Amunicji" - Take Profit zwalnia kapitał i pozwala na ponowne uśrednienie!
+function calculatePathBudget(parentId, allNodes, baseBudgetPct) {
+    let activeTranches = { 'BASE': baseBudgetPct };
+    let path = [];
+    let currId = parentId;
+    
+    while (currId && currId !== 'BASE') {
+        let n = allNodes.find(x => x.node_id === currId);
+        if (n) { 
+            path.unshift(n); 
+            currId = (n.parent_node_ids && n.parent_node_ids.length > 0) ? n.parent_node_ids[0] : null; 
+        } else break;
+    }
+
+    // Symulacja księgowania na ścieżce
+    for (let n of path) {
+        if (n.action_type === 'ADD_TRANCHE') {
+            activeTranches[n.node_id] = parseFloat(n.allocated_budget_pct || 0);
+        } else {
+            // TP / SL zwalnia % z powiązanych transz
+            const linked = n.linked_tranches || [];
+            linked.forEach(tId => { delete activeTranches[tId]; });
+        }
+    }
+    
+    let currentlyUsed = 0;
+    for (let key in activeTranches) currentlyUsed += activeTranches[key];
+    return currentlyUsed;
+}
+
 function getActivePathNodeIds(nodes) {
     let activeIds = new Set(['BASE']);
     let queue = ['BASE'];
@@ -3845,25 +3881,18 @@ function getActivePathNodeIds(nodes) {
         
         let executedChild = children.find(n => n.status === 'EXECUTED');
         if (executedChild) {
-            // Jeśli zrealizowaliśmy wariant A, wariant B umiera (ukrywamy go)
             activeIds.add(executedChild.node_id);
             queue.push(executedChild.node_id);
         } else {
-            // Jeśli oba warianty czekają (PENDING), oba są aktywne jako potencjalna przyszłość
-            children.forEach(c => {
-                activeIds.add(c.node_id);
-                queue.push(c.node_id);
-            });
+            children.forEach(c => { activeIds.add(c.node_id); queue.push(c.node_id); });
         }
     }
     return Array.from(activeIds);
 }
 
-// --- POPRAWIONY KALKULATOR (Waluta Tickera, brak konwersji na PLN) ---
 function calculateNodePnL(targetNodeId, allNodes, trade, maxBudgetCurrency) {
     const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
     const leverage = parseFloat(trade.leverage || 1);
-    
     if (targetNodeId === 'BASE') return 0;
 
     let path = [];
@@ -3875,7 +3904,6 @@ function calculateNodePnL(targetNodeId, allNodes, trade, maxBudgetCurrency) {
         } else break;
     }
 
-    // trade.spent jest oryginalnie zapisany w bazie w walucie tickera (np. w USD)
     let tranches = { 'BASE': { price: parseFloat(trade.buy_price), spent: parseFloat(trade.spent || 0) } };
     let realizedPnL = 0;
 
@@ -3911,544 +3939,6 @@ function calculateNodePnL(targetNodeId, allNodes, trade, maxBudgetCurrency) {
     return 0;
 }
 
-// --- GŁÓWNA FUNKCJA RENDERUJĄCA ---
-function renderCampaignTree(campaignData) {
-    const container = document.getElementById('campaign-list');
-    container.innerHTML = '';
-    const showOnlyActive = document.getElementById('camp-active-path-toggle').checked;
-    
-    if(campaignData.length === 0) {
-        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryteria filtrów.</div>`;
-        return;
-    }
-
-    campaignData.forEach(camp => {
-        const trade = camp.base_trade;
-        const nodes = camp.graph_nodes || [];
-        const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
-        const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
-        const activePathIds = getActivePathNodeIds(nodes);
-
-        const firstTrancheSpent = parseFloat(trade.spent || 0); // W walucie tickera
-        const entryPrice = parseFloat(trade.buy_price || 0);
-        const leverage = parseFloat(trade.leverage || 1);
-        const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
-
-        let optimisticPnL = 0; let tacticalPnL = 0; let pessimisticPnL = 0;
-
-        // TOP SCENARIUSZE (Też w walucie tickera)
-        const targetOP = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'REDUCE') || { target_price: entryPrice * (1 + (0.15 * directionMod)) };
-        if (entryPrice > 0) optimisticPnL = firstTrancheSpent * leverage * (((parseFloat(targetOP.target_price) - entryPrice) / entryPrice) * directionMod);
-
-        const standardSLNode = nodes.find(n => n.path_type === 'STANDARD' && n.action_type === 'STOP_LOSS');
-        const deepFormNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'ADD_TRANCHE');
-        const deepTPNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'REDUCE');
-        let loss1 = 0; let profit2 = 0;
-
-        if (standardSLNode && entryPrice > 0) loss1 = firstTrancheSpent * leverage * (((parseFloat(standardSLNode.target_price) - entryPrice) / entryPrice) * directionMod);
-        if (deepFormNode && deepTPNode && parseFloat(deepFormNode.target_price) > 0) {
-            const deepEntry = parseFloat(deepFormNode.target_price);
-            const deepExit = parseFloat(deepTPNode.target_price);
-            const deepBudget = maxBudgetCurrency * (parseFloat(deepFormNode.allocated_budget_pct || 25) / 100);
-            profit2 = deepBudget * leverage * (((deepExit - deepEntry) / deepEntry) * directionMod);
-        }
-        tacticalPnL = loss1 + profit2;
-
-        const finalSLNode = nodes.find(n => n.path_type === 'ALTERNATIVE' && n.action_type === 'STOP_LOSS') || { target_price: entryPrice * (1 - (0.10 * directionMod)) };
-        if (entryPrice > 0) {
-            const maxLoss1 = firstTrancheSpent * leverage * (((parseFloat(finalSLNode.target_price) - entryPrice) / entryPrice) * directionMod);
-            let maxLoss2 = 0;
-            if (deepFormNode && parseFloat(deepFormNode.target_price) > 0) {
-                const deepEntry = parseFloat(deepFormNode.target_price);
-                const deepBudget = maxBudgetCurrency * (parseFloat(deepFormNode.allocated_budget_pct || 25) / 100);
-                maxLoss2 = deepBudget * leverage * (((parseFloat(finalSLNode.target_price) - deepEntry) / deepEntry) * directionMod);
-            }
-            pessimisticPnL = maxLoss1 + maxLoss2;
-        }
-
-        const card = document.createElement('div');
-        card.style.background = 'var(--bg-card)'; card.style.border = '1px solid var(--border-color)';
-        card.style.borderRadius = '12px'; card.style.padding = '20px'; card.style.marginBottom = '30px';
-        
-        card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-                <h3 style="margin:0; color:var(--text-main); font-size:1.3em;">
-                    ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal;">#ID ${trade.id}</span>
-                </h3>
-                <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px;">${trade.status}</span>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px dashed #333;">
-                <div style="text-align: center; border-right: 1px solid var(--border-color); padding: 5px;">
-                    <div style="font-size: 0.8em; color: var(--text-muted);">🟢 OPTYMIZM</div>
-                    <div style="font-size: 1.1em; font-weight: bold; color: var(--success); margin-top: 4px;">+${optimisticPnL.toFixed(2)} ${trade.currency}</div>
-                </div>
-                <div style="text-align: center; border-right: 1px solid var(--border-color); padding: 5px;">
-                    <div style="font-size: 0.8em; color: var(--text-muted);">🔵 TAKTYKA (Zrzut)</div>
-                    <div style="font-size: 1.1em; font-weight: bold; color: #89b4fa; margin-top: 4px;">${tacticalPnL >= 0 ? '+' : ''}${tacticalPnL.toFixed(2)} ${trade.currency}</div>
-                </div>
-                <div style="text-align: center; padding: 5px;">
-                    <div style="font-size: 0.8em; color: var(--text-muted);">🔴 KAPITULACJA</div>
-                    <div style="font-size: 1.1em; font-weight: bold; color: var(--danger); margin-top: 4px;">${pessimisticPnL.toFixed(2)} ${trade.currency}</div>
-                </div>
-            </div>
-
-            <div style="display:flex; justify-content:center; overflow-x:auto; padding-bottom:20px;">
-                ${buildTreeHTML('BASE', nodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-// --- REKURENCYJNE RYSOWANIE KAFELKÓW WSZERZ (Z pełnymi danymi i przyciskami) ---
-function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive) {
-    if (showOnlyActive && !activePathIds.includes(nodeId)) return '';
-
-    let node;
-    if (nodeId === 'BASE') {
-        node = { 
-            id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', 
-            target_price: trade.buy_price, status: 'EXECUTED', 
-            allocated_budget_pct: (trade.spent / maxBudgetCurrency)*100,
-            required_focus_score: 0, required_cvd_status: 'Dowolne', step_rationale: ''
-        };
-    } else {
-        node = allNodes.find(n => n.node_id === nodeId);
-    }
-    if (!node) return '';
-
-    const isExecuted = node.status === 'EXECUTED';
-    const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
-    
-    const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency);
-    const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
-    const pnlSign = pnlFiat > 0 ? '+' : '';
-
-    let focusBtn = '';
-    if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
-        focusBtn = `<button onclick="goToFocusFromNode('${trade.id}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px; transition:0.2s;">🎯 Focus</button>`;
-    }
-
-    const nodeHtml = `
-        <div class="campaign-node-item" data-node-id="${node.id}" style="background:var(--bg-input); padding:15px; border-radius:8px; border-top: 4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width:280px; text-align:left; position:relative; opacity: ${showOnlyActive && !activePathIds.includes(nodeId) ? '0.4' : '1'};">
-            
-            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id === 'BASE' ? 'Pozycja Bazowa' : 'Węzeł ' + node.node_id}</strong>
-                <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
-            </div>
-            
-            <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
-                <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
-            </div>
-            
-            <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px; display:flex; flex-direction:column; gap:4px;">
-                <div style="display:flex; justify-content:space-between;">
-                    <span>Amunicja:</span>
-                    <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span>Focus Score:</span>
-                    <b style="color:#cdd6f4;">> ${node.required_focus_score || 0} pkt</b>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span>Kondycja CVD:</span>
-                    <b style="color:#cdd6f4;">${node.required_cvd_status || 'Dowolne'}</b>
-                </div>
-            </div>
-
-            ${node.step_rationale ? `
-                <details style="margin-top:8px; font-size:0.82em; background: rgba(0,0,0,0.2); padding:6px; border-radius:4px; border:1px solid #333;">
-                    <summary style="cursor:pointer; color:var(--accent); font-weight:bold; outline:none;">📝 Rozwiń notatkę / tezę</summary>
-                    <div style="margin-top:6px; padding:8px; background: rgba(201,148,0,0.08); border-radius:4px; border-left: 2px solid var(--accent); color:var(--text-main); white-space:pre-wrap;">${node.step_rationale}</div>
-                </details>
-            ` : ''}
-
-            <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
-                <span style="font-size: 0.75em; color: var(--text-muted);">Skumulowany wynik na tym etapie:</span><br>
-                <strong style="color: ${pnlColor}; font-size: 1.1em;">${pnlSign}${pnlFiat.toFixed(2)} ${trade.currency}</strong>
-            </div>
-
-            ${!isExecuted && nodeId !== 'BASE' ? `
-                <div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">
-                    ${focusBtn}
-                    <button onclick="openEditWizardModal('${trade.id}', '${node.id}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Edytuj ✏️</button>
-                    <button onclick="deleteCampaignNode('${trade.id}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button>
-                </div>
-            ` : ''}
-
-            ${(activePathIds.includes(nodeId) || !showOnlyActive) ? `
-                <div style="display:flex; gap:10px; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);">
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant A</button>
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant B</button>
-                </div>
-            ` : ''}
-        </div>
-    `;
-
-    const childrenA = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
-    const childrenB = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
-
-    let childrenHtml = '';
-    if (childrenA.length > 0 || childrenB.length > 0) {
-        childrenHtml = `<div style="display:flex; gap:40px; padding-top:20px; position:relative; margin-top:10px;">`;
-        if (childrenA.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center;">${buildTreeHTML(childrenA[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
-        if (childrenB.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center;">${buildTreeHTML(childrenB[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
-        childrenHtml += `</div>`;
-    }
-
-    return `<div style="display:flex; flex-direction:column; align-items:center;">${nodeHtml}${childrenHtml}</div>`;
-}
-
-// --- OBSŁUGA MODALU (Automatyczne przydzielanie Rodzica i Wariantu) ---
-async function openAddNodeModal(tradeId, ticker, parentId, variant) {
-    document.getElementById('nw-trade-id').value = tradeId;
-    document.getElementById('nw-ticker').value = ticker;
-    document.getElementById('nw-parent-id').value = parentId; // Wiem, skąd przyszedłeś!
-    document.getElementById('nw-variant').value = variant;    // Wiem, którym jesteś wariantem!
-    
-    document.getElementById('nw-title').innerText = `Planuj Krok (Wariant ${variant})`;
-    document.getElementById('nw-variant-label').innerText = variant;
-    document.getElementById('nw-reason').value = '';
-    
-    if (typeof toggleWizardFields === "function") toggleWizardFields();
-
-    // 1. Ładowanie stref z Form
-    const fId = document.getElementById('nw-form-id');
-    fId.innerHTML = '<option value="">⏳ Ładowanie stref...</option>';
-    if (typeof formEntries === 'undefined' || !formEntries || formEntries.length === 0) {
-        try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); window.formEntries = await res.json() || []; } catch(e) {}
-    }
-    const setups = (window.formEntries || []).filter(f => f.ticker === ticker);
-    fId.innerHTML = setups.length === 0 ? '<option value="">Brak zaplanowanych stref w Form</option>' : '';
-    setups.forEach(f => {
-        const price = f.entry_point || f.entry_price || 0;
-        const opt = document.createElement('option');
-        opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(price) });
-        opt.innerText = `[${f.entry_id}] ${f.direction} @ ${parseFloat(price).toFixed(2)}$`;
-        fId.appendChild(opt);
-    });
-
-    // 2. Transze do zamknięcia (Tylko transze wynikające z historii ścieżki do tego momentu)
-    const tList = document.getElementById('nw-tranches-list');
-    tList.innerHTML = '';
-    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
-    if (camp) {
-        tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="BASE" checked><span><b>Pozycja Bazowa (Start)</b></span></label>`;
-        const dcaNodes = (camp.graph_nodes || []).filter(n => n.action_type === 'ADD_TRANCHE');
-        dcaNodes.forEach(n => {
-            tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="${n.node_id}"><span><b>Węzeł ${n.node_id}</b> @ ${n.target_price}$</span></label>`;
-        });
-    }
-
-    document.getElementById('node-wizard-modal').style.display = 'flex';
-}
-
-// --- ZAPIS KROKU (Z logiką nazw 2A3B) ---
-async function submitNewNode() {
-    const tradeId = parseInt(document.getElementById('nw-trade-id').value);
-    const parentId = document.getElementById('nw-parent-id').value;
-    const variant = document.getElementById('nw-variant').value; // 'A' lub 'B'
-    const actionType = document.getElementById('nw-action-type').value;
-    const reason = document.getElementById('nw-reason').value.trim();
-    
-    let formEntryId = null; let targetPrice = 0; let allocatedBudgetPct = 0; let linkedTranches = [];
-
-    if (actionType === 'ADD_TRANCHE') {
-        const formVal = document.getElementById('nw-form-id').value;
-        if (!formVal) return alert("Wybierz strefę docelową z modułu Form.");
-        const formData = JSON.parse(formVal);
-        formEntryId = formData.entry_id; targetPrice = parseFloat(formData.price);
-        allocatedBudgetPct = parseFloat(document.getElementById('nw-budget').value) || 0;
-    } else {
-        document.querySelectorAll('.tranche-checkbox:checked').forEach(cb => linkedTranches.push(cb.value)); 
-        if (linkedTranches.length === 0) return alert("Zaznacz, które transze zamykasz.");
-        const closeVal = document.getElementById('nw-close-form-id').value;
-        if (!closeVal) return alert("Wybierz poziom z modułu Form.");
-        const closeData = JSON.parse(closeVal);
-        formEntryId = closeData.entry_id; targetPrice = parseFloat(closeData.price);
-    }
-
-    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
-    let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
-    
-    // Generowanie logicznej nazwy (np. 2A3B)
-    let nextStepNumber = 2;
-    if (parentId !== 'BASE') {
-        const digits = parentId.match(/\d+/g);
-        if (digits && digits.length > 0) nextStepNumber = parseInt(digits[digits.length - 1]) + 1;
-    }
-    const generatedNodeId = parentId === 'BASE' ? `${nextStepNumber}${variant}` : `${parentId}${nextStepNumber}${variant}`;
-    
-    // Utrzymanie kompatybilności ścieżki w bazie
-    const pathType = variant === 'A' ? 'STANDARD' : 'ALTERNATIVE'; 
-
-    if (currentNodes.some(n => n.node_id === generatedNodeId)) {
-        return alert(`Wariant ${variant} dla tego kroku jest już zajęty. Zmodyfikuj lub usuń stary węzeł.`);
-    }
-
-    const newNode = {
-        node_id: generatedNodeId,
-        parent_node_ids: [parentId],
-        path_type: pathType,
-        form_entry_id: formEntryId,
-        action_type: actionType,
-        target_price: targetPrice,
-        allocated_budget_pct: allocatedBudgetPct,
-        required_focus_score: parseFloat(document.getElementById('nw-focus').value) || 0,
-        step_rationale: reason,
-        linked_tranches: linkedTranches,
-        status: "PENDING"
-    };
-    
-    currentNodes.push(newNode);
-    const btn = document.getElementById('btn-save-wizard');
-    btn.innerHTML = "⏳ Zapis..."; btn.disabled = true;
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes }) });
-        const r = await res.json();
-        if(r.status === 'success') { document.getElementById('node-wizard-modal').style.display = 'none'; loadCampaigns(); }
-        else alert(r.message);
-    } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
-}
-
-// --- LOGIKA NAWIGACJI DO FOCUS ---
-function goToFocusFromNode(tradeId, formEntryId, nodeId) {
-    // Sprawdzamy czy krok dostał sygnał z rynków Live
-    if (!window.activeActionableNodes || !window.activeActionableNodes.includes(nodeId)) {
-        if (!confirm("⚠️ Ten węzeł NIE ZOSTAŁ dzisiaj przetestowany na wykresie cenowym. Chcesz wykonać przedwczesną analizę Focus wbrew rynkowi?")) {
-            return; 
-        }
-    }
-
-    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
-    if(!camp) return;
-    
-    // Przenosimy użytkownika i otwieramy Focus
-    openModule('focus-module', 'Focus');
-    
-    // Automatyczne wypełnianie formularza Focus z lekkim opóźnieniem
-    setTimeout(() => {
-        const tSelect = document.getElementById('focus-ticker-select');
-        tSelect.value = camp.base_trade.ticker;
-        onFocusTickerChange(); 
-        
-        setTimeout(() => {
-            const fSelect = document.getElementById('focus-form-id');
-            fSelect.value = formEntryId;
-            onFocusIdChange(); 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 150); 
-    }, 150);
-}
-
-// --- STRAŻNIK DYSCYPLINY (Walidator Planu) ---
-
-function validateTradeAgainstPlan(tradeId, actionType, currentPrice) {
-    // actionType: 'ADD_TRANCHE' (Kupno) lub 'REDUCE' / 'STOP_LOSS' (Sprzedaż)
-    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
-    
-    if (!camp || !camp.graph_nodes || camp.graph_nodes.length === 0) {
-        return { isCompliant: true, message: "Brak zdefiniowanego planu kampanii dla tej pozycji. Grasz bez zabezpieczenia.", type: 'warning' };
-    }
-
-    const nodes = camp.graph_nodes;
-    const hasExecutedAlternative = nodes.some(n => n.path_type === 'ALTERNATIVE' && n.status === 'EXECUTED');
-    const activePath = hasExecutedAlternative ? 'ALTERNATIVE' : 'STANDARD';
-
-    // Pobieramy tylko oczekujące kroki z aktywnej ścieżki
-    const pendingActiveNodes = nodes.filter(n => n.path_type === activePath && n.status === 'PENDING');
-
-    if (pendingActiveNodes.length === 0) {
-        return { isCompliant: false, message: "Plan został w pełni zrealizowany. Każda kolejna akcja to handel poza założeniami.", type: 'danger' };
-    }
-
-    // Szukamy kroku, który pasuje do intencji (Kupno / Sprzedaż)
-    const matchingNode = pendingActiveNodes.find(n => {
-        if (actionType === 'ADD_TRANCHE') return n.action_type === 'ADD_TRANCHE';
-        if (actionType === 'SELL') return n.action_type === 'REDUCE' || n.action_type === 'STOP_LOSS' || n.action_type === 'REVERSE';
-        return false;
-    });
-
-    if (!matchingNode) {
-        return { isCompliant: false, message: `⚠️ Niezgodność z planem! W aktywnej ścieżce (${activePath}) nie zaplanowałeś teraz takiej akcji (${actionType}).`, type: 'danger' };
-    }
-
-    // Sprawdzamy, czy obecna cena rynkowa jest blisko (+/- 1.5%) zaplanowanego celu
-    const target = parseFloat(matchingNode.target_price);
-    const tolerance = target * 0.015; 
-    
-    if (currentPrice > 0 && Math.abs(currentPrice - target) > tolerance) {
-        return { isCompliant: false, message: `⚠️ Pośpiech! Planujesz akcję przy ${currentPrice.toFixed(2)}$, a Twój węzeł ${matchingNode.node_id} zakłada poziom ${target.toFixed(2)}$.`, type: 'danger' };
-    }
-
-    return { isCompliant: true, message: `✅ Akcja w 100% zgodna z aktywną ścieżką (Węzeł ${matchingNode.node_id}).`, type: 'success' };
-}
-
-// Akcja na Dziś (Prawdziwa komunikacja z backendem)
-async function highlightActionableNodes() {
-    if (globalCampaignCache.length === 0) return alert("Brak widocznych kampanii do sprawdzenia.");
-    const visibleTradeIds = globalCampaignCache.map(c => c.base_trade.id);
-    
-    const btn = document.querySelector('.btn-submit[onclick="highlightActionableNodes()"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = "⏳ Skanuję rynek...";
-    
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/check-actionable`, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ trade_ids: visibleTradeIds })
-        });
-        const data = await res.json();
-        
-        if (data.status === 'success') {
-            const actionableUuids = data.actionable_uuids || [];
-            // --- NOWOŚĆ: Zapis do pamięci globalnej dla przycisku Focus ---
-            window.activeActionableNodes = actionableUuids; 
-            
-            let count = 0;
-            const nodes = document.querySelectorAll('.campaign-node-item');
-            nodes.forEach(n => { n.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'; n.style.transform = 'none'; });
-            
-            globalCampaignCache.forEach(camp => {
-                const campNodes = camp.graph_nodes || [];
-                const hasExecAlt = campNodes.some(n => n.path_type === 'ALTERNATIVE' && n.status === 'EXECUTED');
-                const activePath = hasExecAlt ? 'ALTERNATIVE' : 'STANDARD';
-                
-                campNodes.forEach(node => {
-                    if (node.path_type === activePath && actionableUuids.includes(node.id)) {
-                        const nodeElement = document.querySelector(`.campaign-node-item[data-node-id="${node.id}"]`);
-                        if (nodeElement) {
-                            nodeElement.style.boxShadow = '0 0 18px var(--accent)';
-                            nodeElement.style.transform = 'scale(1.03)';
-                            nodeElement.style.transition = 'all 0.3s ease';
-                            count++;
-                        }
-                    }
-                });
-            });
-            
-            if (count > 0) alert(`Znaleziono ${count} węzłów decyzyjnych w aktywnych ścieżkach, które zostały dzisiaj przetestowane cenowo!`);
-            else alert("Brak akcji na dziś. Żaden węzeł w aktywnych ścieżkach nie osiągnął wyznaczonej strefy cenowej.");
-        }
-    } catch(e) {
-        console.error(e);
-        alert("Wystąpił błąd podczas sprawdzania cen z Yahoo.");
-    } finally {
-        btn.innerHTML = originalText;
-    }
-}
-
-// --- NOWOŚĆ: Funkcja przenosząca i weryfikująca z kafelka do Focus ---
-function goToFocusFromNode(tradeId, formEntryId, nodeId) {
-    // 1. Sprawdzamy, czy krok jest uaktywniony
-    if (!window.activeActionableNodes || !window.activeActionableNodes.includes(nodeId)) {
-        if (!confirm("⚠️ Ten węzeł NIE ZOSTAŁ dzisiaj podświetlony przez system 'Akcji na Dziś' (cena nie dotarła do punktu wejścia). Czy na pewno chcesz wypełnić analizę Focus już teraz wbrew rynkowi?")) {
-            return; 
-        }
-    }
-
-    // 2. Pobieramy ticker z bazy
-    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
-    if(!camp) return;
-    const ticker = camp.base_trade.ticker;
-    
-    // 3. Przełączamy moduł
-    openModule('focus-module', 'Focus');
-    
-    // 4. Po małym opóźnieniu (by DOM się wyrenderował) automatycznie wybieramy spółkę i setup
-    setTimeout(() => {
-        const tSelect = document.getElementById('focus-ticker-select');
-        tSelect.value = ticker;
-        onFocusTickerChange(); // Ta funkcja wygeneruje drugi dropdown z listą form_id
-        
-        setTimeout(() => {
-            const fSelect = document.getElementById('focus-form-id');
-            fSelect.value = formEntryId;
-            onFocusIdChange(); // Ta funkcja wypełni readonly info z Setupu
-            
-            // Lekki scroll na górę do formularza
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 100); 
-    }, 100);
-}
-
-// Obsługa Edycji Kafelka
-async function openEditNodeModal(uuid, nodeId, price, focus) {
-    document.getElementById('edit-node-uuid').value = uuid;
-    document.getElementById('edit-node-id-label').innerText = nodeId;
-    document.getElementById('edit-node-focus').value = focus;
-    document.getElementById('edit-node-reason').value = '';
-    document.getElementById('edit-node-delete-descendants').checked = false;
-    
-    const fId = document.getElementById('edit-node-form-id');
-    fId.innerHTML = '<option value="">Ładowanie opcji z Formularzy...</option>';
-    document.getElementById('edit-node-modal').style.display = 'flex';
-    
-    try {
-        if (!formEntries || formEntries.length === 0) {
-            const res = await fetch(`${API_BASE_URL}/api/form/entries`);
-            formEntries = await res.json() || [];
-        }
-        fId.innerHTML = '';
-        formEntries.forEach(f => {
-            const opt = document.createElement('option');
-            const pVal = f.entry_point || f.entry_price || 0;
-            opt.value = pVal;
-            opt.innerText = `[Form ID: ${f.entry_id}] ${f.ticker} - Setup @ ${parseFloat(pVal).toFixed(2)}$`;
-            if(parseFloat(pVal) === parseFloat(price)) opt.selected = true;
-            fId.appendChild(opt);
-        });
-    } catch(e){ 
-        console.error(e); 
-        fId.innerHTML = '<option value="">Błąd ładowania stref</option>'; 
-    }
-}
-
-async function submitNodeEdit() {
-    let reason = document.getElementById('edit-node-reason').value;
-    if(reason) reason = reason.trim();
-    if(!reason || reason.length < 15) {
-        alert("Wymagane jest podanie merytorycznego powodu zmiany (min. 15 znaków) dla zachowania szczelności audytu AI.");
-        return;
-    }
-    
-    const btn = document.getElementById('btn-save-node-edit');
-    btn.innerHTML = "⏳ Zapis..."; 
-    btn.disabled = true;
-
-    const payload = {
-        id: document.getElementById('edit-node-uuid').value,
-        edit_reason: reason,
-        delete_descendants: document.getElementById('edit-node-delete-descendants').checked,
-        target_price: parseFloat(document.getElementById('edit-node-form-id').value),
-        required_focus_score: parseFloat(document.getElementById('edit-node-focus').value),
-        required_cvd_status: document.getElementById('edit-node-cvd').value
-    };
-    
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
-            method: "POST", 
-            headers: { "Content-Type": "application/json" }, 
-            body: JSON.stringify(payload)
-        });
-        const r = await res.json();
-        if(r.status === 'success') {
-            document.getElementById('edit-node-modal').style.display = 'none';
-            loadCampaigns();
-        } else {
-            alert(r.message);
-        }
-    } catch(e) { 
-        alert("Błąd połączenia z bazą."); 
-    } finally { 
-        btn.innerHTML = "Zapisz Zmianę"; 
-        btn.disabled = false; 
-    }
-}
-
-// --- NOWOŚĆ: Szukanie "przodków" na ścieżce (Dla TP/SL) ---
 function getAncestors(parentId, allNodes) {
     let ancestors = new Set(['BASE']);
     let currentId = parentId;
@@ -4462,7 +3952,6 @@ function getAncestors(parentId, allNodes) {
     return Array.from(ancestors);
 }
 
-// --- POMOCNICZE WYPEŁNIANIE LIST ROZWIJANYCH ---
 async function loadFormSetupsToSelect(selectId, ticker, targetPriceToSelect = null, tpSlType = null) {
     const sel = document.getElementById(selectId);
     if(!sel) return;
@@ -4500,9 +3989,7 @@ function populateTranchesList(tradeId, parentId, selectedTranches = []) {
     const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
     if (!camp) return;
 
-    // Filtrujemy kafelki tylko do tych, które doprowadziły nas do tego miejsca na wykresie!
     const validAncestors = getAncestors(parentId, camp.graph_nodes || []);
-
     const isBaseChecked = selectedTranches.length === 0 || selectedTranches.includes('BASE') ? 'checked' : '';
     tList.innerHTML += `<label style="display:flex; gap:10px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; cursor:pointer;"><input type="checkbox" class="tranche-checkbox" value="BASE" ${isBaseChecked}><span><b>Pozycja Bazowa (Start)</b></span></label>`;
     
@@ -4513,7 +4000,247 @@ function populateTranchesList(tradeId, parentId, selectedTranches = []) {
     });
 }
 
-// --- NIEZAWODNA EDYCJA (Pobiera pełen obiekt z pamięci podręcznej) ---
+async function toggleWizardFields() {
+    const action = document.getElementById('nw-action-type').value;
+    const secAdd = document.getElementById('nw-section-add');
+    const secClose = document.getElementById('nw-section-close');
+    const ticker = document.getElementById('nw-ticker').value;
+
+    if (action === 'ADD_TRANCHE') {
+        secAdd.style.display = 'block'; secClose.style.display = 'none';
+        await loadFormSetupsToSelect('nw-form-id', ticker, null, null);
+    } else {
+        secAdd.style.display = 'none'; secClose.style.display = 'block';
+        secClose.style.background = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
+        secClose.style.borderColor = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
+        await loadFormSetupsToSelect('nw-close-form-id', ticker, null, action);
+        populateTranchesList(document.getElementById('nw-trade-id').value, document.getElementById('nw-parent-id').value);
+    }
+}
+
+function selectOptionByPrice(selectElement, price) {
+    if(!selectElement) return;
+    for (let i = 0; i < selectElement.options.length; i++) {
+        try {
+            const data = JSON.parse(selectElement.options[i].value);
+            if (Math.abs(parseFloat(data.price) - parseFloat(price)) < 0.001) {
+                selectElement.selectedIndex = i; break;
+            }
+        } catch(e) {}
+    }
+}
+
+function renderCampaignTree(campaignData) {
+    const container = document.getElementById('campaign-list');
+    container.innerHTML = '';
+    const showOnlyActive = document.getElementById('camp-active-path-toggle').checked;
+    
+    if(campaignData.length === 0) {
+        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryteria. Kliknij "Planuj" w TradesList.</div>`;
+        return;
+    }
+
+    campaignData.forEach(camp => {
+        const trade = camp.base_trade;
+        const nodes = camp.graph_nodes || [];
+        const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
+        const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
+        const activePathIds = getActivePathNodeIds(nodes);
+
+        const card = document.createElement('div');
+        card.style.background = 'var(--bg-card)'; card.style.border = '1px solid var(--border-color)';
+        card.style.borderRadius = '12px'; card.style.padding = '20px';
+        
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                <h3 style="margin:0; color:var(--text-main); font-size:1.3em;">
+                    ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal;">#ID ${trade.id}</span>
+                </h3>
+                <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px;">${trade.status}</span>
+            </div>
+            <div style="display:flex; justify-content:left; overflow-x:auto; padding:20px 0; min-width: 100%; -webkit-overflow-scrolling: touch;">
+                ${buildTreeHTML('BASE', nodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive) {
+    if (showOnlyActive && !activePathIds.includes(nodeId)) return '';
+
+    let node;
+    if (nodeId === 'BASE') {
+        node = { id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', target_price: trade.buy_price, status: 'EXECUTED', allocated_budget_pct: (trade.spent / maxBudgetCurrency)*100 };
+    } else {
+        node = allNodes.find(n => n.node_id === nodeId);
+    }
+    if (!node) return '';
+
+    const isExecuted = node.status === 'EXECUTED';
+    const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
+    const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency);
+    const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
+    
+    let focusBtn = '';
+    if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
+        focusBtn = `<button onclick="goToFocusFromNode('${trade.id}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px;">🎯 Focus</button>`;
+    }
+
+    const nodeHtml = `
+        <div class="campaign-node-item" data-node-id="${node.id}" style="background:var(--bg-input); padding:15px; border-radius:8px; border-top: 4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width: 260px; min-width: 260px; flex-shrink: 0; text-align:left; position:relative; opacity: ${showOnlyActive && !activePathIds.includes(nodeId) ? '0.4' : '1'};">
+            
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id}</strong>
+                <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
+            </div>
+            
+            <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
+                <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
+            </div>
+            
+            <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
+                Amunicja: <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b><br>
+                Focus Score: <b style="color:#cdd6f4;">> ${node.required_focus_score || 0} pkt</b>
+            </div>
+
+            ${node.step_rationale ? `
+                <details style="margin-top:8px; font-size:0.82em; background: rgba(0,0,0,0.2); padding:6px; border-radius:4px; border:1px solid #333;">
+                    <summary style="cursor:pointer; color:var(--accent); font-weight:bold; outline:none;">📝 Notatka / Teza</summary>
+                    <div style="margin-top:6px; padding:8px; background: rgba(201,148,0,0.08); border-radius:4px; border-left: 2px solid var(--accent); color:var(--text-main); white-space:pre-wrap;">${node.step_rationale}</div>
+                </details>
+            ` : ''}
+
+            <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-size: 0.75em; color: var(--text-muted);">Skumulowany PnL na tym etapie:</span><br>
+                <strong style="color: ${pnlColor}; font-size: 1.1em;">${pnlFiat > 0 ? '+' : ''}${pnlFiat.toFixed(2)} ${trade.currency}</strong>
+            </div>
+
+            ${!isExecuted && nodeId !== 'BASE' ? `
+                <div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">
+                    ${focusBtn}
+                    <button onclick="openEditWizardModal('${trade.id}', '${node.id}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Edytuj ✏️</button>
+                    <button onclick="deleteCampaignNode('${trade.id}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button>
+                </div>
+            ` : ''}
+
+            ${(activePathIds.includes(nodeId) || !showOnlyActive) ? `
+                <div style="display:flex; gap:10px; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);">
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em;">➕ Wariant A</button>
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em;">➕ Wariant B</button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    const childrenA = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
+    const childrenB = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
+
+    let childrenHtml = '';
+    if (childrenA.length > 0 || childrenB.length > 0) {
+        childrenHtml = `<div style="display:flex; gap:30px; padding-top:20px; position:relative; margin-top:10px; flex-shrink:0;">`;
+        if (childrenA.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenA[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
+        if (childrenB.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenB[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
+        childrenHtml += `</div>`;
+    }
+
+    return `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${nodeHtml}${childrenHtml}</div>`;
+}
+
+async function openAddNodeModal(tradeId, ticker, parentId, variant) {
+    document.getElementById('nw-trade-id').value = tradeId;
+    document.getElementById('nw-ticker').value = ticker;
+    document.getElementById('nw-parent-id').value = parentId; 
+    document.getElementById('nw-variant').value = variant;    
+    
+    document.getElementById('nw-title').innerText = `Planuj Krok (Wariant ${variant})`;
+    document.getElementById('nw-variant-label').innerText = variant;
+    document.getElementById('nw-reason').value = '';
+    
+    document.getElementById('nw-action-type').value = 'ADD_TRANCHE';
+    await toggleWizardFields();
+    
+    document.getElementById('node-wizard-modal').style.display = 'flex';
+}
+
+async function submitNewNode() {
+    const tradeId = parseInt(document.getElementById('nw-trade-id').value);
+    const parentId = document.getElementById('nw-parent-id').value;
+    const variant = document.getElementById('nw-variant').value; 
+    const actionType = document.getElementById('nw-action-type').value;
+    const reason = document.getElementById('nw-reason').value.trim();
+    
+    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
+    let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
+    
+    const fxRate = parseFloat(camp.base_trade.buy_fx_rate || 1.0);
+    const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
+    const baseBudgetPct = (parseFloat(camp.base_trade.spent || 0) / maxBudgetCurrency) * 100;
+    
+    // Obliczamy zablokowany budżet NA TEJ ścieżce (uwzględnia zwroty z TP!)
+    const currentPathBudget = calculatePathBudget(parentId, currentNodes, baseBudgetPct);
+
+    let formEntryId = null; let targetPrice = 0; let allocatedBudgetPct = 0; let linkedTranches = [];
+
+    if (actionType === 'ADD_TRANCHE') {
+        const reqBudget = parseFloat(document.getElementById('nw-budget').value) || 0;
+        if (currentPathBudget + reqBudget > 100.1) {
+            return alert(`🛡️ Przekroczono limit budżetu! Ta ścieżka blokuje obecnie ${currentPathBudget.toFixed(1)}% amunicji. Możesz dodać max ${(100 - currentPathBudget).toFixed(1)}%.`);
+        }
+        allocatedBudgetPct = reqBudget;
+        
+        const formVal = document.getElementById('nw-form-id').value;
+        if (!formVal) return alert("Wybierz strefę docelową z modułu Form.");
+        const formData = JSON.parse(formVal);
+        formEntryId = formData.entry_id; targetPrice = parseFloat(formData.price);
+    } else {
+        document.querySelectorAll('.tranche-checkbox:checked').forEach(cb => linkedTranches.push(cb.value)); 
+        if (linkedTranches.length === 0) return alert("Zaznacz, które transze zamykasz.");
+        const closeVal = document.getElementById('nw-close-form-id').value;
+        if (!closeVal) return alert("Wybierz poziom z modułu Form.");
+        const closeData = JSON.parse(closeVal);
+        formEntryId = closeData.entry_id; targetPrice = parseFloat(closeData.price);
+    }
+
+    let nextStepNumber = 2;
+    if (parentId !== 'BASE') {
+        const digits = parentId.match(/\d+/g);
+        if (digits && digits.length > 0) nextStepNumber = parseInt(digits[digits.length - 1]) + 1;
+    }
+    const generatedNodeId = parentId === 'BASE' ? `${nextStepNumber}${variant}` : `${parentId}${nextStepNumber}${variant}`;
+    const pathType = variant === 'A' ? 'STANDARD' : 'ALTERNATIVE'; 
+
+    if (currentNodes.some(n => n.node_id === generatedNodeId)) {
+        return alert(`Wariant ${variant} dla tego kroku jest już zajęty. Edytuj lub usuń stary węzeł.`);
+    }
+
+    const newNode = {
+        node_id: generatedNodeId,
+        parent_node_ids: [parentId],
+        path_type: pathType,
+        form_entry_id: formEntryId,
+        action_type: actionType,
+        target_price: targetPrice,
+        allocated_budget_pct: allocatedBudgetPct,
+        required_focus_score: parseFloat(document.getElementById('nw-focus').value) || 0,
+        required_cvd_status: document.getElementById('nw-cvd')?.value || 'Dowolne',
+        step_rationale: reason,
+        linked_tranches: linkedTranches,
+        status: "PENDING"
+    };
+    
+    currentNodes.push(newNode);
+    const btn = document.getElementById('btn-save-wizard');
+    btn.innerHTML = "⏳ Zapis..."; btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes }) });
+        const r = await res.json();
+        if(r.status === 'success') { document.getElementById('node-wizard-modal').style.display = 'none'; loadCampaigns(); }
+        else alert(r.message);
+    } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+}
+
 let isEditMode = false;
 let currentEditingNodeUuid = null;
 
@@ -4532,25 +4259,21 @@ async function openEditWizardModal(tradeId, nodeUuid) {
     document.getElementById('nw-title').innerHTML = `Edytuj Krok <span style="color:var(--accent);">${node.node_id}</span>`;
     document.getElementById('nw-action-type').value = node.action_type;
     document.getElementById('nw-focus').value = node.required_focus_score || 0;
-    document.getElementById('nw-budget').value = node.allocated_budget_pct || 25;
-    document.getElementById('nw-reason').value = ''; // Wymusza napisanie nowego powodu edycji!
-    
+    document.getElementById('nw-budget').value = node.allocated_budget_pct || 0;
+    document.getElementById('nw-reason').value = ''; 
     const cvdDropdown = document.getElementById('nw-cvd');
     if(cvdDropdown) cvdDropdown.value = node.required_cvd_status || 'Dowolne';
 
-    if (node.action_type === 'ADD_TRANCHE') {
-        document.getElementById('nw-section-add').style.display = 'block';
-        document.getElementById('nw-section-close').style.display = 'none';
-        await loadFormSetupsToSelect('nw-form-id', camp.base_trade.ticker, node.target_price, null);
-    } else {
-        document.getElementById('nw-section-add').style.display = 'none';
-        document.getElementById('nw-section-close').style.display = 'block';
-        document.getElementById('nw-section-close').style.background = node.action_type === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
-        document.getElementById('nw-section-close').style.borderColor = node.action_type === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
-        
-        await loadFormSetupsToSelect('nw-close-form-id', camp.base_trade.ticker, node.target_price, node.action_type);
-        populateTranchesList(tradeId, document.getElementById('nw-parent-id').value, node.linked_tranches || []);
-    }
+    await toggleWizardFields();
+
+    setTimeout(() => {
+        if (node.action_type === 'ADD_TRANCHE') {
+            selectOptionByPrice(document.getElementById('nw-form-id'), node.target_price);
+        } else {
+            selectOptionByPrice(document.getElementById('nw-close-form-id'), node.target_price);
+            populateTranchesList(tradeId, document.getElementById('nw-parent-id').value, node.linked_tranches || []);
+        }
+    }, 150);
 
     document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitWizardEdit()');
     document.getElementById('node-wizard-modal').style.display = 'flex';
@@ -4561,12 +4284,30 @@ async function submitWizardEdit() {
     if (reason.length < 15) return alert("🛡️ Audyt: Podaj merytoryczne uzasadnienie modyfikacji (min. 15 znaków).");
 
     const actionType = document.getElementById('nw-action-type').value;
+    const tradeId = parseInt(document.getElementById('nw-trade-id').value);
+    const parentId = document.getElementById('nw-parent-id').value;
+    
     let targetPrice = 0; let formEntryId = null; let linkedTranches = []; let allocatedBudgetPct = 0;
 
+    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
+    let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
+
     if (actionType === 'ADD_TRANCHE') {
+        const reqBudget = parseFloat(document.getElementById('nw-budget').value) || 0;
+        const fxRate = parseFloat(camp.base_trade.buy_fx_rate || 1.0);
+        const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
+        const baseBudgetPct = (parseFloat(camp.base_trade.spent || 0) / maxBudgetCurrency) * 100;
+        
+        const nodesWithoutCurrent = currentNodes.filter(n => n.id !== currentEditingNodeUuid);
+        const pathBudgetWithoutThis = calculatePathBudget(parentId, nodesWithoutCurrent, baseBudgetPct);
+        
+        if (pathBudgetWithoutThis + reqBudget > 100.1) {
+            return alert(`🛡️ Budżet przekroczony! Zostało max ${(100 - pathBudgetWithoutThis).toFixed(1)}% do wykorzystania.`);
+        }
+        
+        allocatedBudgetPct = reqBudget;
         const val = document.getElementById('nw-form-id').value;
         if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
-        allocatedBudgetPct = parseFloat(document.getElementById('nw-budget').value) || 0;
     } else {
         const val = document.getElementById('nw-close-form-id').value;
         if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
@@ -4576,7 +4317,7 @@ async function submitWizardEdit() {
     const payload = {
         id: currentEditingNodeUuid,
         edit_reason: reason,
-        delete_descendants: false, // Usunięcie to usunięcie, edycja zostawia dzieci w spokoju
+        delete_descendants: false, 
         target_price: targetPrice,
         form_entry_id: formEntryId,
         allocated_budget_pct: allocatedBudgetPct,
@@ -4608,51 +4349,6 @@ function resetWizardToDefaultMode() {
     document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitNewNode()');
 }
 
-async function submitWizardEdit() {
-    const reason = document.getElementById('nw-reason').value.trim();
-    if (reason.length < 15) {
-        alert("🛡️ System Audytu: Podaj merytoryczne uzasadnienie modyfikacji planu (minimum 15 znaków).");
-        return;
-    }
-
-    const actionType = document.getElementById('nw-action-type').value;
-    let targetPrice = 0; let formEntryId = null;
-
-    if (actionType === 'ADD_TRANCHE') {
-        const val = document.getElementById('nw-form-id').value;
-        if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
-    } else {
-        const val = document.getElementById('nw-close-form-id').value;
-        if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
-    }
-
-    const payload = {
-        id: currentEditingNodeUuid,
-        edit_reason: reason,
-        delete_descendants: false, // Opcjonalnie zablokowane na stałe przy edycji by chronić drzewo
-        target_price: targetPrice,
-        form_entry_id: formEntryId,
-        required_focus_score: parseFloat(document.getElementById('nw-focus').value) || 0,
-        required_cvd_status: document.getElementById('nw-cvd')?.value || 'Dowolne'
-    };
-
-    const btn = document.getElementById('btn-save-wizard');
-    btn.innerHTML = "⏳ Aktualizacja..."; btn.disabled = true;
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-            document.getElementById('node-wizard-modal').style.display = 'none';
-            resetWizardToDefaultMode();
-            loadCampaigns(); 
-        } else alert(data.message);
-    } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
-}
-
-// --- LOGIKA KASKADOWEGO USUWANIA ---
 async function deleteCampaignNode(tradeId, nodeUuid, nodeIdStr) {
     const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
     if (!camp) return;
@@ -4697,6 +4393,71 @@ async function deleteSingleNodeDirect(uuid) {
             break;
         }
     }
+}
+
+async function highlightActionableNodes() {
+    if (globalCampaignCache.length === 0) return alert("Brak widocznych kampanii.");
+    const visibleTradeIds = globalCampaignCache.map(c => c.base_trade.id);
+    const btn = document.querySelector('.btn-submit[onclick="highlightActionableNodes()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "⏳ Skanuję rynek...";
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/check-actionable`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ trade_ids: visibleTradeIds })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            const actionableUuids = data.actionable_uuids || [];
+            window.activeActionableNodes = actionableUuids; 
+            
+            let count = 0;
+            const nodes = document.querySelectorAll('.campaign-node-item');
+            nodes.forEach(n => { n.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)'; n.style.transform = 'none'; });
+            
+            globalCampaignCache.forEach(camp => {
+                const campNodes = camp.graph_nodes || [];
+                const activePathIds = getActivePathNodeIds(campNodes);
+                
+                campNodes.forEach(node => {
+                    if (activePathIds.includes(node.node_id) && actionableUuids.includes(node.id)) {
+                        const nodeElement = document.querySelector(`.campaign-node-item[data-node-id="${node.id}"]`);
+                        if (nodeElement) {
+                            nodeElement.style.boxShadow = '0 0 18px var(--accent)';
+                            nodeElement.style.transform = 'scale(1.03)';
+                            nodeElement.style.transition = 'all 0.3s ease';
+                            count++;
+                        }
+                    }
+                });
+            });
+            
+            if (count > 0) alert(`Znaleziono ${count} węzłów decyzyjnych na aktywnych ścieżkach gotowych do weryfikacji!`);
+            else alert("Brak węzłów w strefie ceny na aktywnych ścieżkach.");
+        }
+    } catch(e) {
+        console.error(e); alert("Błąd połączenia z Yahoo Finance.");
+    } finally { btn.innerHTML = originalText; }
+}
+
+function goToFocusFromNode(tradeId, formEntryId, nodeId) {
+    if (!window.activeActionableNodes || !window.activeActionableNodes.includes(nodeId)) {
+        if (!confirm("⚠️ Ten węzeł NIE ZOSTAŁ dzisiaj przetestowany na wykresie. Kontynuować audyt wbrew rynkowi?")) return; 
+    }
+    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
+    if(!camp) return;
+    openModule('focus-module', 'Focus');
+    setTimeout(() => {
+        document.getElementById('focus-ticker-select').value = camp.base_trade.ticker;
+        onFocusTickerChange(); 
+        setTimeout(() => {
+            document.getElementById('focus-form-id').value = formEntryId;
+            onFocusIdChange(); 
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 150); 
+    }, 150);
 }
 
     // --- Start Aplikacji ---
