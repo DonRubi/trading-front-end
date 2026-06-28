@@ -861,6 +861,8 @@
                 <input type="checkbox" id="camp-active-path-toggle" onchange="filterCampaigns()" checked>
                 <span style="color:var(--success); font-weight:bold; font-size:0.9em;">Tylko Aktywna Ścieżka</span>
             </label>
+            <button onclick="collapseAllNodes()" style="background: transparent; color: var(--text-main); border: 1px solid #555; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Zwiń Wszystko 🔼</button>
+            
             <button class="btn-submit" style="background: var(--accent); color: #000; padding: 8px 15px; border-radius: 6px; margin: 0;" onclick="highlightActionableNodes()">⚡ Akcja na Dziś</button>
         </div>
     </div>
@@ -4239,18 +4241,132 @@ async function updateCampaignBudget(tradeId) {
     finally { btn.innerText = originalText; btn.disabled = false; }
 }
 
-function toggleChildrenNodes(nodeId) {
-    const container = document.getElementById(`children-container-${nodeId}`);
-    const btn = document.getElementById(`toggle-btn-${nodeId}`);
-    if (!container) return;
+// --- PAMIĘĆ STANU (Zapamiętuje rozwinięte gałęzie po odświeżeniu/zapisie) ---
+window.expandedNodes = window.expandedNodes || new Set();
+
+function toggleChildrenNodes(uniqueNodeId) {
+    const container = document.getElementById(`children-container-${uniqueNodeId}`);
+    const btn = document.getElementById(`toggle-btn-${uniqueNodeId}`);
     
-    if (container.style.display === 'none') {
-        container.style.display = 'flex';
-        btn.innerHTML = btn.innerHTML.replace('Rozwiń', 'Zwiń').replace('🔽', '🔼');
+    if (window.expandedNodes.has(uniqueNodeId)) {
+        window.expandedNodes.delete(uniqueNodeId);
+        if (container) {
+            container.style.display = 'none';
+            btn.innerHTML = btn.innerHTML.replace('Zwiń', 'Rozwiń').replace('🔼', '🔽');
+        }
     } else {
-        container.style.display = 'none';
-        btn.innerHTML = btn.innerHTML.replace('Zwiń', 'Rozwiń').replace('🔼', '🔽');
+        window.expandedNodes.add(uniqueNodeId);
+        if (container) {
+            container.style.display = 'flex';
+            btn.innerHTML = btn.innerHTML.replace('Rozwiń', 'Zwiń').replace('🔽', '🔼');
+        }
     }
+}
+
+function collapseAllNodes() {
+    // Czyści pamięć o rozwiniętych gałęziach i wymusza ponowne narysowanie grafów
+    window.expandedNodes.clear();
+    filterCampaigns(); 
+}
+
+// --- PODMIENIONA FUNKCJA RYSOWANIA DRZEWA (Czyta z pamięci stanu) ---
+function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive) {
+    if (showOnlyActive && !activePathIds.includes(nodeId)) return '';
+
+    let node;
+    if (nodeId === 'BASE') {
+        node = { id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', target_price: trade.buy_price, status: 'EXECUTED', allocated_budget_pct: (trade.spent / maxBudgetCurrency)*100 };
+    } else {
+        node = allNodes.find(n => n.node_id === nodeId);
+    }
+    if (!node) return '';
+
+    const isExecuted = node.status === 'EXECUTED';
+    const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
+    const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency);
+    const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
+    
+    const childrenA = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
+    const childrenB = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
+    const hasChildren = childrenA.length > 0 || childrenB.length > 0;
+
+    let focusBtn = '';
+    if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
+        focusBtn = `<button onclick="goToFocusFromNode('${trade.id}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px;">🎯 Focus</button>`;
+    }
+
+    // Unikalne ID, żeby Pozycja Bazowa kampanii Apple nie zwijała Pozycji Bazowej kampanii Microsoft
+    const uniqueNodeId = `${trade.id}_${node.id}`;
+    
+    // Sprawdzanie pamięci stanu: czy ten węzeł był rozwinięty przed odświeżeniem?
+    const isExpanded = window.expandedNodes.has(uniqueNodeId);
+    const displayStyle = isExpanded ? 'flex' : 'none';
+    const toggleText = isExpanded ? `Zwiń kolejne kroki (${childrenA.length + childrenB.length}) 🔼` : `Rozwiń kolejne kroki (${childrenA.length + childrenB.length}) 🔽`;
+
+    const nodeHtml = `
+        <div class="campaign-node-item" data-node-id="${node.id}" style="background:var(--bg-input); padding:15px; border-radius:8px; border-top: 4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width: 260px; min-width: 260px; flex-shrink: 0; text-align:left; position:relative; opacity: ${showOnlyActive && !activePathIds.includes(nodeId) ? '0.4' : '1'};">
+            
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id === 'BASE' ? 'Pozycja Bazowa' : 'Węzeł ' + node.node_id}</strong>
+                <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
+            </div>
+            
+            <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
+                <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
+            </div>
+            
+            <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
+                Amunicja: <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b><br>
+                Focus Score: <b style="color:#cdd6f4;">> ${node.required_focus_score || 0} pkt</b>
+            </div>
+
+            ${node.step_rationale ? `
+                <details style="margin-top:8px; font-size:0.82em; background: rgba(0,0,0,0.2); padding:6px; border-radius:4px; border:1px solid #333;">
+                    <summary style="cursor:pointer; color:var(--accent); font-weight:bold; outline:none;">📝 Notatka / Teza</summary>
+                    <div style="margin-top:6px; padding:8px; background: rgba(201,148,0,0.08); border-radius:4px; border-left: 2px solid var(--accent); color:var(--text-main); white-space:pre-wrap;">${node.step_rationale}</div>
+                </details>
+            ` : ''}
+
+            <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-size: 0.75em; color: var(--text-muted);">Skumulowany PnL na tym etapie:</span><br>
+                <strong style="color: ${pnlColor}; font-size: 1.1em;">${pnlFiat > 0 ? '+' : ''}${pnlFiat.toFixed(2)} ${trade.currency}</strong>
+            </div>
+
+            ${!isExecuted && nodeId !== 'BASE' ? `
+                <div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">
+                    ${focusBtn}
+                    <button onclick="openEditWizardModal('${trade.id}', '${node.id}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Edytuj ✏️</button>
+                    <button onclick="deleteCampaignNode('${trade.id}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button>
+                </div>
+            ` : ''}
+
+            ${(activePathIds.includes(nodeId) || !showOnlyActive) ? `
+                <div style="display:flex; gap:10px; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);">
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant A</button>
+                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant B</button>
+                </div>
+            ` : ''}
+            
+            ${hasChildren ? `
+                <div style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); text-align: center;">
+                    <button onclick="toggleChildrenNodes('${uniqueNodeId}')" id="toggle-btn-${uniqueNodeId}" style="background:transparent; color:var(--accent); border:none; cursor:pointer; font-size:0.8em; font-weight:bold; outline:none; transition:0.2s;">
+                        ${toggleText}
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    let childrenHtml = '';
+    if (hasChildren) {
+        // Kontener dzieci pobiera parametr displayStyle zdefiniowany na starcie
+        childrenHtml = `<div id="children-container-${uniqueNodeId}" style="display:${displayStyle}; gap:30px; padding-top:20px; position:relative; margin-top:10px; flex-shrink:0;">`;
+        if (childrenA.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenA[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
+        if (childrenB.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenB[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
+        childrenHtml += `</div>`;
+    }
+
+    return `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${nodeHtml}${childrenHtml}</div>`;
 }
 
 // --- ZAKTUALIZOWANE RYSOWANIE KAMPANII I KAFELKÓW ---
@@ -4298,96 +4414,7 @@ function renderCampaignTree(campaignData) {
     });
 }
 
-function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive) {
-    if (showOnlyActive && !activePathIds.includes(nodeId)) return '';
 
-    let node;
-    if (nodeId === 'BASE') {
-        node = { id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', target_price: trade.buy_price, status: 'EXECUTED', allocated_budget_pct: (trade.spent / maxBudgetCurrency)*100 };
-    } else {
-        node = allNodes.find(n => n.node_id === nodeId);
-    }
-    if (!node) return '';
-
-    const isExecuted = node.status === 'EXECUTED';
-    const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
-    const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency);
-    const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
-    
-    const childrenA = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
-    const childrenB = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
-    const hasChildren = childrenA.length > 0 || childrenB.length > 0;
-
-    let focusBtn = '';
-    if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
-        focusBtn = `<button onclick="goToFocusFromNode('${trade.id}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px;">🎯 Focus</button>`;
-    }
-
-    const nodeHtml = `
-        <div class="campaign-node-item" data-node-id="${node.id}" style="background:var(--bg-input); padding:15px; border-radius:8px; border-top: 4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width: 260px; min-width: 260px; flex-shrink: 0; text-align:left; position:relative; opacity: ${showOnlyActive && !activePathIds.includes(nodeId) ? '0.4' : '1'};">
-            
-            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id}</strong>
-                <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
-            </div>
-            
-            <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
-                <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
-            </div>
-            
-            <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
-                Amunicja: <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b><br>
-                Focus Score: <b style="color:#cdd6f4;">> ${node.required_focus_score || 0} pkt</b>
-            </div>
-
-            ${node.step_rationale ? `
-                <details style="margin-top:8px; font-size:0.82em; background: rgba(0,0,0,0.2); padding:6px; border-radius:4px; border:1px solid #333;">
-                    <summary style="cursor:pointer; color:var(--accent); font-weight:bold; outline:none;">📝 Notatka / Teza</summary>
-                    <div style="margin-top:6px; padding:8px; background: rgba(201,148,0,0.08); border-radius:4px; border-left: 2px solid var(--accent); color:var(--text-main); white-space:pre-wrap;">${node.step_rationale}</div>
-                </details>
-            ` : ''}
-
-            <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
-                <span style="font-size: 0.75em; color: var(--text-muted);">Skumulowany PnL na tym etapie:</span><br>
-                <strong style="color: ${pnlColor}; font-size: 1.1em;">${pnlFiat > 0 ? '+' : ''}${pnlFiat.toFixed(2)} ${trade.currency}</strong>
-            </div>
-
-            ${!isExecuted && nodeId !== 'BASE' ? `
-                <div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">
-                    ${focusBtn}
-                    <button onclick="openEditWizardModal('${trade.id}', '${node.id}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Edytuj ✏️</button>
-                    <button onclick="deleteCampaignNode('${trade.id}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button>
-                </div>
-            ` : ''}
-
-            ${(activePathIds.includes(nodeId) || !showOnlyActive) ? `
-                <div style="display:flex; gap:10px; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);">
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em;">➕ Wariant A</button>
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em;">➕ Wariant B</button>
-                </div>
-            ` : ''}
-            
-            ${hasChildren ? `
-                <div style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); text-align: center;">
-                    <button onclick="toggleChildrenNodes('${node.id}')" id="toggle-btn-${node.id}" style="background:transparent; color:var(--accent); border:none; cursor:pointer; font-size:0.8em; font-weight:bold; outline:none; transition:0.2s;">
-                        Rozwiń kolejne kroki (${childrenA.length + childrenB.length}) 🔽
-                    </button>
-                </div>
-            ` : ''}
-        </div>
-    `;
-
-    let childrenHtml = '';
-    if (hasChildren) {
-        // Kontener dzieci. Domyślnie styl display: none; aby zwinąć widok.
-        childrenHtml = `<div id="children-container-${node.id}" style="display:none; gap:30px; padding-top:20px; position:relative; margin-top:10px; flex-shrink:0;">`;
-        if (childrenA.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenA[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
-        if (childrenB.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenB[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
-        childrenHtml += `</div>`;
-    }
-
-    return `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${nodeHtml}${childrenHtml}</div>`;
-}
 
 // --- ZAKTUALIZOWANA EDYCJA (Wysyłająca typ akcji) ---
 async function submitWizardEdit() {
