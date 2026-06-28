@@ -4181,44 +4181,6 @@ async function submitNewNode() {
     } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
 }
 
-async function openEditWizardModal(tradeId, nodeUuid) {
-    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
-    if (!camp) return;
-    const node = camp.graph_nodes.find(n => n.id === nodeUuid);
-    if (!node) return;
-
-    isEditMode = true;
-    currentEditingNodeUuid = nodeUuid;
-    document.getElementById('nw-trade-id').value = tradeId;
-    document.getElementById('nw-ticker').value = camp.base_trade.ticker;
-    document.getElementById('nw-parent-id').value = (node.parent_node_ids && node.parent_node_ids.length > 0) ? node.parent_node_ids[0] : 'BASE';
-    
-    document.getElementById('nw-title').innerHTML = `Edytuj Krok <span style="color:var(--accent);">${node.node_id}</span>`;
-    document.getElementById('nw-action-type').value = node.action_type;
-    document.getElementById('nw-focus').value = node.required_focus_score || 0;
-    document.getElementById('nw-budget').value = node.allocated_budget_pct || 0;
-    document.getElementById('nw-reason').value = ''; 
-    const cvdDropdown = document.getElementById('nw-cvd');
-    if(cvdDropdown) cvdDropdown.value = node.required_cvd_status || 'Dowolne';
-
-    await toggleWizardFields();
-
-    setTimeout(() => {
-        if (node.action_type === 'ADD_TRANCHE') {
-            selectOptionByPrice(document.getElementById('nw-form-id'), node.target_price);
-        } else {
-            // W trybie edycji musimy pobrać transze ponownie ignorując obecnie edytowany krok
-            populateTranchesSelect(tradeId, document.getElementById('nw-parent-id').value, currentEditingNodeUuid);
-            if (node.linked_tranches && node.linked_tranches.length > 0) {
-                document.getElementById('nw-tranche-select').value = node.linked_tranches[0];
-            }
-        }
-    }, 150);
-
-    document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitWizardEdit()');
-    document.getElementById('node-wizard-modal').style.display = 'flex';
-}
-
 // --- NOWE FUNKCJE WSPOMAGAJĄCE UI ---
 async function updateCampaignBudget(tradeId) {
     const val = parseFloat(document.getElementById(`budget-input-${tradeId}`).value);
@@ -4414,12 +4376,58 @@ function renderCampaignTree(campaignData) {
     });
 }
 
+let isEditMode = false; 
+let currentEditingNodeUuid = null;
+let currentEditBaseline = ""; // <-- NOWOŚĆ: Zmienna zapamiętująca starą notatkę
 
+async function openEditWizardModal(tradeId, nodeUuid) {
+    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
+    if (!camp) return;
+    const node = camp.graph_nodes.find(n => n.id === nodeUuid);
+    if (!node) return;
 
-// --- ZAKTUALIZOWANA EDYCJA (Wysyłająca typ akcji) ---
+    isEditMode = true; currentEditingNodeUuid = nodeUuid;
+    document.getElementById('nw-trade-id').value = tradeId;
+    document.getElementById('nw-ticker').value = camp.base_trade.ticker;
+    document.getElementById('nw-parent-id').value = (node.parent_node_ids && node.parent_node_ids.length > 0) ? node.parent_node_ids[0] : 'BASE';
+    
+    document.getElementById('nw-title').innerHTML = `Edytuj Krok <span style="color:var(--accent);">${node.node_id}</span>`;
+    document.getElementById('nw-action-type').value = node.action_type;
+    document.getElementById('nw-focus').value = node.required_focus_score || 0;
+    document.getElementById('nw-budget').value = node.allocated_budget_pct || 0;
+    
+    // --- NOWOŚĆ: Zachowanie starej notatki + doklejenie "Edit:" ---
+    const oldReason = (node.step_rationale || "").trim();
+    const prefilledText = oldReason ? oldReason + "\n\nEdit: " : "Edit: ";
+    document.getElementById('nw-reason').value = prefilledText;
+    currentEditBaseline = prefilledText.trim(); // Zapisujemy bazę do późniejszej walidacji
+    
+    const cvdDropdown = document.getElementById('nw-cvd');
+    if(cvdDropdown) cvdDropdown.value = node.required_cvd_status || 'Dowolne';
+
+    await toggleWizardFields();
+
+    setTimeout(() => {
+        if (node.action_type === 'ADD_TRANCHE') {
+            selectOptionByPrice(document.getElementById('nw-form-id'), node.target_price);
+        } else {
+            populateTranchesSelect(tradeId, document.getElementById('nw-parent-id').value, currentEditingNodeUuid);
+            if (node.linked_tranches && node.linked_tranches.length > 0) {
+                document.getElementById('nw-tranche-select').value = node.linked_tranches[0];
+            }
+        }
+    }, 150);
+
+    document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitWizardEdit()');
+    document.getElementById('node-wizard-modal').style.display = 'flex';
+}
+
 async function submitWizardEdit() {
     const reason = document.getElementById('nw-reason').value.trim();
-    if (reason.length < 15) return alert("🛡️ Audyt: Podaj merytoryczne uzasadnienie modyfikacji (min. 15 znaków).");
+    
+    // --- NOWOŚĆ: Sprawdzamy, czy dodano co najmniej 10 znaków po słowie "Edit:" ---
+    const addedChars = reason.length - currentEditBaseline.length;
+    if (addedChars < 10) return alert("🛡️ Audyt: Dopisz merytoryczne uzasadnienie edycji po słowie 'Edit:' (min. 10 nowych znaków).");
 
     const actionType = document.getElementById('nw-action-type').value;
     const tradeId = parseInt(document.getElementById('nw-trade-id').value);
@@ -4434,20 +4442,20 @@ async function submitWizardEdit() {
     if (actionType === 'ADD_TRANCHE') {
         const reqBudget = parseFloat(document.getElementById('nw-budget').value) || 0;
         
-        // Dynamiczne wyliczenie pozostałego budżetu podczas edycji (dla dynamicznego MAX limitu)
-        const tradeBudgetPct = float(camp.base_trade.campaign_budget_pct || 12.0);
         const fxRate = parseFloat(camp.base_trade.buy_fx_rate || 1.0);
-        const totalCap = calculateCurrentCapitalPLN(); // Wymagane jeśli masz to zdefiniowane, jeśli nie - ignoruj poniższe zabezpieczenie
         
-        // Zostawiamy logikę kalkulacji budżetu tak, jak była:
-        const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
+        // --- NAPRAWA BŁĘDU: Zmiana float na parseFloat ---
+        const tradeBudgetPct = parseFloat(camp.base_trade.campaign_budget_pct || 12.0);
+        const totalCap = parseFloat(camp.total_capital_pln || 0);
+        
+        const maxBudgetCurrency = (totalCap * (tradeBudgetPct / 100.0)) / fxRate;
         const baseBudgetPct = (parseFloat(camp.base_trade.spent || 0) / maxBudgetCurrency) * 100;
         
         const nodesWithoutCurrent = currentNodes.filter(n => n.id !== currentEditingNodeUuid);
         const pathBudgetWithoutThis = calculatePathBudget(parentId, nodesWithoutCurrent, baseBudgetPct);
         
         if (pathBudgetWithoutThis + reqBudget > 100.1) {
-            return alert(`🛡️ Budżet przekroczony! Zostało max ${(100 - pathBudgetWithoutThis).toFixed(1)}% do wykorzystania na tej ścieżce.`);
+            return alert(`🛡️ Budżet przekroczony! Zostało max ${(100 - pathBudgetWithoutThis).toFixed(1)}% do wykorzystania.`);
         }
         
         allocatedBudgetPct = reqBudget;
@@ -4464,20 +4472,13 @@ async function submitWizardEdit() {
         
         targetPrice = autoResolve.targetPrice;
         formEntryId = autoResolve.formEntryId;
-        allocatedBudgetPct = 0;
-        requiredFocus = 0;
+        allocatedBudgetPct = 0; requiredFocus = 0;
     }
 
-    // KLUCZOWE: Wysyłamy nowy `action_type` do serwera Pythona!
     const payload = {
-        id: currentEditingNodeUuid,
-        edit_reason: reason,
-        action_type: actionType, 
-        delete_descendants: false, 
-        target_price: targetPrice,
-        form_entry_id: formEntryId,
-        allocated_budget_pct: allocatedBudgetPct,
-        linked_tranches: linkedTranches,
+        id: currentEditingNodeUuid, edit_reason: reason, action_type: actionType, 
+        delete_descendants: false, target_price: targetPrice, form_entry_id: formEntryId,
+        allocated_budget_pct: allocatedBudgetPct, linked_tranches: linkedTranches,
         required_focus_score: requiredFocus,
         required_cvd_status: actionType === 'ADD_TRANCHE' ? (document.getElementById('nw-cvd')?.value || 'Dowolne') : 'Dowolne'
     };
@@ -4486,17 +4487,12 @@ async function submitWizardEdit() {
     btn.innerHTML = "⏳ Aktualizacja..."; btn.disabled = true;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
-        });
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
         const data = await res.json();
         if (data.status === 'success') {
-            document.getElementById('node-wizard-modal').style.display = 'none';
-            resetWizardToDefaultMode();
-            loadCampaigns(); 
+            document.getElementById('node-wizard-modal').style.display = 'none'; resetWizardToDefaultMode(); loadCampaigns(); 
         } else alert(data.message);
-    } catch(e) { alert("Błąd połączenia."); } 
-    finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+    } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
 }
 
 function selectOptionByPrice(selectElement, price) {
