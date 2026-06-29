@@ -4136,23 +4136,28 @@ async function toggleWizardFields() {
     const action = document.getElementById('nw-action-type').value;
     const secAdd = document.getElementById('nw-section-add');
     const secClose = document.getElementById('nw-section-close');
+    const secMacro = document.getElementById('nw-section-macro'); // Sekcja z Focus Score
     const ticker = document.getElementById('nw-ticker').value;
 
-    // Reset podglądów
-    document.getElementById('setup-preview-add').style.display = 'none';
-    document.getElementById('setup-preview-close').style.display = 'none';
-
     if (action === 'ADD_TRANCHE') {
-        secAdd.style.display = 'block'; secClose.style.display = 'none';
+        // --- Tryb WEJŚCIE / UŚREDNIANIE ---
+        secAdd.style.display = 'block'; 
+        secClose.style.display = 'none';
+        secMacro.style.display = 'block'; // Pokazujemy Makro/Focus przy otwieraniu
         await loadFormSetupsToSelect('nw-form-id', ticker, null, null);
-        
-        // Listener na zmianę wyboru
-        document.getElementById('nw-form-id').onchange = (e) => updateModalPreview(e.target.value, 'ADD_TRANCHE');
     } else {
-        secAdd.style.display = 'none'; secClose.style.display = 'block';
-        await loadFormSetupsToSelect('nw-close-form-id', ticker, null, action);
+        // --- Tryb ZAMKNIĘCIE (TP/SL) ---
+        secAdd.style.display = 'none'; 
+        secClose.style.display = 'block';
         
-        document.getElementById('nw-close-form-id').onchange = (e) => updateModalPreview(e.target.value, action);
+        // !!! TO JEST NAJWAŻNIEJSZA ZMIANA !!!
+        // Ukrywamy sekcję Focus/Macro, bo przy zamykaniu jest bezużyteczna
+        secMacro.style.display = 'none'; 
+        
+        secClose.style.background = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
+        secClose.style.borderColor = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
+        
+        // Zasilamy listę pozostałych, otwartych transz
         populateTranchesSelect(document.getElementById('nw-trade-id').value, document.getElementById('nw-parent-id').value);
     }
 }
