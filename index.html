@@ -639,11 +639,15 @@
                 <option value="LAST_WEEK">Ubiegły tydzień</option>
                 <optgroup id="alert-month-group" label="Archiwum (Miesiące)"></optgroup>
             </select>
-            <select id="alert-prio-ticker-filter" onchange="handleAlertsFilter()">
-                <option value="ALL">Wszystkie</option>
-                <option value="1">⭐ Tylko Priorytet</option>
+            <select id="alert-prio-ticker-filter" onchange="handleAlertsFilter()" style="background: rgba(201,148,0,0.1); border-color: var(--accent);">
+                <option value="ALL">Wszystkie Spółki</option>
+                <option value="1">⭐ Priorytet (Spółka z Bazy)</option>
             </select>
-        </div> 
+            <select id="alert-prio-form-filter" onchange="handleAlertsFilter()" style="background: rgba(14,203,129,0.1); border-color: var(--success);">
+                <option value="ALL">Wszystkie Setupy</option>
+                <option value="1">⭐ Priorytet (Setup z Form)</option>
+            </select>
+        </div>
         <div class="table-responsive"> 
             <table class="macro-custom-table" style="width:100%;"> 
                 <thead> 
@@ -2849,7 +2853,10 @@
             const typeFilter = document.getElementById('alert-type-filter').value || 'ALL';
             const impFilter = document.getElementById('alert-important-filter').value || 'ALL';
             const dateFilter = document.getElementById('alert-date-filter').value || 'ALL';
+            
+            // Pobranie obu filtrów priorytetowych
             const prioTickerFilter = document.getElementById('alert-prio-ticker-filter') ? document.getElementById('alert-prio-ticker-filter').value : 'ALL';
+            const prioFormFilter = document.getElementById('alert-prio-form-filter') ? document.getElementById('alert-prio-form-filter').value : 'ALL';
 
             const now = new Date();
             now.setHours(0,0,0,0);
@@ -2908,9 +2915,18 @@
                 }
                 let impMatch = (impFilter === 'ALL') || (impFilter === '1' && isImp) || (impFilter === '0' && !isImp);
 
-                // 4. Priorytet Tickera
+                // 4A. Priorytet Tickera (Z bazy DataBase)
                 const isTickerPriority = tData ? (tData.is_priority === true) : false;
                 let prioMatch = (prioTickerFilter === 'ALL') || (prioTickerFilter === '1' && isTickerPriority);
+
+                // 4B. Priorytet Setupu (Z modułu Form)
+                let formPrioMatch = true;
+                if (prioFormFilter === '1') {
+                    // System szuka przypisanego formularza na podstawie tickera i ceny z dokładnością do 0.01
+                    const matchedForm = formEntries.find(f => f.ticker === a.ticker && Math.abs(parseFloat(f.entry_point || 0) - parseFloat(a.target_price || 0)) < 0.01);
+                    const isFormPriority = matchedForm ? (matchedForm.priority === 1 || matchedForm.priority === "1") : false;
+                    if (!isFormPriority) formPrioMatch = false;
+                }
 
                 // 5. Data
                 let dateMatch = true;
@@ -2927,7 +2943,7 @@
                         else dateMatch = a.triggered_at.startsWith(dateFilter);
                     }
                 }
-                return textMatch && typeMatch && impMatch && dateMatch && prioMatch;
+                return textMatch && typeMatch && impMatch && dateMatch && prioMatch && formPrioMatch; // Logika z Form priority
             });
 
             // 2. SORTOWANIE
