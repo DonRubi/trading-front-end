@@ -907,6 +907,14 @@
                     <option value="Dodatnie Candle">Czekaj na dodatnią deltę / absorpcję</option>
                 </select>
             </div>
+            <div id="setup-preview-add" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
+                <div>Priorytet: <b id="preview-prio"></b></div>
+                <div>Przewidywany zysk/strata: <b id="preview-pnl"></b></div>
+            </div>
+
+                <div id="setup-preview-close" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
+                <div>Cena wyjścia (Exit Price): <b id="preview-exit-price"></b></div>
+                </div>
         </div>
 
         <div id="nw-section-close" style="display:none; background:rgba(246,70,93,0.05); padding:10px; border-radius:6px; border:1px solid rgba(246,70,93,0.2); margin-top:10px;">
@@ -915,6 +923,14 @@
             <p style="font-size:0.8em; color:var(--text-muted); margin-top:8px; line-height: 1.4;">
                 Cena docelowa zostanie <b style="color:var(--accent);">automatycznie pobrana</b> z formularza analizy przypisanego do tej transzy w momencie jej otwarcia.
             </p>
+            <div id="setup-preview-add" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
+                <div>Priorytet: <b id="preview-prio"></b></div>
+                <div>Przewidywany zysk/strata: <b id="preview-pnl"></b></div>
+        </div>
+
+            <div id="setup-preview-close" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
+                <div>Cena wyjścia (Exit Price): <b id="preview-exit-price"></b></div>
+            </div>
         </div>
 
         <div id="nw-section-macro" class="form-group" style="margin-top: 15px;">
@@ -4100,27 +4116,49 @@ function populateTranchesSelect(tradeId, parentId, excludeNodeUuid = null) {
     });
 }
 
+// --- POMOCNIK: Aktualizacja podglądu z Form ---
+function updateModalPreview(formValue, actionType) {
+    if (!formValue) return;
+    const data = JSON.parse(formValue);
+    const setup = window.formEntries.find(f => f.entry_id === data.entry_id);
+    if (!setup) return;
+
+    if (actionType === 'ADD_TRANCHE') {
+        const preview = document.getElementById('setup-preview-add');
+        preview.style.display = 'block';
+        document.getElementById('preview-prio').innerText = setup.priority === 1 ? "⭐ Wysoki" : "Normalny";
+        // Szacunek PnL: (TP - Wejście) * budżet
+        const pnl = (parseFloat(setup.tp || 0) - parseFloat(data.price)) * 100; 
+        document.getElementById('preview-pnl').innerText = pnl.toFixed(2) + " $";
+    } else {
+        const preview = document.getElementById('setup-preview-close');
+        preview.style.display = 'block';
+        document.getElementById('preview-exit-price').innerText = data.price.toFixed(2) + " $";
+    }
+}
+
+// --- ZAKTUALIZOWANA FUNKCJA TOGGLE (Wywołująca podgląd) ---
 async function toggleWizardFields() {
     const action = document.getElementById('nw-action-type').value;
     const secAdd = document.getElementById('nw-section-add');
     const secClose = document.getElementById('nw-section-close');
-    const secMacro = document.getElementById('nw-section-macro');
     const ticker = document.getElementById('nw-ticker').value;
 
+    // Reset podglądów
+    document.getElementById('setup-preview-add').style.display = 'none';
+    document.getElementById('setup-preview-close').style.display = 'none';
+
     if (action === 'ADD_TRANCHE') {
-        secAdd.style.display = 'block'; 
-        secClose.style.display = 'none';
-        secMacro.style.display = 'block'; // Pokazujemy Makro przy otwieraniu
+        secAdd.style.display = 'block'; secClose.style.display = 'none';
         await loadFormSetupsToSelect('nw-form-id', ticker, null, null);
+        
+        // Listener na zmianę wyboru
+        document.getElementById('nw-form-id').onchange = (e) => updateModalPreview(e.target.value, 'ADD_TRANCHE');
     } else {
-        secAdd.style.display = 'none'; 
-        secClose.style.display = 'block';
-        secMacro.style.display = 'none';  // Ukrywamy Makro przy zamykaniu
+        secAdd.style.display = 'none'; secClose.style.display = 'block';
+        await loadFormSetupsToSelect('nw-close-form-id', ticker, null, action);
         
-        secClose.style.background = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
-        secClose.style.borderColor = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
-        
-        // Zasilamy listę pozostałych, otwartych transz
+        document.getElementById('nw-close-form-id').onchange = (e) => updateModalPreview(e.target.value, action);
         populateTranchesSelect(document.getElementById('nw-trade-id').value, document.getElementById('nw-parent-id').value);
     }
 }
