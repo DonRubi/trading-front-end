@@ -4214,7 +4214,7 @@ async function submitNewNode() {
 // --- NOWE FUNKCJE WSPOMAGAJĄCE UI ---
 async function updateCampaignBudget(tradeId) {
     const val = parseFloat(document.getElementById(`budget-input-${tradeId}`).value);
-    if (val <= 0 || val > 12) return alert("Błąd: Budżet na jedną kampanię nie może przekroczyć 12% Twojego całkowitego kapitału.");
+    if (val <= 0 || val > 12) return alert("Błąd: Budżet kampanii musi być między 0.1% a 12%.");
     
     const btn = document.querySelector(`button[onclick="updateCampaignBudget(${tradeId})"]`);
     const originalText = btn.innerText;
@@ -4226,11 +4226,18 @@ async function updateCampaignBudget(tradeId) {
             body: JSON.stringify({ trade_id: tradeId, budget_pct: val })
         });
         const r = await res.json();
+        
+        // ZMIANA: Dodano "await", aby interfejs bezwzględnie poczekał na załadowanie przeliczonych danych!
         if (r.status === 'success') {
-            loadCampaigns(); // Przeładuje widok z nowym limitem!
-        } else alert(r.message);
-    } catch(e) { alert("Błąd zapisu budżetu."); }
-    finally { btn.innerText = originalText; btn.disabled = false; }
+            await loadCampaigns(); 
+        } else {
+            alert(r.message);
+        }
+    } catch(e) { 
+        alert("Błąd zapisu budżetu."); 
+    } finally { 
+        btn.innerText = originalText; btn.disabled = false; 
+    }
 }
 
 // --- PAMIĘĆ STANU (Zapamiętuje rozwinięte gałęzie po odświeżeniu/zapisie) ---
