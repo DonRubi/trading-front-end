@@ -2299,20 +2299,25 @@
                 document.getElementById('trade-name').value = tData && tData.stock_name ? tData.stock_name : '';
             } catch(e){} 
         }
-    async function submitTradeForm(e) { 
+    // Główna funkcja dodająca transakcję
+async function submitTradeForm(e) { 
     e.preventDefault(); 
+    
     const spent = parseFloat(document.getElementById('trade-spent').value); 
     const lev = parseInt(document.getElementById('trade-leverage').value); 
     const maxSpendStr = document.getElementById('trade-max-spend').value; 
     const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); 
-    if (spent * lev > maxSpend) { alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); } 
+    
+    if (spent * lev > maxSpend) { 
+        alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); 
+    } 
     
     const baseScore = parseFloat(document.getElementById('trade-score').value) || 0;
     const last15 = parseInt(document.getElementById('trade-last15').value) || 0;
             
     const data = { 
         focus_id: document.getElementById('trade-focus-id').value, 
-        form_id: document.getElementById('trade-form-id').value, 
+        form_id: document.getElementById('trade-form-id').value, // Kluczowe dla automatyzacji
         ticker: document.getElementById('trade-ticker').value, 
         direction: document.getElementById('trade-direction').value, 
         stock_name: document.getElementById('trade-name').value, 
@@ -2330,13 +2335,58 @@
         news_event: parseInt(document.getElementById('trade-news').value),
         cvd_delta: document.getElementById('trade-cvd-delta').value
     }; 
+
     try { 
-        const res = await fetch(`${API_BASE_URL}/api/trades/add`,{ 
-            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) 
+        const res = await fetch(`${API_BASE_URL}/api/trades/add`, { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(data) 
         }); 
-        if(res.ok) { alert('Zapisano!'); document.getElementById('trade-form').reset(); fetchTradesEntries(true); } 
-        else alert('Błąd.'); 
-    } catch(e) { console.error(e); } 
+        
+        const result = await res.json(); // Pobieramy odpowiedź z serwera
+        
+        if(res.ok) { 
+            alert('Zapisano!'); 
+            document.getElementById('trade-form').reset(); 
+            fetchTradesEntries(true); 
+            
+            // AUTOMATYZACJA: Wywołanie po sukcesie
+            await handleTradeAutomation(result.trade_id, data);
+        } else { 
+            alert('Błąd dodawania transakcji.'); 
+        } 
+    } catch(e) { 
+        console.error("Błąd w submitTradeForm:", e); 
+    } 
+}
+
+// Funkcja obsługująca automatyzację w Planerze
+async function handleTradeAutomation(tradeId, tradeData) {
+    try {
+        const autoSync = await fetch(`${API_BASE_URL}/api/trades/execute-automation`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                trade_id: tradeId,
+                form_id: tradeData.form_id, // Przekazujemy ID, aby Planner wiedział który węzeł aktualizować
+                spent_amount: parseFloat(tradeData.spent)
+            })
+        });
+        
+        const syncResult = await autoSync.json();
+        
+        if (syncResult.status === 'success') {
+            console.log("Automatyzacja Planera: Sukces", syncResult.new_status);
+            // Odświeżamy planer, żeby pasek postępu ("Częściowo zrealizowano") wskoczył na ekran
+            if (typeof loadCampaigns === 'function') {
+                loadCampaigns(); 
+            }
+        } else {
+            console.warn("Info z Plannera:", syncResult.message);
+        }
+    } catch (err) {
+        console.error("Błąd automatyzacji planera:", err);
+    }
 }
             
         async function fetchTradesEntries(forceFresh = false) { 
@@ -4299,6 +4349,24 @@ function toggleChildrenNodes(uniqueNodeId) {
     }
 }
 
+function getNodeProgress(node, maxBudgetCurrency) {
+    // Jeśli węzeł nie jest uśrednianiem (np. TP/SL) lub nie ma przypisanego budżetu, nie rysujemy paska
+    if (node.action_type !== 'ADD_TRANCHE' || !node.allocated_budget_pct) return null;
+    
+    const nodeBudgetFiat = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
+    if (nodeBudgetFiat <= 0) return null;
+    
+    const spent = parseFloat(node.accumulated_spent || 0);
+    const progress = Math.min(100, (spent / nodeBudgetFiat) * 100);
+    
+    return {
+        percent: progress,
+        color: progress >= 100 ? 'var(--success)' : (progress > 0 ? '#c99400' : '#444'),
+        spent: spent,
+        total: nodeBudgetFiat
+    };
+}
+    
 function collapseAllNodes() {
     // Czyści pamięć o rozwiniętych gałęziach i wymusza ponowne narysowanie grafów
     window.expandedNodes.clear();
@@ -4311,19 +4379,28 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
 
     let node;
     if (nodeId === 'BASE') {
-        node = { id: 'BASE', node_id: 'BASE', action_type: 'START KAMPANII', target_price: trade.buy_price, status: 'EXECUTED', allocated_budget_pct: (trade.spent / maxBudgetCurrency)*100 };
+        node = { 
+            id: 'BASE', 
+            node_id: 'BASE', 
+            action_type: 'START KAMPANII', 
+            target_price: trade.buy_price, 
+            status: 'EXECUTED', 
+            allocated_budget_pct: (trade.spent / maxBudgetCurrency) * 100,
+            accumulated_spent: trade.spent // Zakładamy, że pozycja bazowa jest już w całości wydana
+        };
     } else {
         node = allNodes.find(n => n.node_id === nodeId);
     }
     if (!node) return '';
 
+    const progressInfo = getNodeProgress(node, maxBudgetCurrency);
     const isExecuted = node.status === 'EXECUTED';
     const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
     const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency);
     const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
     
-    const childrenA = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
-    const childrenB = allNodes.filter(n => n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
+    const childrenA = allNodes.filter(n => n.parent_node_ids && n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
+    const childrenB = allNodes.filter(n => n.parent_node_ids && n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
     const hasChildren = childrenA.length > 0 || childrenB.length > 0;
 
     let focusBtn = '';
@@ -4331,10 +4408,7 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
         focusBtn = `<button onclick="goToFocusFromNode('${trade.id}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px;">🎯 Focus</button>`;
     }
 
-    // Unikalne ID, żeby Pozycja Bazowa kampanii Apple nie zwijała Pozycji Bazowej kampanii Microsoft
     const uniqueNodeId = `${trade.id}_${node.id}`;
-    
-    // Sprawdzanie pamięci stanu: czy ten węzeł był rozwinięty przed odświeżeniem?
     const isExpanded = window.expandedNodes.has(uniqueNodeId);
     const displayStyle = isExpanded ? 'flex' : 'none';
     const toggleText = isExpanded ? `Zwiń kolejne kroki (${childrenA.length + childrenB.length}) 🔼` : `Rozwiń kolejne kroki (${childrenA.length + childrenB.length}) 🔽`;
@@ -4344,15 +4418,25 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
             
             <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
                 <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id === 'BASE' ? 'Pozycja Bazowa' : 'Węzeł ' + node.node_id}</strong>
-                <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : 'Oczekuje'}</span>
+                <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : (node.status === 'PARTIAL' ? 'Częściowo' : 'Oczekuje')}</span>
             </div>
             
             <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
-                <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${node.target_price}$</span>
+                <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${parseFloat(node.target_price).toFixed(2)}$</span>
             </div>
             
             <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
-                Amunicja: <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b><br>
+                Amunicja: <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b>
+                
+                ${progressInfo ? `
+                    <div style="margin-top:8px; width:100%; height:6px; background:#111; border-radius:3px; overflow:hidden;">
+                        <div style="width:${progressInfo.percent}%; height:100%; background:${progressInfo.color}; transition: width 0.5s ease;"></div>
+                    </div>
+                    <div style="font-size:0.75em; margin-top:2px; color: ${progressInfo.percent > 0 ? 'var(--text-main)' : 'var(--text-muted)'};">
+                        Wydano: ${progressInfo.spent.toFixed(0)} / ${progressInfo.total.toFixed(0)} ${trade.currency}
+                    </div>
+                ` : '<br>'}
+                
                 Focus Score: <b style="color:#cdd6f4;">> ${node.required_focus_score || 0} pkt</b>
             </div>
 
@@ -4395,7 +4479,6 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
 
     let childrenHtml = '';
     if (hasChildren) {
-        // Kontener dzieci pobiera parametr displayStyle zdefiniowany na starcie
         childrenHtml = `<div id="children-container-${uniqueNodeId}" style="display:${displayStyle}; gap:30px; padding-top:20px; position:relative; margin-top:10px; flex-shrink:0;">`;
         if (childrenA.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenA[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
         if (childrenB.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenB[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
@@ -4411,8 +4494,8 @@ function renderCampaignTree(campaignData) {
     container.innerHTML = '';
     const showOnlyActive = document.getElementById('camp-active-path-toggle').checked;
     
-    if(campaignData.length === 0) {
-        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryteria. Kliknij "Planuj" w TradesList.</div>`;
+    if(!campaignData || campaignData.length === 0) {
+        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryteria.</div>`;
         return;
     }
 
@@ -4420,29 +4503,26 @@ function renderCampaignTree(campaignData) {
         const trade = camp.base_trade;
         const nodes = camp.graph_nodes || [];
         const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
+        // Upewnij się, że camp.max_budget_pln istnieje w danych z Supabase
         const maxBudgetCurrency = parseFloat(camp.max_budget_pln || 0) / fxRate;
         const activePathIds = getActivePathNodeIds(nodes);
 
         const card = document.createElement('div');
-        card.style.background = 'var(--bg-card)'; card.style.border = '1px solid var(--border-color)';
-        card.style.borderRadius = '12px'; card.style.padding = '20px';
+        card.style.cssText = 'background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:20px; margin-bottom:20px;';
         
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; color:var(--text-main); font-size:1.3em;">
                     ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal;">#ID ${trade.id}</span>
                 </h3>
-                
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                     <div style="font-size: 0.85em; color: var(--text-muted); background:rgba(0,0,0,0.3); padding:6px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
-                        Max ryzyko (kapitał): 
-                        <input type="number" id="budget-input-${trade.id}" value="${trade.campaign_budget_pct || 12}" min="0.1" max="12" step="0.5" style="width: 50px; padding: 2px; background: transparent; color: var(--success); border: none; border-bottom: 1px solid var(--accent); border-radius: 0; font-weight: bold; text-align:center; outline:none;"> %
-                        <button onclick="updateCampaignBudget(${trade.id})" style="background:var(--bg-input); border:1px solid #555; color:var(--text-main); padding:2px 8px; margin-left:5px; border-radius:4px; cursor:pointer; font-size:0.9em; transition:0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#555'">Zapisz</button>
+                        Max ryzyko: <input type="number" id="budget-input-${trade.id}" value="${trade.campaign_budget_pct || 12}" min="0.1" max="12" step="0.5" style="width: 40px; background: transparent; color: var(--success); border: none; border-bottom: 1px solid var(--accent); outline:none;"> %
+                        <button onclick="updateCampaignBudget(${trade.id})" style="background:var(--bg-input); border:1px solid #555; color:var(--text-main); padding:2px 8px; margin-left:5px; border-radius:4px; cursor:pointer;">Zapisz</button>
                     </div>
-                    <span class="badge" style="background: ${trade.status === 'OPEN' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(255,255,255,0.1)'}; color: ${trade.status === 'OPEN' ? 'var(--success)' : '#fff'}; padding: 6px 12px; border-radius: 20px;">${trade.status}</span>
                 </div>
             </div>
-            <div style="display:flex; justify-content:left; overflow-x:auto; padding:20px 0; min-width: 100%; -webkit-overflow-scrolling: touch;">
+            <div style="display:flex; justify-content:left; overflow-x:auto; padding:20px 0; min-width: 100%; gap:15px;">
                 ${buildTreeHTML('BASE', nodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}
             </div>
         `;
