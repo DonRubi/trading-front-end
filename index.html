@@ -896,6 +896,12 @@
         <div id="nw-section-add" style="display:block; background:rgba(14,203,129,0.05); padding:10px; border-radius:6px; border:1px solid rgba(14,203,129,0.2); margin-top:10px;">
             <label style="color:var(--success);">Wybierz strefę wejścia z modułu Form:</label>
             <select id="nw-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select>
+            
+            <div id="setup-preview-add" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
+                <div>Priorytet: <b id="preview-prio"></b></div>
+                <div>Przewidywany zysk/strata: <b id="preview-pnl"></b></div>
+            </div>
+
             <div style="margin-top:10px;">
                 <label>Amunicja (% dopuszczalnego budżetu ścieżki):</label>
                 <input type="number" id="nw-budget" value="25" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
@@ -907,26 +913,14 @@
                     <option value="Dodatnie Candle">Czekaj na dodatnią deltę / absorpcję</option>
                 </select>
             </div>
-            <div id="setup-preview-add" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
-                <div>Priorytet: <b id="preview-prio"></b></div>
-                <div>Przewidywany zysk/strata: <b id="preview-pnl"></b></div>
-            </div>
-
-                <div id="setup-preview-close" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
-                <div>Cena wyjścia (Exit Price): <b id="preview-exit-price"></b></div>
-                </div>
         </div>
 
         <div id="nw-section-close" style="display:none; background:rgba(246,70,93,0.05); padding:10px; border-radius:6px; border:1px solid rgba(246,70,93,0.2); margin-top:10px;">
             <label style="color:var(--text-main);">Wybierz JEDNĄ otwartą pozycję do zamknięcia:</label>
             <select id="nw-tranche-select" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; margin-top:8px; font-weight:bold;"></select>
-            <p style="font-size:0.8em; color:var(--text-muted); margin-top:8px; line-height: 1.4;">
-                Cena docelowa zostanie <b style="color:var(--accent);">automatycznie pobrana</b> z formularza analizy przypisanego do tej transzy w momencie jej otwarcia.
-            </p>
-            <div id="setup-preview-add" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
-                <div>Priorytet: <b id="preview-prio"></b></div>
-                <div>Przewidywany zysk/strata: <b id="preview-pnl"></b></div>
-        </div>
+            
+            <label style="color:var(--text-main); margin-top:10px; display:block;">Wybierz precyzyjną cenę z Form (TP/SL):</label>
+            <select id="nw-close-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; margin-top:8px;"></select>
 
             <div id="setup-preview-close" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
                 <div>Cena wyjścia (Exit Price): <b id="preview-exit-price"></b></div>
