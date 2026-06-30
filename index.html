@@ -4047,27 +4047,55 @@ async function loadFormSetupsToSelect(selectId, ticker, targetPriceToSelect = nu
     const sel = document.getElementById(selectId);
     if(!sel) return;
     sel.innerHTML = '<option value="">⏳ Ładowanie...</option>';
-    if (!window.formEntries || window.formEntries.length === 0) {
-        try { const res = await fetch(`${API_BASE_URL}/api/form/entries`); window.formEntries = await res.json() || []; } catch(e){}
-    }
-    const setups = (window.formEntries || []).filter(f => f.ticker === ticker);
-    sel.innerHTML = setups.length === 0 ? '<option value="">Brak zaplanowanych stref w Form</option>' : '';
     
+    if (!window.formEntries || window.formEntries.length === 0) {
+        try { 
+            const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
+            window.formEntries = await res.json() || []; 
+        } catch(e) {}
+    }
+    
+    // KROK 1: Pobieramy najpierw WSZYSTKIE wpisy dla danego tickera
+    const allTickerSetups = (window.formEntries || []).filter(f => f.ticker === ticker);
+    
+    // KROK 2: Analogicznie jak w Focus - filtrujemy te, które NIE SĄ wyciszone
+    const setups = allTickerSetups.filter(f => f.mute !== 1 && f.mute !== "1" && f.mute !== true);
+    
+    // KROK 3: Wyświetlamy precyzyjny komunikat w zależności od sytuacji
+    if (allTickerSetups.length > 0 && setups.length === 0) {
+        sel.innerHTML = '<option value="">Brak aktywnych setupów (Wyciszone)</option>';
+        return; // Zakończ, bo nie ma nic do rysowania
+    } else if (setups.length === 0) {
+        sel.innerHTML = '<option value="">Brak zaplanowanych stref w Form</option>';
+        return; // Zakończ, bo nie ma nic do rysowania
+    } else {
+        sel.innerHTML = ''; // Wyczyść przed załadowaniem opcji
+    }
+    
+    // KROK 4: Zasilamy listę tylko aktywnymi kafelkami
     setups.forEach(f => {
         let extractedPrice = 0; let label = '';
         if (tpSlType === 'TAKE_PROFIT') {
-            extractedPrice = f.take_profit || f.tp || f.target_price || 0; label = `🎯 TP: ${parseFloat(extractedPrice).toFixed(2)}$`;
+            extractedPrice = f.take_profit || f.tp || f.target_price || 0; 
+            label = `🎯 TP: ${parseFloat(extractedPrice).toFixed(2)}$`;
         } else if (tpSlType === 'STOP_LOSS') {
-            extractedPrice = f.stop_loss || f.sl || 0; label = `🛑 SL: ${parseFloat(extractedPrice).toFixed(2)}$`;
+            extractedPrice = f.stop_loss || f.sl || 0; 
+            label = `🛑 SL: ${parseFloat(extractedPrice).toFixed(2)}$`;
         } else {
-            extractedPrice = f.entry_point || f.entry_price || 0; label = `Wejście @ ${parseFloat(extractedPrice).toFixed(2)}$`;
+            extractedPrice = f.entry_point || f.entry_price || 0; 
+            label = `Wejście @ ${parseFloat(extractedPrice).toFixed(2)}$`;
         }
 
         if (parseFloat(extractedPrice) > 0) {
             const opt = document.createElement('option');
             opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(extractedPrice) });
+            
+            // Analogicznie - czytelny widok ID i Ceny
             opt.innerText = `[Form: ${f.entry_id}] ${f.setup_name || 'Setup'} -> ${label}`;
-            if (targetPriceToSelect !== null && Math.abs(parseFloat(extractedPrice) - parseFloat(targetPriceToSelect)) < 0.001) opt.selected = true;
+            
+            if (targetPriceToSelect !== null && Math.abs(parseFloat(extractedPrice) - parseFloat(targetPriceToSelect)) < 0.001) {
+                opt.selected = true;
+            }
             sel.appendChild(opt);
         }
     });
