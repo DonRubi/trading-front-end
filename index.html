@@ -4200,7 +4200,6 @@ async function toggleWizardFields() {
         secAdd.style.display = 'none'; 
         secClose.style.display = 'block';
         
-        // !!! TO JEST NAJWAŻNIEJSZA ZMIANA !!!
         // Ukrywamy sekcję Focus/Macro, bo przy zamykaniu jest bezużyteczna
         secMacro.style.display = 'none'; 
         
@@ -4209,6 +4208,16 @@ async function toggleWizardFields() {
         
         // Zasilamy listę pozostałych, otwartych transz
         populateTranchesSelect(document.getElementById('nw-trade-id').value, document.getElementById('nw-parent-id').value);
+
+        // --- NOWOŚĆ: Ukrywamy zbędne pole wyboru z Form dla TP/SL ---
+        const closeFormSelect = document.getElementById('nw-close-form-id');
+        if (closeFormSelect) {
+            closeFormSelect.style.display = 'none';
+            // Jeśli element jest w kontenerze z etykietą, ukrywamy cały kontener
+            if (closeFormSelect.parentElement && closeFormSelect.parentElement.tagName === 'DIV') {
+                closeFormSelect.parentElement.style.display = 'none';
+            }
+        }
     }
 }
 
@@ -4594,9 +4603,13 @@ async function openEditWizardModal(tradeId, nodeUuid) {
 async function submitWizardEdit() {
     const reason = document.getElementById('nw-reason').value.trim();
     
-    // --- NOWOŚĆ: Sprawdzamy, czy dodano co najmniej 10 znaków po słowie "Edit:" ---
-    const addedChars = reason.length - currentEditBaseline.length;
-    if (addedChars < 10) return alert("🛡️ Audyt: Dopisz merytoryczne uzasadnienie edycji po słowie 'Edit:' (min. 10 nowych znaków).");
+    // --- NOWOŚĆ: Blokada audytu działa tylko, gdy faktycznie dopisujemy po słowie "Edit: " ---
+    if (currentEditBaseline.endsWith("Edit: ")) {
+        const addedChars = reason.length - currentEditBaseline.length;
+        if (addedChars < 10) return alert("🛡️ Audyt: Dopisz merytoryczne uzasadnienie edycji po słowie 'Edit:' (min. 10 nowych znaków).");
+    } else if (reason.length < 15) {
+        return alert("🛡️ Audyt: Uzasadnienie (notatka) musi mieć minimum 15 znaków.");
+    }
 
     const actionType = document.getElementById('nw-action-type').value;
     const tradeId = parseInt(document.getElementById('nw-trade-id').value);
