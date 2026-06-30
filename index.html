@@ -4438,10 +4438,23 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
     }
     if (!node) return '';
 
-    const progressInfo = getNodeProgress(node, maxBudgetCurrency);
+    // --- POPRAWKA WALUTOWA: Szukamy camp w cache, aby dobrać się do total_capital_pln ---
+    const currentCampRef = globalCampaignCache.find(c => c.base_trade.id === trade.id);
+    let exactMaxBudgetCurrency = maxBudgetCurrency;
+
+    if (currentCampRef) {
+        const totalCapitalPln = parseFloat(currentCampRef.total_capital_pln || 0);
+        const campaignBudgetPct = parseFloat(trade.campaign_budget_pct || 12.0);
+        // Twarde i bezpieczne przeliczenie: (Kapitał PLN * % kampanii) / Kurs FX
+        exactMaxBudgetCurrency = (totalCapitalPln * (campaignBudgetPct / 100.0)) / fxRate;
+    }
+
+    const progressInfo = getNodeProgress(node, exactMaxBudgetCurrency);
     const isExecuted = node.status === 'EXECUTED';
-    const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
-    const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, maxBudgetCurrency);
+    const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * exactMaxBudgetCurrency;
+    
+    // PNL obliczamy na bazie precyzyjnie przeliczonej waluty
+    const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, exactMaxBudgetCurrency);
     const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
     
     const childrenA = allNodes.filter(n => n.parent_node_ids && n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
