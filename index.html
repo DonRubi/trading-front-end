@@ -4501,14 +4501,40 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
 function renderCampaignTree(campaignData) {
     const container = document.getElementById('campaign-list');
     container.innerHTML = '';
-    const showOnlyActive = document.getElementById('camp-active-path-toggle').checked;
+    
+    // Zabezpieczenie przed błędem, gdyby element toggle nie istniał
+    const toggleEl = document.getElementById('camp-active-path-toggle');
+    const showOnlyActive = toggleEl ? toggleEl.checked : false;
     
     if(!campaignData || campaignData.length === 0) {
-        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryteria.</div>`;
+        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak danych kampanii.</div>`;
         return;
     }
 
-    campaignData.forEach(camp => {
+    // --- KLUCZOWA ZMIANA: Twarde filtrowanie danych przed ich narysowaniem ---
+    // Pobieramy wartość globalnego filtra (jeśli go nie zdefiniowano, domyślnie to 'open')
+    const currentFilter = (typeof currentCampaignFilter !== 'undefined' ? currentCampaignFilter : 'open').toLowerCase().trim();
+
+    const filteredData = campaignData.filter(camp => {
+        // Czytamy status transakcji bazowej z bazy danych (np. "OPEN", "CLOSED") i sprowadzamy do małych liter
+        const status = (camp.base_trade.status || 'open').toLowerCase().trim();
+        
+        // Zależnie od aktywnego przycisku, odrzucamy niepasujące kampanie
+        if (currentFilter === 'open' && status !== 'open') return false;
+        if (currentFilter === 'closed' && status !== 'closed') return false;
+        
+        return true; // Jeśli status pasuje lub wybraliśmy filtr "all", kampania zostaje
+    });
+
+    if(filteredData.length === 0) {
+        // Komunikat dostosowany do aktywnego filtra
+        const filterName = currentFilter === 'open' ? 'Otwarte' : (currentFilter === 'closed' ? 'Zamknięte' : 'Wszystkie');
+        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryterium filtra (${filterName}).</div>`;
+        return;
+    }
+
+    // Rysujemy tylko PRZEFILTROWANE kampanie
+    filteredData.forEach(camp => {
         const trade = camp.base_trade;
         const nodes = camp.graph_nodes || [];
         const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
