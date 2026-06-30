@@ -4193,29 +4193,32 @@ async function toggleWizardFields() {
         // --- Tryb WEJŚCIE / UŚREDNIANIE ---
         secAdd.style.display = 'block'; 
         secClose.style.display = 'none';
-        secMacro.style.display = 'block'; // Pokazujemy Makro/Focus przy otwieraniu
+        secMacro.style.display = 'block'; 
         await loadFormSetupsToSelect('nw-form-id', ticker, null, null);
     } else {
         // --- Tryb ZAMKNIĘCIE (TP/SL) ---
         secAdd.style.display = 'none'; 
-        secClose.style.display = 'block';
-        
-        // Ukrywamy sekcję Focus/Macro, bo przy zamykaniu jest bezużyteczna
+        secClose.style.display = 'block'; // Pokazujemy sekcję zamknięcia (Wybór transzy i cena)
         secMacro.style.display = 'none'; 
         
         secClose.style.background = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
         secClose.style.borderColor = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
         
-        // Zasilamy listę pozostałych, otwartych transz
+        // Zasilamy listę otwartych transz (np. BASE, 2A, 3A...), które można zamknąć
         populateTranchesSelect(document.getElementById('nw-trade-id').value, document.getElementById('nw-parent-id').value);
 
-        // --- NOWOŚĆ: Ukrywamy zbędne pole wyboru z Form dla TP/SL ---
+        // --- PRECYZYJNA POPRAWKA ---
+        // Ukrywamy wyłącznie samo pole wyboru ceny z modułu Form (bo paruje się automatycznie w submitWizardEdit)
         const closeFormSelect = document.getElementById('nw-close-form-id');
         if (closeFormSelect) {
+            // Ukrywamy tylko to jedno pole, a nie cały kontener sekcji zamknięcia!
             closeFormSelect.style.display = 'none';
-            // Jeśli element jest w kontenerze z etykietą, ukrywamy cały kontener
-            if (closeFormSelect.parentElement && closeFormSelect.parentElement.tagName === 'DIV') {
-                closeFormSelect.parentElement.style.display = 'none';
+            if (closeFormSelect.parentElement && closeFormSelect.parentElement.style.display !== 'none') {
+                // Jeśli etykieta i select są w osobnym divie wewnątrz sekcji, ukrywamy tylko tego diva
+                const label = closeFormSelect.parentElement.querySelector('label');
+                if (label && (label.innerText.includes('Form') || label.innerText.includes('precyzyjną'))) {
+                    closeFormSelect.parentElement.style.display = 'none';
+                }
             }
         }
     }
