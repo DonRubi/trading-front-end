@@ -3874,8 +3874,46 @@ function openCampaignPlanner(tradeId, ticker) {
     loadCampaigns();
 }
 
+// --- PANCERNE FUNKCJE POMOCNICZE DLA PLINNERA ---
+function getStrictPortfolioCapital() {
+    let totalDepositsPln = 0;
+    (window.depositsDataArray || []).forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount || 0));
+    
+    let totalClosedPnlPln = 0;
+    (window.allTradesData || []).forEach(t => {
+        if (t.status === 'CLOSED') {
+            const s = calculateTradeStats(t);
+            totalClosedPnlPln += s.profPln || 0;
+        }
+    });
+    return totalDepositsPln + totalClosedPnlPln;
+}
+
+function getSafeFxRate(trade) {
+    let fx = parseFloat(trade.buy_fx_rate);
+    const cur = trade.currency || getCurrencyForFrontend(trade.ticker);
+    
+    // Jeśli FX to 1.0, ale waluta to USD lub EUR, to znaczy że kurs nie podpiął się z bazy. Ratujemy sytuację.
+    if (isNaN(fx) || fx <= 0 || (fx === 1.0 && cur !== 'PLN')) {
+        if (cur === 'USD') return 4.0; // Bezpieczne przybliżenie, by budżet nie "wyleciał w kosmos"
+        if (cur === 'EUR') return 4.3;
+        return 1.0;
+    }
+    return fx;
+}
+
 async function loadCampaigns() {
     try {
+        // --- NOWOŚĆ: Upewniamy się, że mamy twarde dane o portfelu do precyzyjnych obliczeń ---
+        if (!window.depositsDataArray || window.depositsDataArray.length === 0) {
+            const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`);
+            window.depositsDataArray = await rD.json() || [];
+        }
+        if (!window.allTradesData || window.allTradesData.length === 0) {
+            const rT = await fetch(`${API_BASE_URL}/api/trades/entries`);
+            window.allTradesData = await rT.json() || [];
+        }
+
         const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
         const trades = await res.json();
         
@@ -3885,12 +3923,10 @@ async function loadCampaigns() {
             targetTrades = trades.filter(t => t.status === statusFilter);
         }
 
-        // Zbieramy same identyfikatory
         const tradeIds = targetTrades.map(t => t.id);
         globalCampaignCache = [];
         
         if (tradeIds.length > 0) {
-            // WYSYŁAMY JEDEN ZBIORCZY REQUEST DO SERWERA
             const campRes = await fetch(`${API_BASE_URL}/api/campaigns/bulk-graph-info`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -4268,12 +4304,12 @@ async function submitNewNode() {
     if (actionType === 'ADD_TRANCHE') {
         const reqBudget = parseFloat(document.getElementById('nw-budget').value) || 0;
         
-        // --- POPRAWKA: Prawidłowe pobranie kapitału i dzielenie przez kurs FX ---
-        const fxRate = parseFloat(camp.base_trade.buy_fx_rate || 1.0);
-        const totalCapPln = parseFloat(camp.total_capital_pln || 0);
+        const safeFxRate = getSafeFxRate(camp.base_trade);
+        const totalCapPln = getStrictPortfolioCapital();
+        const finalCapPln = totalCapPln > 0 ? totalCapPln : parseFloat(camp.total_capital_pln || 0);
         const tradeBudgetPct = parseFloat(camp.base_trade.campaign_budget_pct || 12.0);
         
-        const maxBudgetCurrency = (totalCapPln * (tradeBudgetPct / 100.0)) / fxRate;
+        const maxBudgetCurrency = (finalCapPln * (tradeBudgetPct / 100.0)) / safeFxRate;
         const baseBudgetPct = (parseFloat(camp.base_trade.spent || 0) / maxBudgetCurrency) * 100;
         
         const currentPathBudget = calculatePathBudget(parentId, currentNodes, baseBudgetPct);
@@ -4438,16 +4474,16 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
     }
     if (!node) return '';
 
-    // --- POPRAWKA WALUTOWA: Szukamy camp w cache, aby dobrać się do total_capital_pln ---
-    const currentCampRef = globalCampaignCache.find(c => c.base_trade.id === trade.id);
-    let exactMaxBudgetCurrency = maxBudgetCurrency;
-
-    if (currentCampRef) {
-        const totalCapitalPln = parseFloat(currentCampRef.total_capital_pln || 0);
+    // --- PANCERNA POPRAWKA WALUTOWA DLA WEWNĘTRZNEGO KAFELKA ---
+        const totalCapPln = getStrictPortfolioCapital();
+        const currentCampRef = globalCampaignCache.find(c => c.base_trade.id === trade.id);
+        const fallbackCap = currentCampRef ? parseFloat(currentCampRef.total_capital_pln || 0) : 0;
+        const finalCapPln = totalCapPln > 0 ? totalCapPln : fallbackCap;
+        
+        const safeFxRate = getSafeFxRate(trade); 
         const campaignBudgetPct = parseFloat(trade.campaign_budget_pct || 12.0);
-        // Twarde i bezpieczne przeliczenie: (Kapitał PLN * % kampanii) / Kurs FX
-        exactMaxBudgetCurrency = (totalCapitalPln * (campaignBudgetPct / 100.0)) / fxRate;
-    }
+        
+        const exactMaxBudgetCurrency = (finalCapPln * (campaignBudgetPct / 100.0)) / safeFxRate;
 
     const progressInfo = getNodeProgress(node, exactMaxBudgetCurrency);
     const isExecuted = node.status === 'EXECUTED';
@@ -4587,13 +4623,16 @@ function renderCampaignTree(campaignData) {
         const trade = camp.base_trade;
         const nodes = camp.graph_nodes || [];
         
-        // --- POPRAWKA: Prawidłowe wyliczanie i dzielenie przez kurs walutowy (FX) ---
-        const fxRate = parseFloat(trade.buy_fx_rate || 1.0);
-        const totalCapPln = parseFloat(camp.total_capital_pln || 0);
+        // --- PANCERNA POPRAWKA WALUTOWA ---
+        const totalCapPln = getStrictPortfolioCapital();
+        const fallbackCap = parseFloat(camp.total_capital_pln || 0);
+        const finalCapPln = totalCapPln > 0 ? totalCapPln : fallbackCap;
+        
+        const safeFxRate = getSafeFxRate(trade);
         const tradeBudgetPct = parseFloat(trade.campaign_budget_pct || 12.0);
         
-        // Wyliczamy limit w PLN, a następnie zamieniamy na walutę tickera (np. USD)
-        const maxBudgetCurrency = (totalCapPln * (tradeBudgetPct / 100.0)) / fxRate;
+        // Wyliczamy limit w PLN używając bezpiecznego kapitału, a następnie konwertujemy
+        const maxBudgetCurrency = (finalCapPln * (tradeBudgetPct / 100.0)) / safeFxRate;
         
         const activePathIds = getActivePathNodeIds(nodes);
 
@@ -4705,13 +4744,12 @@ async function submitWizardEdit() {
     if (actionType === 'ADD_TRANCHE') {
         const reqBudget = parseFloat(document.getElementById('nw-budget').value) || 0;
         
-        const fxRate = parseFloat(camp.base_trade.buy_fx_rate || 1.0);
-        
-        // --- NAPRAWA BŁĘDU: Zmiana float na parseFloat ---
+        const safeFxRate = getSafeFxRate(camp.base_trade);
+        const totalCapPln = getStrictPortfolioCapital();
+        const finalCapPln = totalCapPln > 0 ? totalCapPln : parseFloat(camp.total_capital_pln || 0);
         const tradeBudgetPct = parseFloat(camp.base_trade.campaign_budget_pct || 12.0);
-        const totalCap = parseFloat(camp.total_capital_pln || 0);
         
-        const maxBudgetCurrency = (totalCap * (tradeBudgetPct / 100.0)) / fxRate;
+        const maxBudgetCurrency = (finalCapPln * (tradeBudgetPct / 100.0)) / safeFxRate;
         const baseBudgetPct = (parseFloat(camp.base_trade.spent || 0) / maxBudgetCurrency) * 100;
         
         const nodesWithoutCurrent = currentNodes.filter(n => n.id !== currentEditingNodeUuid);
