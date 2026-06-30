@@ -4540,7 +4540,8 @@ async function openEditWizardModal(tradeId, nodeUuid) {
     const node = camp.graph_nodes.find(n => n.id === nodeUuid);
     if (!node) return;
 
-    isEditMode = true; currentEditingNodeUuid = nodeUuid;
+    isEditMode = true; 
+    currentEditingNodeUuid = nodeUuid;
     document.getElementById('nw-trade-id').value = tradeId;
     document.getElementById('nw-ticker').value = camp.base_trade.ticker;
     document.getElementById('nw-parent-id').value = (node.parent_node_ids && node.parent_node_ids.length > 0) ? node.parent_node_ids[0] : 'BASE';
@@ -4550,11 +4551,19 @@ async function openEditWizardModal(tradeId, nodeUuid) {
     document.getElementById('nw-focus').value = node.required_focus_score || 0;
     document.getElementById('nw-budget').value = node.allocated_budget_pct || 0;
     
-    // --- NOWOŚĆ: Zachowanie starej notatki + doklejenie "Edit:" ---
+    // --- POPRAWKA 1: Brak irytującego "Edit:" i obejście wymogu 15 znaków dla TP/SL ---
     const oldReason = (node.step_rationale || "").trim();
-    const prefilledText = oldReason ? oldReason + "\n\nEdit: " : "Edit: ";
+    let prefilledText = oldReason;
+    
+    if (oldReason) {
+        prefilledText += "\n\nEdit: ";
+    } else if (node.action_type !== 'ADD_TRANCHE') {
+        // Domyślny tekst dla TP/SL, spełniający limit backendu (min. 15 znaków)
+        prefilledText = `Aktualizacja parametrów dla ${node.action_type}`;
+    }
+    
     document.getElementById('nw-reason').value = prefilledText;
-    currentEditBaseline = prefilledText.trim(); // Zapisujemy bazę do późniejszej walidacji
+    currentEditBaseline = prefilledText.trim(); 
     
     const cvdDropdown = document.getElementById('nw-cvd');
     if(cvdDropdown) cvdDropdown.value = node.required_cvd_status || 'Dowolne';
@@ -4565,6 +4574,12 @@ async function openEditWizardModal(tradeId, nodeUuid) {
         if (node.action_type === 'ADD_TRANCHE') {
             selectOptionByPrice(document.getElementById('nw-form-id'), node.target_price);
         } else {
+            // --- POPRAWKA 2: Ładowanie ID formularza dla Wariantu B (TP/SL) ---
+            const closeSelect = document.getElementById('nw-close-form-id');
+            if (closeSelect && node.form_entry_id) {
+                closeSelect.value = node.form_entry_id;
+            }
+
             populateTranchesSelect(tradeId, document.getElementById('nw-parent-id').value, currentEditingNodeUuid);
             if (node.linked_tranches && node.linked_tranches.length > 0) {
                 document.getElementById('nw-tranche-select').value = node.linked_tranches[0];
@@ -4626,8 +4641,25 @@ async function submitWizardEdit() {
         
         targetPrice = autoResolve.targetPrice;
         formEntryId = autoResolve.formEntryId;
+
+        // --- PANCERNA NAPRAWA BRAKUJĄCEGO ID ---
+        // Jeśli autoResolve nie zwrócił ID, pobieramy go z węzła lub transakcji, którą zamykamy
+        if (!formEntryId) {
+            if (selectedTranche === 'BASE') {
+                // Dla pozycji bazowej pobieramy ID prosto z obiektu kampanii
+                formEntryId = camp.base_trade.form_id; 
+            } else {
+                // Dla innej transzy szukamy jej w drzewie i kopiujemy jej ID
+                const parentNode = currentNodes.find(n => n.node_id === selectedTranche);
+                if (parentNode && parentNode.form_entry_id) {
+                    formEntryId = parentNode.form_entry_id;
+                }
+            }
+        }
+        // ----------------------------------------
+
         allocatedBudgetPct = 0; requiredFocus = 0;
-    }
+     }
 
     const payload = {
         id: currentEditingNodeUuid, edit_reason: reason, action_type: actionType, 
