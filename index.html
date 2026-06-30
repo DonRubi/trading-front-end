@@ -4652,7 +4652,7 @@ function renderCampaignTree(campaignData) {
                 </div>
             </div>
             <div style="display:flex; justify-content:left; overflow-x:auto; padding:20px 0; min-width: 100%; gap:15px;">
-                ${buildTreeHTML('BASE', nodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}
+                ${buildTreeHTML('BASE', nodes, trade, maxBudgetCurrency, safeFxRate, activePathIds, showOnlyActive)}
             </div>
         `;
         container.appendChild(card);
