@@ -4589,7 +4589,7 @@ async function submitNewNode() {
         const tradeBudgetPct = parseFloat(camp.base_trade.campaign_budget_pct || 12.0);
         
         const maxBudgetCurrency = (finalCapPln * (tradeBudgetPct / 100.0)) / safeFxRate;
-        const baseBudgetPct = (parseFloat(camp.base_trade.spent || 0) / maxBudgetCurrency) * 100;
+        const baseBudgetPct = ((parseFloat(camp.base_trade.spent || 0) * parseFloat(camp.base_trade.leverage || 1)) / maxBudgetCurrency) * 100;
         
         const currentPathBudget = calculatePathBudget(parentId, currentNodes, baseBudgetPct);
         if (currentPathBudget + reqBudget > 100.1) {
@@ -4739,14 +4739,16 @@ function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activ
 
     let node;
     if (nodeId === 'BASE') {
+        const baseLeverage = parseFloat(trade.leverage || 1);
         node = { 
             id: 'BASE', 
             node_id: 'BASE', 
             action_type: 'START KAMPANII', 
             target_price: trade.buy_price, 
             status: 'EXECUTED', 
-            allocated_budget_pct: (trade.spent / maxBudgetCurrency) * 100,
-            accumulated_spent: trade.spent // Zakładamy, że pozycja bazowa jest już w całości wydana
+            // Amunicja liczona z wartości nominalnej (spent * leverage)
+            allocated_budget_pct: ((trade.spent * baseLeverage) / maxBudgetCurrency) * 100,
+            accumulated_spent: trade.spent * baseLeverage
         };
     } else {
         node = allNodes.find(n => n.node_id === nodeId);
@@ -5029,7 +5031,7 @@ async function submitWizardEdit() {
         const tradeBudgetPct = parseFloat(camp.base_trade.campaign_budget_pct || 12.0);
         
         const maxBudgetCurrency = (finalCapPln * (tradeBudgetPct / 100.0)) / safeFxRate;
-        const baseBudgetPct = (parseFloat(camp.base_trade.spent || 0) / maxBudgetCurrency) * 100;
+        const baseBudgetPct = ((parseFloat(camp.base_trade.spent || 0) * parseFloat(camp.base_trade.leverage || 1)) / maxBudgetCurrency) * 100;
         
         const nodesWithoutCurrent = currentNodes.filter(n => n.id !== currentEditingNodeUuid);
         const pathBudgetWithoutThis = calculatePathBudget(parentId, nodesWithoutCurrent, baseBudgetPct);
