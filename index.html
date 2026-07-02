@@ -791,14 +791,19 @@
             </div>
         </div>
         <div id="tab-fvg" class="tab-content">
-            <div class="journal-container">
-                <div class="journal-sidebar">
+            <div class="journal-sidebar">
                     <h4 style="color: var(--accent); margin-bottom: 15px;">Kwalifikator FVG (Quant)</h4>
                     <form onsubmit="fetchFvgData(event)">
+                        <div class="form-group">
+                            <label>Wybierz Setup (ID Form - Opcjonalne do konfrontacji)</label>
+                            <select id="fvg-form-select" onchange="onFvgFormSelectChange()" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; margin-bottom:12px;">
+                                <option value="">-- Wpisz ticker, aby załadować setupy --</option>
+                            </select>
+                        </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Ticker (np. AAPL lub GPW:CDR)</label>
-                                <input type="text" id="fvg-ticker" placeholder="Wpisz ticker..." required>
+                                <label>Ticker (Auto lub z palca)</label>
+                                <input type="text" id="fvg-ticker" placeholder="Wpisz ticker..." required oninput="loadFvgFormDropdown()">
                             </div>
                         </div>
                         <div class="form-row">
@@ -3680,10 +3685,76 @@ async function handleTradeAutomation(tradeId, tradeData) {
     // ==========================================
     let currentFvgContext = {};
     let currentFvgTicker = "";
+    let selectedFvgSetupData = null; // Przechowa dane wybranego ID Form do wysyłki do AI
+
+    // Funkcja ładująca ID Form do dropdownu na podstawie wpisywanego tekstu
+    async function loadFvgFormDropdown() {
+        const ticker = document.getElementById('fvg-ticker').value.trim().toUpperCase();
+        const select = document.getElementById('fvg-form-select');
+        if(!select) return;
+
+        if(!ticker) {
+            select.innerHTML = '<option value="">-- Wpisz ticker, aby załadować setupy --</option>';
+            return;
+        }
+
+        if (!window.formEntries || window.formEntries.length === 0) {
+            try { 
+                const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
+                window.formEntries = await res.json() || []; 
+            } catch(e) {}
+        }
+
+        // Szukamy aktywnych, niewyciszonych setupów dla danej spółki
+        const setups = (window.formEntries || []).filter(f => f.ticker === ticker && f.mute !== 1 && f.mute !== "1" && f.mute !== true);
+
+        if(setups.length === 0) {
+            select.innerHTML = '<option value="">Brak aktywnych stref Form dla tego tickera</option>';
+            selectedFvgSetupData = null;
+            return;
+        }
+
+        select.innerHTML = '<option value="">-- Wybierz ID Form do konfrontacji (Opcjonalnie) --</option>';
+        setups.forEach(f => {
+            select.innerHTML += `<option value="${f.entry_id}">ID: ${f.entry_id} | Setup: ${f.setup_name || 'Brak'} (WE: ${parseFloat(f.entry_point).toFixed(2)}$)</option>`;
+        });
+    }
+
+    // Wywołanie, gdy ręcznie wybierzesz pozycję z listy
+    function onFvgFormSelectChange() {
+        const entryId = document.getElementById('fvg-form-select').value;
+        if(!entryId) {
+            selectedFvgSetupData = null;
+            return;
+        }
+        const setup = window.formEntries.find(f => f.entry_id === entryId);
+        if(setup) {
+            selectedFvgSetupData = {
+                entry_id: setup.entry_id,
+                entry_price: parseFloat(setup.entry_point || 0),
+                take_profit: parseFloat(setup.take_profit || 0),
+                stop_loss: parseFloat(setup.stop_loss || 0)
+            };
+        }
+    }
+
+    // Rozszerzenie funkcji przełączania zakładek, aby przy otwarciu ładowała listę (jeśli wpisano ticker w Focus)
+    const origSwitchTechTab = window.switchTechTab;
+    window.switchTechTab = function(tab) {
+        if(typeof origSwitchTechTab === 'function') origSwitchTechTab(tab);
+        if(tab === 'fvg') {
+            // Spróbujmy podpowiedzieć ticker, jeśli jakiś jest już wpisany w kreatorach
+            const activeTicker = document.getElementById('form-ticker')?.value || document.getElementById('focus-ticker')?.value || "";
+            if(activeTicker && !document.getElementById('fvg-ticker').value) {
+                document.getElementById('fvg-ticker').value = activeTicker;
+            }
+            loadFvgFormDropdown();
+        }
+    }
 
     async function fetchFvgData(e) {
         e.preventDefault();
-        const ticker = document.getElementById('fvg-ticker').value.trim();
+        const ticker = document.getElementById('fvg-ticker').value.trim().toUpperCase();
         const date = document.getElementById('fvg-date').value;
         const timeframe = document.getElementById('fvg-timeframe').value;
         const btn = document.getElementById('btn-fvg-fetch');
@@ -3711,7 +3782,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
             }
         } catch (err) {
             console.error(err);
-            alert("Błąd połączenia z serwerem. Sprawdź czy backend działa.");
+            alert("Błąd połączenia z serwerem.");
         } finally {
             btn.innerText = origText; btn.disabled = false;
         }
@@ -3720,13 +3791,10 @@ async function handleTradeAutomation(tradeId, tradeData) {
     function renderFvgTable(candles) {
         const tbody = document.getElementById('fvg-candles-tbody');
         tbody.innerHTML = '';
-        
         const inputStyle = 'width: 80px; padding: 6px; background: #11111b; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; text-align: center; font-size: 0.9em; outline: none;';
         
         candles.forEach((c, idx) => {
-            // Kolorujemy etykietę dla Świecy D0 (FVG)
             const labelColor = c.label.includes('0') ? 'var(--success)' : 'var(--accent)';
-            
             tbody.innerHTML += `
                 <tr data-label="${c.label}" data-date="${c.date}" data-volume="${c.volume}">
                     <td style="font-weight:bold; color:${labelColor}; font-size: 1.1em;">${c.label}</td>
@@ -3740,6 +3808,35 @@ async function handleTradeAutomation(tradeId, tradeData) {
             `;
         });
     }
+
+    async function analyzeFvgData() {
+        const tbody = document.getElementById('fvg-candles-tbody');
+        const rows = tbody.querySelectorAll('tr');
+        const editedCandles = [];
+        
+        rows.forEach(tr => {
+            editedCandles.push({
+                label: tr.getAttribute('data-label'),
+                date: tr.getAttribute('data-date'),
+                volume: parseFloat(tr.getAttribute('data-volume')),
+                open: parseFloat(tr.querySelector('.fvg-input-open').value),
+                high: parseFloat(tr.querySelector('.fvg-input-high').value),
+                low: parseFloat(tr.querySelector('.fvg-input-low').value),
+                close: parseFloat(tr.querySelector('.fvg-input-close').value)
+            });
+        });
+
+        const btn = document.getElementById('btn-fvg-analyze');
+        const origText = btn.innerHTML;
+        btn.innerHTML = "⏳ AI syntetyzuje dane..."; btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/ta/fvg/analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticker: currentFvgTicker,
+                    candles
 
     async function analyzeFvgData() {
         const tbody = document.getElementById('fvg-candles-tbody');
