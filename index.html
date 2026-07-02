@@ -844,14 +844,18 @@
                     <div id="fvg-results-container" style="display:none; margin-top: 20px;">
                         <h4 style="margin-bottom: 15px; color: var(--accent);">Werdykt Instytucjonalny (AI Quant)</h4>
                         
-                        <div class="kpi-grid">
-                            <div class="kpi-card" style="border: 1px solid var(--border-color);">
-                                <h4 style="color:var(--text-muted);">Status Formacji</h4>
+                        <div class="kpi-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px;">
+                                <h4 style="color:var(--text-muted); font-size:0.85em; margin-bottom:8px;">Status Formacji</h4>
                                 <div class="value" id="fvg-res-status" style="font-size:1.1rem; font-weight:bold;">-</div>
                             </div>
-                            <div class="kpi-card" style="grid-column: span 2; border: 1px solid var(--border-color);">
-                                <h4 style="color:var(--text-muted);">Zgodność z Makro (HTF)</h4>
+                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px;">
+                                <h4 style="color:var(--text-muted); font-size:0.85em; margin-bottom:8px;">Makro (HTF)</h4>
                                 <div class="value" id="fvg-res-trend" style="font-size:1rem;">-</div>
+                            </div>
+                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px; background: rgba(201, 148, 0, 0.05);">
+                                <h4 style="color:var(--accent); font-size:0.85em; margin-bottom:8px;">Relatywna Siła (Sektor)</h4>
+                                <div class="value" id="fvg-res-sector" style="font-size:0.95rem;">-</div>
                             </div>
                         </div>
                         
@@ -3895,7 +3899,6 @@ async function handleTradeAutomation(tradeId, tradeData) {
 
     function displayFvgResults(ai) {
         document.getElementById('fvg-results-container').style.display = 'block';
-        
         const statusEl = document.getElementById('fvg-res-status');
         const statusText = ai.fvg_status || 'Brak werdyktu';
         statusEl.innerText = statusText;
@@ -3905,8 +3908,11 @@ async function handleTradeAutomation(tradeId, tradeData) {
         else statusEl.style.color = '#fcd535';
 
         document.getElementById('fvg-res-trend').innerText = ai.trend_alignment || 'Brak oceny';
+        document.getElementById('fvg-res-sector').innerText = ai.sector_strength || 'Brak danych z ETF';
+        
         document.getElementById('fvg-res-footprint').innerHTML = (ai.institutional_footprint || '-').replace(/\n/g, '<br>');
-        document.getElementById('fvg-res-momentum').innerHTML = (ai.momentum_and_volume || '-').replace(/\n/g, '<br>');
+        // Ważna zmiana klucza na swing_viability
+        document.getElementById('fvg-res-momentum').innerHTML = (ai.swing_viability || '-').replace(/\n/g, '<br>'); 
         document.getElementById('fvg-res-tactics').innerHTML = (ai.dca_tactics || '-').replace(/\n/g, '<br>');
         
         document.getElementById('fvg-results-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
