@@ -682,6 +682,7 @@
             <button class="tab-btn active" onclick="switchTechTab('harmonics')">XABCD</button>
             <button class="tab-btn" onclick="switchTechTab('elliott')">Fale Elliotta</button>
             <button class="tab-btn" onclick="switchTechTab('rgr')">RGR / oRGR</button>
+            <button class="tab-btn" onclick="switchTechTab('fvg')">Analiza FVG (SMC)</button>
         </div>
 
         <div id="tab-harmonics" class="tab-content active">
@@ -785,6 +786,84 @@
                         <div class="kpi-card"><h4>Kąt Linii Szyi</h4><div class="value" id="rgr-angle" style="color:#89b4fa;">-</div></div>
                         <div class="kpi-card"><h4>Wysokość Głowy</h4><div class="value" id="rgr-height" style="color:var(--text-main);">-</div></div>
                         <div class="kpi-card"><h4>Zasięg (TP)</h4><div class="value" id="rgr-target" style="color:var(--accent);">-</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tab-fvg" class="tab-content">
+            <div class="journal-container">
+                <div class="journal-sidebar">
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Kwalifikator FVG (Quant)</h4>
+                    <form onsubmit="fetchFvgData(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Ticker (np. AAPL lub GPW:CDR)</label>
+                                <input type="text" id="fvg-ticker" placeholder="Wpisz ticker..." required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Data FVG (Świeca D0)</label>
+                                <input type="date" id="fvg-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Interwał Bazowy</label>
+                                <select id="fvg-timeframe">
+                                    <option value="1d">Dzienny (D1)</option>
+                                    <option value="1wk">Tygodniowy (W1)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-submit" id="btn-fvg-fetch" style="background: var(--accent); color:#000;">1. Pobierz Struktury z Yahoo</button>
+                    </form>
+                </div>
+                
+                <div class="journal-main">
+                    <div id="fvg-data-container" style="display:none; background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                        <h4 style="margin-bottom: 15px; color:var(--text-main);">Pobrana sekwencja (Sprawdź i ewentualnie popraw knoty):</h4>
+                        <div class="table-responsive" style="margin-bottom: 15px;">
+                            <table class="macro-custom-table" id="fvg-candles-table">
+                                <thead>
+                                    <tr>
+                                        <th>Świeca</th><th>Data</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Wolumen</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fvg-candles-tbody"></tbody>
+                            </table>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end;">
+                            <button onclick="analyzeFvgData()" class="btn-submit" id="btn-fvg-analyze" style="background: var(--success); color:#fff; width: auto; padding: 12px 25px; border-radius: 6px; box-shadow: 0 0 10px rgba(14,203,129,0.3);">🤖 2. Analizuj Order Flow przez AI</button>
+                        </div>
+                    </div>
+
+                    <div id="fvg-results-container" style="display:none; margin-top: 20px;">
+                        <h4 style="margin-bottom: 15px; color: var(--accent);">Werdykt Instytucjonalny (AI Quant)</h4>
+                        
+                        <div class="kpi-grid">
+                            <div class="kpi-card" style="border: 1px solid var(--border-color);">
+                                <h4 style="color:var(--text-muted);">Status Formacji</h4>
+                                <div class="value" id="fvg-res-status" style="font-size:1.1rem; font-weight:bold;">-</div>
+                            </div>
+                            <div class="kpi-card" style="grid-column: span 2; border: 1px solid var(--border-color);">
+                                <h4 style="color:var(--text-muted);">Zgodność z Makro (HTF)</h4>
+                                <div class="value" id="fvg-res-trend" style="font-size:1rem;">-</div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                            <h4 style="color:#89b4fa; margin-bottom: 5px;">Ślad Instytucjonalny (Point of Origin)</h4>
+                            <p id="fvg-res-footprint" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
+                        </div>
+                        
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                            <h4 style="color:#fcd535; margin-bottom: 5px;">Momentum i Wynik CVD</h4>
+                            <p id="fvg-res-momentum" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
+                        </div>
+                        
+                        <div style="background: rgba(14,203,129,0.05); border: 1px solid var(--success); padding: 15px; border-radius: 12px;">
+                            <h4 style="color:var(--success); margin-bottom: 5px;">Instrukcje Rozegrania (DCA)</h4>
+                            <p id="fvg-res-tactics" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3594,6 +3673,137 @@ async function handleTradeAutomation(tradeId, tradeData) {
         } catch (e) {
             console.error("Błąd połączenia:", e);
         }
+    }
+
+    // ==========================================
+    //    MODUŁ FVG QUANT (SMART MONEY CONCEPTS)
+    // ==========================================
+    let currentFvgContext = {};
+    let currentFvgTicker = "";
+
+    async function fetchFvgData(e) {
+        e.preventDefault();
+        const ticker = document.getElementById('fvg-ticker').value.trim();
+        const date = document.getElementById('fvg-date').value;
+        const timeframe = document.getElementById('fvg-timeframe').value;
+        const btn = document.getElementById('btn-fvg-fetch');
+        
+        const origText = btn.innerText;
+        btn.innerText = "⏳ Pobieranie algorytmiki..."; btn.disabled = true;
+        document.getElementById('fvg-data-container').style.display = 'none';
+        document.getElementById('fvg-results-container').style.display = 'none';
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/ta/fvg/fetch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticker, date, timeframe })
+            });
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                currentFvgContext = data.context;
+                currentFvgTicker = ticker;
+                renderFvgTable(data.candles);
+                document.getElementById('fvg-data-container').style.display = 'block';
+            } else {
+                alert("Błąd: " + data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Błąd połączenia z serwerem. Sprawdź czy backend działa.");
+        } finally {
+            btn.innerText = origText; btn.disabled = false;
+        }
+    }
+
+    function renderFvgTable(candles) {
+        const tbody = document.getElementById('fvg-candles-tbody');
+        tbody.innerHTML = '';
+        
+        const inputStyle = 'width: 80px; padding: 6px; background: #11111b; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; text-align: center; font-size: 0.9em; outline: none;';
+        
+        candles.forEach((c, idx) => {
+            // Kolorujemy etykietę dla Świecy D0 (FVG)
+            const labelColor = c.label.includes('0') ? 'var(--success)' : 'var(--accent)';
+            
+            tbody.innerHTML += `
+                <tr data-label="${c.label}" data-date="${c.date}" data-volume="${c.volume}">
+                    <td style="font-weight:bold; color:${labelColor}; font-size: 1.1em;">${c.label}</td>
+                    <td style="color:var(--text-muted);">${c.date}</td>
+                    <td><input type="number" step="0.0001" class="fvg-input-open" value="${c.open}" style="${inputStyle}"></td>
+                    <td><input type="number" step="0.0001" class="fvg-input-high" value="${c.high}" style="${inputStyle}"></td>
+                    <td><input type="number" step="0.0001" class="fvg-input-low" value="${c.low}" style="${inputStyle}"></td>
+                    <td><input type="number" step="0.0001" class="fvg-input-close" value="${c.close}" style="${inputStyle}"></td>
+                    <td style="color:var(--text-muted); text-align:right;">${(c.volume / 1000).toFixed(1)}k</td>
+                </tr>
+            `;
+        });
+    }
+
+    async function analyzeFvgData() {
+        const tbody = document.getElementById('fvg-candles-tbody');
+        const rows = tbody.querySelectorAll('tr');
+        const editedCandles = [];
+        
+        rows.forEach(tr => {
+            editedCandles.push({
+                label: tr.getAttribute('data-label'),
+                date: tr.getAttribute('data-date'),
+                volume: parseFloat(tr.getAttribute('data-volume')),
+                open: parseFloat(tr.querySelector('.fvg-input-open').value),
+                high: parseFloat(tr.querySelector('.fvg-input-high').value),
+                low: parseFloat(tr.querySelector('.fvg-input-low').value),
+                close: parseFloat(tr.querySelector('.fvg-input-close').value)
+            });
+        });
+
+        const btn = document.getElementById('btn-fvg-analyze');
+        const origText = btn.innerHTML;
+        btn.innerHTML = "⏳ AI syntetyzuje dane..."; btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/ta/fvg/analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticker: currentFvgTicker,
+                    candles: editedCandles,
+                    context: currentFvgContext
+                })
+            });
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                displayFvgResults(data.analysis);
+            } else {
+                alert("Błąd analizy: " + data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Błąd połączenia z serwerem AI.");
+        } finally {
+            btn.innerHTML = origText; btn.disabled = false;
+        }
+    }
+
+    function displayFvgResults(ai) {
+        document.getElementById('fvg-results-container').style.display = 'block';
+        
+        const statusEl = document.getElementById('fvg-res-status');
+        const statusText = ai.fvg_status || 'Brak werdyktu';
+        statusEl.innerText = statusText;
+        
+        if (statusText.toUpperCase().includes('POTWIERDZON')) statusEl.style.color = 'var(--success)';
+        else if (statusText.toUpperCase().includes('ZANEGOWAN')) statusEl.style.color = 'var(--danger)';
+        else statusEl.style.color = '#fcd535';
+
+        document.getElementById('fvg-res-trend').innerText = ai.trend_alignment || 'Brak oceny';
+        document.getElementById('fvg-res-footprint').innerHTML = (ai.institutional_footprint || '-').replace(/\n/g, '<br>');
+        document.getElementById('fvg-res-momentum').innerHTML = (ai.momentum_and_volume || '-').replace(/\n/g, '<br>');
+        document.getElementById('fvg-res-tactics').innerHTML = (ai.dca_tactics || '-').replace(/\n/g, '<br>');
+        
+        document.getElementById('fvg-results-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     window.toggleFocusGroup = function(cleanTicker) {
