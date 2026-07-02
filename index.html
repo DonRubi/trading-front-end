@@ -3836,37 +3836,9 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ticker: currentFvgTicker,
-                    candles
-
-    async function analyzeFvgData() {
-        const tbody = document.getElementById('fvg-candles-tbody');
-        const rows = tbody.querySelectorAll('tr');
-        const editedCandles = [];
-        
-        rows.forEach(tr => {
-            editedCandles.push({
-                label: tr.getAttribute('data-label'),
-                date: tr.getAttribute('data-date'),
-                volume: parseFloat(tr.getAttribute('data-volume')),
-                open: parseFloat(tr.querySelector('.fvg-input-open').value),
-                high: parseFloat(tr.querySelector('.fvg-input-high').value),
-                low: parseFloat(tr.querySelector('.fvg-input-low').value),
-                close: parseFloat(tr.querySelector('.fvg-input-close').value)
-            });
-        });
-
-        const btn = document.getElementById('btn-fvg-analyze');
-        const origText = btn.innerHTML;
-        btn.innerHTML = "⏳ AI syntetyzuje dane..."; btn.disabled = true;
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/ta/fvg/analyze`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ticker: currentFvgTicker,
                     candles: editedCandles,
-                    context: currentFvgContext
+                    context: currentFvgContext,
+                    user_setup: selectedFvgSetupData // Przesyłamy ID Formularza!
                 })
             });
             const data = await res.json();
