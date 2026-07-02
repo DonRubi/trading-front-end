@@ -5004,7 +5004,7 @@ async function openEditWizardModal(tradeId, nodeUuid) {
 async function submitWizardEdit() {
     const reason = document.getElementById('nw-reason').value.trim();
     
-    // --- NOWOŚĆ: Blokada audytu działa tylko, gdy faktycznie dopisujemy po słowie "Edit: " ---
+    // --- BLOKADA AUDYTU ---
     if (currentEditBaseline.endsWith("Edit: ")) {
         const addedChars = reason.length - currentEditBaseline.length;
         if (addedChars < 10) return alert("🛡️ Audyt: Dopisz merytoryczne uzasadnienie edycji po słowie 'Edit:' (min. 10 nowych znaków).");
@@ -5031,6 +5031,8 @@ async function submitWizardEdit() {
         const tradeBudgetPct = parseFloat(camp.base_trade.campaign_budget_pct || 12.0);
         
         const maxBudgetCurrency = (finalCapPln * (tradeBudgetPct / 100.0)) / safeFxRate;
+        
+        // TWOJA POPRAWKA: uwzględnienie dźwigni w pozycji bazowej
         const baseBudgetPct = ((parseFloat(camp.base_trade.spent || 0) * parseFloat(camp.base_trade.leverage || 1)) / maxBudgetCurrency) * 100;
         
         const nodesWithoutCurrent = currentNodes.filter(n => n.id !== currentEditingNodeUuid);
@@ -5055,43 +5057,53 @@ async function submitWizardEdit() {
         targetPrice = autoResolve.targetPrice;
         formEntryId = autoResolve.formEntryId;
 
-        // --- PANCERNA NAPRAWA BRAKUJĄCEGO ID ---
-        // Jeśli autoResolve nie zwrócił ID, pobieramy go z węzła lub transakcji, którą zamykamy
         if (!formEntryId) {
             if (selectedTranche === 'BASE') {
-                // Dla pozycji bazowej pobieramy ID prosto z obiektu kampanii
                 formEntryId = camp.base_trade.form_id; 
             } else {
-                // Dla innej transzy szukamy jej w drzewie i kopiujemy jej ID
                 const parentNode = currentNodes.find(n => n.node_id === selectedTranche);
                 if (parentNode && parentNode.form_entry_id) {
                     formEntryId = parentNode.form_entry_id;
                 }
             }
         }
-        // ----------------------------------------
-
         allocatedBudgetPct = 0; requiredFocus = 0;
-     }
+    }
 
-    const payload = {
-        id: currentEditingNodeUuid, edit_reason: reason, action_type: actionType, 
-        delete_descendants: false, target_price: targetPrice, form_entry_id: formEntryId,
-        allocated_budget_pct: allocatedBudgetPct, linked_tranches: linkedTranches,
-        required_focus_score: requiredFocus,
-        required_cvd_status: actionType === 'ADD_TRANCHE' ? (document.getElementById('nw-cvd')?.value || 'Dowolne') : 'Dowolne'
-    };
+    // --- ZAMIAST WOŁAĆ /EDIT-NODE, AKTUALIZUJEMY TABLICĘ W PAMIĘCI I WOŁAMY /SAVE-GRAPH ---
+    let targetNodeIndex = currentNodes.findIndex(n => n.id === currentEditingNodeUuid);
+    if (targetNodeIndex === -1) return alert("Nie znaleziono węzła do edycji.");
+
+    currentNodes[targetNodeIndex].action_type = actionType;
+    currentNodes[targetNodeIndex].target_price = targetPrice;
+    currentNodes[targetNodeIndex].form_entry_id = formEntryId;
+    currentNodes[targetNodeIndex].allocated_budget_pct = allocatedBudgetPct;
+    currentNodes[targetNodeIndex].linked_tranches = linkedTranches;
+    currentNodes[targetNodeIndex].required_focus_score = requiredFocus;
+    currentNodes[targetNodeIndex].required_cvd_status = actionType === 'ADD_TRANCHE' ? (document.getElementById('nw-cvd')?.value || 'Dowolne') : 'Dowolne';
+    currentNodes[targetNodeIndex].step_rationale = reason; 
 
     const btn = document.getElementById('btn-save-wizard');
     btn.innerHTML = "⏳ Aktualizacja..."; btn.disabled = true;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes }) 
+        });
         const data = await res.json();
         if (data.status === 'success') {
-            document.getElementById('node-wizard-modal').style.display = 'none'; resetWizardToDefaultMode(); loadCampaigns(); 
+            document.getElementById('node-wizard-modal').style.display = 'none'; 
+            resetWizardToDefaultMode(); 
+            loadCampaigns(); 
         } else alert(data.message);
-    } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
+    } catch(e) { 
+        alert("Błąd połączenia."); 
+    } finally { 
+        btn.innerHTML = "Zapisz Krok"; 
+        btn.disabled = false; 
+    }
 }
 
 function selectOptionByPrice(selectElement, price) {
@@ -5149,11 +5161,13 @@ async function deleteCampaignNode(tradeId, nodeUuid, nodeIdStr) {
 
     try {
         if (deleteDescendantsFlag) {
-            await fetch(`${API_BASE_URL}/api/campaigns/edit-node`, {
-                method: "POST", headers: { "Content-Type": "application/json" }, 
-                body: JSON.stringify({ id: nodeUuid, edit_reason: "USUWANIE KASKADOWE", delete_descendants: true, target_price: 0 })
+            // --- ZAMIAST WOŁAĆ /EDIT-NODE, FILTRUJEMY TABLICĘ W PAMIĘCI I WOŁAMY /SAVE-GRAPH ---
+            const updatedNodes = nodes.filter(n => !(n.node_id.startsWith(nodeIdStr)));
+            
+            await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ trade_id: camp.base_trade.id, nodes: updatedNodes })
             });
-            await deleteSingleNodeDirect(nodeUuid);
         } else {
             await deleteSingleNodeDirect(nodeUuid);
         }
