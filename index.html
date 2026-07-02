@@ -3283,7 +3283,44 @@ async function handleTradeAutomation(tradeId, tradeData) {
         }
 
         // --- Utils ---
-        function getTradingViewLink(ticker) { if (!ticker) return '#'; const cleanTicker = String(ticker).trim().toUpperCase(); const LAYOUT_ID = 'k5llKflB'; const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/'; if (cleanTicker.includes(':')) { return `${baseUrl}?symbol=${encodeURIComponent(cleanTicker)}`; } const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ']; const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA']; let exchange = ''; if (nasdaqTickers.includes(cleanTicker)) { exchange = 'NASDAQ:'; } else if (nyseTickers.includes(cleanTicker)) { exchange = 'NYSE:'; } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { exchange = 'BINANCE:'; } return `${baseUrl}?symbol=${encodeURIComponent(exchange + cleanTicker)}`; }
+        function getTradingViewLink(ticker) { 
+            if (!ticker) return '#'; 
+            const cleanTicker = String(ticker).trim().toUpperCase(); 
+            
+            const nasdaqTickers = ['AAPL', 'TSLA', 'MSFT', 'AMZN', 'NVDA', 'META', 'GOOGL', 'GOOG', 'NFLX', 'AMD', 'INTC', 'QQQ']; 
+            const nyseTickers = ['SPY', 'BRK.A', 'BRK.B', 'DIS', 'NIO', 'BABA', 'AMC', 'GME', 'JPM', 'V', 'MA']; 
+            
+            let exchange = ''; 
+            let rawTicker = cleanTicker;
+
+            // Wyciągamy giełdę, jeśli została jawnie podana (np. GPW:CDR)
+            if (cleanTicker.includes(':')) { 
+                const parts = cleanTicker.split(':');
+                exchange = parts[0];
+                rawTicker = parts[1];
+            } else if (nasdaqTickers.includes(cleanTicker)) { 
+                exchange = 'NASDAQ'; 
+            } else if (nyseTickers.includes(cleanTicker)) { 
+                exchange = 'NYSE'; 
+            } else if (cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BTC') || cleanTicker.endsWith('ETH')) { 
+                exchange = 'BINANCE'; 
+            } 
+
+            // Sprawdzamy czy to urządzenie mobilne (User-Agent dla telefonów lub wąski ekran)
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+            if (isMobile) {
+                // WERSJA MOBILNA: https://www.tradingview.com/symbols/NASDAQ-AAPL/
+                const mobilePath = exchange ? `${exchange}-${rawTicker}` : rawTicker;
+                return `https://www.tradingview.com/symbols/${encodeURIComponent(mobilePath)}/`;
+            } else {
+                // WERSJA DESKTOP: Twój widok wykresu
+                const LAYOUT_ID = 'k5llKflB'; 
+                const baseUrl = LAYOUT_ID ? `https://www.tradingview.com/chart/${LAYOUT_ID}/` : 'https://www.tradingview.com/chart/'; 
+                const desktopQuery = exchange ? `${exchange}:${rawTicker}` : rawTicker;
+                return `${baseUrl}?symbol=${encodeURIComponent(desktopQuery)}`; 
+            }
+        }
         function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = String(ticker).toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
         function calculateTradeStats(item) { try { const isClosed = (item.status === 'CLOSED' || item.sell_date != null); const mod = ['DBR','RBR'].includes(item.direction) ? 1 : -1; const tm = tickerDataArray.find(t => t.ticker === item.ticker); const buyPrice = parseFloat(item.buy_price) || 0; let cp = buyPrice; if (isClosed && item.sell_price) { cp = parseFloat(item.sell_price); } else if (tm && tm.price) { cp = parseFloat(tm.price); } const spent = parseFloat(item.spent) || 0; const lev = parseInt(item.leverage) || 1; const val = spent * lev; const cfdCost = parseFloat(item.cfd_cost) || 0; const div = parseFloat(item.dividend) || 0; let prof = 0; if (buyPrice !== 0) { prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; } const usedFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1)); const profPln = prof * usedFx; const valPln = val * usedFx; const tp = parseFloat(item.tp) || 0; const sl = parseFloat(item.sl) || 0; let rr = 0; if (buyPrice - sl !== 0) { rr = ((tp - buyPrice) * mod) / ((buyPrice - sl) * mod); } let prog = 0; if (tp - buyPrice !== 0) { prog = ((cp - buyPrice) * mod) / ((tp - buyPrice) * mod); } let dsl = sl; if (prog >= 1) dsl = tp; else if (prog >= 0.5) dsl = buyPrice + ((tp - buyPrice) * (prog - 0.2)); let pd = prog * 100; let pc = 'var(--success)'; if (pd < 0) { pc = 'var(--danger)'; if (buyPrice - sl !== 0) { pd = Math.abs(((cp - buyPrice) * mod) / ((buyPrice - sl) * mod)) * 100; } else { pd = 0; } } if (pd > 100) pd = 100; return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln: spent * usedFx }; } catch (error) { return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0 }; } }
 
