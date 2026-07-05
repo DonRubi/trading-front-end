@@ -683,6 +683,7 @@
             <button class="tab-btn" onclick="switchTechTab('elliott')">Fale Elliotta</button>
             <button class="tab-btn" onclick="switchTechTab('rgr')">RGR / oRGR</button>
             <button class="tab-btn" onclick="switchTechTab('fvg')">Analiza FVG (SMC)</button>
+            <button class="tab-btn" onclick="switchTechTab('structure')">Struktury (OPD/OPS)</button>
         </div>
 
         <div id="tab-harmonics" class="tab-content active">
@@ -876,6 +877,87 @@
                     </div>
                 </div>
             </div>
+        <div id="tab-structure" class="tab-content" style="display:none;">
+            <div class="journal-container">
+                <div class="journal-sidebar">
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Kwalifikator Stref (OPD/OPS)</h4>
+                    <form onsubmit="fetchStructureData(event)">
+                        <div class="form-group">
+                            <label>Wybierz Setup (ID Form - Opcjonalne do konfrontacji)</label>
+                            <select id="struct-form-select" onchange="onStructureFormSelectChange()" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; margin-bottom:12px;">
+                                <option value="">-- Wpisz ticker, aby załadować setupy --</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Ticker</label>
+                                <input type="text" id="struct-ticker" placeholder="np. AAPL" required oninput="loadStructureFormDropdown()">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Data Powstania OPD/OPS</label>
+                                <input type="date" id="struct-date" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label style="color: var(--text-muted);">Data Retestu / S-R Flip (Opcjonalnie)</label>
+                            <input type="date" id="struct-flip-date">
+                        </div>
+                        
+                        <button type="submit" class="btn-submit" id="btn-struct-fetch" style="background: var(--accent); color:#000; margin-top: 15px;">1. Pobierz Strefę z Yahoo</button>
+                    </form>
+                </div>
+                
+                <div class="journal-main">
+                    <div id="struct-data-container" style="display:none; background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="color:var(--text-main);">Świece budujące Strefę (Origin):</h4>
+                            <span id="struct-zone-bounds" style="background: rgba(201, 148, 0, 0.1); border: 1px solid var(--accent); padding: 5px 10px; border-radius: 4px; font-size: 0.85em; color: var(--accent);"></span>
+                        </div>
+                        
+                        <div class="table-responsive" style="margin-bottom: 15px;">
+                            <table class="macro-custom-table" id="struct-candles-table">
+                                <thead>
+                                    <tr>
+                                        <th>Świeca</th><th>Data</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Wolumen</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="struct-candles-tbody"></tbody>
+                            </table>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end;">
+                            <button onclick="analyzeStructureData()" class="btn-submit" id="btn-struct-analyze" style="background: var(--success); color:#fff; width: auto; padding: 12px 25px; border-radius: 6px; box-shadow: 0 0 10px rgba(14,203,129,0.3);">🤖 2. Analizuj Strefę Popytu/Podaży</button>
+                        </div>
+                    </div>
+
+                    <div id="struct-results-container" style="display:none; margin-top: 20px;">
+                        <h4 style="margin-bottom: 15px; color: var(--accent);">Werdykt Instytucjonalny (Struktura)</h4>
+                        
+                        <div class="kpi-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px;">
+                                <h4 style="color:var(--text-muted); font-size:0.85em; margin-bottom:8px;">Ważność Struktury</h4>
+                                <div class="value" id="struct-res-validity" style="font-size:1.1rem; font-weight:bold;">-</div>
+                            </div>
+                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px;">
+                                <h4 style="color:var(--text-muted); font-size:0.85em; margin-bottom:8px;">Horyzont Swingowy (Makro)</h4>
+                                <div class="value" id="struct-res-swing" style="font-size:0.95rem;">-</div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                            <h4 style="color:#89b4fa; margin-bottom: 5px;">Mechanika Strefy i Wolumen</h4>
+                            <p id="struct-res-mechanics" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
+                        </div>
+                        
+                        <div style="background: rgba(14,203,129,0.05); border: 1px solid var(--success); padding: 15px; border-radius: 12px;">
+                            <h4 style="color:var(--success); margin-bottom: 5px;">Instrukcje Rozegrania (DCA & Invalidation)</h4>
+                            <p id="struct-res-dca" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         </div>
     </section>
 
@@ -5391,6 +5473,187 @@ function goToFocusFromNode(tradeId, formEntryId, nodeId) {
         }, 200); // 200ms opóźnienia, aby skrypt zdążył załadować listę z Tickerem
     }, 150); // 150ms opóźnienia na animację zmiany zakładek
 }
+
+    // ==========================================
+    // MODUŁ STRUKTURY (OPD/OPS & S-R FLIP)
+    // ==========================================
+    let currentStructContext = {};
+    let currentStructTicker = "";
+    let selectedStructSetupData = null;
+
+    async function loadStructureFormDropdown() {
+        const ticker = document.getElementById('struct-ticker').value.trim().toUpperCase();
+        const select = document.getElementById('struct-form-select');
+        if(!select) return;
+
+        if(!ticker) {
+            select.innerHTML = '<option value="">-- Wpisz ticker, aby załadować setupy --</option>';
+            return;
+        }
+
+        if (!window.formEntries || window.formEntries.length === 0) {
+            try { 
+                const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
+                window.formEntries = await res.json() || []; 
+            } catch(e) {}
+        }
+
+        const setups = (window.formEntries || []).filter(f => f.ticker === ticker && f.mute !== 1 && f.mute !== "1" && f.mute !== true);
+        if(setups.length === 0) {
+            select.innerHTML = '<option value="">Brak aktywnych stref Form dla tego tickera</option>';
+            selectedStructSetupData = null;
+            return;
+        }
+
+        select.innerHTML = '<option value="">-- Wybierz ID Form do konfrontacji (Opcjonalnie) --</option>';
+        setups.forEach(f => {
+            select.innerHTML += `<option value="${f.entry_id}">ID: ${f.entry_id} | Setup: ${f.setup_name || 'Brak'} (WE: ${parseFloat(f.entry_point).toFixed(2)}$)</option>`;
+        });
+    }
+
+    function onStructureFormSelectChange() {
+        const entryId = document.getElementById('struct-form-select').value;
+        if(!entryId) { selectedStructSetupData = null; return; }
+        const setup = window.formEntries.find(f => f.entry_id === entryId);
+        if(setup) {
+            selectedStructSetupData = {
+                entry_id: setup.entry_id,
+                entry_price: parseFloat(setup.entry_point || 0),
+                take_profit: parseFloat(setup.take_profit || 0),
+                stop_loss: parseFloat(setup.stop_loss || 0)
+            };
+        }
+    }
+
+    // Wstrzyknięcie do istniejącej funkcji przełączania zakładek
+    const prevSwitchTechTab = window.switchTechTab;
+    window.switchTechTab = function(tab) {
+        if(typeof prevSwitchTechTab === 'function') prevSwitchTechTab(tab);
+        if(tab === 'structure') {
+            const activeTicker = document.getElementById('form-ticker')?.value || document.getElementById('focus-ticker')?.value || "";
+            if(activeTicker && !document.getElementById('struct-ticker').value) {
+                document.getElementById('struct-ticker').value = activeTicker;
+            }
+            loadStructureFormDropdown();
+        }
+    }
+
+    async function fetchStructureData(e) {
+        e.preventDefault();
+        const ticker = document.getElementById('struct-ticker').value.trim().toUpperCase();
+        const date = document.getElementById('struct-date').value;
+        const flip_date = document.getElementById('struct-flip-date').value;
+        const btn = document.getElementById('btn-struct-fetch');
+        
+        const origText = btn.innerText;
+        btn.innerText = "⏳ Skanowanie struktury..."; btn.disabled = true;
+        document.getElementById('struct-data-container').style.display = 'none';
+        document.getElementById('struct-results-container').style.display = 'none';
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/ta/structure/fetch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticker, date, flip_date })
+            });
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                currentStructContext = data.context;
+                currentStructTicker = ticker;
+                document.getElementById('struct-zone-bounds').innerText = currentStructContext.zone_bounds || '';
+                renderStructureTable(data.candles);
+                document.getElementById('struct-data-container').style.display = 'block';
+            } else { alert("Błąd: " + data.message); }
+        } catch (err) {
+            console.error(err); alert("Błąd połączenia z serwerem.");
+        } finally { btn.innerText = origText; btn.disabled = false; }
+    }
+
+    function renderStructureTable(candles) {
+        const tbody = document.getElementById('struct-candles-tbody');
+        tbody.innerHTML = '';
+        const inputStyle = 'width: 80px; padding: 6px; background: #11111b; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; text-align: center; font-size: 0.9em; outline: none;';
+        
+        candles.forEach((c) => {
+            const labelColor = c.label.includes('0') ? 'var(--success)' : 'var(--text-muted)';
+            tbody.innerHTML += `
+                <tr data-label="${c.label}" data-date="${c.date}" data-volume="${c.volume}">
+                    <td style="font-weight:bold; color:${labelColor}; font-size: 1.1em;">${c.label}</td>
+                    <td style="color:var(--text-muted);">${c.date}</td>
+                    <td><input type="number" step="0.0001" class="struct-input-open" value="${c.open}" style="${inputStyle}"></td>
+                    <td><input type="number" step="0.0001" class="struct-input-high" value="${c.high}" style="${inputStyle}"></td>
+                    <td><input type="number" step="0.0001" class="struct-input-low" value="${c.low}" style="${inputStyle}"></td>
+                    <td><input type="number" step="0.0001" class="struct-input-close" value="${c.close}" style="${inputStyle}"></td>
+                    <td style="color:var(--text-muted); text-align:right;">${(c.volume / 1000).toFixed(1)}k</td>
+                </tr>
+            `;
+        });
+    }
+
+    async function analyzeStructureData() {
+        const tbody = document.getElementById('struct-candles-tbody');
+        const rows = tbody.querySelectorAll('tr');
+        const editedCandles = [];
+        
+        rows.forEach(tr => {
+            editedCandles.push({
+                label: tr.getAttribute('data-label'),
+                date: tr.getAttribute('data-date'),
+                volume: parseFloat(tr.getAttribute('data-volume')),
+                open: parseFloat(tr.querySelector('.struct-input-open').value),
+                high: parseFloat(tr.querySelector('.struct-input-high').value),
+                low: parseFloat(tr.querySelector('.struct-input-low').value),
+                close: parseFloat(tr.querySelector('.struct-input-close').value)
+            });
+        });
+
+        const btn = document.getElementById('btn-struct-analyze');
+        const origText = btn.innerHTML;
+        btn.innerHTML = "⏳ AI ocenia strefę..."; btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/ta/structure/analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticker: currentStructTicker,
+                    candles: editedCandles,
+                    context: currentStructContext,
+                    user_setup: selectedStructSetupData
+                })
+            });
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                displayStructureResults(data.analysis);
+            } else { alert("Błąd analizy: " + data.message); }
+        } catch (err) {
+            console.error(err); alert("Błąd połączenia z serwerem AI.");
+        } finally { btn.innerHTML = origText; btn.disabled = false; }
+    }
+
+    function displayStructureResults(ai) {
+        document.getElementById('struct-results-container').style.display = 'block';
+        
+        const statusEl = document.getElementById('struct-res-validity');
+        const statusText = ai.structure_validity || 'Brak oceny';
+        statusEl.innerText = statusText;
+        
+        if (statusText.toUpperCase().includes('POTWIERDZONE') || statusText.toUpperCase().includes('FLIP')) {
+            statusEl.style.color = 'var(--success)';
+        } else if (statusText.toUpperCase().includes('SŁABY') || statusText.toUpperCase().includes('INDUCEMENT')) {
+            statusEl.style.color = 'var(--danger)';
+        } else {
+            statusEl.style.color = '#fcd535';
+        }
+
+        document.getElementById('struct-res-swing').innerText = ai.swing_horizon || '-';
+        document.getElementById('struct-res-mechanics').innerHTML = (ai.zone_mechanics || '-').replace(/\n/g, '<br>');
+        document.getElementById('struct-res-dca').innerHTML = (ai.dca_and_invalidation || '-').replace(/\n/g, '<br>');
+        
+        document.getElementById('struct-results-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     // --- Start Aplikacji ---
     loadAiProfileFromServer(); // Pobiera profil z serwera na starcie
