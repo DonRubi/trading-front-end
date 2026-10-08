@@ -178,8 +178,8 @@
                 <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Otwarte pozycje</h2><span class="hp-peek" id="hp-peek-positions"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
                     <div class="hp-table-wrap"><table class="hp-table">
-                        <thead id="hp-pos-head"><tr><th data-sort="ticker" title="Sortuj po tickerze">Ticker<span class="hp-arrow"></span></th><th class="hp-r" data-sort="weight_pct" title="Udział wartości pozycji (po zalewarowaniu) w sumie wartości otwartych pozycji. Kliknij, aby sortować.">Udział w portfelu<span class="hp-arrow"></span></th><th class="hp-r" data-sort="day_pct" title="Zmiana wartości po zalewarowaniu względem wczorajszego zamknięcia. Kliknij, aby sortować.">Zmiana dziś<span class="hp-arrow"></span></th></tr></thead>
-                        <tbody id="hp-positions"><tr><td colspan="3" class="hp-empty">Ładowanie…</td></tr></tbody>
+                        <thead id="hp-pos-head"><tr><th data-sort="ticker" title="Sortuj po tickerze">Ticker<span class="hp-arrow"></span></th><th class="hp-r" data-sort="weight_pct" title="Udział wartości pozycji (po zalewarowaniu) w sumie wartości otwartych pozycji. Kliknij, aby sortować.">Udział w portfelu<span class="hp-arrow"></span></th><th class="hp-r" data-sort="day_pct" title="Zmiana wartości po zalewarowaniu względem wczorajszego zamknięcia. Kliknij, aby sortować.">Zmiana dziś<span class="hp-arrow"></span></th><th class="hp-r" data-sort="return_pct" title="Stopa zwrotu = zysk / zainwestowano (środki własne, z uwzględnieniem kursów walut). Kliknij, aby sortować.">Stopa zwrotu<span class="hp-arrow"></span></th></tr></thead>
+                        <tbody id="hp-positions"><tr><td colspan="4" class="hp-empty">Ładowanie…</td></tr></tbody>
                     </table></div>
                     <div class="hp-err" id="hp-err-positions" hidden></div>
                 </div></div></div>
@@ -5570,7 +5570,7 @@ window.HomePage = (function () {
             th.classList.toggle("hp-sorted", on);
             th.querySelector(".hp-arrow").setAttribute("data-arrow", posSort.dir === "asc" ? " ▲" : " ▼");
         });
-        if (!posRows.length) { tb.innerHTML = '<tr><td colspan="3" class="hp-empty">Brak otwartych pozycji</td></tr>'; return; }
+        if (!posRows.length) { tb.innerHTML = '<tr><td colspan="4" class="hp-empty">Brak otwartych pozycji</td></tr>'; return; }
         const k = posSort.key, dir = posSort.dir === "asc" ? 1 : -1;
         const rows = [...posRows].sort((a, b) => k === "ticker" ? dir * a.ticker.localeCompare(b.ticker, "pl") : dir * (a[k] - b[k]));
         const max = Math.max(...rows.map(r => r.weight_pct), 1);
@@ -5583,9 +5583,9 @@ window.HomePage = (function () {
             const name = r.name ? '<div class="hp-name" title="' + esc(r.name) + '">' + esc(r.name) + "</div>" : "";
             return '<tr style="animation-delay:' + (i * 40) + 'ms"><td><span class="hp-tk">' + esc(r.ticker) + '</span><span class="hp-badge ' + cls + '" title="' + levTip + '">' + txt + "</span>" + tr + stale + name + "</td>" +
                 '<td class="hp-r"><div class="hp-wbar"><div class="hp-wtrack"><div class="hp-wfill" data-w="' + (r.weight_pct / max * 100).toFixed(1) + '"></div></div><span>' + fmtPlain(r.weight_pct, 1) + "</span></div></td>" +
-                '<td class="hp-r ' + sign(r.day_pct) + '">' + fmtPct(r.day_pct) + "</td></tr>";
+                '<td class="hp-r ' + sign(r.day_pct) + '">' + fmtPct(r.day_pct) + '</td><td class="hp-r ' + sign(r.return_pct) + '">' + fmtPct(r.return_pct) + "</td></tr>";
         }).join("");
-        if (posTotals) html += '<tr class="hp-total"><td><span class="hp-tk">Razem</span></td><td class="hp-r">' + fmtPlain(posTotals.weight_pct, 1) + '</td><td class="hp-r ' + sign(posTotals.day_pct) + '">' + fmtPct(posTotals.day_pct) + "</td></tr>";
+        if (posTotals) html += '<tr class="hp-total"><td><span class="hp-tk">Razem</span></td><td class="hp-r">' + fmtPlain(posTotals.weight_pct, 1) + '</td><td class="hp-r ' + sign(posTotals.day_pct) + '">' + fmtPct(posTotals.day_pct) + '</td><td class="hp-r ' + sign(posTotals.return_pct) + '">' + fmtPct(posTotals.return_pct) + "</td></tr>";
         tb.innerHTML = html;
         requestAnimationFrame(() => requestAnimationFrame(() => tb.querySelectorAll(".hp-wfill").forEach(f => f.style.width = f.dataset.w + "%")));
     }
