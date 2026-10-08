@@ -33,6 +33,92 @@
         body.privacy-active .sensitive { filter: blur(6px); user-select: none; opacity: 0.6; transition: filter 0.3s ease; pointer-events: none; }
         #edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; padding: 15px; }
         .modal-box { background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:400px; border:1px solid var(--border-color); max-height: 90vh; overflow-y: auto; }
+        /* ===== Nowa strona główna (HomePage) ===== */
+        .hp-wrap { max-width: 1500px; margin: 0 auto; padding: 15px; display: flex; flex-direction: column; gap: 14px; }
+        .hp-topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .hp-sub { color: var(--text-muted); font-size: 0.85rem; }
+        .hp-tools { display: flex; gap: 8px; }
+        .hp-btn { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); padding: 7px 14px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; transition: transform .2s, border-color .2s; }
+        .hp-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+        .hp-btn.hp-spin { opacity: .6; pointer-events: none; }
+        .hp-btn.hp-primary { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); border: 0; color: #0b0e11; font-weight: 700; }
+        .hp-panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; animation: hp-rise .5s cubic-bezier(.22,.8,.24,1) both; }
+        .hp-panel:nth-of-type(2) { animation-delay: .05s; } .hp-panel:nth-of-type(3) { animation-delay: .1s; } .hp-panel:nth-of-type(4) { animation-delay: .15s; } .hp-panel:nth-of-type(5) { animation-delay: .2s; }
+        @keyframes hp-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        .hp-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 14px 18px; background: none; border: 0; color: var(--text-main); cursor: pointer; text-align: left; border-radius: 14px; }
+        .hp-head h2 { font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 9px; }
+        .hp-dot { width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); }
+        .hp-peek { margin-left: auto; color: var(--text-muted); font-size: 0.82rem; opacity: 0; transition: opacity .3s; }
+        .hp-panel.hp-collapsed .hp-peek { opacity: 1; }
+        .hp-chev { color: var(--text-muted); transition: transform .35s cubic-bezier(.22,.8,.24,1); flex: none; }
+        .hp-panel.hp-collapsed .hp-chev { transform: rotate(-90deg); }
+        .hp-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .4s cubic-bezier(.22,.8,.24,1); }
+        .hp-panel.hp-collapsed .hp-body { grid-template-rows: 0fr; }
+        .hp-inner { overflow: hidden; min-height: 0; }
+        .hp-content { padding: 2px 18px 18px; transition: opacity .3s; }
+        .hp-panel.hp-collapsed .hp-content { opacity: 0; }
+        .hp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+        .hp-kpi { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 14px; transition: transform .25s, border-color .25s; }
+        .hp-kpi:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .hp-ring { position: relative; width: 80px; height: 80px; flex: none; }
+        .hp-ring svg { transform: rotate(-90deg); }
+        .hp-ring circle { fill: none; stroke-width: 9; stroke-linecap: round; }
+        .hp-ring .hp-track { stroke: var(--border-color); }
+        .hp-ring .hp-bar { stroke-dasharray: 226.2; stroke-dashoffset: 226.2; transition: stroke-dashoffset 1.2s cubic-bezier(.22,.8,.24,1), stroke .4s; }
+        .hp-ring .hp-val { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+        .hp-lbl { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .06em; }
+        .hp-big { font-size: 1.9rem; font-weight: 750; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.15; }
+        .hp-hint { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
+        .hp-up { color: var(--success); } .hp-down { color: var(--danger); }
+        .hp-seg { position: relative; display: inline-flex; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 3px; margin-bottom: 12px; }
+        .hp-seg button { position: relative; z-index: 1; background: none; border: 0; padding: 6px 16px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 600; transition: color .25s; }
+        .hp-seg button.hp-on { color: #0b0e11; }
+        .hp-seg .hp-pill { position: absolute; top: 3px; bottom: 3px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); transition: left .35s cubic-bezier(.22,.8,.24,1), width .35s cubic-bezier(.22,.8,.24,1); }
+        .hp-legend { display: flex; gap: 16px; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px; flex-wrap: wrap; }
+        .hp-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+        .hp-chart-box { position: relative; height: 300px; }
+        .hp-note { color: var(--text-muted); font-size: 0.78rem; margin-top: 8px; }
+        .hp-err { color: var(--danger); font-size: 0.85rem; padding: 8px 0; }
+        .hp-table-wrap { overflow-x: auto; }
+        .hp-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+        .hp-table th { text-align: left; color: var(--text-muted); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        .hp-table td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .hp-table tbody tr { animation: hp-rise .45s cubic-bezier(.22,.8,.24,1) both; transition: background .2s; }
+        .hp-table tbody tr:hover { background: rgba(201,148,0,.07); }
+        .hp-table tr:last-child td { border-bottom: 0; }
+        .hp-r { text-align: right !important; }
+        .hp-tk { font-weight: 700; }
+        .hp-badge { display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: 8px; letter-spacing: .04em; vertical-align: middle; }
+        .hp-b-long, .hp-b-buy { background: rgba(14,203,129,.15); color: var(--success); }
+        .hp-b-short, .hp-b-sell { background: rgba(246,70,93,.15); color: var(--danger); }
+        .hp-b-check { background: rgba(96,165,250,.16); color: #60a5fa; }
+        .hp-b-stale { background: rgba(252,213,53,.16); color: var(--accent-hover); }
+        .hp-wbar { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+        .hp-wbar .hp-wtrack { width: 90px; height: 6px; background: var(--border-color); border-radius: 9px; overflow: hidden; }
+        .hp-wbar .hp-wfill { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-hover)); border-radius: 9px; transition: width 1s cubic-bezier(.22,.8,.24,1); }
+        .hp-empty { color: var(--text-muted); text-align: center; padding: 22px 0; }
+        .hp-note-form { display: grid; grid-template-columns: 130px 120px 1fr auto; gap: 8px; margin-bottom: 12px; }
+        .hp-note-form input, .hp-note-form select { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 9px 12px; min-width: 0; color: var(--text-main); font-size: 0.9rem; }
+        .hp-note-form input:focus, .hp-note-form select:focus { outline: 0; border-color: var(--accent); }
+        .hp-note-row.hp-done td { color: var(--text-muted); }
+        .hp-note-row.hp-done .hp-desc, .hp-note-row.hp-done .hp-tk { text-decoration: line-through; }
+        .hp-chk { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--text-muted); cursor: pointer; position: relative; transition: background .2s, border-color .2s, transform .15s; background: none; }
+        .hp-chk:active { transform: scale(.9); }
+        .hp-chk:checked { background: var(--accent); border-color: var(--accent); }
+        .hp-chk:checked::after { content: ""; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid #0b0e11; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+        .hp-x { background: none; border: 0; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 2px 6px; border-radius: 6px; }
+        .hp-x:hover { color: var(--danger); background: rgba(246,70,93,.1); }
+        .hp-panel .dashboard-grid { padding: 0; }
+        @media (max-width: 640px) {
+            .hp-note-form { grid-template-columns: 1fr 1fr; } .hp-note-form input:nth-child(3), .hp-note-form button { grid-column: 1 / -1; }
+            .hp-big { font-size: 1.6rem; } .hp-wbar .hp-wtrack { display: none; } .hp-wrap { padding: 10px; }
+            .hp-content { padding: 2px 12px 14px; } .hp-head { padding: 12px 14px; }
+            .hp-table th, .hp-table td { padding: 8px 5px; font-size: 0.82rem; }
+            .hp-table th { white-space: normal; letter-spacing: .02em; font-size: 0.68rem; line-height: 1.2; }
+            .hp-col-date { display: none; }
+            #hp-positions td:first-child { white-space: normal; } #hp-positions .hp-badge { margin: 2px 4px 0 0; display: inline-block; }
+        }
+        @media (prefers-reduced-motion: reduce) { .hp-panel, .hp-table tbody tr { animation: none; } .hp-body, .hp-ring .hp-bar, .hp-wfill, .hp-chev { transition: none; } }
     </style>
 </head>
 <body>
@@ -45,18 +131,88 @@
     </header>
 
     <main id="dashboard">
-        <div class="dashboard-grid">
-            <div class="menu-card" onclick="openModule('form-module', 'Form')"><span class="icon">📝</span><h3>Form</h3></div>
-            <div class="menu-card" onclick="openModule('focus-module', 'Focus')"><span class="icon">🎯</span><h3>Focus</h3></div>
-            <div class="menu-card" onclick="openModule('tradeslist-module', 'TradesList')"><span class="icon">📊</span><h3>TradesList</h3></div>
-            <div class="menu-card" onclick="openModule('summary-module', 'Summary')"><span class="icon">📈</span><h3>Summary</h3></div>
-            <div class="menu-card" onclick="openModule('database-module', 'DataBase')"><span class="icon">🗄️</span><h3>DataBase</h3></div>
-            <div class="menu-card" onclick="openModule('service-module', 'Service')"><span class="icon">⚙️</span><h3>Service</h3></div>
-            <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Tech. Analysis')"><span class="icon">📐</span><h3>Tech. Analysis</h3></div>
-            <div class="menu-card" onclick="openModule('focuslist-module', 'FocusList')"><span class="icon">👁️</span><h3>FocusList</h3></div>
-            <div class="menu-card" onclick="openModule('alerthistory-module', 'Alerts History')"><span class="icon">🔔</span><h3>AlertHistory</h3></div>
-            <div class="menu-card" onclick="openModule('dailybrief-module', 'Daily Brief')"><span class="icon">📰</span><h3>DailyBrief</h3></div>
-            <div class="menu-card" onclick="openModule('campaign-module', 'Planner Kampanii')"><span class="icon">🧭</span><h3>Planner Kampanii</h3></div>
+        <div class="hp-wrap">
+            <div class="hp-topbar">
+                <span class="hp-sub" id="hp-updated">Łączenie z serwerem… (przy uśpionym serwerze może potrwać do minuty)</span>
+                <div class="hp-tools">
+                    <button class="hp-btn" id="hp-toggle-all" type="button">Zwiń wszystko</button>
+                    <button class="hp-btn" id="hp-refresh" type="button" aria-label="Odśwież dane">↻ Odśwież</button>
+                </div>
+            </div>
+
+            <section class="hp-panel" data-hp-panel="summary">
+                <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Podsumowanie</h2><span class="hp-peek" id="hp-peek-summary"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="hp-body"><div class="hp-inner"><div class="hp-content">
+                    <div class="hp-kpis">
+                        <div class="hp-kpi"><div class="hp-ring"><svg viewBox="0 0 84 84" width="80" height="80"><circle class="hp-track" cx="42" cy="42" r="36"/><circle class="hp-bar" id="hp-ring-budget" cx="42" cy="42" r="36" stroke="var(--accent)"/></svg><div class="hp-val" id="hp-v-budget">–</div></div>
+                            <div><div class="hp-lbl">Wykorzystany budżet</div><div class="hp-hint" id="hp-h-budget">Wolna gotówka: –</div></div></div>
+                        <div class="hp-kpi"><div class="hp-ring"><svg viewBox="0 0 84 84" width="80" height="80"><circle class="hp-track" cx="42" cy="42" r="36"/><circle class="hp-bar" id="hp-ring-lev" cx="42" cy="42" r="36" stroke="#60a5fa"/></svg><div class="hp-val" id="hp-v-lev">–</div></div>
+                            <div><div class="hp-lbl">Lewar portfela</div><div class="hp-hint" id="hp-h-lev">Ekspozycja / kapitał</div></div></div>
+                        <div class="hp-kpi"><div><div class="hp-lbl">Stopa zwrotu (TWR)</div><div class="hp-big" id="hp-v-roi">–</div><div class="hp-hint" id="hp-h-roi">Dziś: –</div></div></div>
+                    </div>
+                    <div class="hp-err" id="hp-err-summary" hidden></div>
+                </div></div></div>
+            </section>
+
+            <section class="hp-panel" data-hp-panel="chart">
+                <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Portfel vs S&amp;P 500</h2><span class="hp-peek" id="hp-peek-chart"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="hp-body"><div class="hp-inner"><div class="hp-content">
+                    <div class="hp-seg" id="hp-seg"><span class="hp-pill"></span>
+                        <button type="button" data-r="1d">Dzień</button><button type="button" data-r="1w">Tydzień</button><button type="button" class="hp-on" data-r="1m">Miesiąc</button>
+                    </div>
+                    <div class="hp-legend"><span><i style="background:var(--accent-hover)"></i>Portfel (PLN)</span><span><i style="background:#60a5fa"></i>S&amp;P 500 (USD)</span><span>Zmiana % od początku zakresu</span></div>
+                    <div class="hp-chart-box"><canvas id="hp-chart"></canvas></div>
+                    <div class="hp-note" id="hp-chart-note"></div>
+                    <div class="hp-err" id="hp-err-chart" hidden></div>
+                </div></div></div>
+            </section>
+
+            <section class="hp-panel" data-hp-panel="positions">
+                <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Otwarte pozycje</h2><span class="hp-peek" id="hp-peek-positions"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="hp-body"><div class="hp-inner"><div class="hp-content">
+                    <div class="hp-table-wrap"><table class="hp-table">
+                        <thead><tr><th>Ticker</th><th class="hp-r">Udział w portfelu</th><th class="hp-r">Zmiana dziś</th><th class="hp-r">Wartość (PLN)</th></tr></thead>
+                        <tbody id="hp-positions"><tr><td colspan="4" class="hp-empty">Ładowanie…</td></tr></tbody>
+                    </table></div>
+                    <div class="hp-err" id="hp-err-positions" hidden></div>
+                </div></div></div>
+            </section>
+
+            <section class="hp-panel" data-hp-panel="notes">
+                <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Notatnik</h2><span class="hp-peek" id="hp-peek-notes"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="hp-body"><div class="hp-inner"><div class="hp-content">
+                    <form class="hp-note-form" id="hp-note-form" autocomplete="off">
+                        <input id="hp-n-ticker" placeholder="Ticker" maxlength="20" required aria-label="Ticker">
+                        <select id="hp-n-action" aria-label="Akcja"><option value="check">Check</option><option value="buy">Buy</option><option value="sell">Sell</option></select>
+                        <input id="hp-n-desc" placeholder="Krótki opis (opcjonalnie)" maxlength="500" aria-label="Opis">
+                        <button class="hp-btn hp-primary" type="submit">Dodaj</button>
+                    </form>
+                    <div class="hp-table-wrap"><table class="hp-table">
+                        <thead><tr><th>Ticker</th><th>Akcja</th><th class="hp-col-date">Data</th><th>Opis</th><th class="hp-r">Check</th><th></th></tr></thead>
+                        <tbody id="hp-notes"></tbody>
+                    </table></div>
+                    <div class="hp-err" id="hp-err-notes" hidden></div>
+                </div></div></div>
+            </section>
+
+            <section class="hp-panel" data-hp-panel="modules">
+                <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Moduły</h2><span class="hp-peek"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="hp-body"><div class="hp-inner"><div class="hp-content">
+                    <div class="dashboard-grid">
+                        <div class="menu-card" onclick="openModule('form-module', 'Form')"><span class="icon">📝</span><h3>Form</h3></div>
+                        <div class="menu-card" onclick="openModule('focus-module', 'Focus')"><span class="icon">🎯</span><h3>Focus</h3></div>
+                        <div class="menu-card" onclick="openModule('tradeslist-module', 'TradesList')"><span class="icon">📊</span><h3>TradesList</h3></div>
+                        <div class="menu-card" onclick="openModule('summary-module', 'Summary')"><span class="icon">📈</span><h3>Summary</h3></div>
+                        <div class="menu-card" onclick="openModule('database-module', 'DataBase')"><span class="icon">🗄️</span><h3>DataBase</h3></div>
+                        <div class="menu-card" onclick="openModule('service-module', 'Service')"><span class="icon">⚙️</span><h3>Service</h3></div>
+                        <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Tech. Analysis')"><span class="icon">📐</span><h3>Tech. Analysis</h3></div>
+                        <div class="menu-card" onclick="openModule('focuslist-module', 'FocusList')"><span class="icon">👁️</span><h3>FocusList</h3></div>
+                        <div class="menu-card" onclick="openModule('alerthistory-module', 'Alerts History')"><span class="icon">🔔</span><h3>AlertHistory</h3></div>
+                        <div class="menu-card" onclick="openModule('dailybrief-module', 'Daily Brief')"><span class="icon">📰</span><h3>DailyBrief</h3></div>
+                        <div class="menu-card" onclick="openModule('campaign-module', 'Planner Kampanii')"><span class="icon">🧭</span><h3>Planner Kampanii</h3></div>
+                    </div>
+                </div></div></div>
+            </section>
         </div>
     </main>
 
@@ -1134,6 +1290,7 @@
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('app-title').innerHTML = 'Quant<span>Desk</span>';
             document.getElementById('back-btn').style.display = 'none';
+            if (window.HomePage) HomePage.refresh();
         }
 
         function togglePrivacy() {
@@ -5320,6 +5477,214 @@ function goToFocusFromNode(tradeId, formEntryId, nodeId) {
     // --- Start Aplikacji ---
     openDashboard();
         
+</script>
+<script>
+// ===== Nowa strona główna (HomePage): podsumowanie %, wykres vs S&P 500, pozycje, notatnik =====
+window.HomePage = (function () {
+    "use strict";
+    const $ = (s, r) => (r || document).querySelector(s);
+    const STORE = "quantdesk.home.panels";
+    const fmtPct = (v, d = 2) => (v >= 0 ? "+" : "") + v.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
+    const fmtPlain = (v, d = 1) => v.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
+    const fmtPln = v => v.toLocaleString("pl-PL", { maximumFractionDigits: 0 });
+    const sign = v => (v >= 0 ? "hp-up" : "hp-down");
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+    let chart = null, range = "1m", chartSeq = 0, notes = [], started = false;
+
+    async function api(path, opts) {
+        const res = await fetch(API_BASE_URL + path, opts);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || (data && data.status === "error")) throw new Error((data && (data.message || data.error)) || ("HTTP " + res.status));
+        return data;
+    }
+    const post = (path, body) => api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    function showErr(id, e) { const el = $("#hp-err-" + id); el.hidden = !e; el.textContent = e ? "Błąd: " + (e.message || e) : ""; }
+
+    function animateNumber(el, to, fmt) {
+        const from = parseFloat(el.dataset.v || "0"); el.dataset.v = to;
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = fmt(to); return; }
+        const t0 = performance.now();
+        (function step(t) {
+            const k = Math.min(1, (t - t0) / 900), e = 1 - Math.pow(1 - k, 3);
+            el.textContent = fmt(from + (to - from) * e);
+            if (k < 1) requestAnimationFrame(step);
+        })(t0);
+    }
+    function setRing(id, pct, max) {
+        const el = $(id), p = Math.max(0, Math.min(1, pct / max));
+        el.style.strokeDashoffset = 226.2 * (1 - p);
+        el.style.stroke = pct / max > .9 ? css("--danger") : "";
+    }
+
+    // ---------- panele zwijane ----------
+    function panels() { return [...document.querySelectorAll("[data-hp-panel]")]; }
+    function setCollapsed(p, c) {
+        p.classList.toggle("hp-collapsed", c);
+        $(".hp-head", p).setAttribute("aria-expanded", String(!c));
+        if (!c && p.dataset.hpPanel === "chart" && chart) setTimeout(() => chart.resize(), 420);
+    }
+    function saveState() { try { localStorage.setItem(STORE, JSON.stringify(Object.fromEntries(panels().map(p => [p.dataset.hpPanel, p.classList.contains("hp-collapsed")])))); } catch (e) {} }
+    function syncToggleAll() { $("#hp-toggle-all").textContent = panels().every(p => p.classList.contains("hp-collapsed")) ? "Rozwiń wszystko" : "Zwiń wszystko"; }
+
+    // ---------- podsumowanie + pozycje ----------
+    async function loadSummary() {
+        try {
+            const d = await api("/api/home/summary"); showErr("summary", null); showErr("positions", null);
+            const s = d.summary;
+            animateNumber($("#hp-v-budget"), s.budget_used_pct, v => fmtPlain(v, 0));
+            animateNumber($("#hp-v-lev"), s.leverage_pct, v => fmtPlain(v, 0));
+            setRing("#hp-ring-budget", s.budget_used_pct, 100); setRing("#hp-ring-lev", s.leverage_pct, 200);
+            $("#hp-h-budget").textContent = "Wolna gotówka: " + fmtPlain(s.cash_pct, 1) + " portfela";
+            $("#hp-h-lev").textContent = "Ekspozycja " + s.leverage_x.toLocaleString("pl-PL", { maximumFractionDigits: 2 }) + "× kapitału";
+            const roi = $("#hp-v-roi"); roi.className = "hp-big " + sign(s.roi_pct);
+            animateNumber(roi, s.roi_pct, v => fmtPct(v));
+            $("#hp-h-roi").innerHTML = 'Dziś: <b class="' + sign(s.day_change_pct) + '">' + fmtPct(s.day_change_pct) + "</b> · prosty ROI " + fmtPct(s.simple_roi_pct);
+            $("#hp-peek-summary").textContent = "ROI " + fmtPct(s.roi_pct) + " · budżet " + fmtPlain(s.budget_used_pct, 0);
+            $("#hp-peek-positions").textContent = d.positions.length + " pozycji" + (s.stale_positions ? " · " + s.stale_positions + " bez świeżej ceny" : "");
+            $("#hp-updated").textContent = "Zaktualizowano " + new Date(d.updated_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+            renderPositions(d.positions);
+        } catch (e) { showErr("summary", e); showErr("positions", e); $("#hp-updated").textContent = "Brak połączenia z API"; }
+    }
+    const STALE = { db: "Cena z bazy", db_stale: "Cena nieaktualna", buy: "Brak notowania" };
+    function renderPositions(rows) {
+        const tb = $("#hp-positions");
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="hp-empty">Brak otwartych pozycji</td></tr>'; return; }
+        const max = Math.max(...rows.map(r => r.weight_pct), 1);
+        tb.innerHTML = rows.map((r, i) => {
+            const long = ["DBR", "RBR"].includes(r.direction);
+            const lev = r.leverage > 1 ? " " + r.leverage + "×" : "";
+            const stale = STALE[r.price_source] ? '<span class="hp-badge hp-b-stale" title="Wycena nie opiera się na notowaniu z ostatniej minuty">' + STALE[r.price_source] + "</span>" : "";
+            return '<tr style="animation-delay:' + (i * 40) + 'ms"><td><span class="hp-tk">' + esc(r.ticker) + '</span><span class="hp-badge ' + (long ? "hp-b-long" : "hp-b-short") + '">' + (long ? "LONG" : "SHORT") + esc(lev) + "</span>" + stale + "</td>" +
+                '<td class="hp-r"><div class="hp-wbar"><div class="hp-wtrack"><div class="hp-wfill" data-w="' + (r.weight_pct / max * 100).toFixed(1) + '"></div></div><span>' + fmtPlain(r.weight_pct, 1) + "</span></div></td>" +
+                '<td class="hp-r ' + sign(r.day_pct) + '">' + fmtPct(r.day_pct) + '</td><td class="hp-r sensitive">' + fmtPln(r.value_pln) + "</td></tr>";
+        }).join("");
+        requestAnimationFrame(() => requestAnimationFrame(() => tb.querySelectorAll(".hp-wfill").forEach(f => f.style.width = f.dataset.w + "%")));
+    }
+
+    // ---------- wykres ----------
+    function placePill() {
+        const on = $("#hp-seg button.hp-on"), pill = $("#hp-seg .hp-pill");
+        if (on && on.offsetWidth) { pill.style.left = on.offsetLeft + "px"; pill.style.width = on.offsetWidth + "px"; }
+    }
+    async function loadChart() {
+        const seq = ++chartSeq;
+        try {
+            if (typeof Chart === "undefined") throw new Error("Nie załadowano biblioteki wykresów (Chart.js).");
+            const d = await api("/api/home/performance?range=" + range);
+            if (seq !== chartSeq) return;
+            showErr("chart", null);
+            const intraday = d.kind === "intraday";
+            const labels = d.labels.map(l => intraday
+                ? new Date(l).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Warsaw" })
+                : new Date(l + "T00:00:00").toLocaleDateString("pl-PL", { day: "2-digit", month: "short" }));
+            $("#hp-chart-note").textContent = !d.labels.length
+                ? (intraday ? "Brak notowań z bieżącej sesji." : "Brak historii ROI - wywołaj /api/cron/calculate-portfolio-roi, aby zacząć ją zapisywać.")
+                : intraday ? "Wykres dzienny to wycena obecnych otwartych pozycji w ciągu sesji (przybliżenie, z kursami walut)." : "";
+            const last = a => [...a].reverse().find(v => v != null);
+            const lp = last(d.portfolio), ls = last(d.sp500);
+            $("#hp-peek-chart").textContent = lp != null && ls != null ? "Portfel " + fmtPct(lp) + " · S&P " + fmtPct(ls) : "";
+            const ctx = $("#hp-chart").getContext("2d"), g = ctx.createLinearGradient(0, 0, 0, 300);
+            g.addColorStop(0, "rgba(252,213,53,.28)"); g.addColorStop(1, "rgba(252,213,53,0)");
+            const datasets = [
+                { label: "Portfel", data: d.portfolio, borderColor: css("--accent-hover") || "#fcd535", backgroundColor: g, fill: true, borderWidth: 2.4, tension: .3, pointRadius: 0, pointHoverRadius: 5, spanGaps: true },
+                { label: "S&P 500", data: d.sp500, borderColor: "#60a5fa", borderWidth: 2, tension: .3, pointRadius: 0, pointHoverRadius: 5, spanGaps: true },
+            ];
+            if (chart) { chart.data.labels = labels; chart.data.datasets.forEach((ds, i) => ds.data = datasets[i].data); chart.update(); return; }
+            const muted = css("--text-muted") || "#848e9c";
+            chart = new Chart(ctx, {
+                type: "line", data: { labels, datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+                    animation: { duration: 900, easing: "easeOutQuart" },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y == null ? null : c.dataset.label + ": " + fmtPct(c.parsed.y) } } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: muted, maxTicksLimit: 8, maxRotation: 0 } },
+                        y: { grid: { color: "rgba(128,128,128,.12)" }, ticks: { color: muted, callback: v => v + "%" } },
+                    },
+                },
+            });
+        } catch (e) { if (seq === chartSeq) showErr("chart", e); }
+    }
+
+    // ---------- notatnik ----------
+    const ACTION = { check: "Check", buy: "Buy", sell: "Sell" };
+    function noteRow(n, i) {
+        const date = n.created_at ? new Date(n.created_at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+        return '<tr class="hp-note-row ' + (n.done ? "hp-done" : "") + '" data-id="' + esc(n.id) + '" style="animation-delay:' + (i * 30) + 'ms">' +
+            '<td><span class="hp-tk">' + esc(n.ticker) + '</span></td><td><span class="hp-badge hp-b-' + esc(n.action) + '" style="margin-left:0">' + (ACTION[n.action] || esc(n.action)) + "</span></td>" +
+            '<td class="hp-col-date" style="white-space:nowrap;color:var(--text-muted)">' + date + '</td><td class="hp-desc">' + esc(n.description) + "</td>" +
+            '<td class="hp-r"><input type="checkbox" class="hp-chk" aria-label="Wykreśl notatkę" ' + (n.done ? "checked" : "") + "></td>" +
+            '<td class="hp-r"><button class="hp-x" type="button" aria-label="Usuń notatkę">×</button></td></tr>';
+    }
+    function renderNotes() {
+        const sorted = [...notes].sort((a, b) => (a.done - b.done) || (new Date(b.created_at) - new Date(a.created_at)));
+        $("#hp-notes").innerHTML = sorted.length ? sorted.map(noteRow).join("") : '<tr><td colspan="6" class="hp-empty">Brak notatek - dodaj pierwszą powyżej</td></tr>';
+        const open = notes.filter(n => !n.done).length;
+        $("#hp-peek-notes").textContent = open ? open + " aktywnych" : "";
+    }
+    async function loadNotes() {
+        try { notes = await api("/api/notes"); showErr("notes", null); renderNotes(); }
+        catch (e) { showErr("notes", /home_notes|relation|does not exist/i.test(e.message) ? new Error("Brak tabeli home_notes - uruchom sql/home_notes.sql w Supabase.") : e); }
+    }
+
+    // ---------- start ----------
+    async function refresh() {
+        const b = $("#hp-refresh"); b.classList.add("hp-spin");
+        await Promise.all([loadSummary(), loadChart(), loadNotes()]);
+        b.classList.remove("hp-spin");
+    }
+    function visible() { return !document.hidden && $("#dashboard") && $("#dashboard").style.display !== "none"; }
+
+    function init() {
+        if (started) return; started = true;
+        let saved = {}; try { saved = JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) {}
+        panels().forEach(p => {
+            setCollapsed(p, !!saved[p.dataset.hpPanel]);
+            $(".hp-head", p).addEventListener("click", () => { setCollapsed(p, !p.classList.contains("hp-collapsed")); saveState(); syncToggleAll(); });
+        });
+        syncToggleAll();
+        $("#hp-toggle-all").addEventListener("click", () => {
+            const c = !panels().every(p => p.classList.contains("hp-collapsed"));
+            panels().forEach(p => setCollapsed(p, c)); saveState(); syncToggleAll();
+        });
+        $("#hp-refresh").addEventListener("click", refresh);
+        $("#hp-seg").addEventListener("click", e => {
+            const b = e.target.closest("button"); if (!b) return;
+            document.querySelectorAll("#hp-seg button").forEach(x => x.classList.toggle("hp-on", x === b));
+            range = b.dataset.r; placePill(); loadChart();
+        });
+        addEventListener("resize", placePill);
+        $("#hp-note-form").addEventListener("submit", async ev => {
+            ev.preventDefault();
+            try {
+                const r = await post("/api/notes/add", { ticker: $("#hp-n-ticker").value, action: $("#hp-n-action").value, description: $("#hp-n-desc").value });
+                notes.unshift(r.note); renderNotes(); showErr("notes", null);
+                $("#hp-n-ticker").value = ""; $("#hp-n-desc").value = ""; $("#hp-n-ticker").focus();
+            } catch (e) { showErr("notes", e); }
+        });
+        $("#hp-notes").addEventListener("click", async ev => {
+            const tr = ev.target.closest("tr.hp-note-row"); if (!tr) return;
+            const n = notes.find(x => String(x.id) === tr.dataset.id); if (!n) return;
+            try {
+                if (ev.target.classList.contains("hp-chk")) {
+                    const prev = n.done; n.done = ev.target.checked; tr.classList.toggle("hp-done", n.done);
+                    try { await post("/api/notes/toggle", { id: n.id, done: n.done }); } catch (e) { n.done = prev; throw e; }
+                    setTimeout(renderNotes, 350);
+                } else if (ev.target.classList.contains("hp-x")) {
+                    await post("/api/notes/delete", { id: n.id });
+                    notes = notes.filter(x => x !== n); renderNotes();
+                }
+            } catch (e) { showErr("notes", e); renderNotes(); }
+        });
+        placePill(); refresh();
+        setInterval(() => { if (visible()) { loadSummary(); loadChart(); } }, 60000);
+    }
+
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+    return { init: init, refresh: function () { if (started) { refresh(); setTimeout(placePill, 50); } } };
+})();
 </script>
 </body>
 </html>
