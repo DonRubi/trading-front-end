@@ -1048,7 +1048,15 @@
     </div>
     
 <script>
-        const API_BASE_URL = 'https://quant-desk-backend-dr8n.onrender.com';
+        // Adres backendu. Do testów można go nadpisać parametrem ?api=... (tylko localhost i *.onrender.com).
+        const API_BASE_URL = (() => {
+            const DEFAULT = 'https://quant-desk-backend-dr8n.onrender.com';
+            try {
+                const u = new URL(new URLSearchParams(location.search).get('api') || DEFAULT);
+                const allowed = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname.endsWith('.onrender.com');
+                return allowed ? u.origin : DEFAULT;
+            } catch (e) { return DEFAULT; }
+        })();
         let isPrivacyMode = false;
         
         let tickerDataArray = [], currentTickerPage = 1, tickerPageSize = 20;
