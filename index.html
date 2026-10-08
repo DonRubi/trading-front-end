@@ -64,14 +64,9 @@
         <div class="macro-header-container"><h3>Kreator Pozycji (Form)</h3></div>
         <div class="journal-container">
             <div class="journal-sidebar">
-                <div class="ai-behavioral-warning" style="display:none; background: rgba(246, 70, 93, 0.1); border: 1px solid var(--danger); padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                    <h5 style="color: var(--danger); margin-bottom: 5px; font-weight: bold;">⚠️ Strażnik Behawioralny AI Ostrzega:</h5>
-                    <p class="ai-warning-text" style="font-size: 0.9em; color: var(--text-main); font-style: italic;"></p>
-                    <div class="ai-size-suggestion" style="margin-top: 8px; font-size: 0.85em; color: var(--accent-hover); font-weight: bold;"></div>
-                </div>
                 <form id="trading-form" onsubmit="submitAdvancedForm(event)">
                     <div class="form-row"><div class="form-group"><label style="display: flex; justify-content: space-between;">Ticker <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label><select id="form-ticker" onchange="updateFormTvLink()"></select></div></div>
-                    <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction" onchange="checkAIBehavioralAlerts()"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div></div>
+                    <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div></div>
                     <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01" required></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01" required></div></div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01" required></div>
                     <div class="form-group"><label>Powody wejścia (Opcjonalne)</label><input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2..."><input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3..."><input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4..."><input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5..."><datalist id="reasons-list"></datalist></div>
@@ -146,11 +141,6 @@
         <div class="macro-header-container"><h3>Analiza przed Wejściem (Focus)</h3></div>
         <div class="journal-container">
             <div class="journal-sidebar">
-                <div class="ai-behavioral-warning" style="display:none; background: rgba(246, 70, 93, 0.1); border: 1px solid var(--danger); padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                    <h5 style="color: var(--danger); margin-bottom: 5px; font-weight: bold;">⚠️ Strażnik Behawioralny AI Ostrzega:</h5>
-                    <p class="ai-warning-text" style="font-size: 0.9em; color: var(--text-main); font-style: italic;"></p>
-                    <div class="ai-size-suggestion" style="margin-top: 8px; font-size: 0.85em; color: var(--accent-hover); font-weight: bold;"></div>
-                </div>
                 <form id="focus-form" onsubmit="submitFocusForm(event)">
                     <div class="form-row">
                         <div class="form-group"><label>Wybierz Ticker</label><select id="focus-ticker-select" onchange="onFocusTickerChange()"><option value="">Ładowanie...</option></select></div>
@@ -210,11 +200,6 @@
         <div class="macro-header-container"><h3>Dziennik Otwartych Pozycji (Trades)</h3></div>
         <div class="journal-container">
             <div class="journal-sidebar">
-                <div class="ai-behavioral-warning" style="display:none; background: rgba(246, 70, 93, 0.1); border: 1px solid var(--danger); padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                    <h5 style="color: var(--danger); margin-bottom: 5px; font-weight: bold;">⚠️ Strażnik Behawioralny AI Ostrzega:</h5>
-                    <p class="ai-warning-text" style="font-size: 0.9em; color: var(--text-main); font-style: italic;"></p>
-                    <div class="ai-size-suggestion" style="margin-top: 8px; font-size: 0.85em; color: var(--accent-hover); font-weight: bold;"></div>
-                </div>
                 <form id="trade-form" onsubmit="submitTradeForm(event)">
                     <div class="form-row" style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 5px;">
                         <div class="form-group">
@@ -251,7 +236,7 @@
                     <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
                     <div class="form-row">
                         <div class="form-group"><label>Komentarz</label><input type="text" id="trade-comment" placeholder="Napisz coś o tym wejściu..." required></div>
-                        <div class="form-group"><label>Kwadrans przed zamknięciem?</label><select id="trade-last15" onchange="checkAIBehavioralAlerts()"><option value="0" selected>Nie (0 pkt)</option><option value="1">Tak (+1 Pkt do Score)</option></select></div>
+                        <div class="form-group"><label>Kwadrans przed zamknięciem?</label><select id="trade-last15"><option value="0" selected>Nie (0 pkt)</option><option value="1">Tak (+1 Pkt do Score)</option></select></div>
                     </div>
                     <div class="form-row"><div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div><div class="form-group"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div></div>
                     <div class="form-row"><div class="form-group"><label>Wydano gotówki</label><input type="number" step="0.01" id="trade-spent" required></div><div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="0.01" min="1" id="trade-leverage" value="1" required></div></div>
@@ -260,11 +245,6 @@
                 </form>
             </div>
             <div class="journal-main">
-                <div style="margin-bottom: 15px; padding: 15px; background: rgba(2, 132, 199, 0.1); border: 1px solid #0284c7; border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <strong style="color: #0284c7; font-size: 1.1em;">Analiza Post-Trade:</strong>
-                    <input type="text" id="campaign-audit-ticker" placeholder="Wpisz ticker kampanii (np. DNN)" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; min-width: 250px;">
-                    <button onclick="runCampaignAudit()" style="padding: 10px 20px; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">🔍 Audyt AI całej kampanii</button>
-                </div>
                 <div class="table-controls">
                     <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze lub nazwie..." oninput="handleTradesFilter()">
                     <select id="trade-status-filter" onchange="handleTradesFilter()"><option value="ALL">Wszystkie Statusy</option><option value="OPEN" selected>Otwarte</option><option value="CLOSED">Zamknięte</option></select>
@@ -837,44 +817,8 @@
                                 <tbody id="fvg-candles-tbody"></tbody>
                             </table>
                         </div>
-                        <div style="display:flex; justify-content:flex-end;">
-                            <button onclick="analyzeFvgData()" class="btn-submit" id="btn-fvg-analyze" style="background: var(--success); color:#fff; width: auto; padding: 12px 25px; border-radius: 6px; box-shadow: 0 0 10px rgba(14,203,129,0.3);">🤖 2. Analizuj Order Flow przez AI</button>
-                        </div>
                     </div>
 
-                    <div id="fvg-results-container" style="display:none; margin-top: 20px;">
-                        <h4 style="margin-bottom: 15px; color: var(--accent);">Werdykt Instytucjonalny (AI Quant)</h4>
-                        
-                        <div class="kpi-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px;">
-                                <h4 style="color:var(--text-muted); font-size:0.85em; margin-bottom:8px;">Status Formacji</h4>
-                                <div class="value" id="fvg-res-status" style="font-size:1.1rem; font-weight:bold;">-</div>
-                            </div>
-                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px;">
-                                <h4 style="color:var(--text-muted); font-size:0.85em; margin-bottom:8px;">Makro (HTF)</h4>
-                                <div class="value" id="fvg-res-trend" style="font-size:1rem;">-</div>
-                            </div>
-                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px; background: rgba(201, 148, 0, 0.05);">
-                                <h4 style="color:var(--accent); font-size:0.85em; margin-bottom:8px;">Relatywna Siła (Sektor)</h4>
-                                <div class="value" id="fvg-res-sector" style="font-size:0.95rem;">-</div>
-                            </div>
-                        </div>
-                        
-                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                            <h4 style="color:#89b4fa; margin-bottom: 5px;">Ślad Instytucjonalny (Point of Origin)</h4>
-                            <p id="fvg-res-footprint" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
-                        </div>
-                        
-                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                            <h4 style="color:#fcd535; margin-bottom: 5px;">Momentum i Wynik CVD</h4>
-                            <p id="fvg-res-momentum" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
-                        </div>
-                        
-                        <div style="background: rgba(14,203,129,0.05); border: 1px solid var(--success); padding: 15px; border-radius: 12px;">
-                            <h4 style="color:var(--success); margin-bottom: 5px;">Instrukcje Rozegrania (DCA)</h4>
-                            <p id="fvg-res-tactics" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
-                        </div>
-                    </div>
                 </div>
             </div>
         <div id="tab-structure" class="tab-content" style="display:none;">
@@ -926,35 +870,8 @@
                                 <tbody id="struct-candles-tbody"></tbody>
                             </table>
                         </div>
-                        <div style="display:flex; justify-content:flex-end;">
-                            <button onclick="analyzeStructureData()" class="btn-submit" id="btn-struct-analyze" style="background: var(--success); color:#fff; width: auto; padding: 12px 25px; border-radius: 6px; box-shadow: 0 0 10px rgba(14,203,129,0.3);">🤖 2. Analizuj Strefę Popytu/Podaży</button>
-                        </div>
                     </div>
 
-                    <div id="struct-results-container" style="display:none; margin-top: 20px;">
-                        <h4 style="margin-bottom: 15px; color: var(--accent);">Werdykt Instytucjonalny (Struktura)</h4>
-                        
-                        <div class="kpi-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px;">
-                                <h4 style="color:var(--text-muted); font-size:0.85em; margin-bottom:8px;">Ważność Struktury</h4>
-                                <div class="value" id="struct-res-validity" style="font-size:1.1rem; font-weight:bold;">-</div>
-                            </div>
-                            <div class="kpi-card" style="border: 1px solid var(--border-color); padding: 15px;">
-                                <h4 style="color:var(--text-muted); font-size:0.85em; margin-bottom:8px;">Horyzont Swingowy (Makro)</h4>
-                                <div class="value" id="struct-res-swing" style="font-size:0.95rem;">-</div>
-                            </div>
-                        </div>
-                        
-                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                            <h4 style="color:#89b4fa; margin-bottom: 5px;">Mechanika Strefy i Wolumen</h4>
-                            <p id="struct-res-mechanics" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
-                        </div>
-                        
-                        <div style="background: rgba(14,203,129,0.05); border: 1px solid var(--success); padding: 15px; border-radius: 12px;">
-                            <h4 style="color:var(--success); margin-bottom: 5px;">Instrukcje Rozegrania (DCA & Invalidation)</h4>
-                            <p id="struct-res-dca" style="font-size:0.9em; line-height:1.6; color:var(--text-main);">-</p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1117,21 +1034,16 @@
     <div id="notes-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; padding: 15px;">
     <div style="background:var(--bg-card); padding:25px; border-radius:12px; width:100%; max-width:650px; border:1px solid #89b4fa; max-height: 90vh; overflow-y: auto;">
         <h3 style="color:#89b4fa; margin-bottom:5px;">Notatnik Otwierania i Prowadzenia Pozycji</h3>
-        <p style="color:var(--text-muted); font-size:0.85em; margin-bottom:15px;">Zapisz fundamenty, katalizatory lub wiadomości. AI skonfrontuje je z reżimem makro z DailyBrief.</p>
+        <p style="color:var(--text-muted); font-size:0.85em; margin-bottom:15px;">Zapisz fundamenty, katalizatory lub wiadomości.</p>
         
         <input type="hidden" id="notes-trade-id">
         <textarea id="notes-textarea" placeholder="Wklej artykuły, raporty z zysków (Earnings) lub opisz swoje przemyślenia: np. 'Spółka silna jakościowo, uran zbliża się do punktu zwrotnego, oczekuję absorpcji dołka...'" style="width:100%; height:180px; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; color:#fff; padding:12px; font-size:0.95em; resize:vertical; outline:none;"></textarea>
         
         <div style="margin-top:15px; display:flex; gap:10px;">
             <button onclick="saveNotesOnly(event)" style="flex:1; padding:12px; background:var(--success); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; transition: 0.2s;">💾 Zapisz</button>
-            <button onclick="auditNotesOnly()" style="flex:1; padding:12px; background:#89b4fa; color:#11111b; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">🤖 Analizuj Makro</button>
             <button onclick="document.getElementById('notes-modal').style.display='none'" style="flex:1; padding:12px; background:var(--bg-input); color:#fff; border:1px solid #45475a; border-radius:6px; cursor:pointer;">Zamknij</button>
         </div>
 
-        <div id="notes-ai-results" style="margin-top:20px; display:none; border-top:1px dashed var(--border-color); padding-top:15px;">
-            <h4 style="color:var(--accent); margin-bottom:10px;">🛡️ Werdykt Techno-Fundamentalny AI:</h4>
-            <div id="notes-ai-content" style="color:var(--text-main); line-height:1.6; font-size:0.95em; background:rgba(255,255,255,0.02); padding:12px; border-radius:6px;"></div>
-        </div>
     </div>
     </div>
     
@@ -1965,6 +1877,12 @@
                 const res = await fetch(`${API_BASE_URL}/api/focus/calculate-automation`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker:t, direction:d, focus_date: fDate}) }); 
                 const r = await res.json(); 
                 
+                // Awaria automatyzacji: backend zwraca oceny neutralne z automation_ok=false - NIE wpisujemy ich do formularza
+                if (!res.ok || r.automation_ok === false || r.candle_score === undefined) {
+                    alert("⚠️ Automatyzacja SMC nie powiodła się:\n" + (r.error || r.message || ("HTTP " + res.status)) + "\n\nPola formularza zostały bez zmian - uzupełnij je ręcznie.");
+                    return;
+                }
+                
                 // Standardowe pola liczbowe
                 document.getElementById('focus-candle').value = r.candle_score; 
                 document.getElementById('focus-volume').value = r.volume_score; 
@@ -1975,7 +1893,9 @@
                 if (r.cvd_score !== undefined) document.getElementById('focus-cvd').value = Math.round(r.cvd_score).toString();
                 if (r.htf_score !== undefined) document.getElementById('focus-htf').value = Math.round(r.htf_score).toString();
                 
-                alert("Pomyślnie przeanalizowano parametry SMC dla wybranej daty!");
+                let msg = "Pomyślnie przeanalizowano parametry SMC" + (r.bar_date ? " (świeca z dnia " + r.bar_date + ")" : "") + ".";
+                if (Array.isArray(r.warnings) && r.warnings.length) msg += "\n\nUwagi:\n• " + r.warnings.join("\n• ");
+                alert(msg);
             } catch(e) { 
                 console.error(e); 
                 alert("Błąd pobierania danych. Sprawdź czy ticker istnieje w Yahoo i czy data nie jest z dalekiej przeszłości."); 
@@ -2741,7 +2661,6 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 const actionHtml = item.status === 'CLOSED' 
                 ? `<span style="color:var(--text-muted); font-weight:bold;">ZAMKNIĘTA</span> <button class="btn-edit" onclick="reopenTrade(${item.id})" style="padding: 2px 6px; margin-left: 5px; border-color: var(--text-muted); color: var(--text-muted);" title="Cofnij zamknięcie">⟲</button>` 
                 : `<div style="display: flex; flex-direction: column; gap: 5px;">
-                    <button class="btn-edit" onclick="runAiExitCopilot('${item.ticker}', ${item.buy_price})" style="background-color: #5b21b6; border-color: #7c3aed; color: #eaecef; font-weight: bold; font-size: 0.85em; padding: 4px 8px;" title="Analiza Wyckoff / Siła Relatywna S&P500 przez AI">🤖 Audyt wyjścia AI</button>
                     <div style="display: flex; gap: 5px;">
                         <button class="btn-delete" onclick="openCloseModal(${item.id})" style="flex:1; padding: 4px 8px;">Sprzedaj</button>
                         <button class="btn-edit" onclick="openNotesModal(${item.id})" style="flex:1; padding: 4px 8px; background: transparent; color: #89b4fa; border: 1px solid #89b4fa;">📝 Notatnik</button>
@@ -4000,7 +3919,6 @@ async function handleTradeAutomation(tradeId, tradeData) {
         const origText = btn.innerText;
         btn.innerText = "⏳ Pobieranie algorytmiki..."; btn.disabled = true;
         document.getElementById('fvg-data-container').style.display = 'none';
-        document.getElementById('fvg-results-container').style.display = 'none';
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/ta/fvg/fetch`, {
@@ -4047,74 +3965,6 @@ async function handleTradeAutomation(tradeId, tradeData) {
         });
     }
 
-    async function analyzeFvgData() {
-        const tbody = document.getElementById('fvg-candles-tbody');
-        const rows = tbody.querySelectorAll('tr');
-        const editedCandles = [];
-        
-        rows.forEach(tr => {
-            editedCandles.push({
-                label: tr.getAttribute('data-label'),
-                date: tr.getAttribute('data-date'),
-                volume: parseFloat(tr.getAttribute('data-volume')),
-                open: parseFloat(tr.querySelector('.fvg-input-open').value),
-                high: parseFloat(tr.querySelector('.fvg-input-high').value),
-                low: parseFloat(tr.querySelector('.fvg-input-low').value),
-                close: parseFloat(tr.querySelector('.fvg-input-close').value)
-            });
-        });
-
-        const btn = document.getElementById('btn-fvg-analyze');
-        const origText = btn.innerHTML;
-        btn.innerHTML = "⏳ AI syntetyzuje dane..."; btn.disabled = true;
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/ta/fvg/analyze`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ticker: currentFvgTicker,
-                    candles: editedCandles,
-                    context: currentFvgContext,
-                    user_setup: selectedFvgSetupData // Przesyłamy ID Formularza!
-                })
-            });
-            const data = await res.json();
-            
-            if (data.status === 'success') {
-                displayFvgResults(data.analysis);
-            } else {
-                alert("Błąd analizy: " + data.message);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Błąd połączenia z serwerem AI.");
-        } finally {
-            btn.innerHTML = origText; btn.disabled = false;
-        }
-    }
-
-    function displayFvgResults(ai) {
-        document.getElementById('fvg-results-container').style.display = 'block';
-        const statusEl = document.getElementById('fvg-res-status');
-        const statusText = ai.fvg_status || 'Brak werdyktu';
-        statusEl.innerText = statusText;
-        
-        if (statusText.toUpperCase().includes('POTWIERDZON')) statusEl.style.color = 'var(--success)';
-        else if (statusText.toUpperCase().includes('ZANEGOWAN')) statusEl.style.color = 'var(--danger)';
-        else statusEl.style.color = '#fcd535';
-
-        document.getElementById('fvg-res-trend').innerText = ai.trend_alignment || 'Brak oceny';
-        document.getElementById('fvg-res-sector').innerText = ai.sector_strength || 'Brak danych z ETF';
-        
-        document.getElementById('fvg-res-footprint').innerHTML = (ai.institutional_footprint || '-').replace(/\n/g, '<br>');
-        // Ważna zmiana klucza na swing_viability
-        document.getElementById('fvg-res-momentum').innerHTML = (ai.swing_viability || '-').replace(/\n/g, '<br>'); 
-        document.getElementById('fvg-res-tactics').innerHTML = (ai.dca_tactics || '-').replace(/\n/g, '<br>');
-        
-        document.getElementById('fvg-results-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
     window.toggleFocusGroup = function(cleanTicker) {
             const rows = document.querySelectorAll('.child-of-' + cleanTicker);
             const icon = document.getElementById('icon-' + cleanTicker);
@@ -4133,158 +3983,27 @@ async function handleTradeAutomation(tradeId, tradeData) {
             if(icon) icon.innerText = isHidden ? '➕' : '➖';
         };
 
-    async function runAiExitCopilot(ticker, buyPrice) {
-    alert(`🤖 AI analizuje SMC i fazę Wyckoffa dla ${ticker}... Czekaj (ok. 10 sekund).`);
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/ai/evaluate-exit`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ticker: ticker, buy_price: buyPrice })
-        });
-        const data = await response.json();
-        if (data.status === 'success') {
-            const ai = data.analysis;
-            alert(`--- AUDYT ZAMKNIĘCIA (Wyckoff/SMC) ---\n\n` +
-                  `📊 Faza: ${ai.wyckoff_phase}\n` +
-                  `⚖️ Siła RS: ${ai.relative_strength}\n` +
-                  `💡 Płynność SMC: ${ai.smart_money_verdict}\n\n` +
-                  `🔥 REKOMENDACJA: ${ai.action}`);
-        } else { alert("Błąd AI: " + data.message); }
-    } catch (e) { alert("Błąd połączenia z serwerem AI."); }
-    };
-
-    async function runCampaignAudit() {
-        const ticker = document.getElementById('campaign-audit-ticker').value.trim().toUpperCase();
-        if (!ticker) return alert("Wpisz ticker!");
-        
-        const modal = document.getElementById('campaign-modal');
-        const content = document.getElementById('campaign-content');
-        modal.style.display = 'flex';
-        content.innerHTML = "⏳ AI analizuje pełną historię zagrań i intencje rynkowe... to potrwa kilka sekund.";
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/ai/campaign-review`, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ticker: ticker })
-            });
-            const data = await response.json();
-            
-            if (data.status === 'success') {
-                const ai = data.review;
-                
-                // BEZPIECZNE MAPOWANIE: Wyciągamy dane bez względu na to, czy serwer dał klucze po polsku czy angielsku
-                const rating = ai.rating || ai.ocena_skutecznosci || "Brak oceny";
-                const diagnosis = ai.campaign_diagnosis || ai.diagnoza_procesu || "Brak danych";
-                const psychology = ai.psychology_check || ai.werdykt_psychologiczny || "Brak danych";
-                const tip = ai.optimization_tip || ai.sugestia_optymalizacji || ai.sugestia_optymalizacyjna || "Brak wskazówek";
-
-                content.innerHTML = `
-                    <div style="font-size: 1.2em; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Ocena skuteczności: <b style="color:var(--accent); font-size: 1.2em;">${rating}</b></div>
-                    <div style="margin-bottom:15px;"><b style="color:var(--success);">Diagnoza procesu (Smart Money vs Hazard):</b><br>${diagnosis}</div>
-                    <div style="margin-bottom:15px;"><b style="color:#89b4fa;">Werdykt psychologiczny wyjścia:</b><br>${psychology}</div>
-                    <div style="background: rgba(201,148,0,0.1); padding:15px; border-radius:6px; border-left: 4px solid var(--accent); margin-top: 20px;">
-                        <b style="color:var(--accent);">Wskazówka optymalizacyjna:</b><br>${tip}
-                    </div>
-                `;
-            } else {
-                content.innerHTML = `❌ Błąd silnika AI: ${data.message || 'Brak szczegółów'}`;
-            }
-        } catch (e) {
-            content.innerHTML = `❌ Błąd połączenia z serwerem lub błąd parsowania danych.`;
-            console.error(e);
-        }
-    }
-    
-    // --- TRENER BEHAWIORALNY AI ---
-    window.latestAiAnalysis = null;
-
-    async function loadAiProfileFromServer() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/ai/get-latest-profile`);
-            const data = await response.json();
-            if (data.status === 'success' && data.analysis) {
-                // Zapisujemy w globalnej pamięci sesji, omijając local storage!
-                window.latestAiAnalysis = data.analysis;
-                console.log("✓ Profil behawioralny AI zsynchronizowany z Supabase.");
-            }
-        } catch (e) {
-            console.error("Błąd synchronizacji profilu AI między urządzeniami:", e);
-        }
-    }
-
-    window.checkAIBehavioralAlerts = function() {
-        if (!window.latestAiAnalysis) return;
-        const aiData = window.latestAiAnalysis;
-
-        let currentDirection = '';
-        let isLast15Min = false;
-
-        // Odczytywanie wartości z obecnie widocznej karty
-        if (document.getElementById('form-module').style.display === 'block') {
-            currentDirection = document.getElementById('form-direction').value;
-        } else if (document.getElementById('focus-module').style.display === 'block') {
-            currentDirection = document.getElementById('focus-direction').value;
-        } else if (document.getElementById('tradeslist-module').style.display === 'block') {
-            currentDirection = document.getElementById('trade-direction').value;
-            const t15El = document.getElementById('trade-last15');
-            if(t15El) isLast15Min = t15El.value === "1";
-        }
-
-        const warningBoxes = document.querySelectorAll('.ai-behavioral-warning');
-        const warningTexts = document.querySelectorAll('.ai-warning-text');
-        const sizeTexts = document.querySelectorAll('.ai-size-suggestion');
-
-        let triggerWarning = false;
-        let warningMsg = '';
-        let sizeMsg = '';
-
-        const errStr = (aiData.wykryte_bledy || []).join(" ").toLowerCase();
-        
-        // REGUŁA 1: Złe zagrania typu SHORT
-        if (currentDirection.includes('D') && errStr.includes('short')) {
-            warningMsg = "Twoja historia wykazuje powtarzające się straty na pozycjach typu SHORT. Zwróć uwagę na globalny trend makro opisany przez AI.";
-            sizeMsg = "💡 Sugerowana wielkość pozycji: " + (aiData.rekomendacja_wielkosci_pozycji || "Ostrożnie zrób redukcję transzy.");
-            triggerWarning = true;
-        } 
-        
-        // REGUŁA 2: Ostatni kwadrans (FOMO / Power Hour)
-        if (isLast15Min && errStr.includes('15')) {
-            warningMsg = "Uwaga: Zaznaczyłeś wejście na koniec sesji. Statystyki wskazują, że uleganie emocjom w Power Hour kosztowało Cię w przeszłości najwięcej.";
-            sizeMsg = "💡 Rekomendacja: " + (aiData.alert_behawioralny || "Zwiń pozycję do kapitału zwiadowczego lub odpuść.");
-            triggerWarning = true;
-        }
-
-        // Aktualizacja wyglądu wszystkich modułów
-        warningBoxes.forEach(box => box.style.display = triggerWarning ? 'block' : 'none');
-        warningTexts.forEach(txt => txt.innerText = warningMsg);
-        sizeTexts.forEach(stxt => stxt.innerText = sizeMsg);
-    };
 
     // --- WSTRZYKIWANIE WALIDACJI PRZY WYBORZE TICKERA ---
     // Aby ostrzeżenie znikało/pojawiało się, gdy w locie zmieniamy formularze:
     const origOpenModule = window.openModule;
     window.openModule = function(moduleId, moduleTitle) {
         origOpenModule(moduleId, moduleTitle);
-        setTimeout(checkAIBehavioralAlerts, 100);
     };
 
     const origOnFocusIdChange = window.onFocusIdChange;
     window.onFocusIdChange = function() {
         if(origOnFocusIdChange) origOnFocusIdChange();
-        setTimeout(checkAIBehavioralAlerts, 100);
     };
 
     const origOnTradeFocusChange = window.onTradeFocusChange;
     window.onTradeFocusChange = async function() {
         if(origOnTradeFocusChange) await origOnTradeFocusChange();
-        setTimeout(checkAIBehavioralAlerts, 100);
     };
 
     async function openNotesModal(tradeId) {
     document.getElementById('notes-trade-id').value = tradeId;
     document.getElementById('notes-textarea').value = '';
-    document.getElementById('notes-ai-results').style.display = 'none';
-    document.getElementById('notes-ai-content').innerHTML = '';
     document.getElementById('notes-modal').style.display = 'flex';
 
     // Pobieramy zapisaną wcześniej notatkę z bazy (jeśli istnieje)
@@ -4330,50 +4049,6 @@ async function handleTradeAutomation(tradeId, tradeData) {
         } catch (e) {
             btn.innerHTML = "❌ Błąd";
             setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000);
-        }
-    }
-
-    async function auditNotesOnly() {
-        const tradeId = document.getElementById('notes-trade-id').value;
-        const txt = document.getElementById('notes-textarea').value.trim();
-        
-        const resultsDiv = document.getElementById('notes-ai-results');
-        const contentDiv = document.getElementById('notes-ai-content');
-        
-        resultsDiv.style.display = 'block';
-        contentDiv.innerHTML = "⏳ AI analizuje korelację Twojej tezy z reżimem płynności z DailyBrief... Proszę czekać.";
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/ai/techno-fundamental-audit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ trade_id: parseInt(tradeId), notes: txt })
-            });
-            const data = await res.json();
-
-            if (data.status === 'success') {
-                const audit = data.audit;
-                const alignment = audit.macro_alignment || "Brak analizy";
-                const warning = audit.market_phase_warning || "Brak danych";
-                const verdict = audit.actionable_verdict || "Brak werdyktu";
-
-                let badgeColor = "var(--accent)";
-                if (verdict.includes("Ewakuuj")) badgeColor = "var(--danger)";
-                if (verdict.includes("Buduj") || verdict.includes("Kupuj")) badgeColor = "var(--success)";
-
-                contentDiv.innerHTML = `
-                    <div style="margin-bottom: 12px;"><b>Zbieżność z Makro (DailyBrief):</b><br>${alignment}</div>
-                    <div style="margin-bottom: 12px;"><b>Faza Rynku i Gotówka:</b><br>${warning}</div>
-                    <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:6px; border-left:4px solid ${badgeColor}; margin-top:15px;">
-                        <strong>Rekomendowany ruch:</strong> <span style="color:${badgeColor}; font-weight:bold;">${verdict}</span>
-                    </div>
-                `;
-            } else {
-                contentDiv.innerHTML = `❌ Błąd silnika AI: ${data.message}`;
-            }
-        } catch (e) {
-            contentDiv.innerHTML = `❌ Błąd połączenia z serwerem.`;
-            console.error(e);
         }
     }
 
@@ -5592,7 +5267,6 @@ function goToFocusFromNode(tradeId, formEntryId, nodeId) {
         const origText = btn.innerText;
         btn.innerText = "⏳ Skanowanie struktury..."; btn.disabled = true;
         document.getElementById('struct-data-container').style.display = 'none';
-        document.getElementById('struct-results-container').style.display = 'none';
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/ta/structure/fetch`, {
@@ -5635,72 +5309,7 @@ function goToFocusFromNode(tradeId, formEntryId, nodeId) {
         });
     }
 
-    async function analyzeStructureData() {
-        const tbody = document.getElementById('struct-candles-tbody');
-        const rows = tbody.querySelectorAll('tr');
-        const editedCandles = [];
-        
-        rows.forEach(tr => {
-            editedCandles.push({
-                label: tr.getAttribute('data-label'),
-                date: tr.getAttribute('data-date'),
-                volume: parseFloat(tr.getAttribute('data-volume')),
-                open: parseFloat(tr.querySelector('.struct-input-open').value),
-                high: parseFloat(tr.querySelector('.struct-input-high').value),
-                low: parseFloat(tr.querySelector('.struct-input-low').value),
-                close: parseFloat(tr.querySelector('.struct-input-close').value)
-            });
-        });
-
-        const btn = document.getElementById('btn-struct-analyze');
-        const origText = btn.innerHTML;
-        btn.innerHTML = "⏳ AI ocenia strefę..."; btn.disabled = true;
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/ta/structure/analyze`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ticker: currentStructTicker,
-                    candles: editedCandles,
-                    context: currentStructContext,
-                    user_setup: selectedStructSetupData
-                })
-            });
-            const data = await res.json();
-            
-            if (data.status === 'success') {
-                displayStructureResults(data.analysis);
-            } else { alert("Błąd analizy: " + data.message); }
-        } catch (err) {
-            console.error(err); alert("Błąd połączenia z serwerem AI.");
-        } finally { btn.innerHTML = origText; btn.disabled = false; }
-    }
-
-    function displayStructureResults(ai) {
-        document.getElementById('struct-results-container').style.display = 'block';
-        
-        const statusEl = document.getElementById('struct-res-validity');
-        const statusText = ai.structure_validity || 'Brak oceny';
-        statusEl.innerText = statusText;
-        
-        if (statusText.toUpperCase().includes('POTWIERDZONE') || statusText.toUpperCase().includes('FLIP')) {
-            statusEl.style.color = 'var(--success)';
-        } else if (statusText.toUpperCase().includes('SŁABY') || statusText.toUpperCase().includes('INDUCEMENT')) {
-            statusEl.style.color = 'var(--danger)';
-        } else {
-            statusEl.style.color = '#fcd535';
-        }
-
-        document.getElementById('struct-res-swing').innerText = ai.swing_horizon || '-';
-        document.getElementById('struct-res-mechanics').innerHTML = (ai.zone_mechanics || '-').replace(/\n/g, '<br>');
-        document.getElementById('struct-res-dca').innerHTML = (ai.dca_and_invalidation || '-').replace(/\n/g, '<br>');
-        
-        document.getElementById('struct-results-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
     // --- Start Aplikacji ---
-    loadAiProfileFromServer(); // Pobiera profil z serwera na starcie
     openDashboard();
         
 </script>
