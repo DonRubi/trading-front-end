@@ -71,7 +71,7 @@
         .hp-hint { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
         .hp-up { color: var(--success); } .hp-down { color: var(--danger); }
         .hp-seg { position: relative; display: inline-flex; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 3px; margin-bottom: 12px; }
-        .hp-seg button { position: relative; z-index: 1; background: none; border: 0; padding: 6px 16px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 600; transition: color .25s; }
+        .hp-seg button { position: relative; z-index: 1; background: none; border: 0; padding: 6px 14px; white-space: nowrap; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 600; transition: color .25s; }
         .hp-seg button.hp-on { color: #0b0e11; }
         .hp-seg .hp-pill { position: absolute; top: 3px; bottom: 3px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); transition: left .35s cubic-bezier(.22,.8,.24,1), width .35s cubic-bezier(.22,.8,.24,1); }
         .hp-legend { display: flex; gap: 16px; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px; flex-wrap: wrap; }
@@ -93,6 +93,11 @@
         .hp-b-short, .hp-b-sell { background: rgba(246,70,93,.15); color: var(--danger); }
         .hp-b-check { background: rgba(96,165,250,.16); color: #60a5fa; }
         .hp-b-stale { background: rgba(252,213,53,.16); color: var(--accent-hover); }
+        .hp-table th[data-sort] { cursor: pointer; user-select: none; }
+        .hp-table th[data-sort]:hover { color: var(--text-main); }
+        .hp-arrow::after { content: ' ↕'; opacity: .35; }
+        .hp-table th.hp-sorted .hp-arrow::after { content: attr(data-arrow); opacity: 1; color: var(--accent-hover); }
+        .hp-name { font-size: 0.68rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .hp-table tr.hp-total td { border-top: 2px solid var(--border-color); font-weight: 700; background: rgba(255,255,255,.03); }
         .hp-wbar { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
         .hp-wbar .hp-wtrack { width: 90px; height: 6px; background: var(--border-color); border-radius: 9px; overflow: hidden; }
@@ -160,7 +165,7 @@
                 <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Portfel vs S&amp;P 500</h2><span class="hp-peek" id="hp-peek-chart"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
                     <div class="hp-seg" id="hp-seg"><span class="hp-pill"></span>
-                        <button type="button" data-r="1d">Dzień</button><button type="button" data-r="1w">Tydzień</button><button type="button" class="hp-on" data-r="1m">Miesiąc</button>
+                        <button type="button" data-r="1d">Dzień</button><button type="button" data-r="1w">Tydzień</button><button type="button" class="hp-on" data-r="1m">Miesiąc</button><button type="button" data-r="1y">Rok</button><button type="button" data-r="all">All time</button>
                     </div>
                     <div class="hp-legend"><span><i style="background:var(--accent-hover)"></i>Portfel (PLN)</span><span><i style="background:#60a5fa"></i>S&amp;P 500 (USD)</span><span>Zmiana % od początku zakresu</span></div>
                     <div class="hp-chart-box"><canvas id="hp-chart"></canvas></div>
@@ -173,8 +178,8 @@
                 <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Otwarte pozycje</h2><span class="hp-peek" id="hp-peek-positions"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
                     <div class="hp-table-wrap"><table class="hp-table">
-                        <thead><tr><th>Ticker</th><th class="hp-r" title="Udział wartości pozycji (po zalewarowaniu) w sumie wartości otwartych pozycji">Udział w portfelu</th><th class="hp-r" title="Zmiana pokazanej wartości względem wczorajszego zamknięcia">Zmiana dziś</th><th class="hp-r" title="Nominał + zysk, przeliczone na PLN">Wartość po dźwigni (PLN)</th></tr></thead>
-                        <tbody id="hp-positions"><tr><td colspan="4" class="hp-empty">Ładowanie…</td></tr></tbody>
+                        <thead id="hp-pos-head"><tr><th data-sort="ticker" title="Sortuj po tickerze">Ticker<span class="hp-arrow"></span></th><th class="hp-r" data-sort="weight_pct" title="Udział wartości pozycji (po zalewarowaniu) w sumie wartości otwartych pozycji. Kliknij, aby sortować.">Udział w portfelu<span class="hp-arrow"></span></th><th class="hp-r" data-sort="day_pct" title="Zmiana wartości po zalewarowaniu względem wczorajszego zamknięcia. Kliknij, aby sortować.">Zmiana dziś<span class="hp-arrow"></span></th></tr></thead>
+                        <tbody id="hp-positions"><tr><td colspan="3" class="hp-empty">Ładowanie…</td></tr></tbody>
                     </table></div>
                     <div class="hp-err" id="hp-err-positions" hidden></div>
                 </div></div></div>
@@ -5555,21 +5560,32 @@ window.HomePage = (function () {
         } catch (e) { showErr("summary", e); showErr("positions", e); $("#hp-updated").textContent = "Brak połączenia z API"; }
     }
     const STALE = { db: "Cena z bazy", db_stale: "Cena nieaktualna", buy: "Brak notowania" };
-    function renderPositions(rows, totals) {
+    let posRows = [], posTotals = null, posSort = { key: "weight_pct", dir: "desc" };
+    try { const sv = JSON.parse(localStorage.getItem("quantdesk.home.sort")); if (sv && sv.key) posSort = sv; } catch (e) {}
+    function renderPositions(rows, totals) { posRows = rows; posTotals = totals; drawPositions(); }
+    function drawPositions() {
         const tb = $("#hp-positions");
-        if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="hp-empty">Brak otwartych pozycji</td></tr>'; return; }
+        document.querySelectorAll("#hp-pos-head th[data-sort]").forEach(th => {
+            const on = th.dataset.sort === posSort.key;
+            th.classList.toggle("hp-sorted", on);
+            th.querySelector(".hp-arrow").setAttribute("data-arrow", posSort.dir === "asc" ? " ▲" : " ▼");
+        });
+        if (!posRows.length) { tb.innerHTML = '<tr><td colspan="3" class="hp-empty">Brak otwartych pozycji</td></tr>'; return; }
+        const k = posSort.key, dir = posSort.dir === "asc" ? 1 : -1;
+        const rows = [...posRows].sort((a, b) => k === "ticker" ? dir * a.ticker.localeCompare(b.ticker, "pl") : dir * (a[k] - b[k]));
         const max = Math.max(...rows.map(r => r.weight_pct), 1);
         const dirBadge = { LONG: ["hp-b-long", "LONG"], SHORT: ["hp-b-short", "SHORT"], MIX: ["hp-b-check", "MIX"] };
         let html = rows.map((r, i) => {
             const [cls, txt] = dirBadge[r.direction] || dirBadge.MIX;
-            const lev = r.leverage > 1.005 ? " " + r.leverage.toLocaleString("pl-PL", { maximumFractionDigits: 2 }) + "×" : "";
+            const levTip = "Średni lewar ×" + r.leverage.toLocaleString("pl-PL", { maximumFractionDigits: 2 });
             const tr = r.n > 1 ? '<span class="hp-badge hp-b-check" title="Pozycje tego tickera są zsumowane">' + r.n + " transze</span>" : "";
             const stale = STALE[r.price_source] ? '<span class="hp-badge hp-b-stale" title="Wycena nie opiera się na notowaniu z ostatniej minuty">' + STALE[r.price_source] + "</span>" : "";
-            return '<tr style="animation-delay:' + (i * 40) + 'ms"><td><span class="hp-tk">' + esc(r.ticker) + '</span><span class="hp-badge ' + cls + '">' + txt + esc(lev) + "</span>" + tr + stale + "</td>" +
+            const name = r.name ? '<div class="hp-name" title="' + esc(r.name) + '">' + esc(r.name) + "</div>" : "";
+            return '<tr style="animation-delay:' + (i * 40) + 'ms"><td><span class="hp-tk">' + esc(r.ticker) + '</span><span class="hp-badge ' + cls + '" title="' + levTip + '">' + txt + "</span>" + tr + stale + name + "</td>" +
                 '<td class="hp-r"><div class="hp-wbar"><div class="hp-wtrack"><div class="hp-wfill" data-w="' + (r.weight_pct / max * 100).toFixed(1) + '"></div></div><span>' + fmtPlain(r.weight_pct, 1) + "</span></div></td>" +
-                '<td class="hp-r ' + sign(r.day_pct) + '">' + fmtPct(r.day_pct) + '</td><td class="hp-r sensitive">' + fmtPln(r.value_pln) + "</td></tr>";
+                '<td class="hp-r ' + sign(r.day_pct) + '">' + fmtPct(r.day_pct) + "</td></tr>";
         }).join("");
-        if (totals) html += '<tr class="hp-total"><td><span class="hp-tk">Razem</span></td><td class="hp-r">' + fmtPlain(totals.weight_pct, 1) + '</td><td class="hp-r ' + sign(totals.day_pct) + '">' + fmtPct(totals.day_pct) + '</td><td class="hp-r sensitive">' + fmtPln(totals.value_pln) + "</td></tr>";
+        if (posTotals) html += '<tr class="hp-total"><td><span class="hp-tk">Razem</span></td><td class="hp-r">' + fmtPlain(posTotals.weight_pct, 1) + '</td><td class="hp-r ' + sign(posTotals.day_pct) + '">' + fmtPct(posTotals.day_pct) + "</td></tr>";
         tb.innerHTML = html;
         requestAnimationFrame(() => requestAnimationFrame(() => tb.querySelectorAll(".hp-wfill").forEach(f => f.style.width = f.dataset.w + "%")));
     }
@@ -5587,12 +5603,16 @@ window.HomePage = (function () {
             if (seq !== chartSeq) return;
             showErr("chart", null);
             const intraday = d.kind === "intraday";
+            const spanDays = d.labels.length > 1 && !intraday ? (new Date(d.labels[d.labels.length - 1]) - new Date(d.labels[0])) / 864e5 : 0;
+            const dateFmt = spanDays > 120 ? { day: "numeric", month: "short", year: "2-digit" } : { day: "2-digit", month: "short" };
             const labels = d.labels.map(l => intraday
                 ? new Date(l).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Warsaw" })
-                : new Date(l + "T00:00:00").toLocaleDateString("pl-PL", { day: "2-digit", month: "short" }));
+                : new Date(l + "T00:00:00").toLocaleDateString("pl-PL", dateFmt));
             $("#hp-chart-note").textContent = !d.labels.length
                 ? (intraday ? "Brak notowań z bieżącej sesji." : "Brak historii ROI - wywołaj /api/cron/calculate-portfolio-roi, aby zacząć ją zapisywać.")
-                : intraday ? "Wykres dzienny to wycena obecnych otwartych pozycji w ciągu sesji (przybliżenie, z kursami walut)." : "";
+                : intraday ? "Wykres dzienny to wycena obecnych otwartych pozycji w ciągu sesji (przybliżenie, z kursami walut)."
+                : (d.range === "all" && d.history_start) ? "Od początku historii portfela: " + new Date(d.history_start + "T00:00:00").toLocaleDateString("pl-PL")
+                : (d.range === "1y" && d.history_start && new Date(d.history_start) > new Date(Date.now() - 365 * 864e5)) ? "Historia portfela dostępna od " + new Date(d.history_start + "T00:00:00").toLocaleDateString("pl-PL") + " - wykres obejmuje krótszy okres niż rok." : "";
             const last = a => [...a].reverse().find(v => v != null);
             const lp = last(d.portfolio), ls = last(d.sp500);
             $("#hp-peek-chart").textContent = lp != null && ls != null ? "Portfel " + fmtPct(lp) + " · S&P " + fmtPct(ls) : "";
@@ -5661,6 +5681,13 @@ window.HomePage = (function () {
             panels().forEach(p => setCollapsed(p, c)); saveState(); syncToggleAll();
         });
         $("#hp-refresh").addEventListener("click", refresh);
+        $("#hp-pos-head").addEventListener("click", e => {
+            const th = e.target.closest("th[data-sort]"); if (!th) return;
+            const key = th.dataset.sort;
+            posSort = { key: key, dir: posSort.key === key ? (posSort.dir === "asc" ? "desc" : "asc") : (key === "ticker" ? "asc" : "desc") };
+            try { localStorage.setItem("quantdesk.home.sort", JSON.stringify(posSort)); } catch (err) {}
+            drawPositions();
+        });
         $("#hp-seg").addEventListener("click", e => {
             const b = e.target.closest("button"); if (!b) return;
             document.querySelectorAll("#hp-seg button").forEach(x => x.classList.toggle("hp-on", x === b));
