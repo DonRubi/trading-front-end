@@ -6131,7 +6131,7 @@ window.Measure = (function () {
         } catch (e) { M.auto = null; }
     }
     function zoneBands() {
-        const list = (typeof formEntries !== "undefined" ? formEntries : []).filter(e => e.ticker === M.ticker);
+        const list = (typeof formEntries !== "undefined" ? formEntries : []).filter(e => e.ticker === M.ticker && e.mute != 1);   // wyciszone zagrania nie są rysowane
         const seen = new Set(), out = [];
         list.forEach(e => {
             const a = parseFloat(e.start_zone), b = parseFloat(e.end_zone), lo = Math.min(a, b), hi = Math.max(a, b), long = e.direction === "DBR" || e.direction === "RBR", muted = e.mute == 1;
