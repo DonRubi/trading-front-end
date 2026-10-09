@@ -282,6 +282,11 @@
         .plx-err { color: var(--danger); font-size: 0.88em; } .plx-warn { color: var(--accent-hover); font-size: 0.85em; }
         .plx-cols { display: grid; grid-template-columns: 1fr; gap: 14px; } @media (min-width: 1100px) { .plx-cols.two { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); } }
         @media (max-width: 760px) { .plx-overlay { padding: 0; } .plx-panel { border-radius: 0; min-height: 100vh; border: 0; } #planner-module.dbx { padding: 12px; } }
+        .plx-do { margin-left: auto; padding: 5px 12px; font-size: 0.85em; }
+        .plx-banner { background: rgba(201,148,0,.10); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.88rem; line-height: 1.55; }
+        .plx-banner a { color: var(--accent-hover); } .plx-banner .dbx-icon { margin-left: 8px; width: 26px; height: 24px; vertical-align: middle; }
+        .plx-toast { position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 20px); max-width: min(560px, 92vw); background: var(--bg-card); border: 1px solid var(--accent); color: var(--text-main); padding: 12px 18px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.55); z-index: 1300; opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; font-size: 0.9rem; line-height: 1.45; }
+        .plx-toast.show { opacity: 1; transform: translate(-50%, 0); }
         .plx-tag { font-size: 0.72rem; color: var(--accent); text-decoration: none; } .plx-tag:hover { text-decoration: underline; }
         /* ===== Okno szczegółów spółki (StockDetail) ===== */
         .sd-link { cursor: pointer; }
@@ -2801,6 +2806,7 @@
             function handleTradeSort(key) { tradeSortDir = (tradeSortKey === key && tradeSortDir === 'desc') ? 'asc' : 'desc'; tradeSortKey = key; handleTradesFilter(); }
 
             async function initTradesModule() { 
+            if (window.Planer) Planer.clearTradeBanner();
             if(focusDataArray.length===0) await fetchFocusEntries(); 
             
             // --- ZABEZPIECZENIE: SAMODZIELNE POBIERANIE CEN ---
@@ -3971,13 +3977,15 @@ async function handleTradeAutomation(tradeId, tradeData) {
             else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; } 
     
             try { 
-                await fetch(`${API_BASE_URL}/api/trades/close`, { 
+                const closeRes = await fetch(`${API_BASE_URL}/api/trades/close`, { 
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'}, 
                     body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost, exit_reason: exitReason }) 
                 }); 
+                const closeJson = await closeRes.json().catch(() => ({}));
                 closeSellModal(); 
                 fetchTradesEntries(true); 
+                if (closeJson.plan_closed && window.Planer) Planer.toast('🧭 Plan #' + closeJson.plan_closed + ' zamknął się automatycznie - zamknięto ostatnią pozycję planu.', 8000);
             } catch(e) {} 
         }
         async function loadDailyBriefs() { try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); } } catch (error) {} }
@@ -5579,10 +5587,11 @@ window.Planer = (function () {
         try { const d = await api("/api/planner/plan?id=" + encodeURIComponent(id)); st.detail = JSON.parse(JSON.stringify(d.plan)); st.detail.ctx = null; drawDetail(); }
         catch (e) { showOverlay("plx-detail", '<div class="plx-err">' + esc(e.message) + '</div><div><button class="hp-btn" onclick="Planer.closeDetail()">Zamknij</button></div>'); }
     }
-    function playRows(l) {
+    function playRows(l, i, canAct) {
         return (l.plays || []).map(p => '<div class="plx-play"><b>' + arrow(p.side) + " wejście " + price(p.entry_point) + "</b><span>TP " + price(p.take_profit) + "</span><span>SL " + price(p.stop_loss) + "</span>" +
             (p.reasons && p.reasons.length ? "<span>" + esc(p.reasons.join(", ")) + "</span>" : "") +
-            "<span>transakcje: <b>" + p.trades + "</b>" + (p.open_trades ? " (otwarte: " + p.open_trades + ", " + pct(p.used_pct) + " kapitału)" : "") + "</span></div>").join("");
+            "<span>transakcje: <b>" + p.trades + "</b>" + (p.open_trades ? " (otwarte: " + p.open_trades + ", " + pct(p.used_pct) + " kapitału)" : "") + "</span>" +
+            (canAct ? '<button type="button" class="hp-btn hp-primary plx-do" data-do="' + esc(p.entry_id) + '" data-leg="' + i + '" title="Przejdź do analizy Focus lub do dodania transakcji dla tego zagrania">Zrób zagranie →</button>' : "") + "</div>").join("");
     }
     function legCard(l, i, editable) {
         const over = l.zone_limit_pct != null && l.planned_pct > l.zone_limit_pct + 1e-9;
@@ -5590,7 +5599,7 @@ window.Planer = (function () {
             (l.missing ? '<span class="plx-warn">strefa nie istnieje już w Form</span>' : "") +
             '<div class="plx-zbud"><span class="db-help">zainwestowano ' + pct(l.used_pct) + " · do dołożenia " + pct(l.left_pct) + (l.zone_limit_pct != null ? " · limit strefy " + pct(l.zone_limit_pct) : "") + "</span>" +
             (editable ? '<label class="dbx-field" style="flex-direction:row;align-items:center;gap:6px;"><span>Budżet strefy</span><input class="dbx-in" type="number" step="0.1" min="0.1" max="100" data-leg="' + i + '" value="' + l.planned_pct + '"> %</label><button class="dbx-icon dbx-del" type="button" onclick="Planer.removeLeg(' + i + ')" title="Usuń strefę z planu">✕</button>'
-                : "<b>budżet " + pct(l.planned_pct) + "</b>") + "</div></div>" + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l) + "</div>";
+                : "<b>budżet " + pct(l.planned_pct) + "</b>") + "</div></div>" + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l, i, editable && !l.missing) + "</div>";
     }
     function drawDetail() {
         const p = st.detail, c = p.company, open_ = p.status === "OPEN";
@@ -5733,6 +5742,55 @@ window.Planer = (function () {
         } catch (e) { m.textContent = e.message; }
     }
 
+    // ---------- „Zrób zagranie”: przejście do Focus (analiza) albo do Transakcji (dodanie pozycji) ----------
+    function toast(text, ms) {
+        let el = document.getElementById("plx-toast");
+        if (!el) { el = document.createElement("div"); el.id = "plx-toast"; el.className = "plx-toast"; document.body.appendChild(el); }
+        el.textContent = text; el.classList.add("show"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), ms || 6000);
+    }
+    const waitFor = (fn, ms) => new Promise(res => { const t0 = Date.now(); (function tick() { let ok = false; try { ok = fn(); } catch (e) {} if (ok || Date.now() - t0 > (ms || 6000)) res(ok); else setTimeout(tick, 100); })(); });
+    function clearTradeBanner() { const b = document.getElementById("plx-trade-banner"); if (b) b.remove(); }
+    function setTradeBanner(c) {
+        clearTradeBanner(); const form = document.getElementById("trade-form"); if (!form) return;
+        const b = document.createElement("div"); b.id = "plx-trade-banner"; b.className = "plx-banner";
+        b.innerHTML = "🧭 <b>Zagranie z Planera</b> · plan #" + c.planId + " · " + arrow(c.zone.side) + " strefa " + num(c.zone.start, 2) + "–" + num(c.zone.end, 2) + " · wejście " + price(c.play.entry_point) + " · TP " + price(c.play.take_profit) + " · SL " + price(c.play.stop_loss) +
+            "<br>Do dołożenia w strefie: <b>" + pct(c.zone.left_pct) + "</b> kapitału · po inwestycji zostanie <b>" + pct(c.after) + "</b> budżetu spółki · " +
+            '<a href="#" data-plan="' + c.planId + '">wróć do planu</a> <button type="button" class="dbx-icon" onclick="Planer.clearTradeBanner()" title="Ukryj">✕</button>';
+        form.insertBefore(b, form.firstChild);
+    }
+    async function doPlay(entryId, legIdx) {
+        const p = st.detail, leg = p.legs[legIdx]; if (!leg) return;
+        const play = (leg.plays || []).find(x => x.entry_id === entryId); if (!play) return;
+        const c = { planId: p.id, ticker: p.ticker, entryId: entryId, zone: leg, play: play, after: p.remaining_after_pct };
+        closeOverlay("plx-detail");
+        let focusId = null;
+        try {
+            const rows = await api("/api/focus/entries"), now = Date.now();
+            const recent = (Array.isArray(rows) ? rows : []).filter(f => f.entry_id === entryId && (!f.created_at || (now - new Date(f.created_at)) / 864e5 <= 14))
+                .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
+            if (recent) focusId = recent.id;
+        } catch (e) {}
+        if (focusId != null) {                       // jest świeża analiza Focus -> dodanie transakcji
+            openModule("tradeslist-module", "Transakcje");
+            const ready = await waitFor(() => { const s = document.getElementById("trade-ticker-select"); return s && Array.prototype.some.call(s.options, o => o.value === c.ticker); });
+            if (!ready) { toast("Nie udało się wczytać formularza Transakcji - spróbuj ponownie."); return; }
+            document.getElementById("trade-ticker-select").value = c.ticker; onTradeTickerChange();
+            const fs = document.getElementById("trade-focus-id"); fs.value = String(focusId); await onTradeFocusChange();
+            setTradeBanner(c);
+            const form = document.getElementById("trade-form"); if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
+            const sp = document.getElementById("trade-spent"); if (sp) setTimeout(() => sp.focus(), 400);
+        } else {                                     // brak analizy -> najpierw Focus dla tego zagrania
+            openModule("focus-module", "Focus");
+            const ready = await waitFor(() => { const s = document.getElementById("focus-ticker-select"); return s && Array.prototype.some.call(s.options, o => o.value === c.ticker); });
+            if (ready) {
+                document.getElementById("focus-ticker-select").value = c.ticker; onFocusTickerChange();
+                const fid = document.getElementById("focus-form-id"); fid.value = c.entryId; onFocusIdChange();
+            }
+            toast("To zagranie nie ma jeszcze analizy Focus z ostatnich 14 dni. Uzupełnij ją tutaj - potem zagranie pojawi się w Transakcjach.", 9000);
+        }
+    }
+    document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".plx-do"); if (b) { e.preventDefault(); doPlay(b.dataset.do, +b.dataset.leg); } });
+
     // ---------- wejścia z innych miejsc aplikacji ----------
     async function openFor(ticker) {         // np. przycisk „Planuj” w Transakcjach i w oknie spółki
         if (typeof openModule === "function") openModule("planner-module", "Planer");
@@ -5741,12 +5799,13 @@ window.Planer = (function () {
             if (d.open_plan_id) openPlan(d.open_plan_id); else openNew(ticker);
         } catch (e) { openNew(); }
     }
-    function onTradeAdded() { const m = document.getElementById("planner-module"); if (m && m.style.display === "block") load(); }
+    function onTradeAdded() { clearTradeBanner(); const m = document.getElementById("planner-module"); if (m && m.style.display === "block") load(); }
     document.addEventListener("click", e => { const t = e.target.closest && e.target.closest("[data-plan]"); if (t) { e.preventDefault(); if (typeof openModule === "function") openModule("planner-module", "Planer"); openPlan(t.dataset.plan); } });
 
     return { open: open, setFilter: setFilter, setQuery: setQuery, openNew: openNew, closeNew: () => closeOverlay("plx-new"), closeDetail: () => closeOverlay("plx-detail"),
              openPlan: openPlan, openFor: openFor, onTicker: onTicker, togglePick: togglePick, setPick: setPick, create: create, saveLegs: saveLegs, removeLeg: removeLeg,
-             fillAddLeg: fillAddLeg, saveNote: saveNote, closePlan: closePlan, reopenPlan: reopenPlan, deletePlan: deletePlan, goTrades: goTrades, onTradeAdded: onTradeAdded };
+             fillAddLeg: fillAddLeg, saveNote: saveNote, closePlan: closePlan, reopenPlan: reopenPlan, deletePlan: deletePlan, goTrades: goTrades, onTradeAdded: onTradeAdded,
+             clearTradeBanner: clearTradeBanner, toast: toast };
 })();
 </script>
 </body>
