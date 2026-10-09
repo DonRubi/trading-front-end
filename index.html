@@ -236,6 +236,53 @@
         .lim-table td, .lim-table th { text-align: center; } .lim-table td:first-child, .lim-table th:first-child { text-align: left; }
         .lim-table input { width: 100px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 7px 8px; text-align: right; }
         .lim-actions { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+        /* ===== Planer (plany inwestycyjne): spójny z Bazą danych i stroną główną ===== */
+        #planner-module.dbx { max-width: 1680px; padding: 18px 24px 48px; font-size: 15px; }
+        @media (min-width: 1900px) { #planner-module.dbx { max-width: 2000px; font-size: 16px; padding: 24px 32px 56px; } }
+        @media (min-width: 2400px) { #planner-module.dbx { max-width: 2480px; font-size: 18px; padding: 30px 48px 64px; } }
+        #planner-module.dbx { animation-name: dbxFade; }
+        .plx-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+        .plx-seg { display: inline-flex; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 3px; }
+        .plx-seg button { background: none; border: 0; padding: 7px 16px; border-radius: 8px; color: var(--text-muted); font-weight: 600; cursor: pointer; font-size: 0.92em; }
+        .plx-seg button.on { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: #0b0e11; }
+        .plx-search { max-width: 320px; }
+        .plx-row { cursor: pointer; }
+        .plx-kind { display: inline-block; font-size: 0.72em; font-weight: 700; padding: 2px 9px; border: 1px solid; border-radius: 10px; white-space: nowrap; }
+        .plx-status { display: inline-block; font-size: 0.72em; font-weight: 700; padding: 2px 10px; border-radius: 99px; letter-spacing: .04em; }
+        .plx-st-open { background: rgba(14,203,129,.15); color: var(--success); } .plx-st-closed { background: rgba(132,142,156,.18); color: var(--text-muted); }
+        .plx-zchips { display: flex; flex-wrap: wrap; gap: 5px; }
+        .plx-zchip { font-size: 0.78em; border: 1px solid var(--border-color); border-radius: 8px; padding: 2px 8px; background: var(--bg-main); white-space: nowrap; }
+        .plx-zchip.long { border-color: rgba(14,203,129,.5); } .plx-zchip.short { border-color: rgba(246,70,93,.5); }
+        .plx-bud { min-width: 150px; } .plx-bud small { color: var(--text-muted); }
+        .plx-track { height: 6px; background: var(--border-color); border-radius: 9px; overflow: hidden; margin-top: 5px; position: relative; }
+        .plx-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-hover)); border-radius: 9px; }
+        .plx-fill.res { background: rgba(252,213,53,.35); position: absolute; top: 0; }
+        .plx-fill.over { background: var(--danger); }
+        .plx-neg { color: var(--danger); font-weight: 700; } .plx-pos { color: var(--success); font-weight: 700; }
+        /* okna: szczegóły planu i nowy plan */
+        .plx-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.82); z-index: 1100; display: none; overflow-y: auto; padding: 16px; }
+        .plx-overlay.open { display: block; }
+        .plx-panel { max-width: 1180px; margin: 0 auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; font-size: 15px; }
+        @media (min-width: 2400px) { .plx-panel { max-width: 1500px; font-size: 18px; } }
+        .plx-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+        .plx-title { font-size: 1.35em; font-weight: 700; color: var(--accent); } .plx-sub { color: var(--text-muted); font-size: 0.88em; margin-top: 2px; }
+        .plx-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+        .plx-kpi { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; }
+        .plx-kpi .l { color: var(--text-muted); font-size: 0.72em; text-transform: uppercase; letter-spacing: .06em; } .plx-kpi .v { font-size: 1.35em; font-weight: 700; margin-top: 4px; } .plx-kpi .s { color: var(--text-muted); font-size: 0.78em; margin-top: 2px; }
+        .plx-h { font-size: 1em; font-weight: 650; margin: 4px 0 2px; }
+        .plx-zone { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; }
+        .plx-zone.pick { cursor: pointer; } .plx-zone.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; } .plx-zone.dis { opacity: .5; cursor: not-allowed; }
+        .plx-zhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .plx-zrange { font-weight: 700; font-size: 1.05em; } .plx-zside { font-size: 0.85em; } .plx-zside.long { color: var(--success); } .plx-zside.short { color: var(--danger); }
+        .plx-zbud { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; } .plx-zbud input { width: 96px; text-align: right; }
+        .plx-play { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; padding: 7px 4px; border-top: 1px dashed var(--border-color); font-size: 0.88em; color: var(--text-muted); }
+        .plx-play b { color: var(--text-main); font-weight: 650; } .plx-play .sd-link { color: var(--accent); }
+        .plx-note { width: 100%; min-height: 70px; resize: vertical; }
+        .plx-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .plx-err { color: var(--danger); font-size: 0.88em; } .plx-warn { color: var(--accent-hover); font-size: 0.85em; }
+        .plx-cols { display: grid; grid-template-columns: 1fr; gap: 14px; } @media (min-width: 1100px) { .plx-cols.two { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); } }
+        @media (max-width: 760px) { .plx-overlay { padding: 0; } .plx-panel { border-radius: 0; min-height: 100vh; border: 0; } #planner-module.dbx { padding: 12px; } }
+        .plx-tag { font-size: 0.72rem; color: var(--accent); text-decoration: none; } .plx-tag:hover { text-decoration: underline; }
         /* ===== Okno szczegółów spółki (StockDetail) ===== */
         .sd-link { cursor: pointer; }
         .sd-link:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -400,7 +447,7 @@
                         <div class="menu-card" onclick="openModule('focuslist-module', 'Lista Focus')"><span class="icon">👁️</span><h3>Lista Focus</h3></div>
                         <div class="menu-card" onclick="openModule('alerthistory-module', 'Historia alertów')"><span class="icon">🔔</span><h3>Historia alertów</h3></div>
                         <div class="menu-card" onclick="openModule('dailybrief-module', 'Przegląd dnia')"><span class="icon">📰</span><h3>Przegląd dnia</h3></div>
-                        <div class="menu-card" onclick="openModule('campaign-module', 'Planer')"><span class="icon">🧭</span><h3>Planer</h3></div>
+                        <div class="menu-card" onclick="openModule('planner-module', 'Planer')"><span class="icon">🧭</span><h3>Planer</h3></div>
                     </div>
                 </div></div></div>
             </section>
@@ -1333,98 +1380,28 @@
             </div>
         </div>
     </div>
-    <section id="campaign-module" class="app-module">
-    <div class="macro-header-container" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; align-items: center;">
-        <h3>Drzewo Scenariuszy Kampanii</h3>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-            <input type="text" id="camp-search-filter" placeholder="Szukaj tickera..." oninput="filterCampaigns()" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
-            <select id="camp-status-filter" class="form-control" onchange="filterCampaigns()" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
-                <option value="ALL">Wszystkie Statusy</option>
-                <option value="OPEN" selected>Otwarte</option>
-                <option value="CLOSED">Zamknięte</option>
-            </select>
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(14,203,129,0.1); padding:8px 12px; border-radius:6px; border:1px solid var(--success);">
-                <input type="checkbox" id="camp-active-path-toggle" onchange="filterCampaigns()" checked>
-                <span style="color:var(--success); font-weight:bold; font-size:0.9em;">Tylko Aktywna Ścieżka</span>
-            </label>
-            <button onclick="collapseAllNodes()" style="background: transparent; color: var(--text-main); border: 1px solid #555; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='#555'; this.style.color='var(--text-main)';">Zwiń Wszystko 🔼</button>
-            
-            <button class="btn-submit" style="background: var(--accent); color: #000; padding: 8px 15px; border-radius: 6px; margin: 0;" onclick="highlightActionableNodes()">⚡ Akcja na Dziś</button>
-        </div>
-    </div>
-    
-    <div id="campaign-list" style="margin-top: 20px; display: flex; flex-direction: column; gap: 20px;">
+    <section id="planner-module" class="app-module dbx">
+        <div class="dbx-panel">
+            <div class="dbx-panel-head">
+                <div><h3>Plany inwestycyjne</h3><div class="db-help">Budżet liczony w % kapitału w strefach z Form, według limitów rodzaju spółki (Baza danych → Serwis). Plan łączy strefy z transakcjami z zakładki Transakcje.</div></div>
+                <div class="dbx-tools"><button class="hp-btn hp-primary" type="button" onclick="Planer.openNew()">＋ Nowy plan</button></div>
+            </div>
+            <div class="plx-bar">
+                <div class="plx-seg" id="plx-filter">
+                    <button type="button" data-f="open" class="on" onclick="Planer.setFilter('open')">Otwarte</button>
+                    <button type="button" data-f="closed" onclick="Planer.setFilter('closed')">Zamknięte</button>
+                    <button type="button" data-f="all" onclick="Planer.setFilter('all')">Wszystkie</button>
+                </div>
+                <input class="dbx-in plx-search" placeholder="Szukaj tickera lub nazwy…" autocomplete="off" oninput="Planer.setQuery(this.value)">
+            </div>
+            <div class="hp-table-wrap">
+                <table class="hp-table dbx-table plx-table">
+                    <thead><tr><th>Spółka</th><th>Rodzaj</th><th>Plan</th><th>Strefy i budżety</th><th>Transakcje</th><th>Budżet spółki</th><th class="hp-r" title="Budżet spółki, który zostanie po zainwestowaniu całego planu">Zostaje po planie</th><th>Status</th><th></th></tr></thead>
+                    <tbody id="plx-tbody"><tr><td colspan="9" class="hp-empty">Ładowanie…</td></tr></tbody>
+                </table>
+            </div>
         </div>
     </section>
-
-    <div id="node-wizard-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; padding: 10px;">
-    <div style="background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:450px; border:1px solid var(--accent); max-height: 90vh; overflow-y: auto;">
-        <h3 style="color:var(--accent); margin-bottom:15px;" id="nw-title">Planuj Krok</h3>
-        
-        <input type="hidden" id="nw-trade-id">
-        <input type="hidden" id="nw-ticker">
-        <input type="hidden" id="nw-parent-id"> 
-        <input type="hidden" id="nw-variant"> 
-        
-        <div class="form-group mb-1">
-            <label style="color:#89b4fa; font-weight:bold;">Akcja (Wariant <span id="nw-variant-label"></span>):</label>
-            <select id="nw-action-type" onchange="toggleWizardFields()" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; font-size:1em;">
-                <option value="ADD_TRANCHE">🟢 Wejdź / Uśrednij (Nowa Transza)</option>
-                <option value="TAKE_PROFIT">🔵 Take Profit (Księguj Zysk)</option>
-                <option value="STOP_LOSS">🔴 Stop Loss (Utnij Stratę)</option>
-            </select>
-        </div>
-
-        <div id="nw-section-add" style="display:block; background:rgba(14,203,129,0.05); padding:10px; border-radius:6px; border:1px solid rgba(14,203,129,0.2); margin-top:10px;">
-            <label style="color:var(--success);">Wybierz strefę wejścia z modułu Form:</label>
-            <select id="nw-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;"></select>
-            
-            <div id="setup-preview-add" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
-                <div>Priorytet: <b id="preview-prio"></b></div>
-                <div>Przewidywany zysk/strata: <b id="preview-pnl"></b></div>
-            </div>
-
-            <div style="margin-top:10px;">
-                <label>Amunicja (% dopuszczalnego budżetu ścieżki):</label>
-                <input type="number" id="nw-budget" value="25" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
-            </div>
-            <div style="margin-top:10px;">
-                <label>Zabezpieczenie Order Flow:</label>
-                <select id="nw-cvd" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
-                    <option value="Dowolne">Zaufaj strefie (Blind limit)</option>
-                    <option value="Dodatnie Candle">Czekaj na dodatnią deltę / absorpcję</option>
-                </select>
-            </div>
-        </div>
-
-        <div id="nw-section-close" style="display:none; background:rgba(246,70,93,0.05); padding:10px; border-radius:6px; border:1px solid rgba(246,70,93,0.2); margin-top:10px;">
-            <label style="color:var(--text-main);">Wybierz JEDNĄ otwartą pozycję do zamknięcia:</label>
-            <select id="nw-tranche-select" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; margin-top:8px; font-weight:bold;"></select>
-            
-            <label style="color:var(--text-main); margin-top:10px; display:block;">Wybierz precyzyjną cenę z Form (TP/SL):</label>
-            <select id="nw-close-form-id" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; margin-top:8px;"></select>
-
-            <div id="setup-preview-close" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; font-size:0.85em; display:none;">
-                <div>Cena wyjścia (Exit Price): <b id="preview-exit-price"></b></div>
-            </div>
-        </div>
-
-        <div id="nw-section-macro" class="form-group" style="margin-top: 15px;">
-            <label>Warunek Makro (Focus Score > X):</label>
-            <input type="number" id="nw-focus" value="15" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;">
-        </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-            <label>Notatka / Uzasadnienie decyzji:</label>
-            <textarea id="nw-reason" rows="2" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px;" placeholder="Wyjaśnij powód..."></textarea>
-        </div>
-        
-        <div style="margin-top:20px; display:flex; gap:10px;">
-            <button onclick="document.getElementById('node-wizard-modal').style.display='none'" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
-            <button id="btn-save-wizard" onclick="submitNewNode()" style="flex:1; background:var(--accent); color:#000; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">Zapisz Krok</button>
-        </div>
-    </div>
-    </div>
 
     <div id="notes-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; padding: 15px;">
     <div style="background:var(--bg-card); padding:25px; border-radius:12px; width:100%; max-width:650px; border:1px solid #89b4fa; max-height: 90vh; overflow-y: auto;">
@@ -1522,7 +1499,7 @@
             if (moduleId === 'tradeslist-module') initTradesModule();
             if (moduleId === 'summary-module') initSummaryModule();
             if (moduleId === 'focuslist-module') initFocusListModule();
-            if (moduleId === 'campaign-module') loadCampaigns();
+            if (moduleId === 'planner-module') Planer.open();
         }
 
         function openDashboard() {
@@ -3001,33 +2978,9 @@ async function submitTradeForm(e) {
     } 
 }
 
-// Funkcja obsługująca automatyzację w Planerze
+// Nowa transakcja trafia do otwartego planu spółki po stronie serwera (plan_id) - tu tylko odświeżamy Planer
 async function handleTradeAutomation(tradeId, tradeData) {
-    try {
-        const autoSync = await fetch(`${API_BASE_URL}/api/trades/execute-automation`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                trade_id: tradeId,
-                form_id: tradeData.form_id, // Przekazujemy ID, aby Planner wiedział który węzeł aktualizować
-                spent_amount: parseFloat(tradeData.spent)
-            })
-        });
-        
-        const syncResult = await autoSync.json();
-        
-        if (syncResult.status === 'success') {
-            console.log("Automatyzacja Planera: Sukces", syncResult.new_status);
-            // Odświeżamy planer, żeby pasek postępu ("Częściowo zrealizowano") wskoczył na ekran
-            if (typeof loadCampaigns === 'function') {
-                loadCampaigns(); 
-            }
-        } else {
-            console.warn("Info z Plannera:", syncResult.message);
-        }
-    } catch (err) {
-        console.error("Błąd automatyzacji planera:", err);
-    }
+    if (window.Planer) Planer.onTradeAdded();
 }
             
         async function fetchTradesEntries(forceFresh = false) { 
@@ -3215,7 +3168,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     <div style="display: flex; gap: 5px;">
                         <button class="btn-delete" onclick="openCloseModal(${item.id})" style="flex:1; padding: 4px 8px;">Sprzedaj</button>
                         <button class="btn-edit" onclick="openNotesModal(${item.id})" style="flex:1; padding: 4px 8px; background: transparent; color: #89b4fa; border: 1px solid #89b4fa;">📝 Notatnik</button>
-                        <button class="btn-edit" onclick="openCampaignPlanner(${item.id}, '${item.ticker}')" style="flex:1; padding: 4px 8px; background: transparent; color: var(--accent); border: 1px solid var(--accent);">🧭 Planuj</button>
+                        <button class="btn-edit" onclick="Planer.openFor('${item.ticker}')" style="flex:1; padding: 4px 8px; background: transparent; color: var(--accent); border: 1px solid var(--accent);">🧭 Planuj</button>
                     </div>
                     </div>`;
                 const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage || 1})" title="Kliknij, aby zmienić dźwignię">x${item.leverage || 1}</span>`;
@@ -3244,7 +3197,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
 
                 tb.innerHTML += `<tr>
                     <td>${item.buy_date || '-'}<br><small>#${item.id}</small></td>
-                    <td><span class="sd-link" data-tk="${item.ticker}"><strong style="color:var(--accent);">${item.ticker || '-'}</strong>${nameHtml}</span></td>
+                    <td><span class="sd-link" data-tk="${item.ticker}"><strong style="color:var(--accent);">${item.ticker || '-'}</strong>${nameHtml}</span>${item.plan_id ? `<br><a href="#" class="plx-tag" data-plan="${item.plan_id}" title="Otwórz plan w Planerze">🧭 plan #${item.plan_id}</a>` : ''}</td>
                     <td style="max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.85em; color:var(--text-main); cursor:pointer; transition:0.2s;" 
                         onclick="this.style.whiteSpace = this.style.whiteSpace === 'normal' ? 'nowrap' : 'normal'; this.style.color = this.style.whiteSpace === 'normal' ? 'var(--accent)' : 'var(--text-main)';" 
                         title="Kliknij, aby rozwinąć/zwinąć">
@@ -4605,1147 +4558,6 @@ async function handleTradeAutomation(tradeId, tradeData) {
         }
     }
 
-// ==========================================
-//    MODUŁ DRZEWA SCENARIUSZY I KAMPANII
-// ==========================================
-
-let globalCampaignCache = [];
-
-// Specjalna funkcja nawigacyjna, która automatycznie filtruje widok pod wybrany ticker
-function openCampaignPlanner(tradeId, ticker) {
-    openModule('campaign-module', 'Planer');
-    const searchInput = document.getElementById('camp-search-filter');
-    if (searchInput) {
-        searchInput.value = ticker.toUpperCase();
-    }
-    loadCampaigns();
-}
-
-// --- PANCERNE FUNKCJE POMOCNICZE DLA PLINNERA ---
-function getStrictPortfolioCapital() {
-    let totalDepositsPln = 0;
-    (window.depositsDataArray || []).forEach(d => totalDepositsPln += parseFloat(d.amount_pln || d.amount || 0));
-    
-    let totalClosedPnlPln = 0;
-    (window.allTradesData || []).forEach(t => {
-        if (t.status === 'CLOSED') {
-            const s = calculateTradeStats(t);
-            totalClosedPnlPln += s.profPln || 0;
-        }
-    });
-    return totalDepositsPln + totalClosedPnlPln;
-}
-
-function getSafeFxRate(trade) {
-    let fx = parseFloat(trade.buy_fx_rate);
-    const cur = trade.currency || getCurrencyForFrontend(trade.ticker);
-    
-    // Jeśli FX to 1.0, ale waluta to USD lub EUR, to znaczy że kurs nie podpiął się z bazy. Ratujemy sytuację.
-    if (isNaN(fx) || fx <= 0 || (fx === 1.0 && cur !== 'PLN')) {
-        if (cur === 'USD') return 4.0; // Bezpieczne przybliżenie, by budżet nie "wyleciał w kosmos"
-        if (cur === 'EUR') return 4.3;
-        return 1.0;
-    }
-    return fx;
-}
-
-async function loadCampaigns() {
-    try {
-        // --- NOWOŚĆ: Upewniamy się, że mamy twarde dane o portfelu do precyzyjnych obliczeń ---
-        if (!window.depositsDataArray || window.depositsDataArray.length === 0) {
-            const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`);
-            window.depositsDataArray = await rD.json() || [];
-        }
-        if (!window.allTradesData || window.allTradesData.length === 0) {
-            const rT = await fetch(`${API_BASE_URL}/api/trades/entries`);
-            window.allTradesData = await rT.json() || [];
-        }
-
-        const res = await fetch(`${API_BASE_URL}/api/trades/entries`);
-        const trades = await res.json();
-        
-        const statusFilter = document.getElementById('camp-status-filter').value;
-        let targetTrades = trades;
-        if (statusFilter !== 'ALL') {
-            targetTrades = trades.filter(t => t.status === statusFilter);
-        }
-
-        const tradeIds = targetTrades.map(t => t.id);
-        globalCampaignCache = [];
-        
-        if (tradeIds.length > 0) {
-            const campRes = await fetch(`${API_BASE_URL}/api/campaigns/bulk-graph-info`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ trade_ids: tradeIds })
-            });
-            
-            if (campRes.ok) {
-                const data = await campRes.json();
-                if (data.status === 'success') {
-                    globalCampaignCache = data.campaigns;
-                }
-            }
-        }
-        
-        filterCampaigns();
-    } catch (e) {
-        console.error("Błąd pobierania kampanii:", e);
-    }
-}
-
-// ==========================================
-//    MODUŁ DRZEWA SCENARIUSZY (FINAL VERSION)
-// ==========================================
-
-function filterCampaigns() {
-    const searchFilter = (document.getElementById('camp-search-filter').value || '').toLowerCase().trim();
-    const statusFilter = document.getElementById('camp-status-filter').value;
-    
-    let filtered = globalCampaignCache.filter(camp => {
-        if (statusFilter !== 'ALL' && camp.base_trade.status !== statusFilter) return false;
-        if (searchFilter && !camp.base_trade.ticker.toLowerCase().includes(searchFilter)) return false;
-        const hasNodes = camp.graph_nodes && camp.graph_nodes.length > 0;
-        if (!searchFilter && !hasNodes) return false;
-        return true;
-    });
-    
-    renderCampaignTree(filtered);
-}
-
-// NOWOŚĆ: Oblicza ile budżetu JEST OBECNIE ZABLOKOWANE na konkretnej ścieżce.
-// System "Odnawialnej Amunicji" - Take Profit zwalnia kapitał i pozwala na ponowne uśrednienie!
-function calculatePathBudget(parentId, allNodes, baseBudgetPct) {
-    let activeTranches = { 'BASE': baseBudgetPct };
-    let path = [];
-    let currId = parentId;
-    
-    while (currId && currId !== 'BASE') {
-        let n = allNodes.find(x => x.node_id === currId);
-        if (n) { 
-            path.unshift(n); 
-            currId = (n.parent_node_ids && n.parent_node_ids.length > 0) ? n.parent_node_ids[0] : null; 
-        } else break;
-    }
-
-    // Symulacja księgowania na ścieżce
-    for (let n of path) {
-        if (n.action_type === 'ADD_TRANCHE') {
-            activeTranches[n.node_id] = parseFloat(n.allocated_budget_pct || 0);
-        } else {
-            // TP / SL zwalnia % z powiązanych transz
-            const linked = n.linked_tranches || [];
-            linked.forEach(tId => { delete activeTranches[tId]; });
-        }
-    }
-    
-    let currentlyUsed = 0;
-    for (let key in activeTranches) currentlyUsed += activeTranches[key];
-    return currentlyUsed;
-}
-
-function getActivePathNodeIds(nodes) {
-    let activeIds = new Set(['BASE']);
-    let queue = ['BASE'];
-    
-    while(queue.length > 0) {
-        let current = queue.shift();
-        let children = nodes.filter(n => n.parent_node_ids && n.parent_node_ids.includes(current));
-        if (children.length === 0) continue;
-        
-        let executedChild = children.find(n => n.status === 'EXECUTED');
-        if (executedChild) {
-            activeIds.add(executedChild.node_id);
-            queue.push(executedChild.node_id);
-        } else {
-            children.forEach(c => { activeIds.add(c.node_id); queue.push(c.node_id); });
-        }
-    }
-    return Array.from(activeIds);
-}
-
-function calculateNodePnL(targetNodeId, allNodes, trade, maxBudgetCurrency) {
-    const directionMod = (trade.direction === 'DBR' || trade.direction === 'RBR') ? 1 : -1;
-    const leverage = parseFloat(trade.leverage || 1);
-    if (targetNodeId === 'BASE') return 0;
-
-    let path = [];
-    let curr = allNodes.find(n => n.node_id === targetNodeId);
-    while (curr) {
-        path.unshift(curr);
-        if (curr.parent_node_ids && curr.parent_node_ids.length > 0 && curr.parent_node_ids[0] !== 'BASE') {
-            curr = allNodes.find(n => n.node_id === curr.parent_node_ids[0]);
-        } else break;
-    }
-
-    let tranches = { 'BASE': { price: parseFloat(trade.buy_price), spent: parseFloat(trade.spent || 0) } };
-    let realizedPnL = 0;
-
-    for (let i = 0; i < path.length; i++) {
-        const n = path[i];
-        const currentPrice = parseFloat(n.target_price);
-
-        if (i === path.length - 1) {
-            let unrealizedPnL = 0;
-            for (const key in tranches) {
-                const t = tranches[key];
-                const pctChange = ((currentPrice - t.price) / t.price) * directionMod;
-                unrealizedPnL += t.spent * leverage * pctChange; 
-            }
-            return realizedPnL + unrealizedPnL;
-        }
-
-        if (n.action_type === 'ADD_TRANCHE') {
-            const budgetFiat = (parseFloat(n.allocated_budget_pct) / 100) * maxBudgetCurrency;
-            tranches[n.node_id] = { price: currentPrice, spent: budgetFiat };
-        } else {
-            const linked = n.linked_tranches || [];
-            linked.forEach(tId => {
-                if (tranches[tId]) {
-                    const t = tranches[tId];
-                    const pctChange = ((currentPrice - t.price) / t.price) * directionMod;
-                    realizedPnL += t.spent * leverage * pctChange;
-                    delete tranches[tId]; 
-                }
-            });
-        }
-    }
-    return 0;
-}
-
-function getAncestors(parentId, allNodes) {
-    let ancestors = new Set(['BASE']);
-    let currentId = parentId;
-    while(currentId && currentId !== 'BASE') {
-        ancestors.add(currentId);
-        let n = allNodes.find(x => x.node_id === currentId);
-        if (n && n.parent_node_ids && n.parent_node_ids.length > 0) {
-            currentId = n.parent_node_ids[0];
-        } else break;
-    }
-    return Array.from(ancestors);
-}
-
-async function loadFormSetupsToSelect(selectId, ticker, targetPriceToSelect = null, tpSlType = null) {
-    const sel = document.getElementById(selectId);
-    if(!sel) return;
-    sel.innerHTML = '<option value="">⏳ Ładowanie...</option>';
-    
-    if (!window.formEntries || window.formEntries.length === 0) {
-        try { 
-            const res = await fetch(`${API_BASE_URL}/api/form/entries`); 
-            window.formEntries = await res.json() || []; 
-        } catch(e) {}
-    }
-    
-    // KROK 1: Pobieramy najpierw WSZYSTKIE wpisy dla danego tickera
-    const allTickerSetups = (window.formEntries || []).filter(f => f.ticker === ticker);
-    
-    // KROK 2: Analogicznie jak w Focus - filtrujemy te, które NIE SĄ wyciszone
-    const setups = allTickerSetups.filter(f => f.mute !== 1 && f.mute !== "1" && f.mute !== true);
-    
-    // KROK 3: Wyświetlamy precyzyjny komunikat w zależności od sytuacji
-    if (allTickerSetups.length > 0 && setups.length === 0) {
-        sel.innerHTML = '<option value="">Brak aktywnych setupów (Wyciszone)</option>';
-        return; // Zakończ, bo nie ma nic do rysowania
-    } else if (setups.length === 0) {
-        sel.innerHTML = '<option value="">Brak zaplanowanych stref w Form</option>';
-        return; // Zakończ, bo nie ma nic do rysowania
-    } else {
-        sel.innerHTML = ''; // Wyczyść przed załadowaniem opcji
-    }
-    
-    // KROK 4: Zasilamy listę tylko aktywnymi kafelkami
-    setups.forEach(f => {
-        let extractedPrice = 0; let label = '';
-        if (tpSlType === 'TAKE_PROFIT') {
-            extractedPrice = f.take_profit || f.tp || f.target_price || 0; 
-            label = `🎯 TP: ${parseFloat(extractedPrice).toFixed(2)}$`;
-        } else if (tpSlType === 'STOP_LOSS') {
-            extractedPrice = f.stop_loss || f.sl || 0; 
-            label = `🛑 SL: ${parseFloat(extractedPrice).toFixed(2)}$`;
-        } else {
-            extractedPrice = f.entry_point || f.entry_price || 0; 
-            label = `Wejście @ ${parseFloat(extractedPrice).toFixed(2)}$`;
-        }
-
-        if (parseFloat(extractedPrice) > 0) {
-            const opt = document.createElement('option');
-            opt.value = JSON.stringify({ entry_id: f.entry_id, price: parseFloat(extractedPrice) });
-            
-            // Analogicznie - czytelny widok ID i Ceny
-            opt.innerText = `[Form: ${f.entry_id}] ${f.setup_name || 'Setup'} -> ${label}`;
-            
-            if (targetPriceToSelect !== null && Math.abs(parseFloat(extractedPrice) - parseFloat(targetPriceToSelect)) < 0.001) {
-                opt.selected = true;
-            }
-            sel.appendChild(opt);
-        }
-    });
-}
-
-// --- LOGIKA DO ZARZĄDZANIA TRANSZAMI 1:1 ---
-
-// Pomocnik: Automatycznie pobiera docelową cenę TP lub SL z przypisanego Formularza
-function resolveTargetPrice(tradeId, actionType, trancheId, currentNodes) {
-    let formIdToUse = null;
-    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
-    
-    if (trancheId === 'BASE') {
-        // Dla pozycji bazowej szukamy domyślnego formularza wygenerowanego dla tej spółki
-        const setups = (window.formEntries || []).filter(f => f.ticker === camp.base_trade.ticker);
-        if (setups.length > 0) formIdToUse = setups[0].entry_id;
-    } else {
-        // Dla uśredniania (ADD_TRANCHE) wiemy dokładnie, który formularz był użyty
-        const trancheNode = currentNodes.find(n => n.node_id === trancheId);
-        if (trancheNode) formIdToUse = trancheNode.form_entry_id;
-    }
-
-    if (!formIdToUse) return { error: `Nie znaleziono powiązanego formularza dla transzy ${trancheId}.` };
-
-    const formSetup = window.formEntries.find(f => f.entry_id === formIdToUse);
-    if (!formSetup) return { error: "Brak danych formularza w pamięci." };
-
-    let tp = parseFloat(formSetup.take_profit || formSetup.tp || formSetup.target_price || 0);
-    let sl = parseFloat(formSetup.stop_loss || formSetup.sl || 0);
-    
-    let price = actionType === 'TAKE_PROFIT' ? tp : sl;
-    if (!price || price <= 0) {
-        return { error: `Brak ustalonego poziomu ${actionType === 'TAKE_PROFIT' ? 'TP' : 'SL'} w formularzu (ID: ${formIdToUse}). Uzupełnij go najpierw w module Form!` };
-    }
-    
-    return { targetPrice: price, formEntryId: formIdToUse };
-}
-
-// Filtruje, co faktycznie pozostało otwarte na danej ścieżce
-function populateTranchesSelect(tradeId, parentId, excludeNodeUuid = null) {
-    const sel = document.getElementById('nw-tranche-select');
-    if(!sel) return;
-    sel.innerHTML = '';
-    
-    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
-    if (!camp) return;
-
-    // Pobranie chronologii ścieżki wstecz (od rodzica do BASE)
-    const pathNodes = [];
-    let currId = parentId;
-    const allNodes = camp.graph_nodes || [];
-    while (currId && currId !== 'BASE') {
-        let n = allNodes.find(x => x.node_id === currId);
-        if (n) {
-            pathNodes.unshift(n);
-            currId = (n.parent_node_ids && n.parent_node_ids.length > 0) ? n.parent_node_ids[0] : null;
-        } else break;
-    }
-
-    let opened = ['BASE'];
-    let closed = [];
-
-    pathNodes.forEach(n => {
-        if (excludeNodeUuid && n.id === excludeNodeUuid) return; // Podczas edycji nie bierzemy pod uwagę "samego siebie"
-        if (n.action_type === 'ADD_TRANCHE') {
-            opened.push(n.node_id);
-        } else if (n.action_type === 'TAKE_PROFIT' || n.action_type === 'STOP_LOSS') {
-            if (n.linked_tranches) closed.push(...n.linked_tranches);
-        }
-    });
-
-    // Otwarte minus to, co już zamknęliśmy na tej ścieżce (Zablokowanie dublowania TP/SL!)
-    let available = opened.filter(id => !closed.includes(id));
-    
-    if (available.length === 0) {
-        sel.innerHTML = '<option value="">Wszystkie transze na tej ścieżce są już zamknięte.</option>';
-        return;
-    }
-
-    available.forEach(tId => {
-        const opt = document.createElement('option');
-        opt.value = tId;
-        if (tId === 'BASE') {
-            opt.innerText = `Pozycja Bazowa (Start)`;
-        } else {
-            const nodeRef = allNodes.find(n => n.node_id === tId);
-            opt.innerText = `Transza z Węzła ${tId} (Otwarta po ${nodeRef ? nodeRef.target_price : '?'}$)`;
-        }
-        sel.appendChild(opt);
-    });
-}
-
-// --- POMOCNIK: Aktualizacja podglądu z Form ---
-function updateModalPreview(formValue, actionType) {
-    if (!formValue) return;
-    const data = JSON.parse(formValue);
-    const setup = window.formEntries.find(f => f.entry_id === data.entry_id);
-    if (!setup) return;
-
-    if (actionType === 'ADD_TRANCHE') {
-        const preview = document.getElementById('setup-preview-add');
-        preview.style.display = 'block';
-        document.getElementById('preview-prio').innerText = setup.priority === 1 ? "⭐ Wysoki" : "Normalny";
-        // Szacunek PnL: (TP - Wejście) * budżet
-        const pnl = (parseFloat(setup.tp || 0) - parseFloat(data.price)) * 100; 
-        document.getElementById('preview-pnl').innerText = pnl.toFixed(2) + " $";
-    } else {
-        const preview = document.getElementById('setup-preview-close');
-        preview.style.display = 'block';
-        document.getElementById('preview-exit-price').innerText = data.price.toFixed(2) + " $";
-    }
-}
-
-// --- ZAKTUALIZOWANA FUNKCJA TOGGLE (Wywołująca podgląd) ---
-async function toggleWizardFields() {
-    const action = document.getElementById('nw-action-type').value;
-    const secAdd = document.getElementById('nw-section-add');
-    const secClose = document.getElementById('nw-section-close');
-    const secMacro = document.getElementById('nw-section-macro'); // Sekcja z Focus Score
-    const ticker = document.getElementById('nw-ticker').value;
-
-    if (action === 'ADD_TRANCHE') {
-        // --- Tryb WEJŚCIE / UŚREDNIANIE ---
-        secAdd.style.display = 'block'; 
-        secClose.style.display = 'none';
-        secMacro.style.display = 'block'; 
-        await loadFormSetupsToSelect('nw-form-id', ticker, null, null);
-    } else {
-        // --- Tryb ZAMKNIĘCIE (TP/SL) ---
-        secAdd.style.display = 'none'; 
-        secClose.style.display = 'block'; // Pokazujemy sekcję zamknięcia (Wybór transzy i cena)
-        secMacro.style.display = 'none'; 
-        
-        secClose.style.background = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
-        secClose.style.borderColor = action === 'TAKE_PROFIT' ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
-        
-        // Zasilamy listę otwartych transz (np. BASE, 2A, 3A...), które można zamknąć
-        populateTranchesSelect(document.getElementById('nw-trade-id').value, document.getElementById('nw-parent-id').value);
-
-        // --- PRECYZYJNA POPRAWKA ---
-        // Ukrywamy wyłącznie samo pole wyboru ceny z modułu Form (bo paruje się automatycznie w submitWizardEdit)
-        const closeFormSelect = document.getElementById('nw-close-form-id');
-        if (closeFormSelect) {
-            // Ukrywamy tylko to jedno pole, a nie cały kontener sekcji zamknięcia!
-            closeFormSelect.style.display = 'none';
-            if (closeFormSelect.parentElement && closeFormSelect.parentElement.style.display !== 'none') {
-                // Jeśli etykieta i select są w osobnym divie wewnątrz sekcji, ukrywamy tylko tego diva
-                const label = closeFormSelect.parentElement.querySelector('label');
-                if (label && (label.innerText.includes('Form') || label.innerText.includes('precyzyjną'))) {
-                    closeFormSelect.parentElement.style.display = 'none';
-                }
-            }
-        }
-    }
-}
-
-async function submitNewNode() {
-    const tradeId = parseInt(document.getElementById('nw-trade-id').value);
-    const parentId = document.getElementById('nw-parent-id').value;
-    const variant = document.getElementById('nw-variant').value; 
-    const actionType = document.getElementById('nw-action-type').value;
-    const reason = document.getElementById('nw-reason').value.trim();
-    
-    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
-    let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
-    
-    let formEntryId = null; let targetPrice = 0; let allocatedBudgetPct = 0; let linkedTranches = [];
-    let requiredFocus = 0;
-
-    if (actionType === 'ADD_TRANCHE') {
-        const reqBudget = parseFloat(document.getElementById('nw-budget').value) || 0;
-        
-        const safeFxRate = getSafeFxRate(camp.base_trade);
-        const totalCapPln = getStrictPortfolioCapital();
-        const finalCapPln = totalCapPln > 0 ? totalCapPln : parseFloat(camp.total_capital_pln || 0);
-        const tradeBudgetPct = parseFloat(camp.base_trade.campaign_budget_pct || 12.0);
-        
-        const maxBudgetCurrency = (finalCapPln * (tradeBudgetPct / 100.0)) / safeFxRate;
-        const baseBudgetPct = ((parseFloat(camp.base_trade.spent || 0) * parseFloat(camp.base_trade.leverage || 1)) / maxBudgetCurrency) * 100;
-        
-        const currentPathBudget = calculatePathBudget(parentId, currentNodes, baseBudgetPct);
-        if (currentPathBudget + reqBudget > 100.1) {
-            return alert(`🛡️ Przekroczono limit budżetu! Ta ścieżka blokuje obecnie ${currentPathBudget.toFixed(1)}% amunicji. Możesz dodać max ${(100 - currentPathBudget).toFixed(1)}%.`);
-        }
-        
-        allocatedBudgetPct = reqBudget;
-        requiredFocus = parseFloat(document.getElementById('nw-focus').value) || 0;
-        
-        const formVal = document.getElementById('nw-form-id').value;
-        if (!formVal) return alert("Wybierz strefę docelową z modułu Form.");
-        const formData = JSON.parse(formVal);
-        formEntryId = formData.entry_id; targetPrice = parseFloat(formData.price);
-    } else {
-        // TP lub SL
-        const selectedTranche = document.getElementById('nw-tranche-select').value;
-        if (!selectedTranche) return alert("Brak otwartych transz do zamknięcia. Prawdopodobnie wszystkie zostały już zamknięte na tej ścieżce.");
-        linkedTranches = [selectedTranche];
-        
-        // Magia: automatyczne wyciąganie TP/SL z Formularza!
-        const autoResolve = resolveTargetPrice(tradeId, actionType, selectedTranche, currentNodes);
-        if (autoResolve.error) return alert(autoResolve.error);
-        
-        targetPrice = autoResolve.targetPrice;
-        formEntryId = autoResolve.formEntryId;
-        allocatedBudgetPct = 0;
-        requiredFocus = 0; // Makro przy zamknięciu ignorowane
-    }
-
-    let nextStepNumber = 2;
-    if (parentId !== 'BASE') {
-        const digits = parentId.match(/\d+/g);
-        if (digits && digits.length > 0) nextStepNumber = parseInt(digits[digits.length - 1]) + 1;
-    }
-    const generatedNodeId = parentId === 'BASE' ? `${nextStepNumber}${variant}` : `${parentId}${nextStepNumber}${variant}`;
-    const pathType = variant === 'A' ? 'STANDARD' : 'ALTERNATIVE'; 
-
-    if (currentNodes.some(n => n.node_id === generatedNodeId)) {
-        return alert(`Wariant ${variant} dla tego kroku jest już zajęty.`);
-    }
-
-    const newNode = {
-        node_id: generatedNodeId,
-        parent_node_ids: [parentId],
-        path_type: pathType,
-        form_entry_id: formEntryId,
-        action_type: actionType,
-        target_price: targetPrice,
-        allocated_budget_pct: allocatedBudgetPct,
-        required_focus_score: requiredFocus,
-        required_cvd_status: actionType === 'ADD_TRANCHE' ? (document.getElementById('nw-cvd')?.value || 'Dowolne') : 'Dowolne',
-        step_rationale: reason,
-        linked_tranches: linkedTranches,
-        status: "PENDING"
-    };
-    
-    currentNodes.push(newNode);
-    const btn = document.getElementById('btn-save-wizard');
-    btn.innerHTML = "⏳ Zapis..."; btn.disabled = true;
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes }) });
-        const r = await res.json();
-        if(r.status === 'success') { document.getElementById('node-wizard-modal').style.display = 'none'; loadCampaigns(); }
-        else alert(r.message);
-    } catch(e) { alert("Błąd połączenia."); } finally { btn.innerHTML = "Zapisz Krok"; btn.disabled = false; }
-}
-
-// --- NOWE FUNKCJE WSPOMAGAJĄCE UI ---
-async function updateCampaignBudget(tradeId) {
-    const val = parseFloat(document.getElementById(`budget-input-${tradeId}`).value);
-    if (val <= 0 || val > 12) return alert("Błąd: Budżet kampanii musi być między 0.1% a 12%.");
-    
-    const btn = document.querySelector(`button[onclick="updateCampaignBudget(${tradeId})"]`);
-    const originalText = btn.innerText;
-    btn.innerText = "⏳"; btn.disabled = true;
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/update-budget`, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ trade_id: tradeId, budget_pct: val })
-        });
-        const r = await res.json();
-        
-        // ZMIANA: Dodano "await", aby interfejs bezwzględnie poczekał na załadowanie przeliczonych danych!
-        if (r.status === 'success') {
-            await loadCampaigns(); 
-        } else {
-            alert(r.message);
-        }
-    } catch(e) { 
-        alert("Błąd zapisu budżetu."); 
-    } finally { 
-        btn.innerText = originalText; btn.disabled = false; 
-    }
-}
-
-// --- PAMIĘĆ STANU (Zapamiętuje rozwinięte gałęzie po odświeżeniu/zapisie) ---
-window.expandedNodes = window.expandedNodes || new Set();
-
-function toggleChildrenNodes(uniqueNodeId) {
-    const container = document.getElementById(`children-container-${uniqueNodeId}`);
-    const btn = document.getElementById(`toggle-btn-${uniqueNodeId}`);
-    
-    if (window.expandedNodes.has(uniqueNodeId)) {
-        window.expandedNodes.delete(uniqueNodeId);
-        if (container) {
-            container.style.display = 'none';
-            btn.innerHTML = btn.innerHTML.replace('Zwiń', 'Rozwiń').replace('🔼', '🔽');
-        }
-    } else {
-        window.expandedNodes.add(uniqueNodeId);
-        if (container) {
-            container.style.display = 'flex';
-            btn.innerHTML = btn.innerHTML.replace('Rozwiń', 'Zwiń').replace('🔽', '🔼');
-        }
-    }
-}
-
-function getNodeProgress(node, maxBudgetCurrency) {
-    // Jeśli węzeł nie jest uśrednianiem (np. TP/SL) lub nie ma przypisanego budżetu, nie rysujemy paska
-    if (node.action_type !== 'ADD_TRANCHE' || !node.allocated_budget_pct) return null;
-    
-    const nodeBudgetFiat = (parseFloat(node.allocated_budget_pct || 0) / 100) * maxBudgetCurrency;
-    if (nodeBudgetFiat <= 0) return null;
-    
-    const spent = parseFloat(node.accumulated_spent || 0);
-    const progress = Math.min(100, (spent / nodeBudgetFiat) * 100);
-    
-    return {
-        percent: progress,
-        color: progress >= 100 ? 'var(--success)' : (progress > 0 ? '#c99400' : '#444'),
-        spent: spent,
-        total: nodeBudgetFiat
-    };
-}
-    
-function collapseAllNodes() {
-    // Czyści pamięć o rozwiniętych gałęziach i wymusza ponowne narysowanie grafów
-    window.expandedNodes.clear();
-    filterCampaigns(); 
-}
-
-// --- PODMIENIONA FUNKCJA RYSOWANIA DRZEWA (Czyta z pamięci stanu) ---
-function buildTreeHTML(nodeId, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive) {
-    if (showOnlyActive && !activePathIds.includes(nodeId)) return '';
-
-    let node;
-    if (nodeId === 'BASE') {
-        const baseLeverage = parseFloat(trade.leverage || 1);
-        node = { 
-            id: 'BASE', 
-            node_id: 'BASE', 
-            action_type: 'START KAMPANII', 
-            target_price: trade.buy_price, 
-            status: 'EXECUTED', 
-            // Amunicja liczona z wartości nominalnej (spent * leverage)
-            allocated_budget_pct: ((trade.spent * baseLeverage) / maxBudgetCurrency) * 100,
-            accumulated_spent: trade.spent * baseLeverage
-        };
-    } else {
-        node = allNodes.find(n => n.node_id === nodeId);
-    }
-    if (!node) return '';
-
-    // --- PANCERNA POPRAWKA WALUTOWA DLA WEWNĘTRZNEGO KAFELKA ---
-        const totalCapPln = getStrictPortfolioCapital();
-        const currentCampRef = globalCampaignCache.find(c => c.base_trade.id === trade.id);
-        const fallbackCap = currentCampRef ? parseFloat(currentCampRef.total_capital_pln || 0) : 0;
-        const finalCapPln = totalCapPln > 0 ? totalCapPln : fallbackCap;
-        
-        const safeFxRate = getSafeFxRate(trade); 
-        const campaignBudgetPct = parseFloat(trade.campaign_budget_pct || 12.0);
-        
-        const exactMaxBudgetCurrency = (finalCapPln * (campaignBudgetPct / 100.0)) / safeFxRate;
-
-    const progressInfo = getNodeProgress(node, exactMaxBudgetCurrency);
-    const isExecuted = node.status === 'EXECUTED';
-    const fiatValue = (parseFloat(node.allocated_budget_pct || 0) / 100) * exactMaxBudgetCurrency;
-    
-    // PNL obliczamy na bazie precyzyjnie przeliczonej waluty
-    const pnlFiat = calculateNodePnL(nodeId, allNodes, trade, exactMaxBudgetCurrency);
-    const pnlColor = pnlFiat >= 0 ? 'var(--success)' : 'var(--danger)';
-    
-    const childrenA = allNodes.filter(n => n.parent_node_ids && n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('A'));
-    const childrenB = allNodes.filter(n => n.parent_node_ids && n.parent_node_ids.includes(nodeId) && n.node_id.endsWith('B'));
-    const hasChildren = childrenA.length > 0 || childrenB.length > 0;
-
-    let focusBtn = '';
-    if (!isExecuted && node.action_type === 'ADD_TRANCHE' && node.form_entry_id) {
-        focusBtn = `<button onclick="goToFocusFromNode('${trade.id}', '${node.form_entry_id}', '${node.id}')" style="background:transparent; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em; margin-right:5px;">🎯 Focus</button>`;
-    }
-
-    const uniqueNodeId = `${trade.id}_${node.id}`;
-    const isExpanded = window.expandedNodes.has(uniqueNodeId);
-    const displayStyle = isExpanded ? 'flex' : 'none';
-    const toggleText = isExpanded ? `Zwiń kolejne kroki (${childrenA.length + childrenB.length}) 🔼` : `Rozwiń kolejne kroki (${childrenA.length + childrenB.length}) 🔽`;
-
-    const nodeHtml = `
-        <div class="campaign-node-item" data-node-id="${node.id}" style="background:var(--bg-input); padding:15px; border-radius:8px; border-top: 4px solid ${isExecuted ? 'var(--success)' : 'var(--accent)'}; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width: 260px; min-width: 260px; flex-shrink: 0; text-align:left; position:relative; opacity: ${showOnlyActive && !activePathIds.includes(nodeId) ? '0.4' : '1'};">
-            
-            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                <strong style="color:var(--text-main); font-size:1.1em;">${node.node_id === 'BASE' ? 'Pozycja Bazowa' : 'Węzeł ' + node.node_id}</strong>
-                <span style="font-size:0.82em; font-weight:bold; color: ${isExecuted ? 'var(--success)' : 'var(--text-muted)'}">${isExecuted ? 'Zrealizowano ✔️' : (node.status === 'PARTIAL' ? 'Częściowo' : 'Oczekuje')}</span>
-            </div>
-            
-            <div style="font-size:0.95em; color:var(--text-main); margin-bottom: 6px;">
-                <b>${node.action_type}</b> przy <span style="color:var(--success); font-weight:bold; font-size:1.05em;">${parseFloat(node.target_price).toFixed(2)}$</span>
-            </div>
-            
-            <div style="font-size:0.82em; color:var(--text-muted); border-top: 1px dashed #444; padding-top: 6px; margin-top: 6px;">
-                Amunicja: <b style="color:#cdd6f4;">${(node.allocated_budget_pct||0).toFixed(1)}% (${fiatValue.toFixed(2)} ${trade.currency})</b>
-                
-                ${progressInfo ? `
-                    <div style="margin-top:8px; width:100%; height:6px; background:#111; border-radius:3px; overflow:hidden;">
-                        <div style="width:${progressInfo.percent}%; height:100%; background:${progressInfo.color}; transition: width 0.5s ease;"></div>
-                    </div>
-                    <div style="font-size:0.75em; margin-top:2px; color: ${progressInfo.percent > 0 ? 'var(--text-main)' : 'var(--text-muted)'};">
-                        Wydano: ${progressInfo.spent.toFixed(0)} / ${progressInfo.total.toFixed(0)} ${trade.currency}
-                    </div>
-                ` : '<br>'}
-                
-                Focus Score: <b style="color:#cdd6f4;">> ${node.required_focus_score || 0} pkt</b>
-            </div>
-
-            ${node.step_rationale ? `
-                <details style="margin-top:8px; font-size:0.82em; background: rgba(0,0,0,0.2); padding:6px; border-radius:4px; border:1px solid #333;">
-                    <summary style="cursor:pointer; color:var(--accent); font-weight:bold; outline:none;">📝 Notatka / Teza</summary>
-                    <div style="margin-top:6px; padding:8px; background: rgba(201,148,0,0.08); border-radius:4px; border-left: 2px solid var(--accent); color:var(--text-main); white-space:pre-wrap;">${node.step_rationale}</div>
-                </details>
-            ` : ''}
-
-            <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
-                <span style="font-size: 0.75em; color: var(--text-muted);">Skumulowany PnL na tym etapie:</span><br>
-                <strong style="color: ${pnlColor}; font-size: 1.1em;">${pnlFiat > 0 ? '+' : ''}${pnlFiat.toFixed(2)} ${trade.currency}</strong>
-            </div>
-
-            ${!isExecuted && nodeId !== 'BASE' ? `
-                <div style="margin-top: 10px; text-align: right; display:flex; justify-content:flex-end; gap:5px;">
-                    ${focusBtn}
-                    <button onclick="openEditWizardModal('${trade.id}', '${node.id}')" style="background:transparent; color:var(--text-main); border:1px solid #555; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Edytuj ✏️</button>
-                    <button onclick="deleteCampaignNode('${trade.id}', '${node.id}', '${node.node_id}')" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:0.82em;">Usuń 🗑️</button>
-                </div>
-            ` : ''}
-
-            ${(activePathIds.includes(nodeId) || !showOnlyActive) ? `
-                <div style="display:flex; gap:10px; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);">
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'A')" style="flex:1; background:rgba(0,123,255,0.1); color:#89b4fa; border:1px dashed #89b4fa; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant A</button>
-                    <button onclick="openAddNodeModal(${trade.id}, '${trade.ticker}', '${node.node_id}', 'B')" style="flex:1; background:rgba(246,70,93,0.1); color:var(--danger); border:1px dashed var(--danger); padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s;">➕ Wariant B</button>
-                </div>
-            ` : ''}
-            
-            ${hasChildren ? `
-                <div style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); text-align: center;">
-                    <button onclick="toggleChildrenNodes('${uniqueNodeId}')" id="toggle-btn-${uniqueNodeId}" style="background:transparent; color:var(--accent); border:none; cursor:pointer; font-size:0.8em; font-weight:bold; outline:none; transition:0.2s;">
-                        ${toggleText}
-                    </button>
-                </div>
-            ` : ''}
-        </div>
-    `;
-
-    let childrenHtml = '';
-    if (hasChildren) {
-        childrenHtml = `<div id="children-container-${uniqueNodeId}" style="display:${displayStyle}; gap:30px; padding-top:20px; position:relative; margin-top:10px; flex-shrink:0;">`;
-        if (childrenA.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenA[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
-        if (childrenB.length > 0) childrenHtml += `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${buildTreeHTML(childrenB[0].node_id, allNodes, trade, maxBudgetCurrency, fxRate, activePathIds, showOnlyActive)}</div>`;
-        childrenHtml += `</div>`;
-    }
-
-    return `<div style="display:flex; flex-direction:column; align-items:center; min-width:max-content;">${nodeHtml}${childrenHtml}</div>`;
-}
-
-// --- ZAKTUALIZOWANE RYSOWANIE KAMPANII I KAFELKÓW ---
-function renderCampaignTree(campaignData) {
-    const container = document.getElementById('campaign-list');
-    container.innerHTML = '';
-    
-    // Zabezpieczenie przed błędem, gdyby element toggle nie istniał
-    const toggleEl = document.getElementById('camp-active-path-toggle');
-    const showOnlyActive = toggleEl ? toggleEl.checked : false;
-    
-    if(!campaignData || campaignData.length === 0) {
-        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak danych kampanii.</div>`;
-        return;
-    }
-
-    // --- KLUCZOWA ZMIANA: Twarde filtrowanie danych przed ich narysowaniem ---
-    // Pobieramy wartość globalnego filtra (jeśli go nie zdefiniowano, domyślnie to 'open')
-    const currentFilter = (typeof currentCampaignFilter !== 'undefined' ? currentCampaignFilter : 'open').toLowerCase().trim();
-
-    const filteredData = campaignData.filter(camp => {
-        // Czytamy status transakcji bazowej z bazy danych (np. "OPEN", "CLOSED") i sprowadzamy do małych liter
-        const status = (camp.base_trade.status || 'open').toLowerCase().trim();
-        
-        // Zależnie od aktywnego przycisku, odrzucamy niepasujące kampanie
-        if (currentFilter === 'open' && status !== 'open') return false;
-        if (currentFilter === 'closed' && status !== 'closed') return false;
-        
-        return true; // Jeśli status pasuje lub wybraliśmy filtr "all", kampania zostaje
-    });
-
-    if(filteredData.length === 0) {
-        // Komunikat dostosowany do aktywnego filtra
-        const filterName = currentFilter === 'open' ? 'Otwarte' : (currentFilter === 'closed' ? 'Zamknięte' : 'Wszystkie');
-        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px;">Brak kampanii spełniających kryterium filtra (${filterName}).</div>`;
-        return;
-    }
-
-    // Rysujemy tylko PRZEFILTROWANE kampanie
-    filteredData.forEach(camp => {
-        const trade = camp.base_trade;
-        const nodes = camp.graph_nodes || [];
-        
-        // --- PANCERNA POPRAWKA WALUTOWA ---
-        const totalCapPln = getStrictPortfolioCapital();
-        const fallbackCap = parseFloat(camp.total_capital_pln || 0);
-        const finalCapPln = totalCapPln > 0 ? totalCapPln : fallbackCap;
-        
-        const safeFxRate = getSafeFxRate(trade);
-        const tradeBudgetPct = parseFloat(trade.campaign_budget_pct || 12.0);
-        
-        // Wyliczamy limit w PLN używając bezpiecznego kapitału, a następnie konwertujemy
-        const maxBudgetCurrency = (finalCapPln * (tradeBudgetPct / 100.0)) / safeFxRate;
-        
-        const activePathIds = getActivePathNodeIds(nodes);
-
-        const card = document.createElement('div');
-        card.style.cssText = 'background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:20px; margin-bottom:20px;';
-        
-        card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap:wrap; gap:10px;">
-                <h3 style="margin:0; color:var(--text-main); font-size:1.3em;">
-                    ${trade.ticker} <span style="font-size:0.75em; color:var(--text-muted); font-weight:normal;">#ID ${trade.id}</span>
-                </h3>
-                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <div style="font-size: 0.85em; color: var(--text-muted); background:rgba(0,0,0,0.3); padding:6px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
-                        Max ryzyko: <input type="number" id="budget-input-${trade.id}" value="${trade.campaign_budget_pct || 12}" min="0.1" max="12" step="0.5" style="width: 40px; background: transparent; color: var(--success); border: none; border-bottom: 1px solid var(--accent); outline:none;"> %
-                        <button onclick="updateCampaignBudget(${trade.id})" style="background:var(--bg-input); border:1px solid #555; color:var(--text-main); padding:2px 8px; margin-left:5px; border-radius:4px; cursor:pointer;">Zapisz</button>
-                    </div>
-                </div>
-            </div>
-            <div style="display:flex; justify-content:left; overflow-x:auto; padding:20px 0; min-width: 100%; gap:15px;">
-                ${buildTreeHTML('BASE', nodes, trade, maxBudgetCurrency, safeFxRate, activePathIds, showOnlyActive)}
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-let isEditMode = false; 
-let currentEditingNodeUuid = null;
-let currentEditBaseline = ""; // <-- NOWOŚĆ: Zmienna zapamiętująca starą notatkę
-
-async function openEditWizardModal(tradeId, nodeUuid) {
-    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
-    if (!camp) return;
-    const node = camp.graph_nodes.find(n => n.id === nodeUuid);
-    if (!node) return;
-
-    isEditMode = true; 
-    currentEditingNodeUuid = nodeUuid;
-    document.getElementById('nw-trade-id').value = tradeId;
-    document.getElementById('nw-ticker').value = camp.base_trade.ticker;
-    document.getElementById('nw-parent-id').value = (node.parent_node_ids && node.parent_node_ids.length > 0) ? node.parent_node_ids[0] : 'BASE';
-    
-    document.getElementById('nw-title').innerHTML = `Edytuj Krok <span style="color:var(--accent);">${node.node_id}</span>`;
-    document.getElementById('nw-action-type').value = node.action_type;
-    document.getElementById('nw-focus').value = node.required_focus_score || 0;
-    document.getElementById('nw-budget').value = node.allocated_budget_pct || 0;
-    
-    // --- POPRAWKA 1: Brak irytującego "Edit:" i obejście wymogu 15 znaków dla TP/SL ---
-    const oldReason = (node.step_rationale || "").trim();
-    let prefilledText = oldReason;
-    
-    if (oldReason) {
-        prefilledText += "\n\nEdit: ";
-    } else if (node.action_type !== 'ADD_TRANCHE') {
-        // Domyślny tekst dla TP/SL, spełniający limit backendu (min. 15 znaków)
-        prefilledText = `Aktualizacja parametrów dla ${node.action_type}`;
-    }
-    
-    document.getElementById('nw-reason').value = prefilledText;
-    currentEditBaseline = prefilledText.trim(); 
-    
-    const cvdDropdown = document.getElementById('nw-cvd');
-    if(cvdDropdown) cvdDropdown.value = node.required_cvd_status || 'Dowolne';
-
-    await toggleWizardFields();
-
-    setTimeout(() => {
-        if (node.action_type === 'ADD_TRANCHE') {
-            selectOptionByPrice(document.getElementById('nw-form-id'), node.target_price);
-        } else {
-            // --- POPRAWKA 2: Ładowanie ID formularza dla Wariantu B (TP/SL) ---
-            const closeSelect = document.getElementById('nw-close-form-id');
-            if (closeSelect && node.form_entry_id) {
-                closeSelect.value = node.form_entry_id;
-            }
-
-            populateTranchesSelect(tradeId, document.getElementById('nw-parent-id').value, currentEditingNodeUuid);
-            if (node.linked_tranches && node.linked_tranches.length > 0) {
-                document.getElementById('nw-tranche-select').value = node.linked_tranches[0];
-            }
-        }
-    }, 150);
-
-    document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitWizardEdit()');
-    document.getElementById('node-wizard-modal').style.display = 'flex';
-}
-
-async function submitWizardEdit() {
-    const reason = document.getElementById('nw-reason').value.trim();
-    
-    // --- BLOKADA AUDYTU ---
-    if (currentEditBaseline.endsWith("Edit: ")) {
-        const addedChars = reason.length - currentEditBaseline.length;
-        if (addedChars < 10) return alert("🛡️ Audyt: Dopisz merytoryczne uzasadnienie edycji po słowie 'Edit:' (min. 10 nowych znaków).");
-    } else if (reason.length < 15) {
-        return alert("🛡️ Audyt: Uzasadnienie (notatka) musi mieć minimum 15 znaków.");
-    }
-
-    const actionType = document.getElementById('nw-action-type').value;
-    const tradeId = parseInt(document.getElementById('nw-trade-id').value);
-    const parentId = document.getElementById('nw-parent-id').value;
-    
-    let targetPrice = 0; let formEntryId = null; let linkedTranches = []; let allocatedBudgetPct = 0;
-    let requiredFocus = 0;
-
-    const camp = globalCampaignCache.find(c => c.base_trade.id === tradeId);
-    let currentNodes = camp && camp.graph_nodes ? [...camp.graph_nodes] : [];
-
-    if (actionType === 'ADD_TRANCHE') {
-        const reqBudget = parseFloat(document.getElementById('nw-budget').value) || 0;
-        
-        const safeFxRate = getSafeFxRate(camp.base_trade);
-        const totalCapPln = getStrictPortfolioCapital();
-        const finalCapPln = totalCapPln > 0 ? totalCapPln : parseFloat(camp.total_capital_pln || 0);
-        const tradeBudgetPct = parseFloat(camp.base_trade.campaign_budget_pct || 12.0);
-        
-        const maxBudgetCurrency = (finalCapPln * (tradeBudgetPct / 100.0)) / safeFxRate;
-        
-        // TWOJA POPRAWKA: uwzględnienie dźwigni w pozycji bazowej
-        const baseBudgetPct = ((parseFloat(camp.base_trade.spent || 0) * parseFloat(camp.base_trade.leverage || 1)) / maxBudgetCurrency) * 100;
-        
-        const nodesWithoutCurrent = currentNodes.filter(n => n.id !== currentEditingNodeUuid);
-        const pathBudgetWithoutThis = calculatePathBudget(parentId, nodesWithoutCurrent, baseBudgetPct);
-        
-        if (pathBudgetWithoutThis + reqBudget > 100.1) {
-            return alert(`🛡️ Budżet przekroczony! Zostało max ${(100 - pathBudgetWithoutThis).toFixed(1)}% do wykorzystania.`);
-        }
-        
-        allocatedBudgetPct = reqBudget;
-        requiredFocus = parseFloat(document.getElementById('nw-focus').value) || 0;
-        const val = document.getElementById('nw-form-id').value;
-        if(val) { const d = JSON.parse(val); targetPrice = d.price; formEntryId = d.entry_id; }
-    } else {
-        const selectedTranche = document.getElementById('nw-tranche-select').value;
-        if (!selectedTranche) return alert("Brak transzy do zamknięcia.");
-        linkedTranches = [selectedTranche];
-        
-        const autoResolve = resolveTargetPrice(tradeId, actionType, selectedTranche, currentNodes);
-        if (autoResolve.error) return alert(autoResolve.error);
-        
-        targetPrice = autoResolve.targetPrice;
-        formEntryId = autoResolve.formEntryId;
-
-        if (!formEntryId) {
-            if (selectedTranche === 'BASE') {
-                formEntryId = camp.base_trade.form_id; 
-            } else {
-                const parentNode = currentNodes.find(n => n.node_id === selectedTranche);
-                if (parentNode && parentNode.form_entry_id) {
-                    formEntryId = parentNode.form_entry_id;
-                }
-            }
-        }
-        allocatedBudgetPct = 0; requiredFocus = 0;
-    }
-
-    // --- ZAMIAST WOŁAĆ /EDIT-NODE, AKTUALIZUJEMY TABLICĘ W PAMIĘCI I WOŁAMY /SAVE-GRAPH ---
-    let targetNodeIndex = currentNodes.findIndex(n => n.id === currentEditingNodeUuid);
-    if (targetNodeIndex === -1) return alert("Nie znaleziono węzła do edycji.");
-
-    currentNodes[targetNodeIndex].action_type = actionType;
-    currentNodes[targetNodeIndex].target_price = targetPrice;
-    currentNodes[targetNodeIndex].form_entry_id = formEntryId;
-    currentNodes[targetNodeIndex].allocated_budget_pct = allocatedBudgetPct;
-    currentNodes[targetNodeIndex].linked_tranches = linkedTranches;
-    currentNodes[targetNodeIndex].required_focus_score = requiredFocus;
-    currentNodes[targetNodeIndex].required_cvd_status = actionType === 'ADD_TRANCHE' ? (document.getElementById('nw-cvd')?.value || 'Dowolne') : 'Dowolne';
-    currentNodes[targetNodeIndex].step_rationale = reason; 
-
-    const btn = document.getElementById('btn-save-wizard');
-    btn.innerHTML = "⏳ Aktualizacja..."; btn.disabled = true;
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, { 
-            method: "POST", 
-            headers: { "Content-Type": "application/json" }, 
-            body: JSON.stringify({ trade_id: tradeId, nodes: currentNodes }) 
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-            document.getElementById('node-wizard-modal').style.display = 'none'; 
-            resetWizardToDefaultMode(); 
-            loadCampaigns(); 
-        } else alert(data.message);
-    } catch(e) { 
-        alert("Błąd połączenia."); 
-    } finally { 
-        btn.innerHTML = "Zapisz Krok"; 
-        btn.disabled = false; 
-    }
-}
-
-function selectOptionByPrice(selectElement, price) {
-    if(!selectElement) return;
-    for (let i = 0; i < selectElement.options.length; i++) {
-        try {
-            const data = JSON.parse(selectElement.options[i].value);
-            if (Math.abs(parseFloat(data.price) - parseFloat(price)) < 0.001) {
-                selectElement.selectedIndex = i; break;
-            }
-        } catch(e) {}
-    }
-}
-
-
-async function openAddNodeModal(tradeId, ticker, parentId, variant) {
-    document.getElementById('nw-trade-id').value = tradeId;
-    document.getElementById('nw-ticker').value = ticker;
-    document.getElementById('nw-parent-id').value = parentId; 
-    document.getElementById('nw-variant').value = variant;    
-    
-    document.getElementById('nw-title').innerText = `Planuj Krok (Wariant ${variant})`;
-    document.getElementById('nw-variant-label').innerText = variant;
-    document.getElementById('nw-reason').value = '';
-    
-    document.getElementById('nw-action-type').value = 'ADD_TRANCHE';
-    await toggleWizardFields();
-    
-    document.getElementById('node-wizard-modal').style.display = 'flex';
-}
-    
-function resetWizardToDefaultMode() {
-    isEditMode = false; currentEditingNodeUuid = null;
-    document.getElementById('nw-title').innerText = "Planuj Krok";
-    document.getElementById('btn-save-wizard').setAttribute('onclick', 'submitNewNode()');
-}
-
-async function deleteCampaignNode(tradeId, nodeUuid, nodeIdStr) {
-    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
-    if (!camp) return;
-
-    const nodes = camp.graph_nodes || [];
-    const childNodes = nodes.filter(n => n.node_id.startsWith(nodeIdStr) && n.node_id !== nodeIdStr);
-
-    let deleteDescendantsFlag = false;
-
-    if (childNodes.length > 0) {
-        const childNames = childNodes.map(n => n.node_id).join(', ');
-        if (confirm(`⚠️ UWAGA KASKADA!\nOd Węzła ${nodeIdStr} zależą kolejne etapy: [ ${childNames} ].\nCzy chcesz usunąć TEN WĘZEŁ ORAZ WSZYSTKIE WYNIKAJĄCE Z NIEGO KROKI?`)) {
-            deleteDescendantsFlag = true;
-        } else return; 
-    } else {
-        if (!confirm(`Czy na pewno chcesz bezpowrotnie usunąć Węzeł ${nodeIdStr}?`)) return;
-    }
-
-    try {
-        if (deleteDescendantsFlag) {
-            // --- ZAMIAST WOŁAĆ /EDIT-NODE, FILTRUJEMY TABLICĘ W PAMIĘCI I WOŁAMY /SAVE-GRAPH ---
-            const updatedNodes = nodes.filter(n => !(n.node_id.startsWith(nodeIdStr)));
-            
-            await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ trade_id: camp.base_trade.id, nodes: updatedNodes })
-            });
-        } else {
-            await deleteSingleNodeDirect(nodeUuid);
-        }
-        loadCampaigns();
-    } catch(e) { alert("Błąd usuwania."); }
-}
-
-async function deleteSingleNodeDirect(uuid) {
-    for (let camp of globalCampaignCache) {
-        const match = (camp.graph_nodes || []).find(n => n.id === uuid);
-        if (match) {
-            const updatedNodes = camp.graph_nodes.filter(n => n.id !== uuid);
-            await fetch(`${API_BASE_URL}/api/campaigns/save-graph`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ trade_id: camp.base_trade.id, nodes: updatedNodes })
-            });
-            break;
-        }
-    }
-}
-
-async function highlightActionableNodes() {
-    if (globalCampaignCache.length === 0) return alert("Brak widocznych kampanii.");
-    const visibleTradeIds = globalCampaignCache.map(c => c.base_trade.id);
-    const btn = document.querySelector('.btn-submit[onclick="highlightActionableNodes()"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = "⏳ Skanuję rynek...";
-    
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/campaigns/check-actionable`, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ trade_ids: visibleTradeIds })
-        });
-        const data = await res.json();
-        
-        if (data.status === 'success') {
-            const actionableUuids = data.actionable_uuids || [];
-            window.activeActionableNodes = actionableUuids; 
-            
-            let count = 0;
-            const nodes = document.querySelectorAll('.campaign-node-item');
-            nodes.forEach(n => { n.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)'; n.style.transform = 'none'; });
-            
-            globalCampaignCache.forEach(camp => {
-                const campNodes = camp.graph_nodes || [];
-                const activePathIds = getActivePathNodeIds(campNodes);
-                
-                campNodes.forEach(node => {
-                    if (activePathIds.includes(node.node_id) && actionableUuids.includes(node.id)) {
-                        const nodeElement = document.querySelector(`.campaign-node-item[data-node-id="${node.id}"]`);
-                        if (nodeElement) {
-                            nodeElement.style.boxShadow = '0 0 18px var(--accent)';
-                            nodeElement.style.transform = 'scale(1.03)';
-                            nodeElement.style.transition = 'all 0.3s ease';
-                            count++;
-                        }
-                    }
-                });
-            });
-            
-            if (count > 0) alert(`Znaleziono ${count} węzłów decyzyjnych na aktywnych ścieżkach gotowych do weryfikacji!`);
-            else alert("Brak węzłów w strefie ceny na aktywnych ścieżkach.");
-        }
-    } catch(e) {
-        console.error(e); alert("Błąd połączenia z Yahoo Finance.");
-    } finally { btn.innerHTML = originalText; }
-}
-
-function goToFocusFromNode(tradeId, formEntryId, nodeId) {
-    // 1. Ostrzeżenie (jeśli węzeł nie został zwalidowany dzisiejszym ruchem ceny)
-    if (!window.activeActionableNodes || !window.activeActionableNodes.includes(nodeId)) {
-        if (!confirm("⚠️ Ten węzeł NIE ZOSTAŁ dzisiaj aktywowany cenowo. Kontynuować audyt ręcznie?")) return; 
-    }
-    
-    // 2. Pobranie nazwy tickera z pamięci kampanii
-    const camp = globalCampaignCache.find(c => c.base_trade.id === parseInt(tradeId));
-    if(!camp) return;
-    
-    // 3. Przełączenie widoku na moduł Focus
-    if (typeof openModule === 'function') openModule('focus-module', 'Focus');
-    
-    // 4. Kaskadowe wpisywanie danych (z bezpiecznym opóźnieniem na wyrenderowanie DOM)
-    setTimeout(() => {
-        // Wypełnianie Tickera
-        const tickerInput = document.getElementById('focus-ticker-select') || document.getElementById('focus-ticker');
-        if (tickerInput) {
-            tickerInput.value = camp.base_trade.ticker;
-            // Wymuszamy natywne zdarzenie, by ewentualne inne funkcje w module Focus zareagowały na zmianę
-            tickerInput.dispatchEvent(new Event('change'));
-            tickerInput.dispatchEvent(new Event('input'));
-            if (typeof onFocusTickerChange === 'function') onFocusTickerChange();
-        }
-        
-        setTimeout(() => {
-            // Wypełnianie ID Formularza
-            const formIdInput = document.getElementById('focus-form-id') || document.getElementById('focus-id');
-            if (formIdInput) {
-                formIdInput.value = formEntryId;
-                formIdInput.dispatchEvent(new Event('change'));
-                formIdInput.dispatchEvent(new Event('input'));
-                if (typeof onFocusIdChange === 'function') onFocusIdChange();
-            }
-            
-            // Płynne przewinięcie na samą górę modułu Focus
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            
-        }, 200); // 200ms opóźnienia, aby skrypt zdążył załadować listę z Tickerem
-    }, 150); // 150ms opóźnienia na animację zmiany zakładek
-}
-
     // ==========================================
     // MODUŁ STRUKTURY (OPD/OPS & S-R FLIP)
     // ==========================================
@@ -6317,7 +5129,7 @@ window.StockDetail = (function () {
     function plan() {
         const d = st.data, t = d && (d.trades || []).find(x => x.status === "OPEN"), tk = st.ticker;
         close();
-        if (typeof openCampaignPlanner === "function") openCampaignPlanner(t ? t.id : 0, tk);
+        if (window.Planer) Planer.openFor(tk);
     }
 
     // fetch z limitem czasu i możliwością anulowania poprzedniego zapytania (np. przy szybkiej zmianie zakresu)
@@ -6677,6 +5489,264 @@ window.StockDetail = (function () {
         open(el.dataset.tk);
     }, true);
     return { open: open, close: close };
+})();
+</script>
+<script>
+// ===== Planer: plany inwestycyjne na spółkę (strefy z Form, budżety z limitów rodzajów spółek, powiązanie z Transakcjami) =====
+window.Planer = (function () {
+    "use strict";
+    const $ = (s, r) => (r || document).querySelector(s);
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const num = (v, d) => (v == null || !isFinite(v)) ? "—" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d == null ? 1 : d, maximumFractionDigits: d == null ? 1 : d });
+    const pct = (v, d) => v == null || !isFinite(v) ? "—" : num(v, d) + "%";
+    const spct = (v, d) => v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "") + num(v, d == null ? 2 : d) + "%";
+    const price = v => v == null || !isFinite(v) ? "—" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    const date = iso => iso ? new Date(iso).toLocaleDateString("pl-PL") : "—";
+    const KIND_COLOR = { inv_prio: "#89b4fa", inv: "#89b4fa", spec_prio: "#fab387", spec: "#fab387" };
+    const arrow = side => side === "LONG" ? "▲" : "▼";
+
+    let st = { filter: "open", q: "", plans: [], seq: 0, detail: null, ctxNew: null, tickers: [], pick: {} };
+
+    async function api(path, body) {
+        const res = await fetch(API_BASE_URL + path, body === undefined ? undefined : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok || d.status === "error") { const e = new Error(d.message || ("HTTP " + res.status)); e.status = res.status; throw e; }
+        return d;
+    }
+    const kindBadge = (k, label) => '<span class="plx-kind" style="color:' + (KIND_COLOR[k] || "#848e9c") + ';border-color:' + (KIND_COLOR[k] || "#848e9c") + '">' + esc(label) + "</span>";
+
+    // ---------- lista planów ----------
+    function open() { st.filter = st.filter || "open"; syncBar(); load(); loadTickers(); }
+    function syncBar() { document.querySelectorAll("#plx-filter button").forEach(b => b.classList.toggle("on", b.dataset.f === st.filter)); }
+    function setFilter(f) { st.filter = f; syncBar(); load(); }
+    function setQuery(q) { st.q = q.trim().toLowerCase(); render(); }
+    async function load() {
+        const my = ++st.seq, tb = $("#plx-tbody");
+        tb.innerHTML = '<tr><td colspan="9" class="hp-empty">Ładowanie…</td></tr>';
+        try {
+            const d = await api("/api/planner/plans?status=" + st.filter);
+            if (my !== st.seq) return;
+            st.plans = d.plans; render();
+        } catch (e) { if (my === st.seq) tb.innerHTML = '<tr><td colspan="9" class="hp-empty plx-err">' + esc(e.message) + "</td></tr>"; }
+    }
+    function budCell(p) {
+        const c = p.company, max = c.max_pct;
+        if (max == null) return '<div class="plx-bud">' + pct(c.used_pct) + ' <small>bez limitu</small></div>';
+        const used = Math.min(100, Math.max(0, (c.used_pct || 0) / max * 100)), res = Math.min(100 - used, Math.max(0, (p.reserved_pct || 0) / max * 100));
+        return '<div class="plx-bud">' + pct(c.used_pct) + ' <small>z ' + pct(max) + '</small><div class="plx-track"><div class="plx-fill ' + ((c.used_pct || 0) > max ? "over" : "") + '" style="width:' + used + '%"></div><div class="plx-fill res" style="left:' + used + '%;width:' + res + '%"></div></div></div>';
+    }
+    function render() {
+        const tb = $("#plx-tbody"), q = st.q;
+        const list = st.plans.filter(p => !q || p.ticker.toLowerCase().includes(q) || String(p.name || "").toLowerCase().includes(q));
+        if (!list.length) {
+            tb.innerHTML = '<tr><td colspan="9" class="hp-empty">' + (st.plans.length ? "Żaden plan nie pasuje do wyszukiwania." :
+                st.filter === "open" ? "Brak otwartych planów. Utwórz pierwszy przyciskiem „＋ Nowy plan”." : st.filter === "closed" ? "Brak zamkniętych planów." : "Brak planów.") + "</td></tr>";
+            return;
+        }
+        tb.innerHTML = list.map(p => {
+            const zones = p.legs.map(l => '<span class="plx-zchip ' + (l.side === "LONG" ? "long" : "short") + '" title="Budżet w strefie">' + arrow(l.side) + " " + num(l.start, 2) + "–" + num(l.end, 2) + " · " + pct(l.planned_pct) + "</span>").join("");
+            const after = p.remaining_after_pct;
+            return '<tr class="plx-row" data-id="' + p.id + '"><td><span class="hp-tk sd-link" data-tk="' + esc(p.ticker) + '">' + esc(p.ticker) + '</span><div class="hp-name">' + esc(p.name) + "</div></td>" +
+                "<td>" + kindBadge(p.kind, p.kind_label) + "</td>" +
+                "<td>" + date(p.created_at) + (p.closed_at ? '<div class="hp-name">do ' + date(p.closed_at) + "</div>" : "") + "</td>" +
+                '<td><div class="plx-zchips">' + (zones || '<span class="db-help">—</span>') + "</div></td>" +
+                "<td>" + p.open_trade_count + " otw. / " + p.trade_count + (p.company.max_trades != null ? ' <small class="db-help">(limit ' + p.company.max_trades + ")</small>" : "") + "</td>" +
+                "<td>" + budCell(p) + "</td>" +
+                '<td class="hp-r ' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '" title="Budżet spółki, który zostanie po zainwestowaniu pozostałej części budżetów stref">' + pct(after) + "</td>" +
+                '<td><span class="plx-status ' + (p.status === "OPEN" ? "plx-st-open" : "plx-st-closed") + '">' + (p.status === "OPEN" ? "OTWARTY" : "ZAMKNIĘTY") + "</span></td>" +
+                '<td class="hp-r"><button class="hp-btn" type="button">Szczegóły</button></td></tr>';
+        }).join("");
+    }
+    document.addEventListener("click", e => {
+        const row = e.target.closest && e.target.closest("#plx-tbody tr.plx-row");
+        if (row && !e.target.closest("[data-tk]")) openPlan(row.dataset.id);
+    });
+
+    // ---------- okna ----------
+    function overlay(id) {
+        let o = document.getElementById(id);
+        if (!o) { o = document.createElement("div"); o.id = id; o.className = "plx-overlay"; o.innerHTML = '<div class="plx-panel"></div>'; document.body.appendChild(o);
+            o.addEventListener("mousedown", e => { if (e.target === o) closeOverlay(id); }); }
+        return o;
+    }
+    function showOverlay(id, html) { const o = overlay(id); o.firstChild.innerHTML = html; o.classList.add("open"); document.body.style.overflow = "hidden"; return o; }
+    function closeOverlay(id) { const o = document.getElementById(id); if (o) o.classList.remove("open"); if (!document.querySelector(".plx-overlay.open")) document.body.style.overflow = ""; }
+    document.addEventListener("keydown", e => { if (e.key === "Escape") { closeOverlay("plx-new"); closeOverlay("plx-detail"); } });
+
+    // ---------- szczegóły planu ----------
+    async function openPlan(id) {
+        showOverlay("plx-detail", '<div class="hp-empty">Ładowanie planu…</div>');
+        try { const d = await api("/api/planner/plan?id=" + encodeURIComponent(id)); st.detail = JSON.parse(JSON.stringify(d.plan)); st.detail.ctx = null; drawDetail(); }
+        catch (e) { showOverlay("plx-detail", '<div class="plx-err">' + esc(e.message) + '</div><div><button class="hp-btn" onclick="Planer.closeDetail()">Zamknij</button></div>'); }
+    }
+    function playRows(l) {
+        return (l.plays || []).map(p => '<div class="plx-play"><b>' + arrow(p.side) + " wejście " + price(p.entry_point) + "</b><span>TP " + price(p.take_profit) + "</span><span>SL " + price(p.stop_loss) + "</span>" +
+            (p.reasons && p.reasons.length ? "<span>" + esc(p.reasons.join(", ")) + "</span>" : "") +
+            "<span>transakcje: <b>" + p.trades + "</b>" + (p.open_trades ? " (otwarte: " + p.open_trades + ", " + pct(p.used_pct) + " kapitału)" : "") + "</span></div>").join("");
+    }
+    function legCard(l, i, editable) {
+        const over = l.zone_limit_pct != null && l.planned_pct > l.zone_limit_pct + 1e-9;
+        return '<div class="plx-zone"><div class="plx-zhead"><span class="plx-zside ' + (l.side === "LONG" ? "long" : "short") + '">' + arrow(l.side) + '</span><span class="plx-zrange">' + num(l.start, 2) + " – " + num(l.end, 2) + "</span>" +
+            (l.missing ? '<span class="plx-warn">strefa nie istnieje już w Form</span>' : "") +
+            '<div class="plx-zbud"><span class="db-help">zainwestowano ' + pct(l.used_pct) + " · do dołożenia " + pct(l.left_pct) + (l.zone_limit_pct != null ? " · limit strefy " + pct(l.zone_limit_pct) : "") + "</span>" +
+            (editable ? '<label class="dbx-field" style="flex-direction:row;align-items:center;gap:6px;"><span>Budżet strefy</span><input class="dbx-in" type="number" step="0.1" min="0.1" max="100" data-leg="' + i + '" value="' + l.planned_pct + '"> %</label><button class="dbx-icon dbx-del" type="button" onclick="Planer.removeLeg(' + i + ')" title="Usuń strefę z planu">✕</button>'
+                : "<b>budżet " + pct(l.planned_pct) + "</b>") + "</div></div>" + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l) + "</div>";
+    }
+    function drawDetail() {
+        const p = st.detail, c = p.company, open_ = p.status === "OPEN";
+        const kpi = (l, v, s) => '<div class="plx-kpi"><div class="l">' + l + '</div><div class="v">' + v + "</div>" + (s ? '<div class="s">' + s + "</div>" : "") + "</div>";
+        const after = p.remaining_after_pct;
+        const trades = (p.trades || []).map(t => "<tr><td>" + esc(t.buy_date) + "</td><td>" + arrow(t.side) + " ×" + num(t.leverage, 2).replace(",00", "") + "</td><td>" + price(t.buy_price) + "</td><td>" + pct(t.invested_pct, 2) + '</td><td class="' + (t.return_pct == null ? "" : t.return_pct >= 0 ? "hp-up" : "hp-down") + '"><b>' + spct(t.return_pct) + "</b></td><td>" + (t.status === "OPEN" ? "otwarta" : "zamknięta " + esc(t.sell_date || "")) + "</td></tr>").join("");
+        showOverlay("plx-detail",
+            '<div class="plx-head"><div><div class="plx-title"><span class="sd-link" data-tk="' + esc(p.ticker) + '">' + esc(p.ticker) + "</span> " + kindBadge(p.kind, p.kind_label) + ' <span class="plx-status ' + (open_ ? "plx-st-open" : "plx-st-closed") + '">' + (open_ ? "OTWARTY" : "ZAMKNIĘTY") + '</span></div><div class="plx-sub">' + esc(p.name) + " · plan od " + date(p.created_at) + (p.closed_at ? " do " + date(p.closed_at) : "") + "</div></div>" +
+            '<div class="plx-actions"><button class="hp-btn" onclick="Planer.goTrades()">📊 Transakcje</button><button class="hp-btn" onclick="Planer.closeDetail()">✕ Zamknij</button></div></div>' +
+            '<div class="plx-kpis">' +
+            kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : " <small class='db-help'>bez limitu</small>"), "wykorzystane w otwartych transakcjach (% kapitału)") +
+            kpi("Zarezerwowane w planie", pct(p.reserved_pct), "do dołożenia w strefach planu") +
+            kpi("Zostaje po inwestycji", '<span class="' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '">' + pct(after) + "</span>", "budżet spółki po zainwestowaniu całego planu") +
+            kpi("Inwestycje w spółce", c.open_trades + (c.max_trades != null ? " / " + c.max_trades : ""), c.trades_left != null ? (c.trades_left > 0 ? "wolnych miejsc: " + c.trades_left : '<span class="plx-neg">limit wyczerpany</span>') : "bez limitu liczby") + "</div>" +
+            (p.capital_known ? "" : '<div class="plx-warn">Nie udało się wyliczyć kapitału - procenty budżetu są niedostępne.</div>') +
+            '<div class="plx-h">Strefy planu i dostępne zagrania z Form</div>' +
+            (p.legs.length ? p.legs.map((l, i) => legCard(l, i, open_)).join("") : '<div class="db-help">Plan nie ma stref.</div>') +
+            (open_ ? '<div class="plx-actions"><select id="plx-addleg" class="dbx-in" style="max-width:340px" onfocus="Planer.fillAddLeg()"><option value="">＋ Dodaj strefę z Form…</option></select><button class="hp-btn hp-primary" onclick="Planer.saveLegs()">Zapisz budżety stref</button><span id="plx-detail-msg" class="plx-err"></span></div>' : "") +
+            '<div class="plx-h">Transakcje w planie (z zakładki Transakcje)</div>' +
+            (trades ? '<div class="hp-table-wrap"><table class="hp-table"><thead><tr><th>Data</th><th>Kierunek</th><th>Cena zakupu</th><th>Zaangażowano</th><th>Wynik</th><th>Status</th></tr></thead><tbody>' + trades + "</tbody></table></div>"
+                : '<div class="db-help">Brak transakcji w tym planie. Nowa transakcja spółki dodana w Transakcjach trafi tu automatycznie, dopóki plan jest otwarty.</div>') +
+            '<div class="plx-h">Notatka</div><textarea id="plx-note" class="dbx-in plx-note" maxlength="2000" ' + (open_ ? "" : "readonly") + ">" + esc(p.note) + "</textarea>" +
+            '<div class="plx-actions">' + (open_ ? '<button class="hp-btn" onclick="Planer.saveNote()">Zapisz notatkę</button><button class="hp-btn dbx-danger" onclick="Planer.closePlan()">Zamknij plan</button>' : '<button class="hp-btn" onclick="Planer.reopenPlan()">Otwórz ponownie</button>') +
+            '<button class="hp-btn" style="margin-left:auto" onclick="Planer.deletePlan()">Usuń plan</button></div>');
+    }
+    function readLegInputs() { document.querySelectorAll("#plx-detail input[data-leg]").forEach(inp => { st.detail.legs[+inp.dataset.leg].planned_pct = parseFloat(String(inp.value).replace(",", ".")); }); }
+    function msg(t) { const m = $("#plx-detail-msg"); if (m) m.textContent = t || ""; }
+    async function saveLegs() {
+        readLegInputs(); msg("");
+        try { const d = await api("/api/planner/update", { id: st.detail.id, legs: st.detail.legs.map(l => ({ entry_id: l.entry_id, planned_pct: l.planned_pct })) });
+            st.detail = d.plan; drawDetail(); load(); if (d.warnings && d.warnings.length) msg(d.warnings.join(" ")); }
+        catch (e) { msg(e.message); }
+    }
+    function removeLeg(i) { readLegInputs(); st.detail.legs.splice(i, 1); drawDetail(); if (!st.detail.legs.length) msg("Plan musi mieć co najmniej jedną strefę - dodaj strefę przed zapisem."); }
+    async function fillAddLeg() {
+        const sel = $("#plx-addleg"); if (!sel || sel.dataset.loaded) return;
+        try {
+            const d = await api("/api/planner/new-context?ticker=" + encodeURIComponent(st.detail.ticker)); sel.dataset.loaded = "1"; st.detail.ctx = d.context;
+            const have = new Set(st.detail.legs.map(l => l.entry_id));
+            sel.innerHTML = '<option value="">＋ Dodaj strefę z Form…</option>' + d.context.zones.filter(z => !have.has(z.entry_id)).map(z => '<option value="' + esc(z.entry_id) + '">' + arrow(z.side) + " " + num(z.start, 2) + "–" + num(z.end, 2) + " · budżet do " + pct(z.budget_pct) + "</option>").join("");
+            sel.onchange = () => { const z = d.context.zones.find(x => x.entry_id === sel.value); if (!z) return; readLegInputs();
+                st.detail.legs.push({ entry_id: z.entry_id, start: z.start, end: z.end, side: z.side, planned_pct: z.budget_pct == null ? 1 : Math.round(z.budget_pct * 100) / 100, used_pct: z.used_pct, left_pct: 0, zone_limit_pct: z.zone_limit_pct, plays: z.plays }); drawDetail(); };
+        } catch (e) { msg(e.message); }
+    }
+    async function saveNote() { try { const d = await api("/api/planner/update", { id: st.detail.id, note: $("#plx-note").value }); st.detail = d.plan; msg(""); load(); const m = $("#plx-detail-msg"); if (m) { m.className = "plx-warn"; m.textContent = "Zapisano."; } } catch (e) { msg(e.message); } }
+    async function closePlan() {
+        try { const d = await api("/api/planner/close", { id: st.detail.id }); st.detail = d.plan; drawDetail(); load(); }
+        catch (e) {
+            if (e.status === 409 && confirm(e.message + "\n\nZamknąć plan mimo otwartych transakcji?")) { const d = await api("/api/planner/close", { id: st.detail.id, force: true }); st.detail = d.plan; drawDetail(); load(); }
+            else if (e.status !== 409) msg(e.message);
+        }
+    }
+    async function reopenPlan() { try { const d = await api("/api/planner/reopen", { id: st.detail.id }); st.detail = d.plan; drawDetail(); load(); } catch (e) { alert(e.message); } }
+    async function deletePlan() {
+        if (!confirm("Usunąć ten plan? Transakcje zostaną odpięte od planu (nie są usuwane).")) return;
+        try { await api("/api/planner/delete", { id: st.detail.id }); closeOverlay("plx-detail"); load(); } catch (e) { alert(e.message); }
+    }
+    function goTrades() { closeOverlay("plx-detail"); if (typeof openModule === "function") openModule("tradeslist-module", "Transakcje"); }
+
+    // ---------- nowy plan ----------
+    async function loadTickers() {
+        if (st.tickers.length) return;
+        try { const rows = await api("/api/database"); const base = x => (x.ticker.includes(":") ? x.ticker.split(":")[1] : x.ticker);
+            st.tickers = (Array.isArray(rows) ? rows : []).filter(x => x && x.ticker).sort((a, b) => base(a).localeCompare(base(b), "pl")); } catch (e) {}
+    }
+    async function openNew(ticker) {
+        await loadTickers();
+        st.ctxNew = null; st.pick = {};
+        showOverlay("plx-new", newHtml());
+        if (ticker) { const sel = $("#plx-new-ticker"); sel.value = ticker; onTicker(); }
+    }
+    function newHtml() {
+        return '<div class="plx-head"><div><div class="plx-title">Nowy plan</div><div class="plx-sub">Wybierz spółkę, strefy z Form i budżet w każdej strefie (% kapitału).</div></div><button class="hp-btn" onclick="Planer.closeNew()">✕ Zamknij</button></div>' +
+            '<select id="plx-new-ticker" class="dbx-in" onchange="Planer.onTicker()"><option value="">Wybierz ticker z Bazy danych…</option>' + st.tickers.map(x => '<option value="' + esc(x.ticker) + '">' + esc(x.ticker) + (x.stock_name ? " — " + esc(x.stock_name) : "") + "</option>").join("") + "</select>" +
+            '<div id="plx-new-body" class="db-help">Po wybraniu spółki zobaczysz jej rodzaj, limity i dostępne strefy.</div>';
+    }
+    async function onTicker() {
+        const tk = $("#plx-new-ticker").value, body = $("#plx-new-body");
+        st.pick = {}; st.ctxNew = null;
+        if (!tk) { body.innerHTML = "Po wybraniu spółki zobaczysz jej rodzaj, limity i dostępne strefy."; return; }
+        body.innerHTML = "Ładowanie…";
+        try {
+            const d = await api("/api/planner/new-context?ticker=" + encodeURIComponent(tk));
+            st.ctxNew = d.context;
+            if (d.open_plan_id) { body.innerHTML = '<div class="plx-warn">Ta spółka ma już otwarty plan. Zamknij go albo edytuj - nowy można utworzyć dopiero potem.</div><div class="plx-actions"><button class="hp-btn hp-primary" onclick="Planer.closeNew(); Planer.openPlan(' + d.open_plan_id + ')">Otwórz istniejący plan</button></div>'; return; }
+            drawNew();
+        } catch (e) { body.innerHTML = '<div class="plx-err">' + esc(e.message) + "</div>"; }
+    }
+    function newSummary() {
+        const c = st.ctxNew; let reserved = 0, any = false;
+        c.zones.forEach(z => { const p = st.pick[z.entry_id]; if (p != null && isFinite(p)) { any = true; reserved += Math.max(p - (z.used_pct || 0), 0); } });
+        const after = (c.max_pct != null && c.used_pct != null) ? c.max_pct - c.used_pct - reserved : null;
+        return { any: any, reserved: reserved, after: after };
+    }
+    function drawNew() {
+        const c = st.ctxNew, body = $("#plx-new-body"), L = c.limits;
+        const kpi = (l, v, s) => '<div class="plx-kpi"><div class="l">' + l + '</div><div class="v">' + v + "</div>" + (s ? '<div class="s">' + s + "</div>" : "") + "</div>";
+        const zones = c.zones.map(z => {
+            const on = st.pick[z.entry_id] != null, none = z.budget_pct != null && z.budget_pct <= 0;
+            return '<div class="plx-zone pick ' + (on ? "sel" : "") + (none ? " dis" : "") + '" data-z="' + esc(z.entry_id) + '"><div class="plx-zhead"><label class="db-check"><input type="checkbox" ' + (on ? "checked" : "") + (none ? " disabled" : "") + ' onchange="Planer.togglePick(\'' + esc(z.entry_id) + '\', this.checked)"></label>' +
+                '<span class="plx-zside ' + (z.side === "LONG" ? "long" : "short") + '">' + arrow(z.side) + '</span><span class="plx-zrange">' + num(z.start, 2) + " – " + num(z.end, 2) + "</span>" +
+                '<div class="plx-zbud"><span class="db-help">w strefie już ' + pct(z.used_pct) + " · budżet strefy do <b>" + (z.budget_pct == null ? "bez limitu" : pct(z.budget_pct)) + "</b></span>" +
+                (on ? '<label class="dbx-field" style="flex-direction:row;align-items:center;gap:6px;"><span>Zaplanuj</span><input class="dbx-in" type="number" step="0.1" min="0.1" max="100" value="' + st.pick[z.entry_id] + '" oninput="Planer.setPick(\'' + esc(z.entry_id) + '\', this.value)"> %</label>' : "") + "</div></div>" +
+                z.plays.map(p => '<div class="plx-play"><b>' + arrow(p.side) + " wejście " + price(p.entry_point) + "</b><span>TP " + price(p.take_profit) + "</span><span>SL " + price(p.stop_loss) + "</span>" + (p.reasons.length ? "<span>" + esc(p.reasons.join(", ")) + "</span>" : "") + "<span>transakcje: <b>" + p.trades + "</b></span></div>").join("") + "</div>";
+        }).join("");
+        body.innerHTML =
+            '<div class="plx-sub"><span class="sd-link" data-tk="' + esc(c.ticker) + '">' + esc(c.ticker) + "</span> — " + esc(c.name) + " " + kindBadge(c.kind, c.kind_label) + "</div>" +
+            '<div class="plx-kpis">' +
+            kpi("Budżet w strefie", L.zone_pct != null ? "do " + pct(L.zone_pct) : "bez limitu", "limit rodzaju spółki (% kapitału)") +
+            kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : ""), c.remaining_pct != null ? "zostaje " + pct(c.remaining_pct) : "bez limitu udziału") +
+            kpi("Inwestycje w spółce", c.open_trades + (c.max_trades != null ? " / " + c.max_trades : ""), c.trades_left != null ? (c.trades_left > 0 ? "wolnych miejsc: " + c.trades_left : '<span class="plx-neg">limit wyczerpany</span>') : "bez limitu liczby") +
+            '<div class="plx-kpi" id="plx-new-sum"></div></div>' +
+            (c.capital_known ? "" : '<div class="plx-warn">Nie udało się wyliczyć kapitału - procenty budżetu są niedostępne.</div>') +
+            (!(L.zone_pct != null || c.max_pct != null) ? '<div class="plx-warn">Dla tego rodzaju spółki nie ustawiono limitów (Baza danych → Serwis).</div>' : "") +
+            '<div class="plx-h">Strefy z Form (bez wyciszonych) — wybierz, w której planujesz zagranie</div>' +
+            (zones || '<div class="db-help">Ta spółka nie ma aktywnych stref w Form.</div>') +
+            '<textarea id="plx-new-note" class="dbx-in plx-note" maxlength="2000" placeholder="Notatka do planu (opcjonalnie)"></textarea>' +
+            '<div class="plx-actions"><button class="hp-btn hp-primary" onclick="Planer.create()">Utwórz plan</button><span id="plx-new-msg" class="plx-err"></span></div>';
+        refreshSum();
+    }
+    function refreshSum() {
+        const box = $("#plx-new-sum"); if (!box) return; const s = newSummary();
+        box.innerHTML = '<div class="l">Po inwestycji zostanie</div><div class="v ' + (s.after == null ? "" : s.after < -1e-9 ? "plx-neg" : "plx-pos") + '">' + (s.any ? pct(s.after) : "—") + '</div><div class="s">budżetu spółki' + (s.any ? " (zarezerwowane " + pct(s.reserved) + ")" : "") + "</div>";
+    }
+    function togglePick(id, on) {
+        const z = st.ctxNew.zones.find(x => x.entry_id === id);
+        if (on) st.pick[id] = z.budget_pct == null ? 1 : Math.round(Math.max(z.budget_pct, 0.1) * 100) / 100; else delete st.pick[id];
+        drawNew();
+    }
+    function setPick(id, v) { const n = parseFloat(String(v).replace(",", ".")); st.pick[id] = isFinite(n) ? n : null; refreshSum(); }
+    async function create() {
+        const m = $("#plx-new-msg"); m.textContent = "";
+        const legs = Object.keys(st.pick).map(id => ({ entry_id: id, planned_pct: st.pick[id] }));
+        if (!legs.length) { m.textContent = "Wybierz co najmniej jedną strefę."; return; }
+        try {
+            const d = await api("/api/planner/create", { ticker: st.ctxNew.ticker, legs: legs, note: $("#plx-new-note").value });
+            closeOverlay("plx-new"); st.filter = "open"; syncBar(); await load();
+            st.detail = d.plan; drawDetail();
+            if (d.warnings && d.warnings.length) { const mm = $("#plx-detail-msg"); if (mm) { mm.className = "plx-warn"; mm.textContent = d.warnings.join(" "); } }
+        } catch (e) { m.textContent = e.message; }
+    }
+
+    // ---------- wejścia z innych miejsc aplikacji ----------
+    async function openFor(ticker) {         // np. przycisk „Planuj” w Transakcjach i w oknie spółki
+        if (typeof openModule === "function") openModule("planner-module", "Planer");
+        try {
+            const d = await api("/api/planner/new-context?ticker=" + encodeURIComponent(ticker));
+            if (d.open_plan_id) openPlan(d.open_plan_id); else openNew(ticker);
+        } catch (e) { openNew(); }
+    }
+    function onTradeAdded() { const m = document.getElementById("planner-module"); if (m && m.style.display === "block") load(); }
+    document.addEventListener("click", e => { const t = e.target.closest && e.target.closest("[data-plan]"); if (t) { e.preventDefault(); if (typeof openModule === "function") openModule("planner-module", "Planer"); openPlan(t.dataset.plan); } });
+
+    return { open: open, setFilter: setFilter, setQuery: setQuery, openNew: openNew, closeNew: () => closeOverlay("plx-new"), closeDetail: () => closeOverlay("plx-detail"),
+             openPlan: openPlan, openFor: openFor, onTicker: onTicker, togglePick: togglePick, setPick: setPick, create: create, saveLegs: saveLegs, removeLeg: removeLeg,
+             fillAddLeg: fillAddLeg, saveNote: saveNote, closePlan: closePlan, reopenPlan: reopenPlan, deletePlan: deletePlan, goTrades: goTrades, onTradeAdded: onTradeAdded };
 })();
 </script>
 </body>
