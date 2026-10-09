@@ -172,6 +172,29 @@
         .dbx-pager .hp-btn:disabled { opacity: .4; pointer-events: none; }
         .dbx-form { display: flex; flex-direction: column; gap: 10px; }
         .dbx-prio { padding: 6px 2px; }
+        @keyframes dbxFade { from { opacity: 0; } to { opacity: 1; } }
+        #database-module.dbx { animation-name: dbxFade; }       /* bez transformacji, żeby szuflada (position: fixed) nie "skakała" */
+        /* ----- szuflada słownika: z prawej krawędzi ekranu ----- */
+        .dbx-drawer { position: fixed; top: 64px; bottom: 72px; right: 0; width: min(560px, 92vw); z-index: 900; transform: translateX(100%); transition: transform .38s cubic-bezier(.22,.8,.24,1) .12s; }
+        .dbx-drawer.open { transform: translateX(0); transition-delay: 0s; }
+        .dbx-drawer-body { height: 100%; overflow: auto; background: var(--bg-card); border: 1px solid var(--border-color); border-right: 0; border-radius: 14px 0 0 14px; padding: 18px 20px; box-shadow: -14px 0 40px rgba(0,0,0,.45); }
+        .dbx-drawer-tab { position: absolute; left: -46px; top: 50%; transform: translateY(-50%); width: 46px; padding: 14px 0; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;
+            background: var(--bg-card); border: 1px solid var(--border-color); border-right: 0; border-radius: 12px 0 0 12px; color: var(--text-muted); box-shadow: -6px 0 18px rgba(0,0,0,.35); transition: color .2s, border-color .2s; }
+        .dbx-drawer-tab:hover, .dbx-drawer.open .dbx-drawer-tab { color: var(--accent-hover); border-color: var(--accent); }
+        .dbx-drawer-ico { font-size: 1.2em; } .dbx-drawer-txt { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 0.8em; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+        .dbx-drawer-x { display: none; } .dbx-backdrop { display: none; }
+        .dbx-drawer .hp-table-wrap { overflow: visible; } .dbx-drawer .dbx-panel-head { flex-wrap: nowrap; align-items: flex-start; }
+        .dbx-drawer .dbx-dict td:last-child, .dbx-drawer .dbx-dict th:last-child { white-space: normal !important; }
+        @media (hover: hover) and (pointer: fine) { .dbx-drawer:hover { transform: translateX(0); transition-delay: 0s; } }   /* komputer: wysuwa się po najechaniu */
+        @media (max-width: 760px), (hover: none) {                /* telefon: mała ikona, wysuwanie dotknięciem */
+            .dbx-drawer { top: 56px; bottom: 64px; width: 94vw; }
+            .dbx-drawer-tab { top: auto; bottom: 14px; transform: none; left: -46px; width: 44px; height: 44px; padding: 0; justify-content: center; border-radius: 50% 0 0 50%; }
+            .dbx-drawer-txt { display: none; } .dbx-drawer-x { display: inline-block; flex: none; }
+            .dbx-drawer-body { padding: 14px 12px; } .dbx-drawer .dbx-dict th, .dbx-drawer .dbx-dict td { font-size: 0.74em; padding: 5px 6px; } .dbx-drawer .dbx-dict td:first-child { min-width: 0; }
+            .dbx-drawer .dbx-dict { table-layout: fixed; width: 100%; } .dbx-drawer .dbx-dict th, .dbx-drawer .dbx-dict td { overflow-wrap: anywhere; font-size: 0.7em; }
+            .dbx-drawer .dbx-dict td:last-child, .dbx-drawer .dbx-dict th:last-child { width: 23%; overflow-wrap: normal; }
+            .dbx-drawer.open ~ .dbx-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 899; }
+        }
         .dbx-details summary { cursor: pointer; font-weight: 650; list-style: none; } .dbx-details summary::-webkit-details-marker { display: none; }
         .dbx-dict th, .dbx-dict td { padding: 6px 8px; font-size: 0.8em; }
         .dbx-cols { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
@@ -759,11 +782,14 @@
                             <button onclick="addTicker()" class="hp-btn hp-primary" type="button">Dodaj</button>
                         </div>
                     </div>
-                    <div class="dbx-panel">
-                        <details open class="dbx-details">
-                            <summary>📖 Słownik tickerów</summary>
-                            <div class="db-help" style="margin:6px 0 10px;">Jak poprawnie dodawać instrumenty do bazy</div>
-                            <div class="hp-table-wrap"><table class="hp-table dbx-dict"><thead><tr><th>Rynek / giełda</th><th>Przedrostek</th><th>Przykład</th><th>Waluta</th></tr></thead>
+                </aside>
+            </div>
+            <!-- Słownik tickerów: szuflada wysuwana z prawej krawędzi (najechanie myszą / dotknięcie ikony) -->
+            <aside class="dbx-drawer" id="dict-drawer" aria-label="Słownik tickerów">
+                <button type="button" class="dbx-drawer-tab" id="dict-tab" aria-expanded="false" aria-controls="dict-body" title="Słownik tickerów" onclick="toggleDict()"><span class="dbx-drawer-ico">📖</span><span class="dbx-drawer-txt">Słownik</span></button>
+                <div class="dbx-drawer-body" id="dict-body">
+                    <div class="dbx-panel-head"><div><h3>📖 Słownik tickerów</h3><div class="db-help">Jak poprawnie dodawać instrumenty do bazy</div></div><button type="button" class="dbx-icon dbx-drawer-x" onclick="toggleDict(false)" title="Zamknij">✕</button></div>
+                    <div class="hp-table-wrap"><table class="hp-table dbx-dict"><thead><tr><th>Rynek / giełda</th><th>Przedrostek</th><th>Przykład</th><th>Waluta</th></tr></thead>
 <tbody>
                         <tr>
                             <td>Polska (GPW)</td>
@@ -838,13 +864,12 @@
                             <td style="color:var(--success); font-weight:bold;">PLN (Celowe)</td>
                         </tr>
                     </tbody></table></div>
-                            <p class="db-help" style="margin-top:10px;">
+                    <p class="db-help" style="margin-top:10px;">
                 * System automatycznie obcina końcówki w kryptowalutach (np. USDT zamienia na parę do USD) i tłumaczy wszystkie przedrostki na format czytelny dla serwerów Yahoo Finance. Dla klasycznych rynków akcyjnych w USA dodawanie przedrostka nie jest wymagane.
             </p>
-                        </details>
-                    </div>
-                </aside>
-            </div>
+                </div>
+            </aside>
+            <div class="dbx-backdrop" onclick="toggleDict(false)"></div>
         </div>
 
         <!-- ============ MAKRO ============ -->
@@ -1725,7 +1750,17 @@
 
         async function loadDatabase() { try { const response = await fetch(`${API_BASE_URL}/api/database`); const dt = await response.json(); tickerDataArray = Array.isArray(dt) ? dt : []; renderMobileList(); } catch (e) {} }
         // --- BAZA DANYCH: zakładki Tickery / Makro / Serwis ---
+        function toggleDict(force) {
+            const d = document.getElementById('dict-drawer'); if (!d) return;
+            const open = typeof force === 'boolean' ? force : !d.classList.contains('open');
+            d.classList.toggle('open', open);
+            document.getElementById('dict-tab').setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+        // faza przechwytywania: działa też wtedy, gdy kliknięty element (np. ticker) obsługuje własne zdarzenie
+        document.addEventListener('click', e => { const d = document.getElementById('dict-drawer'); if (d && d.classList.contains('open') && !e.target.closest('#dict-drawer')) toggleDict(false); }, true);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleDict(false); });
         function switchDbTab(tab) {
+            toggleDict(false);
             dbTab = tab;
             document.querySelectorAll('#db-tabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.dbtab === tab));
             document.querySelectorAll('#database-module .db-tab').forEach(p => p.style.display = (p.id === 'db-tab-' + tab) ? 'block' : 'none');
