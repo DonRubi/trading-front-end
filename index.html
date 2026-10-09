@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Quant Desk v12.0</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         :root { --bg-main: #0b0e11; --bg-card: #181a20; --bg-input: #2b3139; --text-main: #eaecef; --text-muted: #848e9c; --accent: #c99400; --accent-hover: #fcd535; --danger: #f6465d; --success: #0ecb81; --border-color: #2b3139; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -125,6 +126,53 @@
             #hp-positions td:first-child { white-space: normal; } #hp-positions .hp-badge { margin: 2px 4px 0 0; display: inline-block; }
         }
         @media (prefers-reduced-motion: reduce) { .hp-panel, .hp-table tbody tr { animation: none; } .hp-body, .hp-ring .hp-bar, .hp-wfill, .hp-chev { transition: none; } }
+        /* ===== Okno szczegółów spółki (StockDetail) ===== */
+        .sd-link { cursor: pointer; }
+        .sd-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+        #sd-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1100; display: none; overflow-y: auto; padding: 16px; }
+        #sd-overlay.sd-open { display: block; }
+        .sd-panel { max-width: 1100px; margin: 0 auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+        .sd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .sd-title { font-size: 1.35rem; font-weight: 700; color: var(--accent); }
+        .sd-name { color: var(--text-muted); font-size: 0.9rem; margin-top: 2px; }
+        .sd-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .sd-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; padding: 6px 12px; font-weight: 700; cursor: pointer; font-size: 0.85rem; text-decoration: none; }
+        .sd-btn:hover { background: rgba(201,148,0,0.12); }
+        .sd-x { color: var(--text-muted); border-color: var(--border-color); }
+        .sd-badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 8px; vertical-align: middle; letter-spacing: .4px; }
+        .sd-b-open { background: rgba(240,185,11,.16); color: #f0b90b; } .sd-b-closed { background: rgba(132,142,156,.18); color: var(--text-muted); } .sd-b-none { background: rgba(132,142,156,.12); color: var(--text-muted); }
+        .sd-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .sd-kpi { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; }
+        .sd-kpi .sd-l { color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .4px; }
+        .sd-kpi .sd-v { font-size: 1.25rem; font-weight: 700; margin-top: 4px; }
+        .sd-kpi .sd-s { color: var(--text-muted); font-size: 0.72rem; margin-top: 2px; }
+        .sd-big .sd-v { font-size: 1.5rem; }
+        .sd-up { color: var(--success); } .sd-down { color: var(--danger); }
+        .sd-controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+        .sd-seg { display: inline-flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        .sd-seg button { background: transparent; color: var(--text-muted); border: 0; padding: 6px 11px; cursor: pointer; font-weight: 600; font-size: 0.82rem; }
+        .sd-seg button + button { border-left: 1px solid var(--border-color); }
+        .sd-seg button.sd-on { background: var(--accent); color: #11111b; }
+        .sd-ctl-l { color: var(--text-muted); font-size: 0.72rem; margin-right: 6px; text-transform: uppercase; letter-spacing: .4px; }
+        .sd-chart-wrap { position: relative; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; background: var(--bg-main); }
+        #sd-chart { width: 100%; height: 420px; }
+        .sd-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: .9rem; text-align: center; padding: 20px; pointer-events: none; }
+        .sd-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--text-muted); font-size: 0.78rem; }
+        .sd-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+        .sd-zones { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .sd-chip { border: 1px solid var(--border-color); background: transparent; color: var(--text-muted); border-radius: 14px; padding: 3px 10px; font-size: 0.76rem; cursor: pointer; }
+        .sd-chip.sd-on.sd-long { border-color: var(--success); color: var(--success); background: rgba(14,203,129,.10); }
+        .sd-chip.sd-on.sd-short { border-color: var(--danger); color: var(--danger); background: rgba(246,70,93,.10); }
+        .sd-chip.sd-muted { opacity: .6; font-style: italic; }
+        .sd-note { color: var(--text-muted); font-size: 0.78rem; }
+        .sd-h { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; }
+        .sd-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+        .sd-table th { color: var(--text-muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--border-color); }
+        .sd-table td { text-align: right; padding: 8px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        .sd-table th:first-child, .sd-table td:first-child { text-align: left; }
+        .sd-side { font-size: .7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
+        .sd-side.sd-long { background: rgba(14,203,129,.15); color: var(--success); } .sd-side.sd-short { background: rgba(246,70,93,.15); color: var(--danger); }
+        @media (max-width: 600px) { #sd-overlay { padding: 0; } .sd-panel { border-radius: 0; min-height: 100vh; border: 0; } #sd-chart { height: 320px; } }
     </style>
 </head>
 <body>
@@ -216,7 +264,7 @@
                         <div class="menu-card" onclick="openModule('focuslist-module', 'FocusList')"><span class="icon">👁️</span><h3>FocusList</h3></div>
                         <div class="menu-card" onclick="openModule('alerthistory-module', 'Alerts History')"><span class="icon">🔔</span><h3>AlertHistory</h3></div>
                         <div class="menu-card" onclick="openModule('dailybrief-module', 'Daily Brief')"><span class="icon">📰</span><h3>DailyBrief</h3></div>
-                        <div class="menu-card" onclick="openModule('campaign-module', 'Planner Kampanii')"><span class="icon">🧭</span><h3>Planner Kampanii</h3></div>
+                        <div class="menu-card" onclick="openModule('campaign-module', 'Planer')"><span class="icon">🧭</span><h3>Planer</h3></div>
                     </div>
                 </div></div></div>
             </section>
@@ -1523,7 +1571,7 @@
             container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `
                 <div class="data-card">
                     <div class="data-card-info">
-                        <h4>${item.ticker}</h4>
+                        <h4><span class="sd-link" data-tk="${item.ticker}">${item.ticker}</span></h4>
                         <p>${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p>
                  </div>
                     <div style="display: flex; gap:10px; align-items:center;">
@@ -1811,7 +1859,7 @@
                     tbody.innerHTML += `<tr>
                         <td style="font-weight:bold;">${item.entry_id}</td>
                         <td style="color:var(--text-muted);">${dateFormatted}</td>
-                        <td><strong style="color:var(--accent);">${item.ticker}</strong>${stockNameHtml}</td>
+                        <td><span class="sd-link" data-tk="${item.ticker}"><strong style="color:var(--accent);">${item.ticker}</strong>${stockNameHtml}</span></td>
                         <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
                         <td class="sensitive" style="font-weight: 600;">WE: ${entry.toFixed(2)}$</td>
                         <td>${pb}</td><td>${mb}</td>
@@ -2107,7 +2155,7 @@
             const maxPage = Math.ceil(filteredFocusArray.length / focusPageSize) || 1;
 
             filteredFocusArray.slice(start, start + focusPageSize).forEach(i => {
-                tb.innerHTML += `<tr><td>#${i.id}</td><td>${new Date(i.created_at).toLocaleDateString('pl-PL')}</td><td>${i.entry_id}</td><td>${i.ticker}</td><td>${Number(i.points_total).toFixed(1)}</td><td style="color:#0ecb81;">${(i.final_ratio*100).toFixed(0)}%</td><td class="sensitive" style="color:#89b4fa;">${i.allocated_pct.toFixed(1)}%</td><td class="sensitive">${i.allocated_cash} ${i.currency}</td><td><button class="btn-edit" onclick="openEditModal('focus', ${i.id})">✎</button><button class="btn-delete" onclick="deleteFocusEntry(${i.id})">✖</button></td></tr>`;
+                tb.innerHTML += `<tr><td>#${i.id}</td><td>${new Date(i.created_at).toLocaleDateString('pl-PL')}</td><td>${i.entry_id}</td><td><span class="sd-link" data-tk="${i.ticker}">${i.ticker}</span></td><td>${Number(i.points_total).toFixed(1)}</td><td style="color:#0ecb81;">${(i.final_ratio*100).toFixed(0)}%</td><td class="sensitive" style="color:#89b4fa;">${i.allocated_pct.toFixed(1)}%</td><td class="sensitive">${i.allocated_cash} ${i.currency}</td><td><button class="btn-edit" onclick="openEditModal('focus', ${i.id})">✎</button><button class="btn-delete" onclick="deleteFocusEntry(${i.id})">✖</button></td></tr>`;
             });
             updatePageInfo('focus-page-info', currentFocusPage, maxPage, filteredFocusArray.length, focusPageSize);
         }
@@ -2381,7 +2429,7 @@
                 // WIERSZ NADRZĘDNY (HEADER Z TICKEREM)
                 htmlStr += `<tr style="background-color: rgba(255,255,255,0.05); cursor: pointer; border-top: 2px solid var(--border-color);" onclick="toggleFocusGroup('${cleanTicker}')">
                     <td style="white-space: nowrap;">${dateStr}</td>
-                    <td style="font-weight:bold; color:var(--accent); font-size:1.1em; white-space:nowrap;"><span id="icon-${cleanTicker}" style="margin-right:5px;">➕</span> ${group.ticker}</td>
+                    <td style="font-weight:bold; color:var(--accent); font-size:1.1em; white-space:nowrap;"><span id="icon-${cleanTicker}" style="margin-right:5px;">➕</span> <span class="sd-link" data-tk="${group.ticker}">${group.ticker}</span></td>
                     <td style="font-weight:bold;">${group.currency}</td>
                     <td>-</td>
                     <td class="sensitive" style="font-weight: 600; color: #cdd6f4;">${entryStr}</td>
@@ -2865,7 +2913,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
 
                 tb.innerHTML += `<tr>
                     <td>${item.buy_date || '-'}<br><small>#${item.id}</small></td>
-                    <td><strong style="color:var(--accent);">${item.ticker || '-'}</strong>${nameHtml}</td>
+                    <td><span class="sd-link" data-tk="${item.ticker}"><strong style="color:var(--accent);">${item.ticker || '-'}</strong>${nameHtml}</span></td>
                     <td style="max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.85em; color:var(--text-main); cursor:pointer; transition:0.2s;" 
                         onclick="this.style.whiteSpace = this.style.whiteSpace === 'normal' ? 'nowrap' : 'normal'; this.style.color = this.style.whiteSpace === 'normal' ? 'var(--accent)' : 'var(--text-main)';" 
                         title="Kliknij, aby rozwinąć/zwinąć">
@@ -3080,7 +3128,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
             
             // 1. Wygenerowanie standardowych wierszy
             let html = data.map(i => `<tr>
-                <td style="font-weight:bold; color:var(--accent);">${i.ticker}</td>
+                <td style="font-weight:bold; color:var(--accent);"><span class="sd-link" data-tk="${i.ticker}">${i.ticker}</span></td>
                 <td class="sensitive">${i.inv.toFixed(2)} ${i.curr}</td>
                 <td class="sensitive" style="color: #cdd6f4;">${i.invPln.toFixed(2)} PLN</td>
                 <td class="sensitive" style="color:#89b4fa; font-weight:bold;">${i.pctInv.toFixed(1)} %</td>
@@ -3354,7 +3402,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     <td><input type="checkbox" onchange="toggleAlertImportant(${item.id}, this)" ${checkedAttr} style="transform: scale(1.3); cursor: pointer; accent-color: var(--accent);"></td>
                     <td>${new Date(item.triggered_at).toLocaleDateString('pl-PL')}<br><small style="color:var(--text-muted);">${new Date(item.triggered_at).toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'})}</small></td>
                     <td style="color:${typeColor}; font-weight:bold;">${aType}</td>
-                    <td><strong style="color:var(--accent);">${item.ticker}</strong>${stockNameHtml}</td>
+                    <td><span class="sd-link" data-tk="${item.ticker}"><strong style="color:var(--accent);">${item.ticker}</strong>${stockNameHtml}</span></td>
                     <td>${prioText}</td>
                     <td style="font-weight:bold;">${condText}</td>
                     <td class="sensitive">${Number(item.target_price).toFixed(2)} $</td>
@@ -4232,7 +4280,7 @@ let globalCampaignCache = [];
 
 // Specjalna funkcja nawigacyjna, która automatycznie filtruje widok pod wybrany ticker
 function openCampaignPlanner(tradeId, ticker) {
-    openModule('campaign-module', 'Planner Kampanii');
+    openModule('campaign-module', 'Planer');
     const searchInput = document.getElementById('camp-search-filter');
     if (searchInput) {
         searchInput.value = ticker.toUpperCase();
@@ -5580,8 +5628,8 @@ window.HomePage = (function () {
             const levTip = "Średni lewar ×" + r.leverage.toLocaleString("pl-PL", { maximumFractionDigits: 2 });
             const tr = r.n > 1 ? '<span class="hp-badge hp-b-check" title="Pozycje tego tickera są zsumowane">' + r.n + " transze</span>" : "";
             const stale = STALE[r.price_source] ? '<span class="hp-badge hp-b-stale" title="Wycena nie opiera się na notowaniu z ostatniej minuty">' + STALE[r.price_source] + "</span>" : "";
-            const name = r.name ? '<div class="hp-name" title="' + esc(r.name) + '">' + esc(r.name) + "</div>" : "";
-            return '<tr style="animation-delay:' + (i * 40) + 'ms"><td><span class="hp-tk">' + esc(r.ticker) + '</span><span class="hp-badge ' + cls + '" title="' + levTip + '">' + txt + "</span>" + tr + stale + name + "</td>" +
+            const name = r.name ? '<div class="hp-name sd-link" data-tk="' + esc(r.ticker) + '" title="' + esc(r.name) + '">' + esc(r.name) + "</div>" : "";
+            return '<tr style="animation-delay:' + (i * 40) + 'ms"><td><span class="hp-tk sd-link" data-tk="' + esc(r.ticker) + '">' + esc(r.ticker) + '</span><span class="hp-badge ' + cls + '" title="' + levTip + '">' + txt + "</span>" + tr + stale + name + "</td>" +
                 '<td class="hp-r"><div class="hp-wbar"><div class="hp-wtrack"><div class="hp-wfill" data-w="' + (r.weight_pct / max * 100).toFixed(1) + '"></div></div><span>' + fmtPlain(r.weight_pct, 1) + "</span></div></td>" +
                 '<td class="hp-r ' + sign(r.day_pct) + '">' + fmtPct(r.day_pct) + '</td><td class="hp-r ' + sign(r.return_pct) + '">' + fmtPct(r.return_pct) + "</td></tr>";
         }).join("");
@@ -5644,7 +5692,7 @@ window.HomePage = (function () {
     function noteRow(n, i) {
         const date = n.created_at ? new Date(n.created_at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
         return '<tr class="hp-note-row ' + (n.done ? "hp-done" : "") + '" data-id="' + esc(n.id) + '" style="animation-delay:' + (i * 30) + 'ms">' +
-            '<td><span class="hp-tk">' + esc(n.ticker) + '</span></td><td><span class="hp-badge hp-b-' + esc(n.action) + '" style="margin-left:0">' + (ACTION[n.action] || esc(n.action)) + "</span></td>" +
+            '<td><span class="hp-tk sd-link" data-tk="' + esc(n.ticker) + '">' + esc(n.ticker) + '</span></td><td><span class="hp-badge hp-b-' + esc(n.action) + '" style="margin-left:0">' + (ACTION[n.action] || esc(n.action)) + "</span></td>" +
             '<td class="hp-col-date" style="white-space:nowrap;color:var(--text-muted)">' + date + '</td><td class="hp-desc">' + esc(n.description) + "</td>" +
             '<td class="hp-r"><input type="checkbox" class="hp-chk" aria-label="Wykreśl notatkę" ' + (n.done ? "checked" : "") + "></td>" +
             '<td class="hp-r"><button class="hp-x" type="button" aria-label="Usuń notatkę">×</button></td></tr>';
@@ -5722,6 +5770,257 @@ window.HomePage = (function () {
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
     return { init: init, refresh: function () { if (started) { refresh(); setTimeout(placePill, 50); } } };
+})();
+</script>
+<script>
+// ===== Okno szczegółów spółki (StockDetail): wykres, wyniki w %, strefy z Form, znaczniki wejść, lista inwestycji =====
+window.StockDetail = (function () {
+    "use strict";
+    const $ = (s, r) => (r || document).querySelector(s);
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const fmtPct = (v, d = 2) => (v == null || !isFinite(v)) ? "—" : (v >= 0 ? "+" : "") + v.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
+    const fmtPlain = (v, d = 0) => (v == null || !isFinite(v)) ? "—" : v.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
+    const fmtPrice = v => (v == null || !isFinite(v)) ? "—" : v.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    const tone = v => (v == null || !isFinite(v)) ? "" : (v >= 0 ? "sd-up" : "sd-down");
+    const RANGES = [["1d", "1D"], ["1t", "1T"], ["1m", "1M"], ["ytd", "YTD"], ["1r", "1R"], ["5l", "5L"]];
+    const INTERVALS = [["1h", "1H"], ["4h", "4H"], ["1d", "1D"], ["1w", "1W"]];
+    const MARKERS = [["none", "Brak"], ["open", "Otwarte"], ["closed", "Zamknięte"], ["both", "Oba"]];
+    const KIND = { open: ["sd-b-open", "OTWARTA POZYCJA"], closed: ["sd-b-closed", "ZAMKNIĘTE"], none: ["sd-b-none", "BEZ HISTORII W TRADES"] };
+    const MARK_COLOR = { open: "#f0b90b", win: "#0ecb81", loss: "#f6465d" };
+
+    let st = { ticker: null, interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: 0 };
+    let chart = null, candles = null, volume = null, zonesPrim = null, ro = null;
+
+    // ---------- prymityw rysujący strefy (delikatna poświata za świecami) ----------
+    function makeZonesPrimitive() {
+        const prim = {
+            zones: [], series: null, request: null,
+            attached(p) { this.series = p.series; this.request = p.requestUpdate; },
+            detached() { this.series = null; this.request = null; },
+            updateAllViews() {},
+            setZones(z) { this.zones = z; if (this.request) this.request(); },
+            paneViews() { return [view]; }
+        };
+        const view = {
+            zOrder: () => "bottom",
+            renderer: () => ({
+                draw() {},
+                drawBackground(target) {
+                    if (!prim.series) return;
+                    target.useBitmapCoordinateSpace(({ context: ctx, bitmapSize, verticalPixelRatio: vr }) => {
+                        prim.zones.forEach(z => {
+                            const y1 = prim.series.priceToCoordinate(z.hi), y2 = prim.series.priceToCoordinate(z.lo);
+                            if (y1 == null || y2 == null) return;
+                            const top = Math.min(y1, y2) * vr, h = Math.max(Math.abs(y2 - y1) * vr, 1);
+                            const rgb = z.side === "LONG" ? "14,203,129" : "246,70,93";
+                            const g = ctx.createLinearGradient(0, top, 0, top + h);
+                            g.addColorStop(0, "rgba(" + rgb + ",0.20)"); g.addColorStop(0.5, "rgba(" + rgb + ",0.10)"); g.addColorStop(1, "rgba(" + rgb + ",0.20)");
+                            ctx.fillStyle = g; ctx.fillRect(0, top, bitmapSize.width, h);
+                            ctx.fillStyle = "rgba(" + rgb + ",0.35)";
+                            ctx.fillRect(0, top, bitmapSize.width, Math.max(vr, 1)); ctx.fillRect(0, top + h - Math.max(vr, 1), bitmapSize.width, Math.max(vr, 1));
+                        });
+                    });
+                }
+            })
+        };
+        return prim;
+    }
+
+    // ---------- DOM ----------
+    function ensureDom() {
+        if ($("#sd-overlay")) return;
+        const el = document.createElement("div");
+        el.id = "sd-overlay";
+        el.innerHTML = '<div class="sd-panel" role="dialog" aria-modal="true" aria-label="Szczegóły spółki">' +
+            '<div class="sd-head"><div><div class="sd-title" id="sd-title"></div><div class="sd-name" id="sd-name"></div></div>' +
+            '<div class="sd-actions"><a class="sd-btn" id="sd-tv" target="_blank" rel="noopener" hidden>TradingView ↗</a>' +
+            '<button class="sd-btn" id="sd-plan" type="button">🧭 Planuj</button><button class="sd-btn sd-x" id="sd-close" type="button" aria-label="Zamknij">✕</button></div></div>' +
+            '<div class="sd-kpis" id="sd-pnl"></div>' +
+            '<div class="sd-kpis" id="sd-summary"></div>' +
+            '<div class="sd-controls"><div><span class="sd-ctl-l">Zakres</span><span class="sd-seg" id="sd-ranges"></span></div>' +
+            '<div><span class="sd-ctl-l">Interwał</span><span class="sd-seg" id="sd-intervals"></span></div>' +
+            '<div><span class="sd-ctl-l">Wejścia</span><span class="sd-seg" id="sd-markers"></span></div></div>' +
+            '<div class="sd-zones" id="sd-zones"></div>' +
+            '<div class="sd-chart-wrap"><div id="sd-chart"></div><div class="sd-msg" id="sd-msg"></div></div>' +
+            '<div class="sd-legend"><span><i class="sd-dot" style="background:#f0b90b"></i>wejście — pozycja otwarta</span><span><i class="sd-dot" style="background:#0ecb81"></i>zamknięta z zyskiem</span><span><i class="sd-dot" style="background:#f6465d"></i>zamknięta ze stratą</span><span class="sd-note" id="sd-info"></span></div>' +
+            '<div id="sd-trades"></div></div>';
+        document.body.appendChild(el);
+        el.addEventListener("mousedown", e => { if (e.target === el) close(); });
+        $("#sd-close").addEventListener("click", close);
+        $("#sd-plan").addEventListener("click", plan);
+        document.addEventListener("keydown", e => { if (e.key === "Escape" && isOpen()) close(); });
+        seg("#sd-ranges", RANGES, () => st.range, setRange);
+        seg("#sd-intervals", INTERVALS, () => st.interval, setInterval_);
+        seg("#sd-markers", MARKERS, () => st.markers, setMarkers);
+    }
+    function seg(sel, items, get, onPick) {
+        const box = $(sel);
+        box.innerHTML = items.map(i => '<button type="button" data-v="' + i[0] + '">' + i[1] + "</button>").join("");
+        box.addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (b) onPick(b.dataset.v); });
+        box._get = get;
+    }
+    function syncSegs() {
+        ["#sd-ranges", "#sd-intervals", "#sd-markers"].forEach(sel => {
+            const box = $(sel);
+            box.querySelectorAll("button").forEach(b => b.classList.toggle("sd-on", b.dataset.v === box._get()));
+        });
+    }
+    const isOpen = () => { const o = $("#sd-overlay"); return !!o && o.classList.contains("sd-open"); };
+
+    // ---------- sterowanie ----------
+    function open(ticker) {
+        if (!ticker) return;
+        ensureDom();
+        st = { ticker: String(ticker), interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: st.seq };
+        $("#sd-overlay").classList.add("sd-open");
+        document.body.style.overflow = "hidden";
+        $("#sd-title").textContent = st.ticker; $("#sd-name").textContent = "";
+        $("#sd-pnl").innerHTML = ""; $("#sd-summary").innerHTML = ""; $("#sd-zones").innerHTML = ""; $("#sd-trades").innerHTML = "";
+        $("#sd-tv").hidden = true; $("#sd-info").textContent = "";
+        syncSegs(); load();
+    }
+    function close() {
+        const o = $("#sd-overlay"); if (!o) return;
+        o.classList.remove("sd-open"); document.body.style.overflow = "";
+        st.seq++;
+        if (ro) { ro.disconnect(); ro = null; }
+        if (chart) { chart.remove(); chart = candles = volume = zonesPrim = null; }
+    }
+    function setRange(r) {
+        st.range = r;
+        // dobór sensownego interwału do zakresu (np. 1 dzień na świecach dziennych to jedna świeca)
+        if ((r === "1d" || r === "1t") && (st.interval === "1d" || st.interval === "1w")) st.interval = "1h";
+        else if (r === "1m" && st.interval === "1w") st.interval = "1d";
+        else if ((r === "1r" || r === "5l") && (st.interval === "1h" || st.interval === "4h")) st.interval = "1d";
+        syncSegs(); load();
+    }
+    function setInterval_(i) { st.interval = i; syncSegs(); load(); }
+    function setMarkers(m) { st.markers = m; syncSegs(); applyOverlays(); }
+    function plan() {
+        const d = st.data, t = d && (d.trades || []).find(x => x.status === "OPEN"), tk = st.ticker;
+        close();
+        if (typeof openCampaignPlanner === "function") openCampaignPlanner(t ? t.id : 0, tk);
+    }
+
+    async function load() {
+        const my = ++st.seq;
+        showMsg("Ładowanie…");
+        try {
+            const url = API_BASE_URL + "/api/stock/detail?ticker=" + encodeURIComponent(st.ticker) + "&interval=" + st.interval + "&range=" + st.range;
+            const res = await fetch(url);
+            const d = await res.json().catch(() => ({}));
+            if (my !== st.seq) return;
+            if (!res.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + res.status));
+            st.data = d;
+            if (st.zonesFor !== st.ticker) { st.zonesOn = new Set((d.zones || []).filter(z => z.active).map(z => z.entry_id)); st.zonesFor = st.ticker; }
+            render();
+        } catch (e) {
+            if (my !== st.seq) return;
+            clearChart(); showMsg("Nie udało się pobrać danych: " + (e.message || e));
+        }
+    }
+    function showMsg(t) { const m = $("#sd-msg"); if (m) { m.textContent = t || ""; m.style.display = t ? "flex" : "none"; } }
+
+    // ---------- widok ----------
+    function kpi(label, value, sub, extra) {
+        return '<div class="sd-kpi ' + (extra || "") + '"><div class="sd-l">' + label + '</div><div class="sd-v ' + tone(value) + '">' + fmtPct(value) + "</div>" + (sub ? '<div class="sd-s">' + sub + "</div>" : "") + "</div>";
+    }
+    function render() {
+        const d = st.data, [bcls, btxt] = KIND[d.kind] || KIND.none;
+        $("#sd-title").innerHTML = esc(d.ticker) + '<span class="sd-badge ' + bcls + '">' + btxt + "</span>";
+        $("#sd-name").textContent = d.name || "";
+        const tv = $("#sd-tv");
+        if (typeof getTradingViewLink === "function") { try { tv.href = getTradingViewLink(d.ticker); tv.hidden = false; } catch (e) { tv.hidden = true; } }
+        // wyniki w % względem zainwestowanej kwoty - zależnie od typu pozycji
+        let pnl = "";
+        if (d.kind === "open") pnl += kpi("Zysk / strata obecne", d.pnl.current_pct, "otwarte pozycje, % zainwestowanej kwoty", "sd-big");
+        if (d.pnl.realized_pct != null) pnl += kpi("Zysk / strata zrealizowane", d.pnl.realized_pct, d.pnl.closed_count + " zamkniętych, % zainwestowanej kwoty", "sd-big");
+        $("#sd-pnl").innerHTML = pnl; $("#sd-pnl").style.display = pnl ? "" : "none";
+        const s = d.summary || {}, v = s.volume;
+        $("#sd-summary").innerHTML = kpi("Dziś", s.today) + kpi("Od początku miesiąca", s.mtd) + kpi("Od początku kwartału", s.qtd) + kpi("Od początku roku", s.ytd) +
+            '<div class="sd-kpi"><div class="sd-l">Wolumen (ostatnia sesja)</div><div class="sd-v">' + (v && v.ratio_pct != null ? fmtPlain(v.ratio_pct) : "—") + '</div><div class="sd-s">średniej z 20 sesji</div></div>';
+        syncSegs(); renderZoneChips(); renderTrades(); drawChart();
+        const note = [];
+        if (d.available_from && d.range_start && d.available_from > d.range_start) {
+            const gap = (new Date(d.available_from) - new Date(d.range_start)) / 864e5;
+            if (gap > 5) note.push("Dane dla tego interwału dostępne od " + d.available_from + ".");
+        }
+        $("#sd-info").textContent = note.join(" ");
+    }
+    function renderZoneChips() {
+        const box = $("#sd-zones"), zs = st.data.zones || [];
+        if (!zs.length) { box.innerHTML = ""; return; }
+        box.innerHTML = '<span class="sd-ctl-l">Strefy z Form</span>' + zs.map(z => {
+            const on = st.zonesOn.has(z.entry_id), lo = Math.min(z.start, z.end), hi = Math.max(z.start, z.end);
+            return '<button type="button" class="sd-chip ' + (on ? "sd-on " : "") + (z.side === "LONG" ? "sd-long" : "sd-short") + (z.active ? "" : " sd-muted") + '" data-z="' + esc(z.entry_id) + '" title="' + (z.active ? "Aktywna" : "Wyciszona") + '">' +
+                esc(z.entry_id) + " · " + z.side + " · " + fmtPrice(lo) + "–" + fmtPrice(hi) + (z.active ? "" : " (wyciszona)") + "</button>";
+        }).join("") + '<button type="button" class="sd-chip" data-z="*all">wszystkie</button><button type="button" class="sd-chip" data-z="*none">żadne</button>';
+        box.onclick = e => {
+            const b = e.target.closest("button[data-z]"); if (!b) return;
+            const z = b.dataset.z;
+            if (z === "*all") st.zonesOn = new Set(zs.map(x => x.entry_id)); else if (z === "*none") st.zonesOn = new Set();
+            else if (st.zonesOn.has(z)) st.zonesOn.delete(z); else st.zonesOn.add(z);
+            renderZoneChips(); applyOverlays();
+        };
+    }
+    function renderTrades() {
+        const box = $("#sd-trades"), open_ = (st.data.trades || []).filter(t => t.status === "OPEN");
+        if (!open_.length) { box.innerHTML = ""; return; }
+        const rows = open_.map(t => '<tr><td>' + esc(t.buy_date) + '</td><td><span class="sd-side ' + (t.side === "LONG" ? "sd-long" : "sd-short") + '" style="margin-left:0">' + t.side + "</span> ×" + t.leverage.toLocaleString("pl-PL", { maximumFractionDigits: 2 }) + "</td>" +
+            "<td>" + fmtPrice(t.buy_price) + '</td><td class="' + tone(t.return_pct) + '"><b>' + fmtPct(t.return_pct) + "</b></td>" +
+            "<td>" + fmtPct(t.to_tp_pct) + "</td><td>" + fmtPct(t.to_sl_pct) + "</td><td>" + fmtPlain(t.share_pct, 1) + "</td></tr>").join("");
+        box.innerHTML = '<div class="sd-h">Moje inwestycje (otwarte)</div><div class="table-responsive" style="border:0"><table class="sd-table"><thead><tr><th>Data wejścia</th><th>Kierunek</th><th>Cena zakupu</th><th>Wynik</th><th title="Odległość ceny bieżącej od celu (TP)">Do TP</th><th title="Odległość ceny bieżącej od stop lossa">Do SL</th><th title="Udział zaangażowanych środków w kapitale">Udział w kapitale</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+    }
+
+    // ---------- wykres ----------
+    function clearChart() { if (candles) { candles.setData([]); volume.setData([]); candles.setMarkers([]); zonesPrim.setZones([]); } }
+    function drawChart() {
+        const d = st.data;
+        if (typeof LightweightCharts === "undefined") { showMsg("Biblioteka wykresów nie została załadowana (sprawdź połączenie z internetem)."); return; }
+        const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+        if (!chart) {
+            chart = LightweightCharts.createChart($("#sd-chart"), {
+                autoSize: true,
+                layout: { background: { type: "solid", color: "transparent" }, textColor: css("--text-muted") || "#848e9c", fontSize: 12 },
+                grid: { vertLines: { color: "rgba(132,142,156,0.08)" }, horzLines: { color: "rgba(132,142,156,0.08)" } },
+                rightPriceScale: { borderColor: "rgba(132,142,156,0.25)" },
+                timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 4 },
+                crosshair: { mode: 0 }
+            });
+            candles = chart.addCandlestickSeries({ upColor: "#0ecb81", downColor: "#f6465d", borderUpColor: "#0ecb81", borderDownColor: "#f6465d", wickUpColor: "#0ecb81", wickDownColor: "#f6465d" });
+            volume = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "" });
+            volume.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+            candles.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } });
+            zonesPrim = makeZonesPrimitive(); candles.attachPrimitive(zonesPrim);
+        }
+        const intraday = d.interval === "1h" || d.interval === "4h";
+        chart.applyOptions({ timeScale: { timeVisible: intraday, secondsVisible: false } });
+        const bars = d.bars || [];
+        candles.setData(bars.map(b => ({ time: b.time, open: b.o, high: b.h, low: b.l, close: b.c })));
+        const hasVol = bars.some(b => b.v > 0);
+        volume.setData(hasVol ? bars.map(b => ({ time: b.time, value: b.v, color: b.c >= b.o ? "rgba(14,203,129,0.40)" : "rgba(246,70,93,0.40)" })) : []);
+        applyOverlays();
+        chart.timeScale().fitContent();
+        showMsg(bars.length ? "" : "Brak świec w wybranym zakresie.");
+    }
+    function applyOverlays() {
+        if (!candles || !st.data) return;
+        const d = st.data, mode = st.markers;
+        const list = (d.markers || []).filter(m => mode === "both" || (mode === "open" && m.kind === "open") || (mode === "closed" && m.kind !== "open"))
+            .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0))
+            .map(m => ({ time: m.time, position: m.side === "LONG" ? "belowBar" : "aboveBar", shape: m.side === "LONG" ? "arrowUp" : "arrowDown", color: MARK_COLOR[m.kind], size: 1.4 }));
+        candles.setMarkers(mode === "none" ? [] : list);
+        zonesPrim.setZones((d.zones || []).filter(z => st.zonesOn.has(z.entry_id)).map(z => ({ lo: Math.min(z.start, z.end), hi: Math.max(z.start, z.end), side: z.side })));
+    }
+
+    // kliknięcie tickera lub nazwy spółki (atrybut data-tk) w dowolnym miejscu aplikacji otwiera okno szczegółów
+    document.addEventListener("click", e => {
+        const el = e.target.closest && e.target.closest("[data-tk]");
+        if (!el || !el.dataset.tk) return;
+        e.preventDefault(); e.stopPropagation();
+        open(el.dataset.tk);
+    }, true);
+    return { open: open, close: close };
 })();
 </script>
 </body>
