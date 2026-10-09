@@ -1003,8 +1003,13 @@
                     <label>Mnożnik Score z Form<input type="number" id="sc-mult" min="0.5" max="10" step="0.5"></label>
                     <label>Maks. punktów za moment wejścia<input type="number" id="sc-entry" min="0" max="20" step="0.5"></label>
                     <label>Maks. punktów za koniec dnia<input type="number" id="sc-eod" min="0" max="20" step="0.5"></label>
+                    <label title="Gdy ocena momentu wejścia (0–100) jest niższa, dostępny budżet = 0 niezależnie od punktów Form. 0 = bramka wyłączona. Zalecane ok. 50.">Bramka: min. ocena wejścia (0–100)<input type="number" id="sc-gate" min="0" max="100" step="5"></label>
                 </div>
                 <div class="db-help" id="sc-summary"></div>
+                <div class="dbx-cols" style="margin-top:8px">
+                    <div><h5 style="margin:6px 0">Moment wejścia – wagi warunków (0 = tylko informacyjnie)</h5><table class="hp-table" style="width:100%;"><tbody id="sc-wentry"></tbody></table></div>
+                    <div><h5 style="margin:6px 0">Koniec dnia (po zamknięciu sesji) – wagi składników</h5><table class="hp-table" style="width:100%;"><tbody id="sc-weod"></tbody></table><div class="db-help">Liczone automatycznie z dziennych świec (świeca, indeks, VIX, wolumen, HTF) i skalowane do punktów za koniec dnia.</div></div>
+                </div>
                 <div class="table-responsive"><table class="hp-table" style="width:100%;"><thead><tr><th>Widełki: od … % maks. punktów budżetowych</th><th>Dostępna część budżetu (% budżetu z limitów / planu)</th><th></th></tr></thead><tbody id="sc-tiers"></tbody></table></div>
                 <div class="lim-actions"><button class="hp-btn" type="button" onclick="addScoringTier()">＋ Dodaj widełki</button> <button class="hp-btn" type="button" onclick="resetScoring()">Przywróć domyślne</button> <button class="btn-submit" style="width:auto; padding:10px 22px;" onclick="saveScoring()">Zapisz zasady punktacji</button><span id="sc-msg" class="db-help"></span></div>
             </div>
@@ -1931,8 +1936,12 @@
         function scTierRow(t) {
             return `<tr><td><input type="number" data-k="min_pct" min="0" max="100" step="1" value="${t.min_pct}"> % punktów</td><td><input type="number" data-k="budget_pct" min="0" max="100" step="0.1" value="${Math.round(t.budget_pct * 100) / 100}"> % budżetu</td><td><button type="button" class="hp-x" onclick="this.closest('tr').remove(); updateScoringSummary();" title="Usuń widełki">×</button></td></tr>`;
         }
+        let scLabels = { entry: {}, eod: {} };
+        const scWRow = (grp, key, label, v) => `<tr><td>${label}</td><td style="width:90px"><input type="number" data-w="${grp}" data-k="${key}" min="0" max="10" step="0.5" value="${v}"></td></tr>`;
         function fillScoring(r) {
-            document.getElementById('sc-mult').value = r.form_mult; document.getElementById('sc-entry').value = r.entry_max; document.getElementById('sc-eod').value = r.eod_max;
+            document.getElementById('sc-wentry').innerHTML = Object.keys(r.entry_weights || {}).map(k => scWRow('entry', k, scLabels.entry[k] || k, r.entry_weights[k])).join('');
+            document.getElementById('sc-weod').innerHTML = Object.keys(r.eod_weights || {}).map(k => scWRow('eod', k, scLabels.eod[k] || k, r.eod_weights[k])).join('');
+            document.getElementById('sc-mult').value = r.form_mult; document.getElementById('sc-entry').value = r.entry_max; document.getElementById('sc-eod').value = r.eod_max; document.getElementById('sc-gate').value = r.entry_gate_score || 0;
             document.getElementById('sc-tiers').innerHTML = r.tiers.map(scTierRow).join('');
             updateScoringSummary();
         }
@@ -1949,15 +1958,16 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/api/settings/scoring`), d = await res.json();
                 if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
-                scoringDefaults = d.defaults; fillScoring(d.rules); msg.style.color = ''; msg.textContent = d.warning ? d.warning : '';
+                scoringDefaults = d.defaults; scLabels = { entry: d.entry_labels || {}, eod: d.eod_labels || {} }; fillScoring(d.rules); msg.style.color = ''; msg.textContent = d.warning ? d.warning : '';
             } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Nie udało się wczytać zasad punktacji: ' + (e.message || e); }
         }
         function addScoringTier() { document.getElementById('sc-tiers').insertAdjacentHTML('beforeend', scTierRow({ min_pct: 0, budget_pct: 0 })); updateScoringSummary(); }
         function resetScoring() { if (scoringDefaults) fillScoring(scoringDefaults); }
         async function saveScoring() {
             const msg = document.getElementById('sc-msg');
-            const rules = { form_mult: document.getElementById('sc-mult').value, entry_max: document.getElementById('sc-entry').value, eod_max: document.getElementById('sc-eod').value,
-                tiers: [...document.querySelectorAll('#sc-tiers tr')].map(tr => ({ min_pct: tr.querySelector('[data-k=min_pct]').value, budget_pct: tr.querySelector('[data-k=budget_pct]').value })) };
+            const rules = { form_mult: document.getElementById('sc-mult').value, entry_max: document.getElementById('sc-entry').value, eod_max: document.getElementById('sc-eod').value, entry_gate_score: document.getElementById('sc-gate').value,
+                tiers: [...document.querySelectorAll('#sc-tiers tr')].map(tr => ({ min_pct: tr.querySelector('[data-k=min_pct]').value, budget_pct: tr.querySelector('[data-k=budget_pct]').value })), entry_weights: {}, eod_weights: {} };
+            document.querySelectorAll('#scoring-panel [data-w]').forEach(i => { rules[i.dataset.w === 'entry' ? 'entry_weights' : 'eod_weights'][i.dataset.k] = i.value; });
             msg.style.color = ''; msg.textContent = 'Zapisywanie…';
             try {
                 const res = await fetch(`${API_BASE_URL}/api/settings/scoring`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ rules: rules }) });
@@ -3138,7 +3148,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
                         title="Kliknij, aby rozwinąć/zwinąć">
                         ${commentStr}
                     </td>
-                    <td style="text-align:center; line-height:1.4;">${focusScoreStr}<br><span style="font-size:0.8em; color:var(--text-muted);">Kwadrans: ${last15Str}</span></td>
+                    <td style="text-align:center; line-height:1.4;">${focusScoreStr}<br><span style="font-size:0.8em; color:var(--text-muted);">Kwadrans: ${last15Str}</span>${tradePointsHtml(item)}</td>
                     <td class="sensitive">
                         ${spent.toFixed(2)} ${item.currency || 'USD'} <small>(${levHtml})</small><br>
                         <span style="color:#cdd6f4; font-weight:bold;">${spentPln.toFixed(2)} PLN</span> <small style="color:var(--text-muted);">(FX: ${usedFx.toFixed(2)})</small>
@@ -3766,6 +3776,25 @@ async function handleTradeAutomation(tradeId, tradeData) {
             }
         }
         function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = String(ticker).toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
+        // punkty za moment wejścia (z oceny wejścia, 0-5) i koniec dnia (automatycznie po sesji, 0-5)
+        function tradePointsHtml(item) {
+            const f1 = v => String(Math.round(v * 10) / 10).replace('.', ',');
+            const ep = item.entry_eval && item.entry_eval.entry_points != null ? item.entry_eval.entry_points : (item.entry_score != null ? item.entry_score / 20 : null);
+            const eod = item.eod_score;
+            const eodTitle = item.eod_eval && item.eod_eval.components ? item.eod_eval.components.map(c => c.label + ': ' + f1(c.norm * 100) + '%').join(' · ') : '';
+            const eodStr = eod != null ? `<b title="${eodTitle}">${f1(parseFloat(eod))}/5</b>` : `<a href="#" data-eod-trade="${item.id}" title="Policz po zamknięciu sesji (świeca, indeks, VIX, wolumen, HTF)">policz</a>`;
+            return `<br><span style="font-size:0.78em; color:var(--text-muted);">Wejście: ${ep != null ? '<b>' + f1(ep) + '/5</b>' : '–'} · Koniec dnia: ${eodStr}</span>`;
+        }
+        document.addEventListener('click', async e => {
+            const a = e.target.closest && e.target.closest('[data-eod-trade]'); if (!a) return;
+            e.preventDefault(); a.textContent = '…';
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/eod-score`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ trade_id: +a.dataset.eodTrade }) });
+                const d = await res.json().catch(() => ({}));
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                fetchTradesEntries(true);
+            } catch (err) { a.textContent = 'policz'; if (window.Planer) Planer.toast(err.message || String(err), 7000); else alert(err.message || err); }
+        });
         function calculateTradeStats(item) { 
             try { 
                 const isClosed = (item.status === 'CLOSED' || item.sell_date != null); 
@@ -5881,6 +5910,7 @@ window.Wejscie = (function () {
             '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Zagranie</div><div class="v">' + arrow(p.side) + " " + price(p.zone[0]) + "–" + price(p.zone[1]) + '</div><div class="s">' + (inZone ? "kurs w strefie" : "kurs poza strefą") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Punkt wejścia</div><div class="v">' + price(p.entry) + '</div><div class="s">' + (p.entry_is_zone_mid ? "środek strefy (brak punktu w Form)" : "odległość " + spct(dist)) + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.take_profit) + " / " + price(p.stop_loss) + '</div><div class="s">R:R ' + (rr ? num(rr, 1) : "–") + "</div></div></div>" +
+            (d.coverage != null && d.coverage < 0.7 ? '<div class="ev-note">⚠ Ocena opiera się na ' + Math.round(d.coverage * 100) + '% wag – brakuje danych do części warunków (np. CVD, świece), więc wynik może być zawyżony.</div>' : "") +
             (d.scoring ? '<div class="plx-h">Punktacja (zasady z Serwisu)</div><div class="plx-kpis"><div class="plx-kpi"><div class="l">Form × ' + num(d.scoring.form_mult, 1) + '</div><div class="v">' + num(d.scoring.form_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.form_max_points, 0) + '</small></div><div class="s">Score z Form ' + num(d.scoring.form_score, 1) + '/5</div></div>' +
                 '<div class="plx-kpi"><div class="l">Moment wejścia</div><div class="v">' + num(d.scoring.entry_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.entry_max, 0) + '</small></div><div class="s">ocena ' + (d.score == null ? "–" : Math.round(d.score)) + '/100</div></div>' +
                 '<div class="plx-kpi"><div class="l">Razem do budżetu</div><div class="v">' + num(d.scoring.points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.max_points, 0) + '</small></div><div class="s">' + num(d.scoring.pct, 1) + '% punktów</div></div>' +
