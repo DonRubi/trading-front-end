@@ -289,6 +289,14 @@
         .plx-banner a { color: var(--accent-hover); } .plx-banner .dbx-icon { margin-left: 8px; width: 26px; height: 24px; vertical-align: middle; }
         .plx-toast { position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 20px); max-width: min(560px, 92vw); background: var(--bg-card); border: 1px solid var(--accent); color: var(--text-main); padding: 12px 18px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.55); z-index: 1300; opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; font-size: 0.9rem; line-height: 1.45; }
         .plx-toast.show { opacity: 1; transform: translate(-50%, 0); }
+        /* Form: strefy z zagraniami */
+        .fz-zone td { cursor: pointer; } .fz-chev { display: inline-block; width: 1.2em; color: var(--text-muted); transition: transform .15s; } .fz-zone.open .fz-chev { transform: rotate(90deg); }
+        .ev-table .fz-plays td { background: rgba(0,0,0,.18); cursor: default; padding: 0; } .fz-sub { width: 100%; border-collapse: collapse; font-size: 0.86rem; } .ev-table .fz-sub th { text-align: left; color: var(--text-muted); font-weight: 500; font-size: 0.74rem; text-transform: uppercase; padding: 8px 10px; cursor: default; border-bottom: 0; } .ev-table .fz-sub td { padding: 8px 10px; border-top: 1px dashed var(--border-color); vertical-align: top; }
+        .fz-muted-row { opacity: .55; } .fz-reason { display: inline-block; background: rgba(201,148,0,.12); border: 1px solid rgba(201,148,0,.35); border-radius: 999px; padding: 1px 8px; margin: 1px 3px 1px 0; font-size: 0.78rem; white-space: nowrap; }
+        .fz-res { display: flex; flex-direction: column; gap: 4px; margin: -4px 0 8px; } .fz-res button { text-align: left; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 10px; padding: 8px 12px; cursor: pointer; } .fz-res button:hover { border-color: var(--accent); }
+        .fz-zblock { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; } .fz-zhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; flex-wrap: wrap; } .fz-zbody { padding: 0 14px 10px; display: none; } .fz-zblock.open .fz-zbody { display: block; } .fz-zblock.open .fz-chev { transform: rotate(90deg); }
+        #fz-modal .form-group input, #fz-modal .form-group select { width: 100%; }
+        @media (max-width: 760px) { .fz-sub { display: block; overflow-x: auto; } }
         /* radar zagrań i ocena wejścia */
         #ev-radar { padding: 4px 0 16px; } .ev-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; align-items: center; } .ev-controls input[type=search], .ev-controls select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; }
         .ev-count { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px; } .ev-empty { padding: 24px; text-align: center; color: var(--text-muted); } .ev-bad { color: var(--danger); }
@@ -478,12 +486,31 @@
     </main>
 
     <section id="form-module" class="app-module">
-        <div class="macro-header-container"><h3>Kreator Pozycji (Form)</h3></div>
-        <div class="journal-container">
-            <div class="journal-sidebar">
+        <div id="fz-root">
+            <div class="macro-header-container"><h3>Form – strefy i zagrania</h3></div>
+            <div class="ev-muted">Zagrania pogrupowane po strefach. Wyciszone zagrania są domyślnie ukryte (i nie pojawiają się w Radarze, Planerze ani w wyborze w Transakcjach).</div>
+            <div class="ev-controls">
+                <input type="search" id="fz-q" placeholder="Szukaj tickera lub nazwy…" oninput="FormZones.set('q', this.value)">
+                <select onchange="FormZones.set('mute', this.value)"><option value="0" selected>Bez wyciszonych</option><option value="1">Tylko wyciszone</option><option value="ALL">Wszystkie (z wyciszonymi)</option></select>
+                <select onchange="FormZones.set('status', this.value)"><option value="ALL">Wszystkie statusy</option><option value="Skupienie">🟢 Skupienie</option><option value="Obserwacja">⚪ Obserwacja</option><option value="Czekanie">🟡 Czekanie</option><option value="Ignorowanie">🔴 Ignorowanie</option><option value="Brak danych">Brak danych</option></select>
+                <select onchange="FormZones.set('prio', this.value)"><option value="ALL">Wszystkie</option><option value="1">⭐ Tylko priorytet</option></select>
+                <button class="hp-btn" onclick="FormZones.toggleAll()">⇕ Rozwiń / zwiń wszystkie</button>
+                <button class="hp-btn ev-go" onclick="FormZones.openAdd()">＋ Dodaj nowy wpis</button>
+            </div>
+            <div id="fz-count" class="ev-count"></div>
+            <div id="fz-body"></div>
+        </div>
+        <div class="plx-overlay" id="fz-modal">
+            <div class="plx-panel">
+                <div class="plx-head"><div><div class="plx-title">Nowy wpis w Form</div><div class="plx-sub">Wybierz spółkę, zobacz jej obecne strefy i dodaj zagranie w istniejącej albo w nowej strefie.</div></div><button class="hp-btn" onclick="FormZones.closeAdd()">✕</button></div>
+                <div class="form-group"><label>Spółka (ticker lub nazwa)</label><input type="search" id="fz-search" placeholder="Zacznij pisać, np. NVDA albo Orlen…" autocomplete="off" oninput="FormZones.search(this.value)"></div>
+                <div id="fz-results"></div>
+                <div id="fz-chosen" style="display:none"></div>
+                <div id="fz-formwrap" style="display:none">
+                    <div class="plx-h" id="fz-formtitle">Nowe zagranie</div>
                 <form id="trading-form" onsubmit="submitAdvancedForm(event)">
-                    <div class="form-row"><div class="form-group"><label style="display: flex; justify-content: space-between;">Ticker <a id="form-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label><select id="form-ticker" onchange="updateFormTvLink()"></select></div></div>
-                    <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div></div>
+                    <input type="hidden" id="form-ticker">
+                                        <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div></div>
                     <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01" required></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01" required></div></div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01" required></div>
                     <div class="form-group"><label>Powody wejścia (Opcjonalne)</label><input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2..."><input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3..."><input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4..."><input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5..."><datalist id="reasons-list"></datalist></div>
@@ -508,48 +535,7 @@
                     </div>
                     <button type="button" onclick="applyLiquidity()" style="width:100%; background:#89b4fa; color:#11111b; border-radius:6px; padding:10px; border:none; font-weight:bold; cursor:pointer;">Ustaw jako Take Profit</button>
                 </div>
-            </div>
-            <div class="journal-main">
-                <div class="table-controls" style="display:flex; gap:10px;">
-                    <input type="text" id="journal-search" placeholder="🔍 Szukaj..." oninput="handleFormFilter()">
-                    <select id="form-mute-filter" onchange="handleFormFilter()">
-                        <option value="ALL">Wszystkie (Wyciszenie)</option>
-                        <option value="0">Aktywne (Nie wyciszone)</option>
-                        <option value="1">Wyciszone (Zignorowane)</option>
-                    </select>
-                    <select id="form-status-filter" onchange="applyFormFilterAndSort()" style="padding:5px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:4px; margin-left: 10px;">
-                        <option value="ALL">Wszystkie statusy</option>
-                        <option value="Skupienie">🟢 Skupienie</option>
-                        <option value="Obserwacja">⚪ Obserwacja</option>
-                        <option value="Czekanie">🟡 Czekanie</option>
-                        <option value="Ignorowanie">🔴 Ignorowanie</option>
-                        <option value="Brak danych">Brak danych</option>
-                    </select>
-                    <select id="priority-filter" onchange="applyFormFilterAndSort()">
-                        <option value="ALL">Wszystkie</option>
-                        <option value="1">⭐ Tylko Priorytet</option>
-                    </select>
                 </div>
-                <div class="table-responsive">
-                    <table id="journal-table">
-                        <thead><tr>
-                            <th onclick="handleFormSort('entry_id')">ID ↕</th>
-                            <th onclick="handleFormSort('created_at')">Data ↕</th>
-                            <th onclick="handleFormSort('ticker')">Ticker / Spółka ↕</th>
-                            <th onclick="handleFormSort('direction')">Kierunek ↕</th>
-                            <th onclick="handleFormSort('entry_point')">Wejście ↕</th>
-                            <th onclick="handleFormSort('priority')">Priorytet ↕</th>
-                            <th onclick="handleFormSort('mute')">Mute ↕</th>
-                            <th onclick="handleFormSort('diff')">Status ↕</th>
-                            <th onclick="handleFormSort('diff')">Dystans % ↕</th>
-                            <th onclick="handleFormSort('rr')">R:R ↕</th>
-                            <th onclick="handleFormSort('score')">Score ↕</th>
-                            <th>Akcje</th>
-                        </tr></thead>
-                        <tbody id="form-table-body"></tbody>
-                    </table>
-                </div>
-                <div class="pagination-container"><button onclick="changeFormPage(-1)" id="form-prev-page" class="btn-pag">◀ Poprzednia</button><div style="display:flex; align-items:center; gap:10px;"><span id="form-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('form', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button onclick="changeFormPage(1)" id="form-next-page" class="btn-pag">Następna ▶</button></div>
             </div>
         </div>
     </section>
@@ -1982,26 +1968,10 @@
         }
     
         // --- FORM MODULE ---
-        function handleFormSort(key) {
-            formSortDir = (formSortKey === key && formSortDir === 'desc') ? 'asc' : 'desc';
-            formSortKey = key;
-            applyFormFilterAndSort();
-        }
+        function handleFormSort(key) { FormZones.sort(key); }
 
         async function initFormModule() { 
             if(tickerDataArray.length === 0) await loadDatabase(); 
-            const select = document.getElementById('form-ticker'); 
-            select.innerHTML = ''; 
-            
-            // Inteligentne sortowanie ignorujące prefix np. 'GPW:'
-            const sortedTickers = [...tickerDataArray].sort((a, b) => {
-                const baseA = a.ticker.includes(':') ? a.ticker.split(':')[1] : a.ticker;
-                const baseB = b.ticker.includes(':') ? b.ticker.split(':')[1] : b.ticker;
-                return baseA.localeCompare(baseB);
-            });
-            
-            sortedTickers.forEach(t => { select.innerHTML += `<option value="${t.ticker}">${t.ticker}</option>`; }); 
-            
             fetchFormEntries(); 
             fetchFormReasons();
         }
@@ -2021,173 +1991,11 @@
             } catch (error) { console.error(error); } 
         }
         
-        function handleFormFilter() { formFilterText = document.getElementById('journal-search').value.toLowerCase(); formCurrentPage = 1; applyFormFilterAndSort(); }
-        
-        function applyFormFilterAndSort() {
-            const muteFilter = document.getElementById('form-mute-filter').value;
-            const statusFilter = document.getElementById('form-status-filter') ? document.getElementById('form-status-filter').value : 'ALL';
-            const prioFilter = document.getElementById('priority-filter') ? document.getElementById('priority-filter').value : 'ALL';
-    
-            // 1. MAPOWANIE
-            let mappedEntries = formEntries.map(item => {
-                const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); 
-                const mod = isLong ? 1 : -1;
-                const entry = parseFloat(item.entry_point) || 0; 
-                const sl = parseFloat(item.stop_loss) || 0; 
-                const tp = parseFloat(item.take_profit) || 0;
-        
-                const rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
-                const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
-                const cp = tm && tm.price ? tm.price : entry; 
-        
-                const rawDiff = entry !== 0 ? (((cp - entry) / entry) * 100 * mod) : 0;
-                const realDiff = entry !== 0 ? (((cp - entry) / entry) * 100) : 0;
-                const score = Array.isArray(item.reasons) ? item.reasons.length : 0;
+        function handleFormFilter() { FormZones.render(); }
+        function applyFormFilterAndSort() { if (window.FormZones) FormZones.render(); }
+        function renderAdvancedFormTable() { if (window.FormZones) FormZones.render(); }
+        function changeFormPage() {}
 
-                let calcStatus = 'Brak danych';
-                if (entry !== 0 && !isNaN(rawDiff) && isFinite(rawDiff)) {
-                    let isObserwacja = false, isSkupienie = false;
-                
-                    if (isLong) {
-                        if (realDiff >= -5 && realDiff <= 10) isObserwacja = true;
-                        if (realDiff >= -3 && realDiff <= 10 && item.priority === 1) isSkupienie = true;
-                    } else {
-                        if (realDiff >= -10 && realDiff <= 5) isObserwacja = true;
-                        if (realDiff >= -10 && realDiff <= 3 && item.priority === 1) isSkupienie = true;
-                    }
-
-                    if (isSkupienie) calcStatus = 'Skupienie';
-                    else if (isObserwacja) calcStatus = 'Obserwacja';
-                    else calcStatus = Math.abs(rawDiff) > 15 ? 'Ignorowanie' : 'Czekanie';
-                }
-
-                return { ...item, diff: rawDiff, rr: rr, score: score, calculatedStatus: calcStatus };
-            });
-
-            // 2. FILTROWANIE
-            filteredFormEntries = mappedEntries.filter(entry => {
-                const tData = tickerDataArray.find(t => t.ticker === entry.ticker);
-                const stockName = tData && tData.stock_name ? tData.stock_name.toLowerCase() : '';
-                const tickerLower = (entry.ticker || '').toLowerCase();
-        
-                const textMatch = tickerLower.includes(formFilterText) || stockName.includes(formFilterText);
-                const muteMatch = muteFilter === 'ALL' ? true : (entry.mute.toString() === muteFilter);
-                const statusMatch = statusFilter === 'ALL' ? true : (entry.calculatedStatus === statusFilter);
-        
-                // Logika priorytetu
-                const isPriority = tData ? (tData.is_priority === true) : false;
-                const prioMatch = (prioFilter === 'ALL') || (prioFilter === '1' && isPriority);
-        
-                return textMatch && muteMatch && statusMatch && prioMatch;
-            });
-
-            // 3. SORTOWANIE
-            filteredFormEntries.sort((a, b) => {
-                let va = a[formSortKey];
-                let vb = b[formSortKey];
-
-                if(typeof va === 'string') { 
-                    return formSortDir === 'asc' ? (va || '').localeCompare(vb || '') : (vb || '').localeCompare(va || ''); 
-                }
-                return formSortDir === 'asc' ? (va || 0) - (vb || 0) : (vb || 0) - (va || 0);
-            });
-
-            renderAdvancedFormTable();
-        }
-    
-            function renderAdvancedFormTable() {
-            const tbody = document.getElementById('form-table-body'); tbody.innerHTML = '';
-            const items = filteredFormEntries.slice((formCurrentPage - 1) * formRowsPerPage, formCurrentPage * formRowsPerPage);
-            const maxPage = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
-
-            items.forEach(item => {
-                try {
-                    const dateFormatted = item.created_at ? new Date(item.created_at).toLocaleDateString('pl-PL') : '-';
-                    const isLong = (item.direction === 'DBR' || item.direction === 'RBR'); const mod = isLong ? 1 : -1;
-                    const entry = parseFloat(item.entry_point) || 0; const sl = parseFloat(item.stop_loss) || 0; const tp = parseFloat(item.take_profit) || 0;
-                    let rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
-                    
-                    // Jednorazowe wyszukanie danych tickera
-                    const tm = tickerDataArray.find(t => t.ticker === item.ticker); 
-                    const cp = tm && tm.price ? tm.price : entry; 
-                    
-                    // --- NAZWA SPÓŁKI ---
-                    const stockName = tm && tm.stock_name ? tm.stock_name : '';
-                    const stockNameHtml = stockName ? `<br><small style="color:var(--text-muted);">${stockName}</small>` : '';
-                    
-                    // rawDiff - dystans pokazujący (+), gdy cena idzie w pożądanym kierunku trade'u
-                    const rawDiff = entry !== 0 ? (((cp - entry) / entry) * 100 * mod) : 0;
-                    // realDiff - surowa zmiana ceny (zawsze na minusie pod wejściem, na plusie ponad wejściem)
-                    const realDiff = entry !== 0 ? (((cp - entry) / entry) * 100) : 0;
-                    
-                    let diffStr = '-';
-                    let status = 'Brak danych';
-                    let statusColor = '#848e9c';
-                    let diffColor = 'gray';
-
-                    if (!isNaN(rawDiff) && isFinite(rawDiff)) {
-                        let isObserwacja = false;
-                        let isSkupienie = false;
-
-                        // Asymetryczne reguły w zależności od kierunku (wyliczane na bazie realnej ceny na wykresie)
-                        if (isLong) {
-                            if (realDiff >= -5 && realDiff <= 10) isObserwacja = true;
-                            if (realDiff >= -3 && realDiff <= 10 && item.priority === 1) isSkupienie = true;
-                        } else {
-                            if (realDiff >= -10 && realDiff <= 5) isObserwacja = true;
-                            if (realDiff >= -10 && realDiff <= 3 && item.priority === 1) isSkupienie = true;
-                        }
-
-                        // Przypisywanie ostatecznego statusu
-                        if (isSkupienie) {
-                            status = 'Skupienie';
-                            statusColor = '#0ecb81';
-                        } else if (isObserwacja) {
-                            status = 'Obserwacja';
-                            statusColor = '#848e9c';
-                        } else {
-                            const dist = Math.abs(rawDiff);
-                            status = dist > 15 ? 'Ignorowanie' : 'Czekanie';
-                            statusColor = dist > 15 ? '#f6465d' : '#fcd535';
-                        }
-
-                        diffColor = rawDiff >= 0 ? '#0ecb81' : '#f6465d';
-                        diffStr = (rawDiff > 0 ? '+' : '') + rawDiff.toFixed(2) + '%';
-                    }
-                    
-                    const tvLink = getTradingViewLink(item.ticker); 
-                    const muteVal = item.mute !== undefined && item.mute !== null ? item.mute : 1;
-                    const pb = item.priority === 1 ? `<span style="color: #fcd535; font-weight: bold; cursor: pointer; border-bottom: 1px dashed #fcd535;" onclick="updateFormEntryField('${item.entry_id}', 'priority', 0)">⚡ Wysoki</span>` : `<span style="color: var(--text-muted); cursor: pointer; border-bottom: 1px dashed var(--text-muted);" onclick="updateFormEntryField('${item.entry_id}', 'priority', 1)">Normalny</span>`;
-                    const mb = muteVal === 1 ? `<span style="color: var(--danger); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--danger);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 0)">🔕 Tak</span>` : `<span style="color: var(--success); font-weight: bold; cursor: pointer; border-bottom: 1px dashed var(--success);" onclick="updateFormEntryField('${item.entry_id}', 'mute', 1)">🔔 Nie</span>`;
-
-                    // Obliczanie Score (Zliczanie ilości powodów)
-                    const reasonsCount = Array.isArray(item.reasons) ? item.reasons.length : 0;
-                    
-                    tbody.innerHTML += `<tr>
-                        <td style="font-weight:bold;">${item.entry_id}</td>
-                        <td style="color:var(--text-muted);">${dateFormatted}</td>
-                        <td><span class="sd-link" data-tk="${item.ticker}"><strong style="color:var(--accent);">${item.ticker}</strong>${stockNameHtml}</span></td>
-                        <td><span style="font-size:0.85em; color:var(--text-muted);">${item.direction}</span><br><small>${item.start_zone} - ${item.end_zone}</small></td>
-                        <td class="sensitive" style="font-weight: 600;">WE: ${entry.toFixed(2)}$</td>
-                        <td>${pb}</td><td>${mb}</td>
-                        <td style="color:${statusColor}; font-weight:bold;">${status}</td>
-                        <td class="sensitive" style="color:${diffColor}; font-weight:bold;">${diffStr}</td>
-                        <td class="sensitive">${rr.toFixed(2)}</td><td style="font-weight:bold; color:#a6e3a1;">${reasonsCount}/5</td>
-                        <td><a href="${tvLink}" target="_blank" style="text-decoration:none; color:var(--accent);">📈 Link</a> <button class="btn-edit" onclick="copyFormEntry('${item.entry_id}')" title="Kopiuj do formularza">📋</button> <button class="btn-edit" onclick="openEditModal('form', '${item.entry_id}')">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry('${item.entry_id}')" style="padding: 3px 8px;">Usuń</button></td>
-                    </tr>`;
-                } catch(e) { console.error("Error drawing form row", e); }
-            });
-            updatePageInfo('form-page-info', formCurrentPage, maxPage, filteredFormEntries.length, formRowsPerPage);
-        }
-
-        function changeFormPage(d) { 
-            const maxPage = Math.ceil(filteredFormEntries.length / formRowsPerPage) || 1;
-            formCurrentPage += d; 
-            if(formCurrentPage < 1) formCurrentPage = 1;
-            if(formCurrentPage > maxPage) formCurrentPage = maxPage;
-            renderAdvancedFormTable(); 
-        }
-        
         async function submitAdvancedForm(e) { 
             e.preventDefault(); 
             const formReasons = [
@@ -2213,7 +2021,7 @@
                 document.getElementById('trading-form').reset(); 
                 await fetchFormEntries(true); 
                 fetchFormReasons();
-                alert("Zapisano Setup w bazie!");
+                FormZones.closeAdd(); if (window.Planer) Planer.toast("Zapisano zagranie w Form.");
             } catch(err) { alert('Błąd: ' + err.message); } 
         }
 
@@ -2240,30 +2048,8 @@
         async function updateFormEntryField(id, field, val) { try { await fetch(`${API_BASE_URL}/api/form/update`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ entry_id: id, field: field, value: val }) }); fetchFormEntries(true); } catch(e){} }
 
         function copyFormEntry(id) {
-            // Szukamy odpowiedniego wpisu w bazie pobranej przez aplikację
             const item = formEntries.find(x => x.entry_id === id);
-            if (!item) return;
-
-            // Przepisywanie danych do pól formularza
-            document.getElementById('form-ticker').value = item.ticker;
-            document.getElementById('form-direction').value = item.direction || 'DBR';
-            document.getElementById('form-priority').value = item.priority || 0;
-            document.getElementById('form-start').value = item.start_zone || '';
-            document.getElementById('form-end').value = item.end_zone || '';
-            document.getElementById('form-tp').value = item.take_profit || '';
-            
-            // Celowe czyszczenie pól: Punkt wejścia oraz Powody
-            document.getElementById('form-entry').value = '';
-            for(let i = 1; i <= 5; i++) {
-                const reasonEl = document.getElementById('form-reason-' + i);
-                if (reasonEl) reasonEl.value = '';
-            }
-
-            // Aktualizacja przycisku z linkiem do TradingView obok selecta
-            updateFormTvLink();
-
-            // Automatyczne przewinięcie ekranu gładko do góry (do formularza)
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (item) FormZones.openAdd(item.ticker, item);   // klon: kierunek, strefa, TP i priorytet; wejście i powody puste
         }
     
         // --- ŁOWCA PŁYNNOŚCI (Zastępuje Fibo) ---
@@ -2317,7 +2103,7 @@
             toggleLiquidityHunter();
         }
 
-        function updateFormTvLink() { const ticker = document.getElementById('form-ticker').value; const linkEl = document.getElementById('form-tv-link'); if (ticker) { linkEl.href = getTradingViewLink(ticker); linkEl.style.display = 'inline-block'; } }
+        function updateFormTvLink() {}
 
         // --- FOCUS MODULE ---
         function handleFocusSort(key) { focusSortDir = (focusSortKey === key && focusSortDir === 'desc') ? 'asc' : 'desc'; focusSortKey = key; renderFocusTable(); }
@@ -2328,7 +2114,7 @@
                 formEntriesGlobal = await res.json(); 
                 
                 // Unikalne tickery posortowane alfabetycznie (bez prefixu jak w Form)
-                const uniqueTickers = [...new Set(formEntriesGlobal.map(e => e.ticker))];
+                const uniqueTickers = [...new Set(formEntriesGlobal.filter(e => e.mute != 1).map(e => e.ticker))];
                 uniqueTickers.sort((a, b) => {
                     const baseA = a.includes(':') ? a.split(':')[1] : a;
                     const baseB = b.includes(':') ? b.split(':')[1] : b;
@@ -2814,7 +2600,8 @@
 
             // Tickery z aktywnymi zagraniami z Form (transakcja nie wymaga już analizy Focus) oraz z dawnych analiz Focus
             if (!formEntries.length) { try { await fetchFormEntries(true); } catch (e) {} }
-            const uniqueTickers = [...new Set([...formEntries.filter(f => f.mute != 1).map(f => f.ticker), ...focusDataArray.map(f => f.ticker)])].filter(Boolean);
+            const liveForm = new Set(formEntries.filter(f => f.mute != 1).map(f => f.entry_id));
+            const uniqueTickers = [...new Set([...formEntries.filter(f => f.mute != 1).map(f => f.ticker), ...focusDataArray.filter(f => liveForm.has(f.entry_id)).map(f => f.ticker)])].filter(Boolean);
             uniqueTickers.sort((a, b) => {
                 const baseA = a.includes(':') ? a.split(':')[1] : a;
                 const baseB = b.includes(':') ? b.split(':')[1] : b;
@@ -2910,8 +2697,9 @@
             }
 
             // Ograniczenie wyświetlania setupów do tych z ostatnich 14 dni
+            const liveForm = new Set(formEntries.filter(f => f.mute != 1).map(f => f.entry_id));
             const entries = focusDataArray.filter(f => {
-                if (f.ticker !== selectedTicker) return false;
+                if (f.ticker !== selectedTicker || !liveForm.has(f.entry_id)) return false;
                 if (!f.created_at) return true; 
                 const diffDays = (new Date() - new Date(f.created_at)) / (1000 * 60 * 60 * 24);
                 return diffDays <= 14;
@@ -6011,6 +5799,169 @@ window.Wejscie = (function () {
         if (typeof prefillTradeFromPlay === "function") prefillTradeFromPlay(d.ticker, d.play.entry_id, compact(d));
     }
     return { loadRadar: loadRadar, setFilter: setFilter, evaluate: evaluate, close: close };
+})();
+</script>
+<script>
+/* Form: zagrania pogrupowane po strefach, filtr wyciszonych i okno „Dodaj nowy wpis”. Dane: formEntries i tickerDataArray (globalne). */
+window.FormZones = (function () {
+    "use strict";
+    const $ = (s, r) => (r || document).querySelector(s);
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const num = (v, d) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const price = v => (v == null || isNaN(v) || v === 0) ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
+    const LONG = d => d === "DBR" || d === "RBR";
+    const arrow = long => long ? '<span style="color:var(--success)">▲</span>' : '<span style="color:var(--danger)">▼</span>';
+    const RANK = { "Skupienie": 0, "Obserwacja": 1, "Czekanie": 2, "Ignorowanie": 3, "Brak danych": 4 };
+    const STCOL = { "Skupienie": "#0ecb81", "Obserwacja": "#848e9c", "Czekanie": "#fcd535", "Ignorowanie": "#f6465d", "Brak danych": "#848e9c" };
+    const S = { q: "", mute: "0", status: "ALL", prio: "ALL", key: "dist", dir: 1, open: new Set(), shown: [] };
+    const isMuted = e => e.mute == 1;
+    const tickerRow = t => (typeof tickerDataArray !== "undefined" ? tickerDataArray : []).find(x => x.ticker === t);
+
+    // ---------- obliczenia (te same reguły statusu i R:R co dotąd) ----------
+    function view(e) {
+        const long = LONG(e.direction), mod = long ? 1 : -1;
+        const entry = parseFloat(e.entry_point) || 0, sl = parseFloat(e.stop_loss) || 0, tp = parseFloat(e.take_profit) || 0;
+        const tm = tickerRow(e.ticker), cp = tm && tm.price ? tm.price : entry;
+        const rr = (entry - sl !== 0) ? ((tp - entry) * mod) / ((entry - sl) * mod) : 0;
+        const raw = entry !== 0 ? ((cp - entry) / entry) * 100 * mod : NaN, real = entry !== 0 ? ((cp - entry) / entry) * 100 : NaN;
+        let status = "Brak danych";
+        if (isFinite(raw)) {
+            let obs = false, foc = false;
+            if (long) { obs = real >= -5 && real <= 10; foc = real >= -3 && real <= 10 && e.priority === 1; }
+            else { obs = real >= -10 && real <= 5; foc = real >= -10 && real <= 3 && e.priority === 1; }
+            status = foc ? "Skupienie" : obs ? "Obserwacja" : (Math.abs(raw) > 15 ? "Ignorowanie" : "Czekanie");
+        }
+        return { e: e, long: long, entry: entry, sl: sl, tp: tp, rr: rr, raw: isFinite(raw) ? raw : null, status: status,
+                 score: Array.isArray(e.reasons) ? e.reasons.length : 0, muted: isMuted(e) };
+    }
+    function zonesOf(entries) {
+        const map = new Map();
+        entries.forEach(e => {
+            const a = parseFloat(e.start_zone) || 0, b = parseFloat(e.end_zone) || 0, lo = Math.min(a, b), hi = Math.max(a, b);
+            const key = e.ticker + "|" + lo.toFixed(4) + "|" + hi.toFixed(4) + "|" + (LONG(e.direction) ? "L" : "S");
+            if (!map.has(key)) map.set(key, { key: key, ticker: e.ticker, lo: lo, hi: hi, long: LONG(e.direction), all: [] });
+            map.get(key).all.push(view(e));
+        });
+        return [...map.values()];
+    }
+    function build() {
+        const q = S.q.trim().toLowerCase();
+        const zones = zonesOf(Array.isArray(formEntries) ? formEntries : []);
+        const out = [];
+        zones.forEach(z => {
+            const tm = tickerRow(z.ticker), name = tm && tm.stock_name ? tm.stock_name : "";
+            if (q && (z.ticker + " " + name).toLowerCase().indexOf(q) < 0) return;
+            if (S.prio === "1" && !(tm && tm.is_priority === true)) return;
+            const vis = z.all.filter(p => (S.mute === "ALL" || (S.mute === "1") === p.muted) && (S.status === "ALL" || p.status === S.status));
+            if (!vis.length) return;
+            vis.sort((x, y) => (x.e.entry_id < y.e.entry_id ? -1 : 1));
+            const near = vis.slice().sort((x, y) => (x.raw == null ? 1e9 : Math.abs(x.raw)) - (y.raw == null ? 1e9 : Math.abs(y.raw)))[0];
+            const best = vis.reduce((m, p) => RANK[p.status] < RANK[m] ? p.status : m, "Brak danych");
+            out.push({ key: z.key, ticker: z.ticker, name: name, lo: z.lo, hi: z.hi, long: z.long, vis: vis, near: near, status: best,
+                       hiddenMuted: z.all.filter(p => p.muted).length - vis.filter(p => p.muted).length,
+                       prio: vis.some(p => p.e.priority === 1), date: vis.reduce((m, p) => (p.e.created_at || "") > m ? p.e.created_at : m, "") });
+        });
+        const f = { ticker: z => z.ticker, dist: z => z.near.raw == null ? 1e9 : Math.abs(z.near.raw), plays: z => z.vis.length, status: z => RANK[z.status], date: z => z.date || "" }[S.key] || (z => z.ticker);
+        out.sort((a, b) => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * S.dir; });
+        return out;
+    }
+
+    // ---------- widok ----------
+    function playRows(z) {
+        return '<table class="fz-sub"><thead><tr><th>ID</th><th>Data</th><th>Wejście</th><th>TP</th><th>SL</th><th>R:R</th><th>Score</th><th>Powody</th><th>Priorytet</th><th>Wyciszenie</th><th></th></tr></thead><tbody>' +
+            z.vis.map(p => {
+                const e = p.e, id = esc(e.entry_id), d = e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–";
+                const prio = e.priority === 1 ? '<span style="color:#fcd535;font-weight:700;cursor:pointer;border-bottom:1px dashed #fcd535" onclick="updateFormEntryField(\'' + id + '\',\'priority\',0)">⚡ Wysoki</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'priority\',1)">Normalny</span>';
+                const mute = p.muted ? '<span style="color:var(--danger);font-weight:700;cursor:pointer;border-bottom:1px dashed var(--danger)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',0)">🔕 Wyciszone</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',1)">🔔 Aktywne</span>';
+                const reasons = (Array.isArray(e.reasons) ? e.reasons : []).map(r => '<span class="fz-reason">' + esc(r) + "</span>").join("") || '<span class="ev-muted">brak</span>';
+                return '<tr class="' + (p.muted ? "fz-muted-row" : "") + '"><td><b>' + id + "</b></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
+                    '</td><td style="color:#a6e3a1;font-weight:700">' + p.score + "/5</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
+                    '<td style="white-space:nowrap"><button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="openEditModal(\'form\', \'' + id + '\')" title="Edytuj">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
+            }).join("") + "</tbody></table>";
+    }
+    function render() {
+        const box = $("#fz-body"); if (!box) return;
+        const zones = S.shown = build();
+        const plays = zones.reduce((n, z) => n + z.vis.length, 0);
+        $("#fz-count").textContent = zones.length + " stref · " + plays + " zagrań" + (S.mute === "0" ? " (wyciszone ukryte)" : S.mute === "1" ? " (tylko wyciszone)" : "");
+        if (!zones.length) { box.innerHTML = '<div class="ev-empty">' + (formEntries && formEntries.length ? "Brak stref spełniających filtry." : "Ładowanie…") + "</div>"; return; }
+        const th = (k, t) => '<th data-fz-sort="' + k + '">' + t + (S.key === k ? (S.dir > 0 ? " ▲" : " ▼") : "") + "</th>";
+        let h = '<div class="table-responsive"><table class="ev-table"><thead><tr>' + th("ticker", "Spółka") + "<th>Strefa</th>" + th("plays", "Zagrania") + "<th>Najbliższe wejście</th>" + th("dist", "Odległość") + th("status", "Status") + "<th>Prio</th><th></th></tr></thead><tbody>";
+        zones.forEach(z => {
+            const open = S.open.has(z.key), n = z.near, d = n.raw;
+            h += '<tr class="fz-zone' + (open ? " open" : "") + '" data-fz-toggle="' + esc(z.key) + '"><td><span class="fz-chev">▸</span><a class="sd-link" data-tk="' + esc(z.ticker) + '"><b>' + esc(z.ticker) + '</b></a><div class="ev-muted" style="margin-left:1.2em">' + esc(z.name) + "</div></td>" +
+                "<td>" + arrow(z.long) + " " + price(z.lo) + "–" + price(z.hi) + "</td><td>" + z.vis.length + (z.hiddenMuted > 0 ? ' <span class="ev-muted">(+' + z.hiddenMuted + " wyciszone)</span>" : "") + "</td>" +
+                "<td>" + price(n.entry) + "</td><td style=\"color:" + (d == null ? "var(--text-muted)" : d >= 0 ? "var(--success)" : "var(--danger)") + ';font-weight:700">' + (d == null ? "–" : (d > 0 ? "+" : "") + num(d, 1) + "%") + "</td>" +
+                '<td style="color:' + STCOL[z.status] + ';font-weight:700">' + esc(z.status) + "</td><td>" + (z.prio ? "⭐" : "") + "</td>" +
+                '<td class="ev-act"><a class="hp-btn ev-tv" href="' + esc(getTradingViewLink(z.ticker)) + '" target="_blank" rel="noopener">📈 TV</a> <button class="hp-btn" data-fz-add="' + esc(z.key) + '">＋ zagranie</button></td></tr>';
+            if (open) h += '<tr class="fz-plays"><td colspan="8">' + playRows(z) + "</td></tr>";
+        });
+        box.innerHTML = h + "</tbody></table></div>";
+    }
+    function set(k, v) { S[k] = v; render(); }
+    function sort(k) { S.dir = S.key === k ? -S.dir : 1; S.key = k; render(); }
+    function toggleAll() { if (S.open.size) S.open.clear(); else S.shown.forEach(z => S.open.add(z.key)); render(); }
+
+    // ---------- okno „Dodaj nowy wpis” ----------
+    function lock(on) { document.body.style.overflow = on ? "hidden" : (document.querySelector(".plx-overlay.open") ? "hidden" : ""); }
+    function openAdd(ticker, pre) {
+        const o = $("#fz-modal"); o.classList.add("open"); lock(true);
+        $("#fz-results").innerHTML = ""; $("#fz-chosen").style.display = "none"; $("#fz-formwrap").style.display = "none";
+        $("#fz-search").value = "";
+        if (ticker) { const t = tickerRow(ticker); choose(ticker, pre, t); } else setTimeout(() => $("#fz-search").focus(), 50);
+    }
+    function closeAdd() { $("#fz-modal").classList.remove("open"); lock(false); }
+    function search(q) {
+        q = q.trim().toLowerCase(); const box = $("#fz-results");
+        if (!q) { box.innerHTML = ""; return; }
+        const hits = (typeof tickerDataArray !== "undefined" ? tickerDataArray : []).filter(t => (t.ticker + " " + (t.stock_name || "")).toLowerCase().indexOf(q) >= 0).slice(0, 8);
+        box.innerHTML = hits.length ? '<div class="fz-res">' + hits.map(t => '<button type="button" data-fz-pick="' + esc(t.ticker) + '"><b>' + esc(t.ticker) + "</b> · " + esc(t.stock_name || "") + "</button>").join("") + "</div>" : '<div class="ev-muted">Brak takiej spółki w Bazie danych.</div>';
+    }
+    function prefill(pre, title) {
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? "" : v; };
+        set("form-direction", pre && pre.direction || "DBR"); set("form-priority", pre && pre.priority || 0);
+        set("form-start", pre && pre.start_zone); set("form-end", pre && pre.end_zone); set("form-tp", pre && pre.take_profit);
+        set("form-entry", ""); for (let i = 1; i <= 5; i++) set("form-reason-" + i, "");
+        $("#fz-formtitle").textContent = title;
+    }
+    function choose(ticker, pre, trow) {
+        const t = trow || tickerRow(ticker) || { ticker: ticker };
+        $("#fz-results").innerHTML = ""; $("#fz-search").value = ticker + (t.stock_name ? " · " + t.stock_name : "");
+        document.getElementById("form-ticker").value = ticker;
+        const zones = zonesOf((formEntries || []).filter(e => e.ticker === ticker));
+        zones.sort((a, b) => a.lo - b.lo);
+        const ch = $("#fz-chosen"); ch.style.display = "block";
+        ch.innerHTML = '<div class="plx-h">' + esc(ticker) + " " + (t.stock_name ? "· " + esc(t.stock_name) : "") + ' <a class="sd-link" href="' + esc(getTradingViewLink(ticker)) + '" target="_blank" rel="noopener" style="font-size:.8em">📈 TV</a></div>' +
+            '<div class="ev-muted" style="margin-bottom:6px">Obecne strefy tej spółki (kliknij, aby rozwinąć):</div>' +
+            (zones.length ? zones.map(z => {
+                const muted = z.all.filter(p => p.muted).length;
+                return '<div class="fz-zblock" data-zk="' + esc(z.key) + '"><div class="fz-zhead" data-fz-ztoggle><span class="fz-chev">▸</span>' + arrow(z.long) + " <b>" + price(z.lo) + "–" + price(z.hi) + "</b> <span class=\"ev-muted\">" + z.all.length + " zagr." + (muted ? ", w tym " + muted + " wyciszone" : "") + '</span><button type="button" class="hp-btn" style="margin-left:auto" data-fz-zone="' + esc(z.key) + '">＋ zagranie w tej strefie</button></div>' +
+                    '<div class="fz-zbody">' + z.all.map(p => '<div class="plx-play' + (p.muted ? " fz-muted-row" : "") + '"><b>' + esc(p.e.entry_id) + "</b><span>wejście " + price(p.entry) + "</span><span>TP " + price(p.tp) + "</span><span>R:R " + num(p.rr, 2) + "</span><span>" + p.score + "/5</span>" +
+                        (p.muted ? "<span>🔕 wyciszone</span>" : "") + "<span>" + (Array.isArray(p.e.reasons) ? p.e.reasons.map(r => '<span class="fz-reason">' + esc(r) + "</span>").join("") : "") + "</span></div>").join("") + "</div></div>";
+            }).join("") : '<div class="ev-muted">Brak stref – to będzie pierwsza.</div>') +
+            '<button type="button" class="hp-btn" data-fz-newzone style="margin-top:6px">＋ Nowa strefa</button>';
+        $("#fz-formwrap").style.display = "block";
+        const z0 = pre ? zonesOf([pre])[0] : null;
+        prefill(pre, pre ? "Nowe zagranie w strefie " + price(z0.lo) + "–" + price(z0.hi) : "Nowe zagranie – nowa strefa");
+        if (pre) { const blk = ch.querySelector('.fz-zblock[data-zk="' + (z0.key).replace(/"/g, '\\"') + '"]'); if (blk) blk.classList.add("open"); }
+    }
+
+    document.addEventListener("click", e => {
+        const t = e.target; if (!t.closest) return;
+        const sortEl = t.closest("[data-fz-sort]"); if (sortEl) { sort(sortEl.dataset.fzSort); return; }
+        const addEl = t.closest("[data-fz-add]");
+        if (addEl) { const z = S.shown.find(x => x.key === addEl.dataset.fzAdd); if (z) openAdd(z.ticker, z.vis[0].e); return; }
+        const row = t.closest("[data-fz-toggle]");
+        if (row && !t.closest("a, button, [data-tk]")) { const k = row.dataset.fzToggle; S.open.has(k) ? S.open.delete(k) : S.open.add(k); render(); return; }
+        const pick = t.closest("[data-fz-pick]"); if (pick) { choose(pick.dataset.fzPick, null); return; }
+        const zt = t.closest("[data-fz-ztoggle]"); if (zt && !t.closest("button")) { zt.parentNode.classList.toggle("open"); return; }
+        const zb = t.closest("[data-fz-zone]");
+        if (zb) { const tk = document.getElementById("form-ticker").value, z = zonesOf((formEntries || []).filter(x => x.ticker === tk)).find(x => x.key === zb.dataset.fzZone); if (z) { prefill(z.all[0].e, "Nowe zagranie w strefie " + price(z.lo) + "–" + price(z.hi)); $("#fz-formwrap").scrollIntoView({ behavior: "smooth", block: "start" }); } return; }
+        if (t.closest("[data-fz-newzone]")) { prefill(null, "Nowe zagranie – nowa strefa"); $("#fz-formwrap").scrollIntoView({ behavior: "smooth", block: "start" }); }
+    });
+    document.addEventListener("mousedown", e => { if (e.target.id === "fz-modal") closeAdd(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#fz-modal") && $("#fz-modal").classList.contains("open")) closeAdd(); });
+    return { render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
 })();
 </script>
 </body>
