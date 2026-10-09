@@ -172,6 +172,20 @@
         .sd-table th:first-child, .sd-table td:first-child { text-align: left; }
         .sd-side { font-size: .7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
         .sd-side.sd-long { background: rgba(14,203,129,.15); color: var(--success); } .sd-side.sd-short { background: rgba(246,70,93,.15); color: var(--danger); }
+        .sd-wrap { white-space: normal !important; text-align: left !important; min-width: 180px; max-width: 320px; }
+        .sd-sub { color: var(--text-muted); font-size: 0.78rem; margin-top: 2px; }
+        .sd-noteform { display: flex; flex-direction: column; gap: 8px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px; }
+        .sd-noteform[hidden] { display: none; }
+        .sd-noteform textarea, .sd-noteform input { width: 100%; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 0.9rem; resize: vertical; }
+        .sd-noteform-act { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .sd-notecard { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+        .sd-notehead { display: flex; justify-content: space-between; align-items: center; }
+        .sd-notebody { margin-top: 4px; white-space: pre-wrap; word-break: break-word; font-size: 0.9rem; }
+        .sd-notelink { margin-top: 4px; font-size: 0.85rem; word-break: break-all; } .sd-notelink a { color: var(--accent); }
+        .sd-delnote { background: none; border: 0; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; } .sd-delnote:hover { color: var(--danger); }
+        .sd-tip { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; font-size: 0.8rem; min-height: 30px; }
+        .sd-tip.sd-off { visibility: hidden; }
+        .sd-closed summary { cursor: pointer; } .sd-closed .sd-h { display: inline-block; }
         @media (max-width: 600px) { #sd-overlay { padding: 0; } .sd-panel { border-radius: 0; min-height: 100vh; border: 0; } #sd-chart { height: 320px; } }
     </style>
 </head>
@@ -5789,7 +5803,7 @@ window.StockDetail = (function () {
     const MARK_COLOR = { open: "#f0b90b", win: "#0ecb81", loss: "#f6465d" };
 
     let st = { ticker: null, interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: 0 };
-    let chart = null, candles = null, volume = null, zonesPrim = null, ro = null;
+    let chart = null, candles = null, volume = null, zonesPrim = null, entriesPrim = null, ro = null;
 
     // ---------- prymityw rysujący strefy (delikatna poświata za świecami) ----------
     function makeZonesPrimitive() {
@@ -5826,6 +5840,46 @@ window.StockDetail = (function () {
         return prim;
     }
 
+    // ---------- prymityw: punkty wejść na dokładnej cenie (scalone w ciągu dnia), z udziałem w wartości inwestycji ----------
+    function makeEntriesPrimitive() {
+        const prim = {
+            items: [], hits: [], chart: null, series: null, request: null,
+            attached(p) { this.chart = p.chart; this.series = p.series; this.request = p.requestUpdate; },
+            detached() { this.chart = this.series = this.request = null; },
+            updateAllViews() {},
+            setItems(v) { this.items = v; if (this.request) this.request(); },
+            // skala ceny obejmuje ceny widocznych wejść (inaczej punkt poza zakresem świec wpadałby w obszar wolumenu)
+            autoscaleInfo() {
+                if (!this.chart) return null;
+                const ps = this.items.filter(i => this.chart.timeScale().timeToCoordinate(i.time) != null).map(i => i.price);
+                return ps.length ? { priceRange: { minValue: Math.min.apply(null, ps), maxValue: Math.max.apply(null, ps) } } : null;
+            },
+            paneViews() { return [view]; }
+        };
+        const view = {
+            zOrder: () => "top",
+            renderer: () => ({
+                draw(target) {
+                    if (!prim.series || !prim.chart) return;
+                    target.useMediaCoordinateSpace(({ context: ctx }) => {
+                        prim.hits = [];
+                        prim.items.forEach(it => {
+                            const x = prim.chart.timeScale().timeToCoordinate(it.time), y = prim.series.priceToCoordinate(it.price);
+                            if (x == null || y == null) return;
+                            const col = MARK_COLOR[it.kind];
+                            ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 2 * Math.PI);
+                            ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(11,14,17,0.95)"; ctx.stroke();
+                            const label = (it.share_pct != null ? Math.round(it.share_pct) + "%" : "") + (it.count > 1 ? (it.share_pct != null ? " " : "") + "×" + it.count : "");
+                            if (label) { ctx.font = "10px -apple-system, Segoe UI, Roboto, sans-serif"; ctx.fillStyle = col; ctx.textBaseline = "middle"; ctx.fillText(label, x + 9, y - 9); }
+                            prim.hits.push({ x, y, it });
+                        });
+                    });
+                }
+            })
+        };
+        return prim;
+    }
+
     // ---------- DOM ----------
     function ensureDom() {
         if ($("#sd-overlay")) return;
@@ -5834,7 +5888,9 @@ window.StockDetail = (function () {
         el.innerHTML = '<div class="sd-panel" role="dialog" aria-modal="true" aria-label="Szczegóły spółki">' +
             '<div class="sd-head"><div><div class="sd-title" id="sd-title"></div><div class="sd-name" id="sd-name"></div></div>' +
             '<div class="sd-actions"><a class="sd-btn" id="sd-tv" target="_blank" rel="noopener" hidden>TradingView ↗</a>' +
-            '<button class="sd-btn" id="sd-plan" type="button">🧭 Planuj</button><button class="sd-btn sd-x" id="sd-close" type="button" aria-label="Zamknij">✕</button></div></div>' +
+            '<button class="sd-btn" id="sd-addnote" type="button">📝 Dodaj notatkę</button><button class="sd-btn" id="sd-plan" type="button">🧭 Planuj</button><button class="sd-btn sd-x" id="sd-close" type="button" aria-label="Zamknij">✕</button></div></div>' +
+            '<form class="sd-noteform" id="sd-noteform" hidden><textarea id="sd-note-text" rows="3" maxlength="2000" placeholder="Treść notatki"></textarea>' +
+            '<input type="url" id="sd-note-url" maxlength="500" placeholder="Link (https://…) — opcjonalnie"><div class="sd-noteform-act"><button class="sd-btn" type="submit">Zapisz</button><button class="sd-btn sd-x" type="button" id="sd-note-cancel">Anuluj</button><span class="sd-note" id="sd-note-err"></span></div></form>' +
             '<div class="sd-kpis" id="sd-pnl"></div>' +
             '<div class="sd-kpis" id="sd-summary"></div>' +
             '<div class="sd-controls"><div><span class="sd-ctl-l">Zakres</span><span class="sd-seg" id="sd-ranges"></span></div>' +
@@ -5842,12 +5898,16 @@ window.StockDetail = (function () {
             '<div><span class="sd-ctl-l">Wejścia</span><span class="sd-seg" id="sd-markers"></span></div></div>' +
             '<div class="sd-zones" id="sd-zones"></div>' +
             '<div class="sd-chart-wrap"><div id="sd-chart"></div><div class="sd-msg" id="sd-msg"></div></div>' +
-            '<div class="sd-legend"><span><i class="sd-dot" style="background:#f0b90b"></i>wejście — pozycja otwarta</span><span><i class="sd-dot" style="background:#0ecb81"></i>zamknięta z zyskiem</span><span><i class="sd-dot" style="background:#f6465d"></i>zamknięta ze stratą</span><span class="sd-note" id="sd-info"></span></div>' +
-            '<div id="sd-trades"></div></div>';
+            '<div class="sd-legend"><span><i class="sd-dot" style="background:#f0b90b"></i>wejście — pozycja otwarta</span><span><i class="sd-dot" style="background:#0ecb81"></i>zamknięta z zyskiem</span><span><i class="sd-dot" style="background:#f6465d"></i>zamknięta ze stratą</span><span class="sd-note" id="sd-info"></span></div><div class="sd-tip sd-off" id="sd-tip">&nbsp;</div>' +
+            '<div id="sd-trades"></div><div id="sd-notes"></div></div>';
         document.body.appendChild(el);
         el.addEventListener("mousedown", e => { if (e.target === el) close(); });
         $("#sd-close").addEventListener("click", close);
         $("#sd-plan").addEventListener("click", plan);
+        $("#sd-addnote").addEventListener("click", () => { const f = $("#sd-noteform"); f.hidden = !f.hidden; if (!f.hidden) $("#sd-note-text").focus(); });
+        $("#sd-note-cancel").addEventListener("click", () => { $("#sd-noteform").hidden = true; });
+        $("#sd-noteform").addEventListener("submit", saveNote);
+        $("#sd-notes").addEventListener("click", delNote);
         document.addEventListener("keydown", e => { if (e.key === "Escape" && isOpen()) close(); });
         seg("#sd-ranges", RANGES, () => st.range, setRange);
         seg("#sd-intervals", INTERVALS, () => st.interval, setInterval_);
@@ -5875,7 +5935,8 @@ window.StockDetail = (function () {
         $("#sd-overlay").classList.add("sd-open");
         document.body.style.overflow = "hidden";
         $("#sd-title").textContent = st.ticker; $("#sd-name").textContent = "";
-        $("#sd-pnl").innerHTML = ""; $("#sd-summary").innerHTML = ""; $("#sd-zones").innerHTML = ""; $("#sd-trades").innerHTML = "";
+        $("#sd-pnl").innerHTML = ""; $("#sd-summary").innerHTML = ""; $("#sd-zones").innerHTML = ""; $("#sd-trades").innerHTML = ""; $("#sd-notes").innerHTML = "";
+        $("#sd-noteform").hidden = true; $("#sd-note-text").value = ""; $("#sd-note-url").value = ""; $("#sd-note-err").textContent = "";
         $("#sd-tv").hidden = true; $("#sd-info").textContent = "";
         syncSegs(); load();
     }
@@ -5884,7 +5945,7 @@ window.StockDetail = (function () {
         o.classList.remove("sd-open"); document.body.style.overflow = "";
         st.seq++;
         if (ro) { ro.disconnect(); ro = null; }
-        if (chart) { chart.remove(); chart = candles = volume = zonesPrim = null; }
+        if (chart) { chart.remove(); chart = candles = volume = zonesPrim = entriesPrim = null; }
     }
     function setRange(r) {
         st.range = r;
@@ -5939,7 +6000,7 @@ window.StockDetail = (function () {
         const s = d.summary || {}, v = s.volume;
         $("#sd-summary").innerHTML = kpi("Dziś", s.today) + kpi("Od początku miesiąca", s.mtd) + kpi("Od początku kwartału", s.qtd) + kpi("Od początku roku", s.ytd) +
             '<div class="sd-kpi"><div class="sd-l">Wolumen (ostatnia sesja)</div><div class="sd-v">' + (v && v.ratio_pct != null ? fmtPlain(v.ratio_pct) : "—") + '</div><div class="sd-s">średniej z 20 sesji</div></div>';
-        syncSegs(); renderZoneChips(); renderTrades(); drawChart();
+        syncSegs(); renderZoneChips(); renderTrades(); renderNotes(); drawChart();
         const note = [];
         if (d.available_from && d.range_start && d.available_from > d.range_start) {
             const gap = (new Date(d.available_from) - new Date(d.range_start)) / 864e5;
@@ -5953,7 +6014,7 @@ window.StockDetail = (function () {
         box.innerHTML = '<span class="sd-ctl-l">Strefy z Form</span>' + zs.map(z => {
             const on = st.zonesOn.has(z.entry_id), lo = Math.min(z.start, z.end), hi = Math.max(z.start, z.end);
             return '<button type="button" class="sd-chip ' + (on ? "sd-on " : "") + (z.side === "LONG" ? "sd-long" : "sd-short") + (z.active ? "" : " sd-muted") + '" data-z="' + esc(z.entry_id) + '" title="' + (z.active ? "Aktywna" : "Wyciszona") + '">' +
-                esc(z.entry_id) + " · " + z.side + " · " + fmtPrice(lo) + "–" + fmtPrice(hi) + (z.active ? "" : " (wyciszona)") + "</button>";
+                esc(z.entry_id) + " · " + fmtPrice(lo) + "–" + fmtPrice(hi) + (z.active ? "" : " (wyciszona)") + "</button>";
         }).join("") + '<button type="button" class="sd-chip" data-z="*all">wszystkie</button><button type="button" class="sd-chip" data-z="*none">żadne</button>';
         box.onclick = e => {
             const b = e.target.closest("button[data-z]"); if (!b) return;
@@ -5963,17 +6024,65 @@ window.StockDetail = (function () {
             renderZoneChips(); applyOverlays();
         };
     }
+    function noteCell(t) {
+        const bits = [];
+        if (t.comment) bits.push('<div>' + esc(t.comment) + "</div>");
+        if (t.notes) bits.push('<div class="sd-sub" title="' + esc(t.notes) + '">' + esc(t.notes.length > 160 ? t.notes.slice(0, 160) + "…" : t.notes) + "</div>");
+        return bits.length ? bits.join("") : "—";
+    }
     function renderTrades() {
-        const box = $("#sd-trades"), open_ = (st.data.trades || []).filter(t => t.status === "OPEN");
-        if (!open_.length) { box.innerHTML = ""; return; }
-        const rows = open_.map(t => '<tr><td>' + esc(t.buy_date) + '</td><td><span class="sd-side ' + (t.side === "LONG" ? "sd-long" : "sd-short") + '" style="margin-left:0">' + t.side + "</span> ×" + t.leverage.toLocaleString("pl-PL", { maximumFractionDigits: 2 }) + "</td>" +
-            "<td>" + fmtPrice(t.buy_price) + '</td><td class="' + tone(t.return_pct) + '"><b>' + fmtPct(t.return_pct) + "</b></td>" +
-            "<td>" + fmtPct(t.to_tp_pct) + "</td><td>" + fmtPct(t.to_sl_pct) + "</td><td>" + fmtPlain(t.share_pct, 1) + "</td></tr>").join("");
-        box.innerHTML = '<div class="sd-h">Moje inwestycje (otwarte)</div><div class="table-responsive" style="border:0"><table class="sd-table"><thead><tr><th>Data wejścia</th><th>Kierunek</th><th>Cena zakupu</th><th>Wynik</th><th title="Odległość ceny bieżącej od celu (TP)">Do TP</th><th title="Odległość ceny bieżącej od stop lossa">Do SL</th><th title="Udział zaangażowanych środków w kapitale">Udział w kapitale</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+        const box = $("#sd-trades"), all = st.data.trades || [];
+        const open_ = all.filter(t => t.status === "OPEN"), closed = all.filter(t => t.status !== "OPEN");
+        let html = "";
+        if (open_.length) {
+            const rows = open_.map(t => '<tr><td>' + esc(t.buy_date) + '</td><td><span class="sd-side ' + (t.side === "LONG" ? "sd-long" : "sd-short") + '" style="margin-left:0">' + t.side + "</span> ×" + t.leverage.toLocaleString("pl-PL", { maximumFractionDigits: 2 }) + "</td>" +
+                "<td>" + fmtPrice(t.buy_price) + '</td><td class="' + tone(t.return_pct) + '"><b>' + fmtPct(t.return_pct) + "</b></td>" +
+                "<td>" + fmtPct(t.to_tp_pct) + "</td><td>" + fmtPct(t.to_sl_pct) + "</td><td>" + fmtPlain(t.lev_share_pct, 1) + "</td><td>" + fmtPlain(t.share_pct, 1) + '</td><td class="sd-wrap">' + noteCell(t) + "</td></tr>").join("");
+            html += '<div class="sd-h">Moje inwestycje (otwarte)</div><div class="table-responsive" style="border:0"><table class="sd-table"><thead><tr><th>Data wejścia</th><th>Kierunek</th><th>Cena zakupu</th><th>Wynik (Trades)</th><th title="Odległość ceny bieżącej od celu (TP)">Do TP</th><th title="Odległość ceny bieżącej od stop lossa">Do SL</th><th title="Wartość po zalewarowaniu tej transzy / suma wartości inwestycji w tej spółce">Udział w inwestycji</th><th title="Udział zaangażowanych środków w kapitale">Udział w kapitale</th><th class="sd-wrap">Notatka</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+        }
+        if (closed.length) {
+            const rows = closed.map(t => '<tr><td>' + esc(t.buy_date) + "</td><td>" + esc(t.sell_date || "—") + '</td><td><span class="sd-side ' + (t.side === "LONG" ? "sd-long" : "sd-short") + '" style="margin-left:0">' + t.side + "</span> ×" + t.leverage.toLocaleString("pl-PL", { maximumFractionDigits: 2 }) + "</td>" +
+                '<td class="' + tone(t.return_pct) + '"><b>' + fmtPct(t.return_pct) + '</b></td><td class="sd-wrap">' + noteCell(t) + "</td></tr>").join("");
+            html += '<details class="sd-closed"' + (open_.length ? "" : " open") + '><summary class="sd-h">Zamknięte transakcje (' + closed.length + ')</summary><div class="table-responsive" style="border:0"><table class="sd-table"><thead><tr><th>Data wejścia</th><th>Data wyjścia</th><th>Kierunek</th><th>Wynik (Trades)</th><th class="sd-wrap">Notatka</th></tr></thead><tbody>' + rows + "</tbody></table></div></details>";
+        }
+        box.innerHTML = html;
+    }
+    function renderNotes() {
+        const box = $("#sd-notes"), notes = st.data.notes || [];
+        if (!notes.length) { box.innerHTML = ""; return; }
+        box.innerHTML = '<div class="sd-h">Notatki</div>' + notes.map(n => {
+            const link = n.url && /^https?:\/\//i.test(n.url) ? '<a href="' + esc(n.url) + '" target="_blank" rel="noopener noreferrer">' + esc(n.url.replace(/^https?:\/\//i, "").slice(0, 70)) + " ↗</a>" : "";
+            const date = n.created_at ? new Date(n.created_at).toLocaleDateString("pl-PL") : "";
+            return '<div class="sd-notecard"><div class="sd-notehead"><span class="sd-note">' + esc(date) + '</span><button type="button" class="sd-delnote" data-id="' + esc(n.id) + '" title="Usuń notatkę">✕</button></div>' +
+                (n.content ? '<div class="sd-notebody">' + esc(n.content) + "</div>" : "") + (link ? '<div class="sd-notelink">' + link + "</div>" : "") + "</div>";
+        }).join("");
+    }
+    async function saveNote(e) {
+        e.preventDefault();
+        const err = $("#sd-note-err"), content = $("#sd-note-text").value.trim(), url = $("#sd-note-url").value.trim();
+        err.textContent = "";
+        if (!content && !url) { err.textContent = "Podaj treść lub link."; return; }
+        try {
+            const res = await fetch(API_BASE_URL + "/api/stock/notes/add", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: st.ticker, content: content, url: url }) });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + res.status));
+            st.data.notes = [d.note].concat(st.data.notes || []);
+            $("#sd-note-text").value = ""; $("#sd-note-url").value = ""; $("#sd-noteform").hidden = true;
+            renderNotes();
+        } catch (ex) { err.textContent = "Błąd: " + (ex.message || ex); }
+    }
+    async function delNote(e) {
+        const b = e.target.closest(".sd-delnote"); if (!b || !confirm("Usunąć notatkę?")) return;
+        try {
+            const res = await fetch(API_BASE_URL + "/api/stock/notes/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: b.dataset.id }) });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + res.status));
+            st.data.notes = (st.data.notes || []).filter(n => String(n.id) !== b.dataset.id); renderNotes();
+        } catch (ex) { alert("Nie udało się usunąć: " + (ex.message || ex)); }
     }
 
     // ---------- wykres ----------
-    function clearChart() { if (candles) { candles.setData([]); volume.setData([]); candles.setMarkers([]); zonesPrim.setZones([]); } }
+    function clearChart() { if (candles) { candles.setData([]); volume.setData([]); entriesPrim.setItems([]); zonesPrim.setZones([]); } }
     function drawChart() {
         const d = st.data;
         if (typeof LightweightCharts === "undefined") { showMsg("Biblioteka wykresów nie została załadowana (sprawdź połączenie z internetem)."); return; }
@@ -5992,6 +6101,8 @@ window.StockDetail = (function () {
             volume.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
             candles.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } });
             zonesPrim = makeZonesPrimitive(); candles.attachPrimitive(zonesPrim);
+            entriesPrim = makeEntriesPrimitive(); candles.attachPrimitive(entriesPrim);
+            chart.subscribeCrosshairMove(p => showTip(p));
         }
         const intraday = d.interval === "1h" || d.interval === "4h";
         chart.applyOptions({ timeScale: { timeVisible: intraday, secondsVisible: false } });
@@ -6006,11 +6117,20 @@ window.StockDetail = (function () {
     function applyOverlays() {
         if (!candles || !st.data) return;
         const d = st.data, mode = st.markers;
-        const list = (d.markers || []).filter(m => mode === "both" || (mode === "open" && m.kind === "open") || (mode === "closed" && m.kind !== "open"))
-            .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0))
-            .map(m => ({ time: m.time, position: m.side === "LONG" ? "belowBar" : "aboveBar", shape: m.side === "LONG" ? "arrowUp" : "arrowDown", color: MARK_COLOR[m.kind], size: 1.4 }));
-        candles.setMarkers(mode === "none" ? [] : list);
+        const items = (d.entries || []).filter(m => mode === "both" || (mode === "open" && m.kind === "open") || (mode === "closed" && m.kind !== "open"));
+        entriesPrim.setItems(mode === "none" ? [] : items);
         zonesPrim.setZones((d.zones || []).filter(z => st.zonesOn.has(z.entry_id)).map(z => ({ lo: Math.min(z.start, z.end), hi: Math.max(z.start, z.end), side: z.side })));
+    }
+
+    // podpowiedź przy najechaniu na punkt wejścia: dokładna cena, liczba transakcji, udział w wartości inwestycji
+    function showTip(p) {
+        const tip = $("#sd-tip"); if (!tip) return;
+        let best = null;
+        if (p && p.point && entriesPrim) entriesPrim.hits.forEach(h => { const dd = Math.hypot(h.x - p.point.x, h.y - p.point.y); if (dd <= 11 && (!best || dd < best.d)) best = { d: dd, h: h }; });
+        if (!best) { tip.classList.add("sd-off"); return; }
+        const it = best.h.it, name = { open: "otwarta", win: "zamknięta z zyskiem", loss: "zamknięta ze stratą" }[it.kind];
+        tip.textContent = "Wejście " + fmtPrice(it.price) + " · " + (it.count > 1 ? it.count + " transakcje (" : "") + name + (it.count > 1 ? ")" : "") + (it.share_pct != null ? " · " + fmtPlain(it.share_pct, 1) + " wartości inwestycji" : "");
+        tip.classList.remove("sd-off");
     }
 
     // kliknięcie tickera lub nazwy spółki (atrybut data-tk) w dowolnym miejscu aplikacji otwiera okno szczegółów
