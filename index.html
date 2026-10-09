@@ -185,6 +185,10 @@
         .sd-delnote { background: none; border: 0; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; } .sd-delnote:hover { color: var(--danger); }
         .sd-tip { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; font-size: 0.8rem; min-height: 30px; }
         .sd-tip.sd-off { visibility: hidden; }
+        .sd-cvdwrap { margin-top: -4px; } .sd-cvdwrap[hidden] { display: none; }
+        #sd-cvd { width: 100%; height: 190px; }
+        .sd-select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; font-size: 0.8rem; margin-left: 6px; }
+        .sd-select:disabled { opacity: .45; }
         .sd-sechead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
         .sd-sec { cursor: pointer; user-select: none; } .sd-sec:hover { color: var(--accent); }
         .sd-secact { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -5810,9 +5814,16 @@ window.StockDetail = (function () {
     const MARKERS = [["none", "Brak"], ["open", "Otwarte"], ["closed", "Zamknięte"], ["both", "Oba"]];
     const KIND = { open: ["sd-b-open", "OTWARTA POZYCJA"], closed: ["sd-b-closed", "ZAMKNIĘTE"], none: ["sd-b-none", "BEZ HISTORII W TRADES"] };
     const MARK_COLOR = { open: "#f0b90b", win: "#0ecb81", loss: "#f6465d" };
+    const CVD_MODES = [["off", "Ukryj"], ["candles", "Świece"], ["line", "Linia"], ["hist", "Histogram"], ["overlay", "Na wykresie"]];
+    const CVD_ANCHORS = [["auto", "auto"], ["none", "bez resetu"], ["1d", "dzień"], ["1w", "tydzień"], ["1m", "miesiąc"], ["1y", "rok"]];
+    const lsGet = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
+    const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+    const cvdModeSaved = () => { const m = lsGet("sd.cvd", "candles"); return CVD_MODES.some(x => x[0] === m) ? m : "candles"; };
+    const fmtCompact = v => { const a = Math.abs(v), s = v < 0 ? "-" : ""; return a >= 1e9 ? s + (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? s + (a / 1e6).toFixed(2) + "M" : a >= 1e3 ? s + (a / 1e3).toFixed(1) + "K" : s + a.toFixed(0); };
 
-    let st = { ticker: null, interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: 0, sort: {}, collapsed: new Set(), groupLev: true, secOpen: true, secClosed: null };
+    let st = { ticker: null, interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: 0, sort: {}, collapsed: new Set(), groupLev: true, secOpen: true, secClosed: null, cvdMode: "candles", cvdAnchor: "auto", cvdData: null, cvdKey: null, cvdSeq: 0 };
     let chart = null, candles = null, volume = null, zonesPrim = null, entriesPrim = null, ro = null;
+    let cvdChart = null, cvdSeries = null, cvdSeriesMode = null, cvdOverlay = null, syncing = false;
 
     // ---------- prymityw rysujący strefy (delikatna poświata za świecami) ----------
     function makeZonesPrimitive() {
@@ -5906,9 +5917,11 @@ window.StockDetail = (function () {
             '<div class="sd-kpis" id="sd-summary"></div>' +
             '<div class="sd-controls"><div><span class="sd-ctl-l">Zakres</span><span class="sd-seg" id="sd-ranges"></span></div>' +
             '<div><span class="sd-ctl-l">Interwał</span><span class="sd-seg" id="sd-intervals"></span></div>' +
-            '<div><span class="sd-ctl-l">Wejścia</span><span class="sd-seg" id="sd-markers"></span></div></div>' +
+            '<div><span class="sd-ctl-l">Wejścia</span><span class="sd-seg" id="sd-markers"></span></div>' +
+            '<div><span class="sd-ctl-l">CVD</span><span class="sd-seg" id="sd-cvdmode"></span> <select class="sd-select" id="sd-cvdanchor" title="Kiedy zerować sumę CVD (jak „Anchor period" na TradingView)">' + CVD_ANCHORS.map(a => '<option value="' + a[0] + '">reset: ' + a[1] + "</option>").join("") + "</select></div></div>" +
             '<div class="sd-zones" id="sd-zones"></div>' +
             '<div class="sd-chart-wrap"><div id="sd-chart"></div><div class="sd-msg" id="sd-msg"></div></div>' +
+            '<div class="sd-chart-wrap sd-cvdwrap" id="sd-cvdwrap" hidden><div id="sd-cvd"></div></div><div class="sd-note" id="sd-cvdnote"></div>' +
             '<div class="sd-legend"><span><i class="sd-dot" style="background:#f0b90b"></i>wejście — pozycja otwarta</span><span><i class="sd-dot" style="background:#0ecb81"></i>zamknięta z zyskiem</span><span><i class="sd-dot" style="background:#f6465d"></i>zamknięta ze stratą</span><span class="sd-note">wielkość kropki = wielkość wejścia (z dźwignią)</span><span class="sd-note" id="sd-info"></span></div><div class="sd-tip sd-off" id="sd-tip">&nbsp;</div>' +
             '<div id="sd-trades"></div><div id="sd-notes"></div></div>';
         document.body.appendChild(el);
@@ -5924,6 +5937,8 @@ window.StockDetail = (function () {
         seg("#sd-ranges", RANGES, () => st.range, setRange);
         seg("#sd-intervals", INTERVALS, () => st.interval, setInterval_);
         seg("#sd-markers", MARKERS, () => st.markers, setMarkers);
+        seg("#sd-cvdmode", CVD_MODES, () => st.cvdMode, setCvdMode);
+        $("#sd-cvdanchor").addEventListener("change", e => { st.cvdAnchor = e.target.value; loadCvd(); });
     }
     function seg(sel, items, get, onPick) {
         const box = $(sel);
@@ -5932,7 +5947,7 @@ window.StockDetail = (function () {
         box._get = get;
     }
     function syncSegs() {
-        ["#sd-ranges", "#sd-intervals", "#sd-markers"].forEach(sel => {
+        ["#sd-ranges", "#sd-intervals", "#sd-markers", "#sd-cvdmode"].forEach(sel => {
             const box = $(sel);
             box.querySelectorAll("button").forEach(b => b.classList.toggle("sd-on", b.dataset.v === box._get()));
         });
@@ -5944,13 +5959,15 @@ window.StockDetail = (function () {
         if (!ticker) return;
         ensureDom();
         st = { ticker: String(ticker), interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: st.seq,
-               sort: { open: { k: "buy_date", d: -1 }, closed: { k: "buy_date", d: -1 } }, collapsed: new Set(), groupLev: true, secOpen: true, secClosed: null };
+               sort: { open: { k: "buy_date", d: -1 }, closed: { k: "buy_date", d: -1 } }, collapsed: new Set(), groupLev: true, secOpen: true, secClosed: null,
+               cvdMode: cvdModeSaved(), cvdAnchor: "auto", cvdData: null, cvdKey: null, cvdSeq: st.cvdSeq + 1 };
         $("#sd-overlay").classList.add("sd-open");
         document.body.style.overflow = "hidden";
         $("#sd-title").textContent = st.ticker; $("#sd-name").textContent = "";
         $("#sd-pnl").innerHTML = ""; $("#sd-summary").innerHTML = ""; $("#sd-zones").innerHTML = ""; $("#sd-trades").innerHTML = ""; $("#sd-notes").innerHTML = "";
         $("#sd-noteform").hidden = true; $("#sd-note-text").value = ""; $("#sd-note-url").value = ""; $("#sd-note-err").textContent = "";
         $("#sd-tv").hidden = true; $("#sd-info").textContent = "";
+        $("#sd-cvdanchor").value = "auto"; $("#sd-cvdnote").textContent = ""; removeCvd();
         syncSegs(); load();
     }
     function close() {
@@ -5958,6 +5975,7 @@ window.StockDetail = (function () {
         o.classList.remove("sd-open"); document.body.style.overflow = "";
         st.seq++;
         if (ro) { ro.disconnect(); ro = null; }
+        removeCvd();
         if (chart) { chart.remove(); chart = candles = volume = zonesPrim = entriesPrim = null; }
     }
     function setRange(r) {
@@ -6013,7 +6031,7 @@ window.StockDetail = (function () {
         const s = d.summary || {}, v = s.volume;
         $("#sd-summary").innerHTML = kpi("Dziś", s.today) + kpi("Od początku miesiąca", s.mtd) + kpi("Od początku kwartału", s.qtd) + kpi("Od początku roku", s.ytd) +
             '<div class="sd-kpi"><div class="sd-l">Wolumen (ostatnia sesja)</div><div class="sd-v">' + (v && v.ratio_pct != null ? fmtPlain(v.ratio_pct) : "—") + '</div><div class="sd-s">średniej z 20 sesji</div></div>';
-        syncSegs(); renderZoneChips(); renderTrades(); renderNotes(); drawChart();
+        syncSegs(); renderZoneChips(); renderTrades(); renderNotes(); drawChart(); loadCvd();
         const note = [];
         if (d.available_from && d.range_start && d.available_from > d.range_start) {
             const gap = (new Date(d.available_from) - new Date(d.range_start)) / 864e5;
@@ -6179,9 +6197,13 @@ window.StockDetail = (function () {
                 autoSize: true,
                 layout: { background: { type: "solid", color: "transparent" }, textColor: css("--text-muted") || "#848e9c", fontSize: 12 },
                 grid: { vertLines: { color: "rgba(132,142,156,0.08)" }, horzLines: { color: "rgba(132,142,156,0.08)" } },
-                rightPriceScale: { borderColor: "rgba(132,142,156,0.25)" },
+                rightPriceScale: { borderColor: "rgba(132,142,156,0.25)", minimumWidth: 72 },
                 timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 4 },
                 crosshair: { mode: 0 }
+            });
+            chart.timeScale().subscribeVisibleTimeRangeChange(r => {      // oś czasu wykresu CVD podąża za wykresem ceny
+                if (!cvdChart || syncing || !r) return;
+                syncing = true; try { cvdChart.timeScale().setVisibleRange(r); } catch (e) {} syncing = false;
             });
             candles = chart.addCandlestickSeries({ upColor: "#0ecb81", downColor: "#f6465d", borderUpColor: "#0ecb81", borderDownColor: "#f6465d", wickUpColor: "#0ecb81", wickDownColor: "#f6465d" });
             volume = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "" });
@@ -6208,6 +6230,92 @@ window.StockDetail = (function () {
         // skala wielkości liczona po wszystkich wejściach w danych, więc przełączanie filtra nie zmienia rozmiarów kropek
         entriesPrim.setItems(mode === "none" ? [] : items, Math.max.apply(null, [1].concat((d.entries || []).map(e => e.weight || 0))));
         zonesPrim.setZones((d.zones || []).filter(z => st.zonesOn.has(z.entry_id)).map(z => ({ lo: Math.min(z.start, z.end), hi: Math.max(z.start, z.end), side: z.side })));
+    }
+
+    // ---------- CVD: panel pod wykresem ceny (świece / linia / histogram) albo nakładka na wykresie; tryb "Ukryj" ----------
+    const anchorLabel = a => (CVD_ANCHORS.find(x => x[0] === a) || [a, a])[1];
+    const CVD_UP = "#0ecb81", CVD_DN = "#f6465d";
+    function setCvdMode(m) {
+        st.cvdMode = m; lsSet("sd.cvd", m); syncSegs();
+        loadCvd();
+    }
+    function removeCvd() {
+        if (cvdOverlay && chart) { try { chart.removeSeries(cvdOverlay); } catch (e) {} }
+        cvdOverlay = null;
+        if (cvdChart) { cvdChart.remove(); cvdChart = cvdSeries = cvdSeriesMode = null; }
+        const w = $("#sd-cvdwrap"); if (w) w.hidden = true;
+    }
+    function cvdNote(txt) { const n = $("#sd-cvdnote"); if (n) n.textContent = txt || ""; }
+    async function loadCvd() {
+        const mode = st.cvdMode, sel = $("#sd-cvdanchor");
+        sel.disabled = mode === "off";
+        if (mode === "off") { st.cvdSeq++; removeCvd(); cvdNote(""); return; }     // ukryte: bez pobierania danych
+        if (!st.data) return;
+        const key = [st.ticker, st.interval, st.range, st.cvdAnchor].join("|");
+        if (st.cvdKey === key && st.cvdData) { drawCvd(); return; }
+        const my = ++st.cvdSeq;
+        cvdNote("Ładowanie CVD…");
+        try {
+            const url = API_BASE_URL + "/api/stock/cvd?ticker=" + encodeURIComponent(st.ticker) + "&interval=" + st.interval + "&range=" + st.range + "&anchor=" + st.cvdAnchor;
+            const res = await fetch(url);
+            const d = await res.json().catch(() => ({}));
+            if (my !== st.cvdSeq) return;
+            if (!res.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + res.status));
+            st.cvdData = d; st.cvdKey = key; drawCvd();
+        } catch (e) {
+            if (my !== st.cvdSeq) return;
+            st.cvdData = null; st.cvdKey = null; removeCvd();
+            cvdNote("CVD niedostępne: " + (e.message || e));
+        }
+    }
+    function drawCvd() {
+        const d = st.cvdData; if (!d || st.cvdMode === "off" || typeof LightweightCharts === "undefined" || !chart) return;
+        const mode = st.cvdMode, S = d.series || [], intraday = st.interval === "1h" || st.interval === "4h";
+        const priceFmt = { type: "custom", formatter: fmtCompact, minMove: 1 };
+        const base = { baseValue: { type: "price", price: 0 }, topLineColor: CVD_UP, bottomLineColor: CVD_DN, topFillColor1: "rgba(14,203,129,0.28)", topFillColor2: "rgba(14,203,129,0.02)", bottomFillColor1: "rgba(246,70,93,0.02)", bottomFillColor2: "rgba(246,70,93,0.28)", lineWidth: 2, priceFormat: priceFmt };
+        if (mode === "overlay") {
+            if (cvdChart) { cvdChart.remove(); cvdChart = cvdSeries = cvdSeriesMode = null; }
+            $("#sd-cvdwrap").hidden = true;
+            if (!cvdOverlay) {
+                cvdOverlay = chart.addBaselineSeries(Object.assign({ priceScaleId: "cvd", lastValueVisible: false, priceLineVisible: false }, base));
+                chart.priceScale("cvd").applyOptions({ scaleMargins: { top: 0.55, bottom: 0.2 } });
+            }
+            cvdOverlay.setData(S.map(x => ({ time: x.time, value: x.c })));
+        } else {
+            if (cvdOverlay) { try { chart.removeSeries(cvdOverlay); } catch (e) {} cvdOverlay = null; }
+            $("#sd-cvdwrap").hidden = false;
+            if (!cvdChart) {
+                cvdChart = LightweightCharts.createChart($("#sd-cvd"), {
+                    autoSize: true,
+                    layout: { background: { type: "solid", color: "transparent" }, textColor: getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim() || "#848e9c", fontSize: 12 },
+                    grid: { vertLines: { color: "rgba(132,142,156,0.08)" }, horzLines: { color: "rgba(132,142,156,0.08)" } },
+                    rightPriceScale: { borderColor: "rgba(132,142,156,0.25)", minimumWidth: 72 },
+                    timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 4, timeVisible: intraday, secondsVisible: false },
+                    crosshair: { mode: 0 }
+                });
+                cvdChart.timeScale().subscribeVisibleTimeRangeChange(r => {
+                    if (!chart || syncing || !r) return;
+                    syncing = true; try { chart.timeScale().setVisibleRange(r); } catch (e) {} syncing = false;
+                });
+            }
+            cvdChart.applyOptions({ timeScale: { timeVisible: intraday, secondsVisible: false } });
+            if (cvdSeries && cvdSeriesMode !== mode) { cvdChart.removeSeries(cvdSeries); cvdSeries = null; }
+            if (!cvdSeries) {
+                cvdSeries = mode === "candles" ? cvdChart.addCandlestickSeries({ upColor: CVD_UP, downColor: CVD_DN, borderUpColor: CVD_UP, borderDownColor: CVD_DN, wickUpColor: CVD_UP, wickDownColor: CVD_DN, priceFormat: priceFmt })
+                    : mode === "hist" ? cvdChart.addHistogramSeries({ priceFormat: priceFmt })
+                    : cvdChart.addBaselineSeries(base);
+                cvdSeriesMode = mode;
+            }
+            cvdSeries.setData(S.map(x => mode === "candles" ? { time: x.time, open: x.o, high: x.h, low: x.l, close: x.c }
+                : mode === "hist" ? { time: x.time, value: x.delta, color: x.delta >= 0 ? "rgba(14,203,129,0.7)" : "rgba(246,70,93,0.7)" }
+                : { time: x.time, value: x.c }));
+            const r = chart.timeScale().getVisibleRange();
+            if (r) { syncing = true; try { cvdChart.timeScale().setVisibleRange(r); } catch (e) { cvdChart.timeScale().fitContent(); } syncing = false; } else cvdChart.timeScale().fitContent();
+        }
+        let note = "CVD ze świec " + d.ltf + " (przybliżenie, reguły wskaźnika TradingView) · reset: " + anchorLabel(d.anchor) + " · dostępne od " + d.covered_from;
+        if (st.data && d.covered_from > st.data.range_start) note += " — źródło danych ma krótszą historię niż wybrany zakres";
+        if (!S.length) note = "Brak danych CVD w wybranym zakresie (świece " + d.ltf + " dostępne od " + d.covered_from + ").";
+        cvdNote(note);
     }
 
     // podpowiedź przy najechaniu na punkt wejścia: dokładna cena, liczba transakcji, udział w wartości inwestycji
