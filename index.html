@@ -293,7 +293,7 @@
         #ev-radar { padding: 4px 0 16px; } .ev-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; align-items: center; } .ev-controls input[type=search], .ev-controls select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; }
         .ev-count { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px; } .ev-empty { padding: 24px; text-align: center; color: var(--text-muted); } .ev-bad { color: var(--danger); }
         .ev-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } .ev-table th { text-align: left; color: var(--text-muted); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--border-color); cursor: pointer; white-space: nowrap; }
-        .ev-table td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; } .ev-table tbody tr:hover { background: rgba(201,148,0,.06); } .ev-act { white-space: nowrap; text-align: right; }
+        .ev-table td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; } .ev-table tbody tr:hover { background: rgba(201,148,0,.06); } .ev-act { white-space: nowrap; text-align: right; } .ev-tv { text-decoration: none; display: inline-block; }
         @media (min-width: 2000px) { .ev-table { font-size: 1.05rem; } }
         .ev-muted { color: var(--text-muted); font-size: 0.82em; } .ev-pos { color: var(--success); } .ev-warn { color: var(--accent-hover); }
         .ev-kind { border: 1px solid; border-radius: 999px; padding: 2px 9px; font-size: 0.75rem; white-space: nowrap; } .ev-chip { background: rgba(14,203,129,.15); color: var(--success); border-radius: 999px; padding: 1px 8px; font-size: 0.72rem; }
@@ -1028,7 +1028,7 @@
                 <input type="search" placeholder="Szukaj tickera lub nazwy…" oninput="Wejscie.setFilter('q', this.value)">
                 <select onchange="Wejscie.setFilter('kind', this.value)"><option value="ALL">Inwestycje i spekulacje</option><option value="inv">Inwestycja</option><option value="spec">Spekulacja</option></select>
                 <select onchange="Wejscie.setFilter('prio', this.value)"><option value="ALL">Priorytet i brak</option><option value="prio">Priorytet</option><option value="none">Brak priorytetu</option></select>
-                <select onchange="Wejscie.setFilter('band', this.value)"><option value="ALL">Dowolna odległość</option><option value="5">do 5% od wejścia</option><option value="10">do 10% od wejścia</option><option value="20">do 20% od wejścia</option></select>
+                <select onchange="Wejscie.setFilter('band', this.value)"><option value="ALL">Dowolna odległość</option><option value="5" selected>do 5% od wejścia</option><option value="10">do 10% od wejścia</option><option value="20">do 20% od wejścia</option></select>
                 <select onchange="Wejscie.setFilter('plan', this.value)"><option value="ALL">Z planem i bez</option><option value="has">Mają plan</option><option value="none">Bez planu</option></select>
                 <button class="hp-btn" onclick="Wejscie.loadRadar(true)">↻ Odśwież</button>
             </div>
@@ -5863,7 +5863,7 @@ window.Wejscie = (function () {
     }
 
     // ---------- radar ----------
-    const rd = { rows: [], loaded: false, kind: "ALL", prio: "ALL", band: "ALL", plan: "ALL", q: "", key: "dist", dir: 1 };
+    const rd = { rows: [], loaded: false, kind: "ALL", prio: "ALL", band: "5", plan: "ALL", q: "", key: "dist", dir: 1 };
     async function loadRadar(force) {
         const box = $("#ev-radar-body"); if (!box) return;
         if (!rd.loaded || force) box.innerHTML = '<div class="ev-empty">Ładowanie radaru…</div>';
@@ -5902,7 +5902,7 @@ window.Wejscie = (function () {
                 (r.plays.length > 1 ? " · +" + (r.plays.length - 1) + " zagr." : "") + "</div></td>" +
                 '<td class="' + dcls + '"><b>' + spct(d) + "</b>" + (zone ? ' <span class="ev-chip">w strefie</span>' : "") + "</td>" +
                 "<td>" + (n.rr != null ? num(n.rr, 1) : "–") + "</td><td>" + plan + "</td>" +
-                '<td class="ev-act"><button class="hp-btn" data-ev-eval="' + esc(r.ticker) + '" data-entry="' + esc(n.entry_id) + '">Oceń wejście</button>' +
+                '<td class="ev-act"><a class="hp-btn ev-tv" href="' + esc(getTradingViewLink(r.ticker)) + '" target="_blank" rel="noopener" title="Otwórz w TradingView">📈 TV</a> <button class="hp-btn" data-ev-eval="' + esc(r.ticker) + '" data-entry="' + esc(n.entry_id) + '">Oceń wejście</button>' +
                 (r.plan ? "" : ' <button class="hp-btn" data-ev-plan="' + esc(r.ticker) + '">Przygotuj plan</button>') + "</td></tr>";
         });
         box.innerHTML = h + "</tbody></table></div>";
@@ -5972,7 +5972,7 @@ window.Wejscie = (function () {
         const companyLine = '<div class="ev-muted">Spółka: wykorzystano ' + pct(co.used_pct) + (co.max_pct != null ? " z " + pct(co.max_pct) : "") + " budżetu" +
             (co.max_trades != null ? " · wolnych wejść: " + co.trades_left + " z " + co.max_trades : "") + (b.plan_id ? " · plan #" + b.plan_id : " · brak planu spółki") + "</div>";
         show(
-            '<div class="plx-head"><div><div class="plx-title">Ocena wejścia · ' + esc(d.ticker) + ' <a class="sd-link" data-tk="' + esc(d.ticker) + '" style="font-size:.6em">wykres</a></div>' +
+            '<div class="plx-head"><div><div class="plx-title">Ocena wejścia · ' + esc(d.ticker) + ' <a class="sd-link" data-tk="' + esc(d.ticker) + '" style="font-size:.6em">wykres</a> <a class="sd-link" href="' + esc(getTradingViewLink(d.ticker)) + '" target="_blank" rel="noopener" style="font-size:.6em">TradingView</a></div>' +
             '<div class="plx-sub">' + esc(d.name) + " · " + kindBadge(d.kind, d.kind_label) + " · kurs " + price(d.price) + " (" + (d.price_source === "5m" ? "ostatnia świeca 5m" : "ostatnia świeca 1H") + ")</div></div>" +
             '<div class="plx-actions">' + (ov.plays.length > 1 ? '<select id="ev-play-sel">' + opts + "</select>" : "") + '<button class="hp-btn" data-ev-refresh>↻ Odśwież</button><button class="hp-btn" data-ev-close>✕</button></div></div>' +
             '<div class="ev-verdict" style="border-color:' + vc + '"><div><div class="ev-vtext" style="color:' + vc + '">' + esc(d.verdict) + '</div><div class="ev-muted">' +
