@@ -302,6 +302,12 @@
         .fz-slots { display: flex; flex-wrap: wrap; gap: 6px; } .fz-slot { border: 1px dashed var(--border-color); border-radius: 8px; padding: 4px 10px; font-size: 0.84rem; color: var(--text-muted); } .fz-slot.cur { border-color: var(--accent); color: var(--text-main); } .fz-slot.done { border-style: solid; border-color: var(--success); color: var(--text-main); }
         .fz-facts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; line-height: 1.45; } .fz-ext { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-bottom: 8px; }
         .fz-v-OK { border-color: rgba(14,203,129,.6); background: rgba(14,203,129,.12); } .fz-v-PARTIAL { border-color: rgba(252,213,53,.6); background: rgba(252,213,53,.1); } .fz-v-FAIL { border-color: rgba(246,70,93,.6); background: rgba(246,70,93,.1); } .fz-ended { opacity: .6; text-decoration: line-through; text-decoration-color: rgba(132,142,156,.8); } .fz-reason a { color: var(--accent-hover); text-decoration: none; }
+        .fz-detail .plx-kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } .fz-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .fz-neigh { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } @media (max-width: 760px) { .fz-neigh { grid-template-columns: 1fr; } }
+        .fz-ncard { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; cursor: pointer; font-size: 0.9rem; line-height: 1.55; } .fz-ncard:hover { border-color: var(--accent); } .fz-ncard.off { opacity: .5; cursor: default; } .fz-ncard .t { color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase; letter-spacing: .05em; }
+        .fz-same { color: var(--success); font-weight: 600; } .fz-other { color: var(--accent-hover); font-weight: 600; }
+        .fz-ladder td, .fz-ladder th { padding: 6px 10px; } .fz-ladder tr.cur td { background: rgba(201,148,0,.14); font-weight: 700; } .fz-ladder tbody tr { cursor: pointer; } .fz-ladder tbody tr:hover td { background: rgba(201,148,0,.08); }
+        .fz-rblock { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; margin-bottom: 6px; } .fz-rblock summary { cursor: pointer; list-style: none; }
         /* radar zagrań i ocena wejścia */
         #ev-radar { padding: 4px 0 16px; } .ev-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; align-items: center; } .ev-controls input[type=search], .ev-controls select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; }
         .ev-count { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px; } .ev-empty { padding: 24px; text-align: center; color: var(--text-muted); } .ev-bad { color: var(--danger); }
@@ -2041,11 +2047,13 @@
                 reasons: formReasons
             }; 
             try { 
-                await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); 
+                const addRes = await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); 
+                const addJson = await addRes.json().catch(() => ({}));
                 document.getElementById('trading-form').reset(); 
                 await fetchFormEntries(true); 
                 fetchFormReasons();
                 FormZones.closeAdd(); if (window.Planer) Planer.toast("Zapisano zagranie w Form.");
+                if (addJson && addJson.entry_id) FormZones.openDetail(addJson.entry_id);      // od razu szczegóły nowego zagrania (z nawigacją do sąsiednich)
             } catch(err) { alert('Błąd: ' + err.message); } 
         }
 
@@ -5953,9 +5961,9 @@ window.FormZones = (function () {
                 const prio = e.priority === 1 ? '<span style="color:#fcd535;font-weight:700;cursor:pointer;border-bottom:1px dashed #fcd535" onclick="updateFormEntryField(\'' + id + '\',\'priority\',0)">⚡ Wysoki</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'priority\',1)">Normalny</span>';
                 const mute = p.muted ? '<span style="color:var(--danger);font-weight:700;cursor:pointer;border-bottom:1px dashed var(--danger)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',0)">🔕 Wyciszone</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',1)">🔔 Aktywne</span>';
                 const reasons = (Array.isArray(e.reasons) ? e.reasons : []).map(r => chip(r, e)).join("") || '<span class="ev-muted">brak</span>';
-                return '<tr class="' + (p.muted ? "fz-muted-row" : "") + '"><td><b>' + id + "</b></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
+                return '<tr class="' + (p.muted ? "fz-muted-row" : "") + '"><td><a href="#" data-fz-detail="' + id + '" title="Szczegóły zagrania"><b>' + id + "</b></a></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
                     '</td><td style="color:#a6e3a1;font-weight:700">' + p.score + "/5" + activeNote(e, p.score) + "</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
-                    '<td style="white-space:nowrap"><button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="openEditModal(\'form\', \'' + id + '\')" title="Edytuj">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
+                    '<td style="white-space:nowrap"><button class="btn-edit" data-fz-detail="' + id + '" title="Szczegóły zagrania">🔍</button> <button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="openEditModal(\'form\', \'' + id + '\')" title="Edytuj">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
             }).join("") + "</tbody></table>";
     }
     function render() {
@@ -6026,8 +6034,83 @@ window.FormZones = (function () {
         if (pre) { const blk = ch.querySelector('.fz-zblock[data-zk="' + (z0.key).replace(/"/g, '\\"') + '"]'); if (blk) blk.classList.add("open"); }
     }
 
+
+    // ---------- szczegóły zagrania z nawigacją po sąsiednich zagraniach tej spółki ----------
+    const D = { id: null };
+    function ladder(ticker, keepId) {
+        const zones = zonesOf((formEntries || []).filter(e => e.ticker === ticker)), items = [];
+        zones.forEach(z => z.all.forEach(p => {
+            if (p.e.entry_id === keepId || S.mute === "ALL" || (S.mute === "1") === p.muted) items.push({ p: p, z: z, price: p.entry || (z.lo + z.hi) / 2 });
+        }));
+        return items.sort((a, b) => a.price - b.price || (a.p.e.entry_id < b.p.e.entry_id ? -1 : 1));
+    }
+    function relation(cur, o) {
+        const pct = (o.price / cur.price - 1) * 100, same = o.z.key === cur.z.key;
+        let zoneTxt;
+        if (same) zoneTxt = '<span class="fz-same">✓ ta sama strefa</span> (' + price(o.z.lo) + "–" + price(o.z.hi) + ")";
+        else {
+            let gap = "";
+            if (o.z.lo > cur.z.hi) gap = ", odstęp między strefami " + num((o.z.lo / cur.z.hi - 1) * 100, 1) + "%";
+            else if (cur.z.lo > o.z.hi) gap = ", odstęp między strefami " + num((cur.z.lo / o.z.hi - 1) * 100, 1) + "%";
+            else gap = ", strefy nakładają się";
+            zoneTxt = '<span class="fz-other">inna strefa</span> ' + price(o.z.lo) + "–" + price(o.z.hi) + gap;
+        }
+        return { pct: pct, diff: o.price - cur.price, html: zoneTxt };
+    }
+    function neighCard(title, cur, o) {
+        if (!o) return '<div class="fz-ncard off"><div class="t">' + title + '</div>Brak kolejnego zagrania w tym kierunku.</div>';
+        const r = relation(cur, o), e = o.p.e;
+        return '<div class="fz-ncard" data-fz-go="' + esc(e.entry_id) + '"><div class="t">' + title + "</div><b>" + esc(e.entry_id) + "</b> · wejście <b>" + price(o.price) + "</b>" + (o.p.muted ? " 🔕" : "") +
+            '<div>Odległość: <b style="color:' + (r.pct >= 0 ? "var(--success)" : "var(--danger)") + '">' + (r.pct > 0 ? "+" : "") + num(r.pct, 2) + "%</b> (" + (r.diff > 0 ? "+" : "") + price(r.diff) + ")</div><div>" + r.html + "</div></div>";
+    }
+    function reasonBlock(name, e) {
+        const d = (Array.isArray(e.reasons_detail) ? e.reasons_detail : []).find(x => String(x.label).toLowerCase() === String(name).toLowerCase());
+        if (!d) return '<div class="fz-rblock">' + chip(name, e) + ' <span class="ev-muted">bez pomiaru</span></div>';
+        const facts = (d.facts || []).map(f => '<div class="ev-muted">• ' + esc(f) + "</div>").join("");
+        const items = (d.items || []).map(i => '<div><a href="' + esc(i.url) + '" target="_blank" rel="noopener">🔗 ' + esc(i.source || i.url) + "</a> " + esc(i.date || "") + " " + esc(i.direction || "") + (i.note ? " – " + esc(i.note) : "") + "</div>").join("");
+        const ref = d.ref ? "<div>Wartość odniesienia: <b>" + price(d.ref.value) + "</b> (" + esc(d.ref.label || d.ref.role) + ") → " + (APPLYL[d.ref.applies_to] || "–") + "</div>" : "";
+        return '<details class="fz-rblock"><summary>' + chip(name, e) + "</summary>" + ref + items + facts + '<div class="ev-muted">zweryfikowano: ' + esc((d.verified_at || "").slice(0, 10)) + "</div></details>";
+    }
+    function renderDetail() {
+        const e = (formEntries || []).find(x => x.entry_id === D.id), o = $("#fz-detail");
+        if (!e) { closeDetail(); return; }
+        const items = ladder(e.ticker, D.id), i = items.findIndex(x => x.p.e.entry_id === D.id), cur = items[i];
+        const prev = i > 0 ? items[i - 1] : null, next = i < items.length - 1 ? items[i + 1] : null;
+        const tm = tickerRow(e.ticker), cp = tm && tm.price, p = cur.p;
+        const dist = cp && cur.price ? (cp / cur.price - 1) * 100 : null;
+        const act = (Array.isArray(e.reasons_detail) ? e.reasons_detail : []);
+        let h = '<div class="plx-head"><div><div class="plx-title">' + esc(e.ticker) + ' <a class="sd-link" data-tk="' + esc(e.ticker) + '" style="font-size:.6em">wykres</a> <a class="sd-link" href="' + esc(getTradingViewLink(e.ticker)) + '" target="_blank" rel="noopener" style="font-size:.6em">TradingView</a></div>' +
+            '<div class="plx-sub">' + esc((tm && tm.stock_name) || "") + " · zagranie " + esc(e.entry_id) + " · " + arrow(p.long) + " strefa " + price(cur.z.lo) + "–" + price(cur.z.hi) + (p.muted ? " · 🔕 wyciszone" : "") + "</div></div>" +
+            '<div class="fz-nav"><button class="hp-btn" data-fz-nav="prev"' + (prev ? "" : " disabled") + ' title="Niżej (←)">◀ Niżej</button><span class="ev-muted">' + (i + 1) + " z " + items.length + '</span><button class="hp-btn" data-fz-nav="next"' + (next ? "" : " disabled") + ' title="Wyżej (→)">Wyżej ▶</button><button class="hp-btn" data-fz-dclose>✕</button></div></div>';
+        h += '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Wejście</div><div class="v">' + price(p.entry) + '</div><div class="s">kurs ' + price(cp) + (dist != null ? " (" + (dist > 0 ? "+" : "") + num(dist, 1) + "% od wejścia)" : "") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.tp) + " / " + price(p.sl) + '</div><div class="s">R:R ' + num(p.rr, 2) + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">Score</div><div class="v">' + p.score + '/5</div><div class="s">' + activeNote(e, p.score).replace(/<[^>]+>/g, "") + (e.priority === 1 ? " ⚡ priorytet" : "") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">Status</div><div class="v" style="color:' + STCOL[p.status] + '">' + esc(p.status) + '</div><div class="s">dodano ' + (e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–") + "</div></div></div>";
+        h += '<div class="plx-h">Sąsiednie zagrania tej spółki</div><div class="fz-neigh">' + neighCard("◀ Niżej (w lewo)", cur, prev) + neighCard("Wyżej (w prawo) ▶", cur, next) + "</div>";
+        h += '<div class="plx-h">Powody</div>' + ((e.reasons || []).length ? e.reasons.map(r => reasonBlock(r, e)).join("") : '<div class="ev-muted">Brak powodów.</div>');
+        h += '<div class="plx-h">Wszystkie zagrania spółki (od najniższego wejścia)</div><div class="table-responsive"><table class="ev-table fz-ladder"><thead><tr><th>ID</th><th>Wejście</th><th>Od poprzedniego</th><th>Strefa</th><th>Score</th></tr></thead><tbody>' +
+            items.map((it, k) => '<tr class="' + (k === i ? "cur" : "") + '" data-fz-go="' + esc(it.p.e.entry_id) + '"><td>' + esc(it.p.e.entry_id) + (it.p.muted ? " 🔕" : "") + "</td><td>" + price(it.price) + "</td><td>" + (k ? (it.price / items[k - 1].price - 1 >= 0 ? "+" : "") + num((it.price / items[k - 1].price - 1) * 100, 2) + "% " + (it.z.key === items[k - 1].z.key ? '<span class="fz-same">· ta sama strefa</span>' : '<span class="fz-other">· inna strefa</span>') : "–") + "</td><td>" + arrow(it.z.long) + " " + price(it.z.lo) + "–" + price(it.z.hi) + "</td><td>" + it.p.score + "/5</td></tr>").join("") + "</tbody></table></div>";
+        h += '<div class="plx-actions"><button class="hp-btn" onclick="FormZones.closeDetail(); copyFormEntry(\'' + esc(e.entry_id) + '\')">📋 Klonuj</button><button class="hp-btn" onclick="openEditModal(\'form\', \'' + esc(e.entry_id) + '\')">✎ Edytuj</button>' +
+            '<button class="hp-btn" onclick="updateFormEntryField(\'' + esc(e.entry_id) + "', 'mute', " + (p.muted ? 0 : 1) + ')">' + (p.muted ? "🔔 Włącz" : "🔕 Wycisz") + "</button></div>";
+        o.firstChild.innerHTML = h;
+    }
+    function openDetail(id) {
+        let o = $("#fz-detail");
+        if (!o) { o = document.createElement("div"); o.id = "fz-detail"; o.className = "plx-overlay fz-detail"; o.innerHTML = '<div class="plx-panel"></div>'; document.body.appendChild(o); o.addEventListener("mousedown", e => { if (e.target === o) closeDetail(); }); }
+        D.id = id; renderDetail(); o.classList.add("open"); lock(true);
+    }
+    function closeDetail() { const o = $("#fz-detail"); if (o) o.classList.remove("open"); D.id = null; lock(false); }
+    function navDetail(dir) {
+        const e = (formEntries || []).find(x => x.entry_id === D.id); if (!e) return;
+        const items = ladder(e.ticker, D.id), i = items.findIndex(x => x.p.e.entry_id === D.id), t = items[i + (dir === "next" ? 1 : -1)];
+        if (t) { D.id = t.p.e.entry_id; renderDetail(); }
+    }
     document.addEventListener("click", e => {
         const t = e.target; if (!t.closest) return;
+        const dt = t.closest("[data-fz-detail]"); if (dt) { e.preventDefault(); openDetail(dt.dataset.fzDetail); return; }
+        if (t.closest("[data-fz-dclose]")) { closeDetail(); return; }
+        const nv = t.closest("[data-fz-nav]"); if (nv) { navDetail(nv.dataset.fzNav); return; }
+        const go = t.closest("#fz-detail [data-fz-go]"); if (go) { D.id = go.dataset.fzGo; renderDetail(); return; }
         const sortEl = t.closest("[data-fz-sort]"); if (sortEl) { sort(sortEl.dataset.fzSort); return; }
         const addEl = t.closest("[data-fz-add]");
         if (addEl) { const z = S.shown.find(x => x.key === addEl.dataset.fzAdd); if (z) openAdd(z.ticker, z.vis[0].e); return; }
@@ -6041,8 +6124,12 @@ window.FormZones = (function () {
     });
     document.addEventListener("mousedown", e => { if (e.target.id === "fz-modal") closeAdd(); });
     document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest && e.target.closest("#fz-measure") && e.target.tagName === "INPUT") e.preventDefault(); });
+    document.addEventListener("keydown", e => {
+        const d = $("#fz-detail"); if (!d || !d.classList.contains("open")) return;
+        if (e.key === "ArrowLeft") navDetail("prev"); else if (e.key === "ArrowRight") navDetail("next"); else if (e.key === "Escape") closeDetail();
+    });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#fz-modal") && $("#fz-modal").classList.contains("open")) closeAdd(); });
-    return { refresh: refresh, render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
+    return { openDetail: openDetail, closeDetail: closeDetail, refresh: refresh, render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
 })();
 </script>
 <script>
