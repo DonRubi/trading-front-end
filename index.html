@@ -5945,10 +5945,10 @@ window.HomePage = (function () {
     try { const sv = JSON.parse(localStorage.getItem("quantdesk.home.sort")); if (sv && sv.key) posSort = sv; } catch (e) {}
     function renderPositions(rows, totals) { posRows = rows; posTotals = totals; drawPositions(); }
     const EXT_LABEL = { pre: "pre", post: "post", mix: "pre/post" };
-    // ta sama miara policzona po cenie pre/post-market - tylko gdy notowanie poza sesją regularną jest dostępne
+    // sama zmiana poza sesją regularną (od ceny z sesji do bieżącej ceny pre/post), osobno od "Zmiana dziś" - tylko gdy notowanie jest dostępne
     function extCell(val, kind, what, pricePct) {
         if (val == null || !isFinite(val) || !kind) return "";
-        const tip = what + " po cenie " + (EXT_LABEL[kind] || kind) + "-market" + (pricePct != null ? " (cena " + fmtPct(pricePct) + " względem sesji regularnej)" : "");
+        const tip = what + " w " + (EXT_LABEL[kind] || kind) + "-market, od zamknięcia sesji regularnej do bieżącej ceny" + (pricePct != null ? " (sama cena " + fmtPct(pricePct) + ")" : "") + ". Nie jest wliczona w wartość obok.";
         return ' <span class="hp-ext ' + sign(val) + '" title="' + esc(tip) + '">(' + fmtPct(val) + " " + (EXT_LABEL[kind] || kind) + ")</span>";
     }
     function drawPositions() {
@@ -5971,9 +5971,9 @@ window.HomePage = (function () {
             const name = r.name ? '<div class="hp-name sd-link" data-tk="' + esc(r.ticker) + '" title="' + esc(r.name) + '">' + esc(r.name) + "</div>" : "";
             return '<tr style="animation-delay:' + (i * 40) + 'ms"><td><span class="hp-tk sd-link" data-tk="' + esc(r.ticker) + '">' + esc(r.ticker) + '</span><span class="hp-badge ' + cls + '" title="' + levTip + '">' + txt + "</span>" + tr + stale + name + "</td>" +
                 '<td class="hp-r"><div class="hp-wbar"><div class="hp-wtrack"><div class="hp-wfill" data-w="' + (r.weight_pct / max * 100).toFixed(1) + '"></div></div><span>' + fmtPlain(r.weight_pct, 1) + "</span></div></td>" +
-                '<td class="hp-r ' + sign(r.day_pct) + '">' + fmtPct(r.day_pct) + extCell(r.day_pct_ext, r.ext_kind, "Zmiana dziś", r.ext_price_pct) + '</td><td class="hp-r ' + sign(r.return_pct) + '">' + fmtPct(r.return_pct) + extCell(r.return_pct_ext, r.ext_kind, "Stopa zwrotu", r.ext_price_pct) + "</td></tr>";
+                '<td class="hp-r ' + sign(r.day_pct) + '">' + fmtPct(r.day_pct) + extCell(r.ext_move_pct, r.ext_kind, "Sama zmiana wartości pozycji", r.ext_price_pct) + '</td><td class="hp-r ' + sign(r.return_pct) + '">' + fmtPct(r.return_pct) + extCell(r.ext_return_move_pct, r.ext_kind, "Zmiana stopy zwrotu (w pkt proc.)", r.ext_price_pct) + "</td></tr>";
         }).join("");
-        if (posTotals) html += '<tr class="hp-total"><td><span class="hp-tk">Razem</span></td><td class="hp-r">' + fmtPlain(posTotals.weight_pct, 1) + '</td><td class="hp-r ' + sign(posTotals.day_pct) + '">' + fmtPct(posTotals.day_pct) + extCell(posTotals.day_pct_ext, posTotals.ext_kind, "Zmiana dziś (razem)", null) + '</td><td class="hp-r ' + sign(posTotals.return_pct) + '">' + fmtPct(posTotals.return_pct) + extCell(posTotals.return_pct_ext, posTotals.ext_kind, "Stopa zwrotu (razem)", null) + "</td></tr>";
+        if (posTotals) html += '<tr class="hp-total"><td><span class="hp-tk">Razem</span></td><td class="hp-r">' + fmtPlain(posTotals.weight_pct, 1) + '</td><td class="hp-r ' + sign(posTotals.day_pct) + '">' + fmtPct(posTotals.day_pct) + extCell(posTotals.ext_move_pct, posTotals.ext_kind, "Sama zmiana wartości portfela otwartych pozycji", null) + '</td><td class="hp-r ' + sign(posTotals.return_pct) + '">' + fmtPct(posTotals.return_pct) + extCell(posTotals.ext_return_move_pct, posTotals.ext_kind, "Zmiana stopy zwrotu (w pkt proc.)", null) + "</td></tr>";
         tb.innerHTML = html;
         requestAnimationFrame(() => requestAnimationFrame(() => tb.querySelectorAll(".hp-wfill").forEach(f => f.style.width = f.dataset.w + "%")));
     }
