@@ -128,6 +128,22 @@
             #hp-positions td:first-child { white-space: normal; } #hp-positions .hp-badge { margin: 2px 4px 0 0; display: inline-block; }
         }
         @media (prefers-reduced-motion: reduce) { .hp-panel, .hp-table tbody tr { animation: none; } .hp-body, .hp-ring .hp-bar, .hp-wfill, .hp-chev { transition: none; } }
+        /* ===== Baza danych: zakładki, rodzaje spółek, limity ===== */
+        .db-help { color: var(--text-muted); font-size: 0.82rem; line-height: 1.4; }
+        .db-select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; width: 100%; }
+        .db-select.db-mini { width: auto; padding: 6px 8px; font-size: 0.82rem; }
+        .db-check, .form-group label.db-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.82rem; white-space: nowrap; overflow: visible; margin: 0; color: inherit; }
+        .db-check input, .form-group .db-check input { width: auto !important; margin: 0; }
+        .data-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+        .data-card-info h4 { font-size: 1rem; } .data-card-info p { color: var(--text-muted); font-size: 0.8rem; margin: 2px 0; }
+        .db-filter { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; } .db-filter .db-select { width: auto; }
+        .db-flabel { color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .4px; }
+        .db-kind { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 1px 8px; border: 1px solid; border-radius: 10px; margin-top: 4px; }
+        .lim-panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .lim-panel h4 { color: var(--accent); margin-bottom: 8px; }
+        .lim-table td, .lim-table th { text-align: center; } .lim-table td:first-child, .lim-table th:first-child { text-align: left; }
+        .lim-table input { width: 100px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 7px 8px; text-align: right; }
+        .lim-actions { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
         /* ===== Okno szczegółów spółki (StockDetail) ===== */
         .sd-link { cursor: pointer; }
         .sd-link:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -266,8 +282,8 @@
                 <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Notatnik</h2><span class="hp-peek" id="hp-peek-notes"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
                     <form class="hp-note-form" id="hp-note-form" autocomplete="off">
-                        <select id="hp-n-ticker" required aria-label="Ticker (z zakładki Database)"><option value="" selected disabled>Wybierz ticker…</option></select>
-                        <select id="hp-n-action" aria-label="Akcja"><option value="check">Check</option><option value="buy">Buy</option><option value="sell">Sell</option></select>
+                        <select id="hp-n-ticker" required aria-label="Ticker (z Bazy danych)"><option value="" selected disabled>Wybierz ticker…</option></select>
+                        <select id="hp-n-action" aria-label="Akcja"><option value="check">Sprawdź</option><option value="buy">Kup</option><option value="sell">Sprzedaj</option></select>
                         <input id="hp-n-desc" placeholder="Krótki opis (opcjonalnie)" maxlength="500" aria-label="Opis">
                         <button class="hp-btn hp-primary" type="submit">Dodaj</button>
                     </form>
@@ -285,14 +301,13 @@
                     <div class="dashboard-grid">
                         <div class="menu-card" onclick="openModule('form-module', 'Form')"><span class="icon">📝</span><h3>Form</h3></div>
                         <div class="menu-card" onclick="openModule('focus-module', 'Focus')"><span class="icon">🎯</span><h3>Focus</h3></div>
-                        <div class="menu-card" onclick="openModule('tradeslist-module', 'TradesList')"><span class="icon">📊</span><h3>TradesList</h3></div>
-                        <div class="menu-card" onclick="openModule('summary-module', 'Summary')"><span class="icon">📈</span><h3>Summary</h3></div>
-                        <div class="menu-card" onclick="openModule('database-module', 'DataBase')"><span class="icon">🗄️</span><h3>DataBase</h3></div>
-                        <div class="menu-card" onclick="openModule('service-module', 'Service')"><span class="icon">⚙️</span><h3>Service</h3></div>
-                        <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Tech. Analysis')"><span class="icon">📐</span><h3>Tech. Analysis</h3></div>
-                        <div class="menu-card" onclick="openModule('focuslist-module', 'FocusList')"><span class="icon">👁️</span><h3>FocusList</h3></div>
-                        <div class="menu-card" onclick="openModule('alerthistory-module', 'Alerts History')"><span class="icon">🔔</span><h3>AlertHistory</h3></div>
-                        <div class="menu-card" onclick="openModule('dailybrief-module', 'Daily Brief')"><span class="icon">📰</span><h3>DailyBrief</h3></div>
+                        <div class="menu-card" onclick="openModule('tradeslist-module', 'Transakcje')"><span class="icon">📊</span><h3>Transakcje</h3></div>
+                        <div class="menu-card" onclick="openModule('summary-module', 'Podsumowanie')"><span class="icon">📈</span><h3>Podsumowanie</h3></div>
+                        <div class="menu-card" onclick="openModule('database-module', 'Baza danych')"><span class="icon">🗄️</span><h3>Baza danych</h3></div>
+                        <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Analiza techniczna')"><span class="icon">📐</span><h3>Analiza techniczna</h3></div>
+                        <div class="menu-card" onclick="openModule('focuslist-module', 'Lista Focus')"><span class="icon">👁️</span><h3>Lista Focus</h3></div>
+                        <div class="menu-card" onclick="openModule('alerthistory-module', 'Historia alertów')"><span class="icon">🔔</span><h3>Historia alertów</h3></div>
+                        <div class="menu-card" onclick="openModule('dailybrief-module', 'Przegląd dnia')"><span class="icon">📰</span><h3>Przegląd dnia</h3></div>
                         <div class="menu-card" onclick="openModule('campaign-module', 'Planer')"><span class="icon">🧭</span><h3>Planer</h3></div>
                     </div>
                 </div></div></div>
@@ -437,7 +452,7 @@
     </section>
 
     <section id="tradeslist-module" class="app-module">
-        <div class="macro-header-container"><h3>Dziennik Otwartych Pozycji (Trades)</h3></div>
+        <div class="macro-header-container"><h3>Dziennik otwartych pozycji (Transakcje)</h3></div>
         <div class="journal-container">
             <div class="journal-sidebar">
                 <form id="trade-form" onsubmit="submitTradeForm(event)">
@@ -612,33 +627,31 @@
         </div> 
     </section>
 
-    <section id="database-module" class="app-module"> 
-        <div class="macro-header-container" style="display:flex; justify-content:space-between; flex-direction:column; gap:10px;"> 
-            <h3>Panel Sentymentu (Makro)</h3> 
-            <div style="display:flex; gap:10px; flex-wrap:wrap;"> 
-                <button class="btn-submit" style="width:100%; padding:10px; background:#0284c7; color:#fff;" onclick="forceMacroYTDUpdate(event)">📥 Pobierz YTD</button> 
-                <button class="btn-submit" style="width:100%; padding:10px;" onclick="forceMacroUpdate()">Aktualizuj Dzisiaj</button> 
-            </div> 
-        </div> 
-        <div class="table-responsive" style="margin-top:15px;">
-            <table class="macro-custom-table" style="width:100%;">
-                <thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&P 500</th><th>Odczyt</th></tr></thead>
-                <tbody id="macro-table-body"></tbody>
-            </table>
-        </div> 
-        <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="focuslist-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('focuslist', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div> 
+    <section id="database-module" class="app-module">
+        <div class="tabs" id="db-tabs">
+            <button class="tab-btn active" data-dbtab="tickers" onclick="switchDbTab('tickers')">Tickery</button>
+            <button class="tab-btn" data-dbtab="macro" onclick="switchDbTab('macro')">Makro</button>
+            <button class="tab-btn" data-dbtab="service" onclick="switchDbTab('service')">Serwis</button>
+        </div>
+        <div id="db-tab-tickers" class="db-tab">
         <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;"> 
-            <h3>Baza Tickerów</h3> 
-            <div class="form-row" style="margin-top:15px;"> 
-    <div class="form-group" style="flex:2;"><input type="text" id="new-ticker" placeholder="Wpisz Ticker (np. AAPL)"></div> 
-    <div class="form-group" style="flex:2;">
-        <select id="new-ticker-conviction" style="height: 100%; padding: 12px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px;">
-            <option value="Inwestycja (Core)">Inwestycja (Mocne fundamenty)</option>
-            <option value="Spekulacja" selected>Spekulacja (Tylko technika)</option>
-        </select>
-    </div>
-    <div class="form-group" style="flex:1;"><button onclick="addTicker()" class="btn-submit" style="height:100%;">Dodaj</button></div> 
-</div> 
+            <h3>Baza tickerów</h3>
+            <p class="db-help">Rodzaj spółki decyduje o sposobie rozgrywania inwestycji i o limitach z zakładki Serwis: <b>Inwestycja</b> lub <b>Spekulacja</b> oraz <b>Priorytet</b> (albo jego brak).</p>
+            <div class="form-row" style="margin-top:15px; align-items:stretch;">
+                <div class="form-group" style="flex:2;"><input type="text" id="new-ticker" placeholder="Wpisz ticker (np. AAPL)"></div>
+                <div class="form-group" style="flex:2;">
+                    <select id="new-ticker-conviction" class="db-select" style="height:100%;">
+                        <option value="Inwestycja (Core)">Inwestycja (mocne fundamenty)</option>
+                        <option value="Spekulacja" selected>Spekulacja (tylko technika)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1; min-width:120px; justify-content:center;"><label class="db-check"><input type="checkbox" id="new-ticker-priority"> ⚡ Priorytet</label></div>
+                <div class="form-group" style="flex:1;"><button onclick="addTicker()" class="btn-submit" style="height:100%;">Dodaj</button></div>
+            </div>
+            <div class="db-filter"><span class="db-flabel">Rodzaj</span>
+                <select id="db-kind-filter" class="db-select" onchange="setTickerKindFilter(this.value)">
+                    <option value="all">Wszystkie rodzaje</option><option value="inv_prio">Inwestycja · priorytet</option><option value="inv">Inwestycja</option><option value="spec_prio">Spekulacja · priorytet</option><option value="spec">Spekulacja</option>
+                </select><span id="db-kind-counts" class="db-help"></span></div>
             <div id="db-list-container"></div> 
             <div class="pagination-container"><button class="btn-pag" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="ticker-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('database', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="ticker-next-btn" onclick="changeTickerPage(1)">Nast →</button></div> 
         </div> 
@@ -734,10 +747,38 @@
                 * System automatycznie obcina końcówki w kryptowalutach (np. USDT zamienia na parę do USD) i tłumaczy wszystkie przedrostki na format czytelny dla serwerów Yahoo Finance. Dla klasycznych rynków akcyjnych w USA dodawanie przedrostka nie jest wymagane.
             </p>
         </div>
-    </section>
-
-    <section id="service-module" class="app-module"> 
-        <h2>Panel Admina (Service)</h2> 
+        </div>
+        <div id="db-tab-macro" class="db-tab" style="display:none;">
+        <div class="macro-header-container" style="display:flex; justify-content:space-between; flex-direction:column; gap:10px;"> 
+            <h3>Makro — panel sentymentu</h3> 
+            <div style="display:flex; gap:10px; flex-wrap:wrap;"> 
+                <button class="btn-submit" style="width:100%; padding:10px; background:#0284c7; color:#fff;" onclick="forceMacroYTDUpdate(event)">📥 Pobierz YTD</button> 
+                <button class="btn-submit" style="width:100%; padding:10px;" onclick="forceMacroUpdate()">Aktualizuj Dzisiaj</button> 
+            </div> 
+        </div> 
+        <div class="table-responsive" style="margin-top:15px;">
+            <table class="macro-custom-table" style="width:100%;">
+                <thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&P 500</th><th>Odczyt</th></tr></thead>
+                <tbody id="macro-table-body"></tbody>
+            </table>
+        </div> 
+        <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="focuslist-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('focuslist', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div> 
+        </div>
+        <div id="db-tab-service" class="db-tab" style="display:none;">
+        <div class="lim-panel">
+            <h4>📐 Limity inwestycyjne wg rodzaju spółki</h4>
+            <p class="db-help">Rodzaj spółki wynika z oznaczeń w zakładce Tickery: <b>Inwestycja</b> / <b>Spekulacja</b> oraz <b>Priorytet</b>. Limity są w % kapitału (wpłaty + zysk zrealizowany), puste pole oznacza brak limitu.</p>
+            <div class="table-responsive">
+                <table class="macro-custom-table lim-table" style="width:100%;">
+                    <thead><tr><th>Rodzaj spółki</th><th>Spółek w bazie</th>
+                        <th title="Ile % kapitału wolno zaangażować łącznie we wszystkie wejścia w jednej strefie jednej spółki">Maks. zaangażowanie w jednej strefie<br><small>% kapitału</small></th>
+                        <th title="Maksymalna liczba inwestycji (wejść) w jednej spółce">Maks. liczba inwestycji w jednej spółce</th>
+                        <th title="Maksymalny udział jednej spółki tego rodzaju w budżecie">Maks. udział jednej spółki w budżecie<br><small>% kapitału</small></th></tr></thead>
+                    <tbody id="lim-body"><tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Ładowanie…</td></tr></tbody>
+                </table>
+            </div>
+            <div class="lim-actions"><button class="btn-submit" style="width:auto; padding:10px 22px;" onclick="saveLimits()">Zapisz limity</button><span id="lim-msg" class="db-help"></span></div>
+        </div>
         <div class="dashboard-grid" style="grid-template-columns: 1fr; margin: 0; padding: 0;"> 
             <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;"> 
                 <h4 style="color: var(--accent); margin-bottom: 15px;">💰 Rejestracja Dywidendy</h4> 
@@ -749,7 +790,7 @@
             </div> 
         </div> 
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top:10px;"> 
-            <h4 style="margin-bottom: 5px;">Ręczne wywołania (CRON)</h4> 
+            <h4 style="margin-bottom: 5px;">Ręczne wywołania (zadania cykliczne)</h4> 
             <div style="display:flex; gap:10px; margin-bottom: 10px; flex-wrap: wrap;">
                 <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="last-price-update-log">
                     <strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>
@@ -790,6 +831,7 @@
                     GPW:CDR (CD Projekt)
                 </span>
             </div>
+        </div>
         </div>
     </section>
 
@@ -1051,7 +1093,7 @@
                             <table class="macro-custom-table" id="fvg-candles-table">
                                 <thead>
                                     <tr>
-                                        <th>Świeca</th><th>Data</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Wolumen</th>
+                                        <th>Świeca</th><th>Data</th><th>Otwarcie</th><th>Maks.</th><th>Min.</th><th>Zamknięcie</th><th>Wolumen</th>
                                     </tr>
                                 </thead>
                                 <tbody id="fvg-candles-tbody"></tbody>
@@ -1104,7 +1146,7 @@
                             <table class="macro-custom-table" id="struct-candles-table">
                                 <thead>
                                     <tr>
-                                        <th>Świeca</th><th>Data</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Wolumen</th>
+                                        <th>Świeca</th><th>Data</th><th>Otwarcie</th><th>Maks.</th><th>Min.</th><th>Zamknięcie</th><th>Wolumen</th>
                                     </tr>
                                 </thead>
                                 <tbody id="struct-candles-tbody"></tbody>
@@ -1119,14 +1161,14 @@
     </section>
 
     <section id="dailybrief-module" class="app-module">
-        <div class="macro-header-container"><h3>Wpisy Makro (AI Brief)</h3></div>
+        <div class="macro-header-container"><h3>Wpisy makro (przegląd dnia)</h3></div>
         <div class="brief-carousel-container" id="dailybrief-carousel"><p style="text-align:center; padding:20px;">Ładowanie...</p></div>
     </section>
 
     <nav class="bottom-nav">
-        <button class="nav-item active" onclick="openDashboard()"><span>🏠</span>Home</button>
-        <button class="nav-item" onclick="openModule('tradeslist-module', 'Trades')"><span>📊</span>Trades</button>
-        <button class="nav-item" onclick="openModule('database-module', 'Baza')"><span>🗄️</span>Baza</button>
+        <button class="nav-item active" onclick="openDashboard()"><span>🏠</span>Start</button>
+        <button class="nav-item" onclick="openModule('tradeslist-module', 'Transakcje')"><span>📊</span>Transakcje</button>
+        <button class="nav-item" onclick="openModule('database-module', 'Baza danych')"><span>🗄️</span>Baza</button>
     </nav>
 
     <div id="edit-modal">
@@ -1350,21 +1392,22 @@
         }
 
         // --- NAWIGACJA ---
+        let dbTab = 'tickers', dbTabPending = null;
         function openModule(moduleId, moduleTitle) {
+            if (moduleId === 'service-module') { moduleId = 'database-module'; moduleTitle = 'Baza danych'; dbTabPending = 'service'; }   // dawny moduł Service to teraz zakładka Serwis
             document.getElementById('dashboard').style.display = 'none';
             document.querySelectorAll('.app-module').forEach(m => m.style.display = 'none');
             document.getElementById(moduleId).style.display = 'block';
             document.getElementById('app-title').innerText = moduleTitle;
             document.getElementById('back-btn').style.display = 'flex';
 
-            if (moduleId === 'database-module') { loadDatabase(); loadMacroData(); }
+            if (moduleId === 'database-module') { loadDatabase(); loadMacroData(); switchDbTab(dbTabPending || dbTab); dbTabPending = null; }
             if (moduleId === 'alerthistory-module') loadAlertHistory();
             if (moduleId === 'dailybrief-module') loadDailyBriefs();
             if (moduleId === 'form-module') initFormModule();
             if (moduleId === 'focus-module') initFocusModule();
             if (moduleId === 'tradeslist-module') initTradesModule();
             if (moduleId === 'summary-module') initSummaryModule();
-            if (moduleId === 'service-module') loadServiceModule();
             if (moduleId === 'focuslist-module') initFocusListModule();
             if (moduleId === 'campaign-module') loadCampaigns();
         }
@@ -1593,35 +1636,116 @@
         }
 
         async function loadDatabase() { try { const response = await fetch(`${API_BASE_URL}/api/database`); const dt = await response.json(); tickerDataArray = Array.isArray(dt) ? dt : []; renderMobileList(); } catch (e) {} }
+        // --- BAZA DANYCH: zakładki Tickery / Makro / Serwis ---
+        function switchDbTab(tab) {
+            dbTab = tab;
+            document.querySelectorAll('#db-tabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.dbtab === tab));
+            document.querySelectorAll('#database-module .db-tab').forEach(p => p.style.display = (p.id === 'db-tab-' + tab) ? 'block' : 'none');
+            if (tab === 'service') { loadServiceModule(); loadLimits(); }
+        }
+
+        // rodzaj spółki = Inwestycja / Spekulacja (kolumna conviction) x Priorytet / brak (is_priority)
+        const TICKER_KIND = {
+            inv_prio:  { label: 'Inwestycja · priorytet', color: '#89b4fa' },
+            inv:       { label: 'Inwestycja',             color: '#89b4fa' },
+            spec_prio: { label: 'Spekulacja · priorytet', color: '#fab387' },
+            spec:      { label: 'Spekulacja',             color: '#fab387' }
+        };
+        let tickerKindFilter = 'all';
+        function tickerKind(item) {
+            const inv = String((item && item.conviction) || '').trim().toLowerCase().startsWith('inwest');
+            return (inv ? 'inv' : 'spec') + (item && item.is_priority ? '_prio' : '');
+        }
+        function filteredTickers() { return tickerKindFilter === 'all' ? tickerDataArray : tickerDataArray.filter(x => tickerKind(x) === tickerKindFilter); }
+        function setTickerKindFilter(v) { tickerKindFilter = v; currentTickerPage = 1; renderMobileList(); }
+        const CCY_SYMBOL = { PLN: 'zł', EUR: '€', USD: '$' };
+
         function renderMobileList() {
-            const container = document.getElementById('db-list-container'); container.innerHTML = ''; if (tickerDataArray.length === 0) return;
+            const container = document.getElementById('db-list-container'); container.innerHTML = '';
+            const counts = { inv_prio: 0, inv: 0, spec_prio: 0, spec: 0 };
+            tickerDataArray.forEach(x => counts[tickerKind(x)]++);
+            const cn = document.getElementById('db-kind-counts');
+            if (cn) cn.textContent = tickerDataArray.length ? Object.keys(TICKER_KIND).map(k => TICKER_KIND[k].label + ': ' + counts[k]).join(' · ') : '';
+            const list = filteredTickers();
+            if (list.length === 0) { container.innerHTML = '<p class="db-help" style="padding:12px 0;">' + (tickerDataArray.length ? 'Brak spółek tego rodzaju.' : 'Baza tickerów jest pusta.') + '</p>'; updatePageInfo('ticker-page-info', 1, 1, 0, tickerPageSize); return; }
             const start = (currentTickerPage - 1) * tickerPageSize;
-            const maxPage = Math.ceil(tickerDataArray.length / tickerPageSize) || 1;
-            container.innerHTML = tickerDataArray.slice(start, start + tickerPageSize).map((item) => `
+            const maxPage = Math.ceil(list.length / tickerPageSize) || 1;
+            container.innerHTML = list.slice(start, start + tickerPageSize).map((item) => {
+                const k = tickerKind(item), kd = TICKER_KIND[k], inv = k.startsWith('inv');
+                const sym = CCY_SYMBOL[(typeof getCurrencyForFrontend === 'function' ? getCurrencyForFrontend(item.ticker) : 'USD')] || '';
+                return `
                 <div class="data-card">
                     <div class="data-card-info">
                         <h4><span class="sd-link" data-tk="${item.ticker}">${item.ticker}</span></h4>
-                        <p>${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p>
-                 </div>
-                    <div style="display: flex; gap:10px; align-items:center;">
-                        <label style="font-size: 0.75rem; cursor:pointer; color: ${item.is_priority ? 'var(--accent)' : 'var(--text-muted)'};">
-                            <input type="checkbox" ${item.is_priority ? 'checked' : ''} onchange="toggleTickerPriority('${item.ticker}', this)"> ⚡
+                        <p>${item.stock_name ? item.stock_name + ' · ' : ''}${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p>
+                        <span class="db-kind" style="color:${kd.color}; border-color:${kd.color};">${kd.label}</span>
+                    </div>
+                    <div style="display: flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                        <select class="db-select db-mini" onchange="setTickerConviction('${item.ticker}', this.value)" title="Rodzaj spółki">
+                            <option value="Inwestycja (Core)" ${inv ? 'selected' : ''}>Inwestycja</option>
+                            <option value="Spekulacja" ${inv ? '' : 'selected'}>Spekulacja</option>
+                        </select>
+                        <label class="db-check" style="color: ${item.is_priority ? 'var(--accent)' : 'var(--text-muted)'};" title="Priorytet">
+                            <input type="checkbox" ${item.is_priority ? 'checked' : ''} onchange="toggleTickerPriority('${item.ticker}', this)"> ⚡ Priorytet
                         </label>
-                        <span class="price-tag sensitive">${item.price !== null ? item.price + '$' : '...'}</span>
+                        <span class="price-tag sensitive">${item.price !== null && item.price !== undefined ? item.price + ' ' + sym : '...'}</span>
                         <button class="btn-edit" onclick="openEditModal('ticker', '${item.ticker}')">✎</button>
                         <button class="btn-delete" onclick="removeTicker('${item.ticker}')">✖</button>
                     </div>
-                  </div>
-            `).join('');
-            updatePageInfo('ticker-page-info', currentTickerPage, maxPage, tickerDataArray.length, tickerPageSize);
+                </div>`;
+            }).join('');
+            updatePageInfo('ticker-page-info', currentTickerPage, maxPage, list.length, tickerPageSize);
+        }
+
+        async function setTickerConviction(ticker, value) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/database/set-conviction`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ticker: ticker, conviction: value }) });
+                const d = await res.json().catch(() => ({}));
+                if (!res.ok || d.status === 'error') throw new Error(d.message || ('HTTP ' + res.status));
+                await loadDatabase();
+            } catch (e) { alert('Nie udało się zmienić rodzaju spółki: ' + (e.message || e)); loadDatabase(); }
         }
 
         function changeTickerPage(dir) { 
-            const maxPage = Math.ceil(tickerDataArray.length / tickerPageSize) || 1;
+            const maxPage = Math.ceil(filteredTickers().length / tickerPageSize) || 1;
             currentTickerPage += dir; 
             if(currentTickerPage < 1) currentTickerPage = 1;
             if(currentTickerPage > maxPage) currentTickerPage = maxPage;
             renderMobileList(); 
+        }
+
+        // --- SERWIS: limity inwestycyjne wg rodzaju spółki (% kapitału) ---
+        async function loadLimits() {
+            const body = document.getElementById('lim-body'), msg = document.getElementById('lim-msg');
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/settings/limits`);
+                const d = await res.json();
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                const num = v => (v === null || v === undefined) ? '' : v;
+                body.innerHTML = d.types.map(ty => {
+                    const l = d.limits[ty.key] || {};
+                    return `<tr data-t="${ty.key}"><td><strong>${ty.label}</strong></td><td>${(d.counts && d.counts[ty.key]) || 0}</td>
+                        <td><input type="number" data-f="zone_pct" min="0" max="100" step="0.1" placeholder="bez limitu" value="${num(l.zone_pct)}"> %</td>
+                        <td><input type="number" data-f="max_trades" min="1" step="1" placeholder="bez limitu" value="${num(l.max_trades)}"></td>
+                        <td><input type="number" data-f="max_budget_pct" min="0" max="100" step="0.1" placeholder="bez limitu" value="${num(l.max_budget_pct)}"> %</td></tr>`;
+                }).join('');
+                msg.textContent = d.warning ? d.warning : (d.configured ? '' : 'Limity nie są jeszcze ustawione.');
+            } catch (e) { body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger);">Nie udało się wczytać limitów: ' + (e.message || e) + '</td></tr>'; }
+        }
+        async function saveLimits() {
+            const msg = document.getElementById('lim-msg'), limits = {};
+            document.querySelectorAll('#lim-body tr[data-t]').forEach(tr => {
+                limits[tr.dataset.t] = {};
+                tr.querySelectorAll('input[data-f]').forEach(inp => { limits[tr.dataset.t][inp.dataset.f] = inp.value.trim() === '' ? null : inp.value.trim(); });
+            });
+            msg.style.color = ''; msg.textContent = 'Zapisywanie…';
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/settings/limits`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ limits: limits }) });
+                const d = await res.json().catch(() => ({}));
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                msg.style.color = 'var(--success)';
+                msg.textContent = 'Zapisano.' + ((d.warnings && d.warnings.length) ? ' Uwaga: ' + d.warnings.join(' ') : '');
+            } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Błąd: ' + (e.message || e); }
         }
 
         async function toggleTickerPriority(ticker, checkbox) {
@@ -1676,14 +1800,15 @@
         async function addTicker() { 
             const t = document.getElementById('new-ticker').value.trim().toUpperCase(); 
             const conv = document.getElementById('new-ticker-conviction').value;
+            const prio = document.getElementById('new-ticker-priority').checked;
             if (!t) return; 
             try { 
                 await fetch(`${API_BASE_URL}/api/database/add`, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ ticker: t, conviction: conv }) 
+                    body: JSON.stringify({ ticker: t, conviction: conv, is_priority: prio }) 
                 }); 
-                document.getElementById('new-ticker').value = ''; 
+                document.getElementById('new-ticker').value = ''; document.getElementById('new-ticker-priority').checked = false; 
                 loadDatabase(); 
            } catch (e) {} 
         }
@@ -5724,7 +5849,7 @@ window.HomePage = (function () {
     }
 
     // ---------- notatnik ----------
-    const ACTION = { check: "Check", buy: "Buy", sell: "Sell" };
+    const ACTION = { check: "Sprawdź", buy: "Kup", sell: "Sprzedaj" };
     function noteRow(n, i) {
         const date = n.created_at ? new Date(n.created_at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
         return '<tr class="hp-note-row ' + (n.done ? "hp-done" : "") + '" data-id="' + esc(n.id) + '" style="animation-delay:' + (i * 30) + 'ms">' +
