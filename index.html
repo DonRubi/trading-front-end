@@ -5641,6 +5641,7 @@ window.Planer = (function () {
             kpi("Zostaje po inwestycji", '<span class="' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '">' + pct(after) + "</span>", "budżet spółki po zainwestowaniu całego planu") +
             kpi("Inwestycje w spółce", c.open_trades + (c.max_trades != null ? " / " + c.max_trades : ""), c.trades_left != null ? (c.trades_left > 0 ? "wolnych miejsc: " + c.trades_left : '<span class="plx-neg">limit wyczerpany</span>') : "bez limitu liczby") + "</div>" +
             (p.capital_known ? "" : '<div class="plx-warn">Nie udało się wyliczyć kapitału - procenty budżetu są niedostępne.</div>') +
+            (open_ ? '<div id="plx-watch" class="plx-watch"></div>' : "") +
             '<div class="plx-h">Strefy planu i dostępne zagrania z Form</div>' +
             (p.legs.length ? p.legs.map((l, i) => legCard(l, i, open_)).join("") : '<div class="db-help">Plan nie ma stref.</div>') +
             (open_ ? '<div class="plx-actions"><select id="plx-addleg" class="dbx-in" style="max-width:340px" onfocus="Planer.fillAddLeg()"><option value="">＋ Dodaj strefę z Form…</option></select><button class="hp-btn hp-primary" onclick="Planer.saveLegs()">Zapisz budżety stref</button><span id="plx-detail-msg" class="plx-err"></span></div>' : "") +
@@ -5650,7 +5651,33 @@ window.Planer = (function () {
             '<div class="plx-h">Notatka</div><textarea id="plx-note" class="dbx-in plx-note" maxlength="2000" ' + (open_ ? "" : "readonly") + ">" + esc(p.note) + "</textarea>" +
             '<div class="plx-actions">' + (open_ ? '<button class="hp-btn" onclick="Planer.saveNote()">Zapisz notatkę</button><button class="hp-btn dbx-danger" onclick="Planer.closePlan()">Zamknij plan</button>' : '<button class="hp-btn" onclick="Planer.reopenPlan()">Otwórz ponownie</button>') +
             '<button class="hp-btn" style="margin-left:auto" onclick="Planer.deletePlan()">Usuń plan</button></div>');
+        loadWatch();
     }
+    // ---------- strażnik planu: stany stref, sygnały siły/słabości i propozycje dokładek (po zamknięciu sesji) ----------
+    const WSTATE = { W_DRODZE: ["#848e9c", "W drodze – bez analizy"], PRZY_STREFIE: ["#fcd535", "Przy strefie"], UTKNAL: ["#89b4fa", "Utknął (>3 mies.)"], UNIEWAZNIONE: ["#f6465d", "Unieważnione"], CEL: ["#0ecb81", "Cel"] };
+    const WICON = { "siła": "🟢", "słabość": "🔴", info: "⚪" };
+    function watchHtml(d) {
+        let h = '<div class="plx-h">Strażnik planu <span class="db-help">· po zamknięciu sesji ' + esc(d.bar_date) + ' · między strefami analiza wyłączona, dopóki kurs nie utknął na dłużej</span> <button class="hp-btn" style="padding:3px 10px" data-plx-watch>↻</button></div>';
+        d.legs.forEach(l => {
+            const sc = WSTATE[l.state] || ["#848e9c", l.state];
+            h += '<div class="plx-zone"><div class="plx-zhead"><span class="plx-zside ' + (l.side === "LONG" ? "long" : "short") + '">' + arrow(l.side) + '</span><span class="plx-zrange">' + price(l.zone[0]) + " – " + price(l.zone[1]) + '</span>' +
+                '<span class="ev-kind" style="color:' + sc[0] + ';border-color:' + sc[0] + '">' + esc(sc[1]) + '</span><span class="db-help">' + esc(l.why || "") + "</span></div>" +
+                (l.signals.length ? l.signals.map(s => '<div class="plx-play" style="color:var(--text-main)">' + (WICON[s.kind] || "⚪") + " " + esc(s.text) + "</div>").join("") : '<div class="plx-play db-help">Brak sygnałów.</div>') +
+                '<div class="plx-play">' + l.proposals.map(p => p.available
+                    ? '<span class="ev-chip" title="' + esc(p.reason) + '">➕ ' + esc(p.label) + ": do " + pct(p.cap_pct) + " kapitału</span>"
+                    : '<span class="db-help" title="' + esc((p.blockers || []).join("; ") || p.reason) + '">' + esc(p.label) + ": niedostępna</span>").join(" ") +
+                (l.proposals.some(p => p.available) ? ' <button class="hp-btn" data-ev-eval="' + esc(d.ticker) + '" data-entry="' + esc(l.entry_id) + '">Oceń wejście i ustal kwotę →</button>' : "") + "</div></div>";
+        });
+        if (d.history && d.history.length) h += '<details><summary class="db-help" style="cursor:pointer">Historia sygnałów (' + d.history.length + ')</summary>' + d.history.filter(r => !String(r.code).startsWith("state_")).map(r => '<div class="plx-play"><b>' + esc(r.bar_date) + "</b> " + (WICON[r.kind] || "⚪") + " " + esc(r.text) + "</div>").join("") + "</details>";
+        return h;
+    }
+    async function loadWatch() {
+        const box = $("#plx-watch"); if (!box || !st.detail || st.detail.status !== "OPEN") return;
+        box.innerHTML = '<div class="plx-h">Strażnik planu</div><div class="db-help">Analizuję zamknięte świece dzienne…</div>';
+        try { const d = await api("/api/planner/watch?plan_id=" + st.detail.id); if ($("#plx-watch")) $("#plx-watch").innerHTML = watchHtml(d); }
+        catch (e) { if ($("#plx-watch")) $("#plx-watch").innerHTML = '<div class="plx-h">Strażnik planu</div><div class="plx-warn">' + esc(e.message) + "</div>"; }
+    }
+    document.addEventListener("click", e => { if (e.target.closest && e.target.closest("[data-plx-watch]")) loadWatch(); });
     function readLegInputs() { document.querySelectorAll("#plx-detail input[data-leg]").forEach(inp => { st.detail.legs[+inp.dataset.leg].planned_pct = parseFloat(String(inp.value).replace(",", ".")); }); }
     function msg(t) { const m = $("#plx-detail-msg"); if (m) m.textContent = t || ""; }
     async function saveLegs() {
@@ -5954,6 +5981,7 @@ window.Wejscie = (function () {
             '<div class="plx-kpi"><div class="l">Punkt wejścia</div><div class="v">' + price(p.entry) + '</div><div class="s">' + (p.entry_is_zone_mid ? "środek strefy (brak punktu w Form)" : "odległość " + spct(dist)) + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.take_profit) + " / " + price(p.stop_loss) + '</div><div class="s">R:R ' + (rr ? num(rr, 1) : "–") + "</div></div></div>" +
             (d.coverage != null && d.coverage < 0.7 ? '<div class="ev-note">⚠ Ocena opiera się na ' + Math.round(d.coverage * 100) + '% wag – brakuje danych do części warunków (np. CVD, świece), więc wynik może być zawyżony.</div>' : "") +
+            '<div id="ev-zq"></div>' +
             (d.scoring ? '<div class="plx-h">Punktacja (zasady z Serwisu)</div><div class="plx-kpis"><div class="plx-kpi"><div class="l">Form × ' + num(d.scoring.form_mult, 1) + '</div><div class="v">' + num(d.scoring.form_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.form_max_points, 0) + '</small></div><div class="s">Score z Form ' + num(d.scoring.form_score, 1) + '/5</div></div>' +
                 '<div class="plx-kpi"><div class="l">Moment wejścia</div><div class="v">' + num(d.scoring.entry_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.entry_max, 0) + '</small></div><div class="s">ocena ' + (d.score == null ? "–" : Math.round(d.score)) + '/100</div></div>' +
                 '<div class="plx-kpi"><div class="l">Razem do budżetu</div><div class="v">' + num(d.scoring.points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.max_points, 0) + '</small></div><div class="s">' + num(d.scoring.pct, 1) + '% punktów</div></div>' +
@@ -5963,6 +5991,7 @@ window.Wejscie = (function () {
             (d.warnings && d.warnings.length ? '<div class="plx-warn">' + d.warnings.map(esc).join("<br>") + "</div>" : "") +
             '<div class="plx-actions"><button class="hp-btn ev-go" data-ev-trade>Dodaj transakcję →</button>' +
             (b.plan_id ? '<a href="#" class="plx-tag" data-plan="' + b.plan_id + '">otwórz plan</a>' : '<button class="hp-btn" data-ev-plan="' + esc(d.ticker) + '">Przygotuj plan</button>') + "</div>");
+        if (window.FormZones) FormZones.zoneQualityBlock(d.ticker, p.entry_id).then(html => { const el = $("#ev-zq"); if (el && ov.data === d) el.innerHTML = html; });
     }
     document.addEventListener("click", e => {
         const t = e.target; if (!t.closest) return;
@@ -6180,6 +6209,24 @@ window.FormZones = (function () {
     }
 
 
+    // ---------- jakość strefy (Seiden) - plakietka informacyjna, nie wlicza się do Score ----------
+    const ZQ = {};
+    function zoneQualityFor(ticker) {
+        if (!ZQ[ticker]) ZQ[ticker] = fetch(API_BASE_URL + "/api/form/zone-quality?ticker=" + encodeURIComponent(ticker)).then(r => r.json()).then(d => (d.status === "success" ? d.zones : [])).catch(() => []);
+        return ZQ[ticker];
+    }
+    function zoneQualityHtml(z) {
+        if (!z) return '<div class="ev-muted">Jakość strefy: brak danych.</div>';
+        if (z.error) return '<div class="ev-muted">Jakość strefy: ' + esc(z.error) + "</div>";
+        const col = z.score >= 0.75 ? "var(--success)" : z.score >= 0.5 ? "var(--accent-hover)" : "var(--danger)";
+        return '<details class="fz-rblock"><summary><b style="color:' + col + '">Jakość strefy: ' + z.grade + " (" + Math.round(z.score * 100) + '%)</b> <span class="ev-muted">· informacyjnie, nie wlicza się do Score' + (z.base ? " · baza " + new Date(z.base.from_t * 1000).toLocaleDateString("pl-PL") + ", wyjście " + num(z.base.departure_atr, 1) + " ATR, powrotów: " + z.fresh_touches : "") +
+            (z.broken_before ? " · ⚠ złamana wcześniej – szybciej TP" + (z.tp_hint ? " (np. przy " + price(z.tp_hint) + ")" : "") : "") + "</span></summary>" +
+            z.factors.map(f => '<div class="ev-muted">• ' + esc(f.label) + " – <b>" + Math.round(f.score * 100) + "%</b>: " + esc(f.text) + "</div>").join("") + "</details>";
+    }
+    async function zoneQualityBlock(ticker, entryId) {
+        const zs = await zoneQualityFor(ticker);
+        return zoneQualityHtml(zs.find(z => (z.ids || []).indexOf(entryId) >= 0));
+    }
     // ---------- szczegóły zagrania z nawigacją po sąsiednich zagraniach tej spółki ----------
     const D = { id: null };
     function ladder(ticker, keepId) {
@@ -6231,6 +6278,7 @@ window.FormZones = (function () {
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.tp) + " / " + price(p.sl) + '</div><div class="s">R:R ' + num(p.rr, 2) + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Score</div><div class="v">' + fmtScore(p.score) + '/5</div><div class="s">suma jakości powodów' + (e.priority === 1 ? " · ⚡ priorytet" : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Status</div><div class="v" style="color:' + STCOL[p.status] + '">' + esc(p.status) + '</div><div class="s">dodano ' + (e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–") + "</div></div></div>";
+        h += '<div id="fz-zq" data-for="' + esc(e.entry_id) + '"><div class="ev-muted">Jakość strefy: liczę…</div></div>';
         h += '<div class="plx-h">Sąsiednie zagrania tej spółki</div><div class="fz-neigh">' + neighCard("◀ Niżej (w lewo)", cur, prev) + neighCard("Wyżej (w prawo) ▶", cur, next) + "</div>";
         h += '<div class="plx-h">Powody</div>' + ((e.reasons || []).length ? e.reasons.map(r => reasonBlock(r, e)).join("") : '<div class="ev-muted">Brak powodów.</div>');
         h += '<div class="plx-h">Wszystkie zagrania spółki (od najniższego wejścia)</div><div class="table-responsive"><table class="ev-table fz-ladder"><thead><tr><th>ID</th><th>Wejście</th><th>Od poprzedniego</th><th>Strefa</th><th>Score</th></tr></thead><tbody>' +
@@ -6238,6 +6286,8 @@ window.FormZones = (function () {
         h += '<div class="plx-actions"><button class="hp-btn" onclick="FormZones.closeDetail(); copyFormEntry(\'' + esc(e.entry_id) + '\')">📋 Klonuj</button><button class="hp-btn" onclick="openEditModal(\'form\', \'' + esc(e.entry_id) + '\')">✎ Edytuj</button>' +
             '<button class="hp-btn" onclick="updateFormEntryField(\'' + esc(e.entry_id) + "', 'mute', " + (p.muted ? 0 : 1) + ')">' + (p.muted ? "🔔 Włącz" : "🔕 Wycisz") + "</button></div>";
         o.firstChild.innerHTML = h;
+        const forId = e.entry_id;
+        zoneQualityBlock(e.ticker, forId).then(html => { const el = $("#fz-zq"); if (el && el.dataset.for === forId) el.innerHTML = html; });
     }
     function openDetail(id) {
         let o = $("#fz-detail");
@@ -6274,7 +6324,7 @@ window.FormZones = (function () {
         if (e.key === "ArrowLeft") navDetail("prev"); else if (e.key === "ArrowRight") navDetail("next"); else if (e.key === "Escape") closeDetail();
     });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#fz-modal") && $("#fz-modal").classList.contains("open")) closeAdd(); });
-    return { scoreOf: scoreOf, openDetail: openDetail, closeDetail: closeDetail, refresh: refresh, render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
+    return { zoneQualityBlock: zoneQualityBlock, scoreOf: scoreOf, openDetail: openDetail, closeDetail: closeDetail, refresh: refresh, render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
 })();
 </script>
 <script>
@@ -6290,6 +6340,7 @@ window.Measure = (function () {
     const TYPES = {
         fvg: { label: "Luka (FVG)", slots: ["Świeca przed luką", "Świeca po luce"], need: 2, bar: true, help: "Kliknij dwie świece, między którymi powstała luka (sąsiednie = luka cenowa, co druga = FVG z trzech świec)." },
         swing: { label: "Potwierdzony dołek/szczyt", slots: ["Świeca dołka (dla short: szczytu)"], need: 1, bar: true, help: "Kliknij świecę dołka – liczy się dół korpusu (dla short: góra korpusu)." },
+        correction: { label: "Powtórzenie korekty", slots: ["Koniec korekty 1 (opcjonalnie)", "Koniec korekty 2 (opcjonalnie)"], need: 0, bar: true, help: "Porównuje bieżącą korektę z poprzednimi korektami tej spółki w trendzie (mała = siła, typowa = norma, duża = nadal siła, przebita razem z dołkiem = słabość) i wylicza pasmo oczekiwanego powtórzenia korekty. Opcjonalnie kliknij końce korekt, które mają posłużyć za wzorzec." },
         trend: { label: "Zdrowy trend", slots: ["Ostatni dołek (dla short: szczyt) – opcjonalnie"], need: 0, bar: true, help: "Aplikacja sama znajduje szczyty i dołki (HH/HL). Możesz kliknąć świecę własnego ostatniego dołka (dla short: szczytu) – liczy się dół korpusu – i wtedy to on jest sprawdzany." },
         fibo: { label: "Poziomy FIBO", slots: ["Początek swingu", "Koniec swingu"], need: 2, log: true, suggest: "fibo_leg", help: "Kliknij początek i koniec swingu (wg knotów). „Podpowiedz” bierze ostatni ruch trendu." },
         one2one: { label: "Korekta 1:1", slots: ["A – start korekty", "B – koniec pierwszej fali", "C – koniec odbicia"], need: 3, help: "Pierwsza fala korekty A→B, odbicie do C; druga fala ma być równa pierwszej (standardowo i logarytmicznie)." },
@@ -6300,7 +6351,7 @@ window.Measure = (function () {
         vp: { label: "Volume Profile", slots: ["Początek profilu (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie od początku trendu albo od kontynuacji po wyraźnej korekcie; możesz wskazać własny początek." },
         external: { label: "Analiza zewnętrzna", slots: [], need: 0, external: true, help: "Linki do analiz; kilka analiz liczy się jako jeden punkt." }
     };
-    const ORDER = ["fvg", "swing", "trend", "fibo", "one2one", "xabcd", "rgr", "elliott", "vwap", "vp", "external"];
+    const ORDER = ["fvg", "swing", "trend", "correction", "fibo", "one2one", "xabcd", "rgr", "elliott", "vwap", "vp", "external"];
     const APPLY = { entry: ["form-entry", "Punkt wejścia"], start: ["form-start", "Początek strefy"], end: ["form-end", "Koniec strefy (SL)"], tp: ["form-tp", "Take Profit"] };
     const M = { magnet: true, ticker: "", tf: "1d", type: null, anchors: [], bars: [], auto: null, result: null, added: [], items: [{}], opts: {}, apply: "entry" };
     let chart = null, candle = null, vol = null, prim = null, priceLines = [], extraSeries = [], zoneCache = [];
@@ -6485,7 +6536,7 @@ window.Measure = (function () {
         M.type = M.type === k ? null : k; M.anchors = []; M.result = null; M.apply = "entry";
         if (M.type === "external") M.items = M.items.length ? M.items : [{}];
         clearOverlay(); drawTypes(); drawEditor(); drawResultCard();
-        if (M.type && ["trend", "vwap", "vp"].indexOf(M.type) >= 0) { /* działa bez kotwic */ verify(); }
+        if (M.type && ["trend", "correction", "vwap", "vp"].indexOf(M.type) >= 0) { /* działa bez kotwic */ verify(); }
     }
     async function verify() {
         const T = TYPES[M.type], z = formZone();
