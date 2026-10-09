@@ -109,6 +109,7 @@
         .hp-ext { font-size: 0.74rem; font-weight: 500; opacity: 0.9; white-space: nowrap; cursor: help; }
         .hp-note-form input, .hp-note-form select { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 9px 12px; min-width: 0; color: var(--text-main); font-size: 0.9rem; }
         .hp-note-form input:focus, .hp-note-form select:focus { outline: 0; border-color: var(--accent); }
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 10px 0; } .sc-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--text-muted); } #scoring-panel input[type=number] { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; color: var(--text-main); width: 110px; } .sc-grid input { width: 100% !important; }
         .hp-note-alert { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; } .hp-alert-chk { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-size: 0.88rem; } .hp-alert { display: inline-block; margin-left: 8px; font-size: 0.78rem; color: var(--accent-hover); white-space: nowrap; } .hp-alert.sent { color: var(--text-muted); }
         .hp-note-row.hp-done td { color: var(--text-muted); }
         .hp-note-row.hp-done .hp-desc, .hp-note-row.hp-done .hp-tk { text-decoration: line-through; }
@@ -995,6 +996,18 @@
             <div class="lim-actions"><button class="btn-submit" style="width:auto; padding:10px 22px;" onclick="saveLimits()">Zapisz limity</button><span id="lim-msg" class="db-help"></span></div>
 
             </div>
+            <div class="dbx-panel lim-panel" id="scoring-panel">
+                <h4>🎯 Punktacja inwestycji i cięcie budżetu</h4>
+                <p class="db-help">Punkty budżetowe = <b>Score z Form × mnożnik</b> + <b>punkty za moment wejścia</b>. Od ich procentu (względem maksimum) zależy, jaka część dostępnego budżetu (limity powyżej / plan) przysługuje na wejście. Punkty za koniec dnia (po zamknięciu sesji) dochodzą do łącznego wyniku, ale nie wpływają na budżet.</p>
+                <div class="sc-grid">
+                    <label>Mnożnik Score z Form<input type="number" id="sc-mult" min="0.5" max="10" step="0.5"></label>
+                    <label>Maks. punktów za moment wejścia<input type="number" id="sc-entry" min="0" max="20" step="0.5"></label>
+                    <label>Maks. punktów za koniec dnia<input type="number" id="sc-eod" min="0" max="20" step="0.5"></label>
+                </div>
+                <div class="db-help" id="sc-summary"></div>
+                <div class="table-responsive"><table class="hp-table" style="width:100%;"><thead><tr><th>Widełki: od … % maks. punktów budżetowych</th><th>Dostępna część budżetu (% budżetu z limitów / planu)</th><th></th></tr></thead><tbody id="sc-tiers"></tbody></table></div>
+                <div class="lim-actions"><button class="hp-btn" type="button" onclick="addScoringTier()">＋ Dodaj widełki</button> <button class="hp-btn" type="button" onclick="resetScoring()">Przywróć domyślne</button> <button class="btn-submit" style="width:auto; padding:10px 22px;" onclick="saveScoring()">Zapisz zasady punktacji</button><span id="sc-msg" class="db-help"></span></div>
+            </div>
             <div class="dbx-cols">
                 <div class="dbx-panel">
                     <div class="dbx-panel-head"><h3>💰 Rejestracja dywidendy</h3></div>
@@ -1752,7 +1765,7 @@
             dbTab = tab;
             document.querySelectorAll('#db-tabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.dbtab === tab));
             document.querySelectorAll('#database-module .db-tab').forEach(p => p.style.display = (p.id === 'db-tab-' + tab) ? 'block' : 'none');
-            if (tab === 'service') { loadServiceModule(); loadLimits(); }
+            if (tab === 'service') { loadServiceModule(); loadLimits(); loadScoring(); }
         }
 
         // rodzaj spółki = Inwestycja / Spekulacja (kolumna conviction) x Priorytet / brak (is_priority)
@@ -1912,6 +1925,48 @@
                 msg.textContent = 'Zapisano.' + ((d.warnings && d.warnings.length) ? ' Uwaga: ' + d.warnings.join(' ') : '');
             } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Błąd: ' + (e.message || e); }
         }
+
+        // --- SERWIS: punktacja inwestycji i cięcie budżetu (widełki % punktów -> część dostępnego budżetu) ---
+        let scoringDefaults = null;
+        function scTierRow(t) {
+            return `<tr><td><input type="number" data-k="min_pct" min="0" max="100" step="1" value="${t.min_pct}"> % punktów</td><td><input type="number" data-k="budget_pct" min="0" max="100" step="0.1" value="${Math.round(t.budget_pct * 100) / 100}"> % budżetu</td><td><button type="button" class="hp-x" onclick="this.closest('tr').remove(); updateScoringSummary();" title="Usuń widełki">×</button></td></tr>`;
+        }
+        function fillScoring(r) {
+            document.getElementById('sc-mult').value = r.form_mult; document.getElementById('sc-entry').value = r.entry_max; document.getElementById('sc-eod').value = r.eod_max;
+            document.getElementById('sc-tiers').innerHTML = r.tiers.map(scTierRow).join('');
+            updateScoringSummary();
+        }
+        function updateScoringSummary() {
+            const m = parseFloat(document.getElementById('sc-mult').value) || 0, e = parseFloat(document.getElementById('sc-entry').value) || 0, d = parseFloat(document.getElementById('sc-eod').value) || 0;
+            const fmt = v => String(Math.round(v * 100) / 100).replace('.', ',');
+            const budget = 5 * m + e;
+            const rows = [...document.querySelectorAll('#sc-tiers tr')].map(tr => ({ p: parseFloat(tr.querySelector('[data-k=min_pct]').value), b: parseFloat(tr.querySelector('[data-k=budget_pct]').value) })).filter(x => !isNaN(x.p)).sort((a, b) => b.p - a.p);
+            document.getElementById('sc-summary').innerHTML = `Maksimum punktów budżetowych: <b>${fmt(budget)}</b> (Form 5 × ${fmt(m)} = ${fmt(5 * m)} + wejście ${fmt(e)}); łącznie z końcem dnia: <b>${fmt(budget + d)}</b>. ` +
+                rows.map(x => `od ${fmt(x.p)}% (≥ ${fmt(budget * x.p / 100)} pkt) → ${fmt(x.b)}% budżetu`).join(' · ');
+        }
+        async function loadScoring() {
+            const msg = document.getElementById('sc-msg');
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/settings/scoring`), d = await res.json();
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                scoringDefaults = d.defaults; fillScoring(d.rules); msg.style.color = ''; msg.textContent = d.warning ? d.warning : '';
+            } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Nie udało się wczytać zasad punktacji: ' + (e.message || e); }
+        }
+        function addScoringTier() { document.getElementById('sc-tiers').insertAdjacentHTML('beforeend', scTierRow({ min_pct: 0, budget_pct: 0 })); updateScoringSummary(); }
+        function resetScoring() { if (scoringDefaults) fillScoring(scoringDefaults); }
+        async function saveScoring() {
+            const msg = document.getElementById('sc-msg');
+            const rules = { form_mult: document.getElementById('sc-mult').value, entry_max: document.getElementById('sc-entry').value, eod_max: document.getElementById('sc-eod').value,
+                tiers: [...document.querySelectorAll('#sc-tiers tr')].map(tr => ({ min_pct: tr.querySelector('[data-k=min_pct]').value, budget_pct: tr.querySelector('[data-k=budget_pct]').value })) };
+            msg.style.color = ''; msg.textContent = 'Zapisywanie…';
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/settings/scoring`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ rules: rules }) });
+                const d = await res.json().catch(() => ({}));
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                fillScoring(d.rules); msg.style.color = 'var(--success)'; msg.textContent = 'Zapisano.' + ((d.warnings && d.warnings.length) ? ' Uwaga: ' + d.warnings.join(' ') : '');
+            } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Błąd: ' + (e.message || e); }
+        }
+        document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#scoring-panel')) updateScoringSummary(); });
 
         async function toggleTickerPriority(ticker, checkbox) {
             try {
@@ -5810,7 +5865,7 @@ window.Wejscie = (function () {
         } else {
             budget = '<div class="plx-kpis">' +
                 '<div class="plx-kpi"><div class="l">Dostępny budżet</div><div class="v">' + pct(b.base_pct) + '</div><div class="s">kapitału · ' + (b.source === "plan" ? "z planu (zostało do dołożenia w strefie)" : "z limitów rodzaju spółki (strefa minus już użyte)") + "</div></div>" +
-                '<div class="plx-kpi"><div class="l">Współczynnik oceny</div><div class="v">' + Math.round(b.factor * 100) + '%</div><div class="s">0% poniżej 45 pkt · 100% od 85 pkt</div></div>' +
+                '<div class="plx-kpi"><div class="l">Część budżetu wg punktów</div><div class="v">' + Math.round(b.factor * 100) + '%</div><div class="s">' + (d.scoring ? esc(d.scoring.tier) : "") + "</div></div>" +
                 '<div class="plx-kpi"><div class="l">Rekomendowany budżet</div><div class="v" style="color:' + (b.recommended_pct > 0 ? "var(--success)" : "var(--danger)") + '">' + pct(b.recommended_pct) + '</div><div class="s">kapitału na to wejście</div></div></div>';
         }
         const co = b.company || {};
@@ -5826,6 +5881,10 @@ window.Wejscie = (function () {
             '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Zagranie</div><div class="v">' + arrow(p.side) + " " + price(p.zone[0]) + "–" + price(p.zone[1]) + '</div><div class="s">' + (inZone ? "kurs w strefie" : "kurs poza strefą") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Punkt wejścia</div><div class="v">' + price(p.entry) + '</div><div class="s">' + (p.entry_is_zone_mid ? "środek strefy (brak punktu w Form)" : "odległość " + spct(dist)) + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.take_profit) + " / " + price(p.stop_loss) + '</div><div class="s">R:R ' + (rr ? num(rr, 1) : "–") + "</div></div></div>" +
+            (d.scoring ? '<div class="plx-h">Punktacja (zasady z Serwisu)</div><div class="plx-kpis"><div class="plx-kpi"><div class="l">Form × ' + num(d.scoring.form_mult, 1) + '</div><div class="v">' + num(d.scoring.form_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.form_max_points, 0) + '</small></div><div class="s">Score z Form ' + num(d.scoring.form_score, 1) + '/5</div></div>' +
+                '<div class="plx-kpi"><div class="l">Moment wejścia</div><div class="v">' + num(d.scoring.entry_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.entry_max, 0) + '</small></div><div class="s">ocena ' + (d.score == null ? "–" : Math.round(d.score)) + '/100</div></div>' +
+                '<div class="plx-kpi"><div class="l">Razem do budżetu</div><div class="v">' + num(d.scoring.points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.max_points, 0) + '</small></div><div class="s">' + num(d.scoring.pct, 0) + '% punktów</div></div>' +
+                '<div class="plx-kpi"><div class="l">Koniec dnia</div><div class="v">– <small class="ev-muted">/ ' + num(d.scoring.eod_max, 0) + '</small></div><div class="s">dojdzie po sesji (łącznie max ' + num(d.scoring.total_max, 0) + ')</div></div></div>' : "") +
             '<div class="plx-h">Warunki w chwili wejścia <span class="ev-muted">(ⓘ – co oznacza dany warunek)</span></div><div class="ev-conds">' + d.conditions.map(condRow).join("") + "</div>" +
             '<div class="plx-h">Budżet na to wejście</div>' + budget + companyLine +
             (d.warnings && d.warnings.length ? '<div class="plx-warn">' + d.warnings.map(esc).join("<br>") + "</div>" : "") +
@@ -5845,7 +5904,7 @@ window.Wejscie = (function () {
 
     function compact(d) {      // to, co zapisujemy przy transakcji (ocena w chwili wejścia)
         return { entry_score: d.score, entry_eval: { verdict: d.verdict, score: d.score, factor: d.factor, price: d.price, evaluated_at: new Date().toISOString(),
-            recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source,
+            recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source, points: d.scoring && d.scoring.points, max_points: d.scoring && d.scoring.max_points, form_score: d.scoring && d.scoring.form_score, entry_points: d.scoring && d.scoring.entry_points,
             conditions: d.conditions.map(c => ({ id: c.id, score: c.score, status: c.status })) }, summary: {
             verdict: d.verdict, score: d.score, recommended_pct: d.budget.recommended_pct, source: d.budget.source, capital_pln: d.budget.capital_pln, price: d.price } };
     }
