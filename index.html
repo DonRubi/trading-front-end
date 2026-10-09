@@ -5996,7 +5996,7 @@ window.FormZones = (function () {
         const t = trow || tickerRow(ticker) || { ticker: ticker };
         $("#fz-results").innerHTML = ""; $("#fz-search").value = ticker + (t.stock_name ? " · " + t.stock_name : "");
         document.getElementById("form-ticker").value = ticker;
-        const zones = zonesOf((formEntries || []).filter(e => e.ticker === ticker));
+        const zones = zonesOf((formEntries || []).filter(e => e.ticker === ticker)).filter(z => !z.all.every(p => p.muted));   // strefy z samymi wyciszonymi zagraniami nie są pokazywane
         zones.sort((a, b) => a.lo - b.lo);
         const ch = $("#fz-chosen"); ch.style.display = "block";
         ch.innerHTML = '<div class="plx-h">' + esc(ticker) + " " + (t.stock_name ? "· " + esc(t.stock_name) : "") + ' <a class="sd-link" href="' + esc(getTradingViewLink(ticker)) + '" target="_blank" rel="noopener" style="font-size:.8em">📈 TV</a></div>' +
