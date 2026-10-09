@@ -323,6 +323,7 @@
         .ev-w { color: var(--text-muted); font-size: 0.75em; margin-left: 6px; } .ev-score { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; } .ev-info { background: none; border: 0; color: var(--accent); cursor: pointer; font-size: 1.1em; padding: 0 4px; }
         .ev-desc { margin-top: 8px; padding: 8px 10px; border-left: 2px solid var(--accent); font-size: 0.86em; line-height: 1.5; background: rgba(201,148,0,.06); } .ev-scale { color: var(--text-muted); margin-top: 4px; font-size: .92em; }
         .ev-note { background: rgba(201,148,0,.10); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 0.88rem; } .ev-go { background: var(--success); color: #fff; border-color: var(--success); }
+.ev-opts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; background: var(--bg-main); border: 1px dashed var(--border-color); border-radius: 12px; padding: 8px 12px; font-size: 0.88rem; } .ev-opts label { display: inline-flex; gap: 6px; align-items: center; color: var(--text-muted); } .ev-opts input, .ev-opts select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 8px; }
         .ev-evalbox { background: rgba(14,203,129,.07); border: 1px solid rgba(14,203,129,.35); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.88rem; line-height: 1.55; }
         @media (max-width: 760px) { .ev-table thead { display: none; } .ev-table, .ev-table tbody, .ev-table tr, .ev-table td { display: block; width: 100%; } .ev-table tr { border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 10px; padding: 6px 4px; } .ev-table td { border: 0; padding: 4px 10px; } .ev-act { text-align: left; } .ev-verdict { flex-direction: column; align-items: flex-start; } .ev-cond { grid-template-columns: 14px 1fr auto; } .ev-info { grid-column: 3; } }
         .plx-tag { font-size: 0.72rem; color: var(--accent); text-decoration: none; } .plx-tag:hover { text-decoration: underline; }
@@ -728,6 +729,7 @@
             <button class="tab-btn" onclick="switchSummaryTab('deposits')">Historia depozytu</button> 
             <button class="tab-btn" onclick="switchSummaryTab('open')">Podsumowanie otwartych</button> 
             <button class="tab-btn" onclick="switchSummaryTab('closed')">Podsumowanie zamkniętych</button> 
+            <button class="tab-btn" onclick="switchSummaryTab('score')">Skuteczność wg punktów</button> 
         </div> 
         <div id="tab-dashboard" class="tab-content active"> 
             <div class="kpi-grid"> 
@@ -789,6 +791,10 @@
                 </table> 
             </div> 
         </div> 
+        <div id="tab-score" class="tab-content">
+            <div class="ev-muted">Czy wyższa punktacja faktycznie daje lepsze wyniki? Raport z zamkniętych transakcji: skuteczność, zwrot na środkach własnych (%) i wielokrotność ryzyka R w przedziałach punktów zapisanych przy transakcji (Form, moment wejścia, razem do budżetu, koniec dnia). Wyniki w % – bez kwot.</div>
+            <div id="score-report-body"><div class="ev-empty">Ładowanie raportu…</div></div>
+        </div>
         <div id="tab-closed" class="tab-content"> 
             <div class="table-controls"> 
                 <select id="s-cls-month-filter" onchange="renderSummaryClosed()"> <option value="ALL">Wszystkie Miesiące</option> </select> 
@@ -3269,13 +3275,38 @@ async function handleTradeAutomation(tradeId, tradeData) {
         }
 
         // --- SUMMARY MODULE ---
-        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
+        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'score') loadScoreReport(); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
         
         async function initSummaryModule() {
             if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); allTradesData = await res.json() || []; } catch(e) {} }
             if(tickerDataArray.length === 0) await loadDatabase();
             if(macroDataArray.length === 0) { try { const mRes = await fetch(`${API_BASE_URL}/api/macro/history`); macroDataArray = await mRes.json() || []; } catch(e) {} }
             try { const rD = await fetch(`${API_BASE_URL}/api/portfolio/deposits`); depositsDataArray = await rD.json() || []; renderDepositsTable(); calculateAndRenderSummary(); } catch(e){}
+        }
+
+        // --- Summary: raport skuteczności wg punktacji ---
+        async function loadScoreReport() {
+            const box = document.getElementById('score-report-body');
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/summary/score-report`), d = await res.json();
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                const f = (v, dec, suf) => v == null ? '–' : String(Math.round(v * Math.pow(10, dec)) / Math.pow(10, dec)).replace('.', ',') + (suf || '');
+                const col = v => v == null ? '' : (v >= 0 ? 'var(--success)' : 'var(--danger)');
+                const maxAbs = Math.max(1, ...Object.values(d.dims).flatMap(x => x.buckets.map(b => Math.abs(b.avg_ret || 0))));
+                let h = `<div class="kpi-grid" style="margin:12px 0"><div class="kpi-card"><h4>Zamknięte transakcje</h4><div class="value">${d.closed}</div></div><div class="kpi-card"><h4>Z zapisaną punktacją</h4><div class="value">${d.with_points}</div></div>` +
+                    `<div class="kpi-card"><h4>Skuteczność ogółem</h4><div class="value">${f(d.overall.win_rate, 0, '%')}</div></div><div class="kpi-card"><h4>Średni zwrot</h4><div class="value" style="color:${col(d.overall.avg_ret)}">${f(d.overall.avg_ret, 1, '%')}</div></div><div class="kpi-card"><h4>Średnie R</h4><div class="value">${f(d.overall.avg_r, 2)}</div></div></div>`;
+                if (!d.with_points) h += '<div class="ev-note">Żadna zamknięta transakcja nie ma jeszcze zapisanej punktacji (zapisuje się przy dodaniu transakcji z oceny wejścia, a punkty końca dnia – przy „policz”). Raport wypełni się wraz z kolejnymi transakcjami.</div>';
+                Object.values(d.dims).forEach(dim => {
+                    h += `<div class="plx-h" style="margin-top:16px">${dim.title} <span class="ev-muted">· transakcji: ${dim.n}${dim.spearman != null ? ' · korelacja punktów z wynikiem (Spearman): <b>' + String(dim.spearman).replace('.', ',') + '</b>' : ''}</span></div>`;
+                    if (dim.trend) h += `<div class="ev-muted">${dim.trend}.</div>`;
+                    h += '<div class="table-responsive"><table class="hp-table" style="width:100%"><thead><tr><th>Przedział</th><th>Transakcji</th><th>Skuteczność</th><th>Śr. zwrot</th><th>Mediana</th><th>Śr. R</th><th>Najgorsza / najlepsza</th><th>Wiarygodność</th></tr></thead><tbody>' +
+                        dim.buckets.map(b => `<tr><td>${b.label}${b.note ? ' <span class="ev-muted">(' + b.note + ')</span>' : ''}</td><td>${b.n}</td><td>${f(b.win_rate, 0, '%')}</td>` +
+                            `<td><div style="display:flex;align-items:center;gap:8px"><span style="min-width:54px;color:${col(b.avg_ret)};font-weight:700">${f(b.avg_ret, 1, '%')}</span><span style="display:inline-block;height:8px;border-radius:4px;background:${col(b.avg_ret) || 'transparent'};width:${b.avg_ret == null ? 0 : Math.round(Math.abs(b.avg_ret) / maxAbs * 90)}px"></span></div></td>` +
+                            `<td>${f(b.median_ret, 1, '%')}</td><td>${f(b.avg_r, 2)}${b.n_r && b.n_r !== b.n ? ' <span class="ev-muted">(' + b.n_r + ')</span>' : ''}</td><td>${f(b.worst, 1, '%')} / ${f(b.best, 1, '%')}</td><td style="color:${b.reliable ? 'var(--success)' : 'var(--text-muted)'}">${b.n === 0 ? '–' : b.reliable ? 'wystarczająca próba' : 'za mała próba (<' + d.min_n + ')'}</td></tr>`).join('') + '</tbody></table></div>';
+                });
+                h += `<div class="ev-muted" style="margin-top:12px">Uwaga: przedział z mniej niż ${d.min_n} transakcjami jest anegdotą, nie dowodem; korelacja liczona od ${d.min_corr_n} transakcji. Punkty zapisane są w chwili transakcji, więc późniejsza zmiana zasad w Serwisie nie przestawia historii.</div>`;
+                box.innerHTML = h;
+            } catch (e) { box.innerHTML = '<div class="ev-empty ev-bad">Nie udało się wczytać raportu: ' + (e.message || e) + '</div>'; }
         }
 
         function calculateAndRenderSummary() {
@@ -5847,7 +5878,8 @@ window.Wejscie = (function () {
     function setFilter(k, v) { rd[k] = v; drawRadar(); }
 
     // ---------- okno oceny wejścia ----------
-    const ov = { data: null, plays: [], req: 0 };
+    const ov = { data: null, plays: [], req: 0, opts: {} };
+    const optKey = (t, id) => t + "|" + id;
     function overlay() {
         let o = document.getElementById("ev-overlay");
         if (!o) { o = document.createElement("div"); o.id = "ev-overlay"; o.className = "plx-overlay"; o.innerHTML = '<div class="plx-panel"></div>'; document.body.appendChild(o);
@@ -5863,17 +5895,27 @@ window.Wejscie = (function () {
         const r = rd.rows.find(x => x.ticker === ticker);
         return r ? r.plays : [];
     }
-    async function evaluate(ticker, entryId) {
+    async function evaluate(ticker, entryId, newOpts) {
         const my = ++ov.req;
+        if (newOpts) ov.opts[optKey(ticker, entryId)] = newOpts;
+        const o = ov.opts[optKey(ticker, entryId)] || {};
+        const qs = (o.gap_dates && o.gap_dates.length ? "&gap_dates=" + encodeURIComponent(o.gap_dates.join(",")) : "") + (o.calendar !== undefined && o.calendar !== "" ? "&calendar=" + encodeURIComponent(o.calendar) : "");
         show('<div class="ev-empty">Ocena wejścia ' + esc(ticker) + ' – pobieram świece, CVD i budżet…</div>');
         try {
-            const [d, plays] = await Promise.all([api("/api/entry/evaluate?ticker=" + encodeURIComponent(ticker) + "&entry_id=" + encodeURIComponent(entryId)), playsOf(ticker)]);
+            const [d, plays] = await Promise.all([api("/api/entry/evaluate?ticker=" + encodeURIComponent(ticker) + "&entry_id=" + encodeURIComponent(entryId) + qs), playsOf(ticker)]);
             if (my !== ov.req) return;
             ov.data = d; ov.plays = plays; render();
         } catch (e) {
             if (my !== ov.req) return;
             show('<div class="plx-head"><div class="plx-title">Ocena wejścia · ' + esc(ticker) + '</div><button class="hp-btn" data-ev-close>✕</button></div><div class="ev-empty ev-bad">' + esc(e.message) + "</div>");
         }
+    }
+    function optionsHtml(d) {
+        const o = ov.opts[optKey(d.ticker, d.play.entry_id)] || {}, gd = o.gap_dates || [], cal = o.calendar === undefined ? "" : String(o.calendar);
+        const src = d.options && d.options.gap_source ? "Luka: " + esc(d.options.gap_source) + (d.options.gap_dates && d.options.gap_dates.length ? " (" + d.options.gap_dates.map(esc).join(" → ") + ")" : "") : "Luka: nie wskazano";
+        return '<div class="ev-opts"><span class="ev-muted">' + src + '</span><label>Luka – data powstania <input type="date" id="ev-gd1" value="' + esc(gd[0] || "") + '"> <input type="date" id="ev-gd2" value="' + esc(gd[1] || "") + '" title="Druga data (opcjonalnie): świeca po luce"></label>' +
+            '<label>Kalendarz – moja ocena <select id="ev-cal"><option value=""' + (cal === "" ? " selected" : "") + '>nie oceniam (z kalendarza zdarzeń)</option><option value="1"' + (cal === "1" ? " selected" : "") + '>brak ryzyka</option><option value="0.6"' + (cal === "0.6" ? " selected" : "") + '>umiarkowane</option><option value="0.2"' + (cal === "0.2" ? " selected" : "") + '>wysokie</option></select></label>' +
+            '<button type="button" class="hp-btn" data-ev-recalc>Przelicz</button></div>';
     }
     function condRow(c, i) {
         const sc = c.score == null ? "brak danych" : Math.round(c.score * 100) + "%";
@@ -5907,6 +5949,7 @@ window.Wejscie = (function () {
             '<div class="ev-verdict" style="border-color:' + vc + '"><div><div class="ev-vtext" style="color:' + vc + '">' + esc(d.verdict) + '</div><div class="ev-muted">' +
             (d.blocked ? "Kurs przebił stop loss – zagranie unieważnione." : "Średnia ważona " + d.conditions.filter(c => c.score != null).length + " z " + d.conditions.length + " warunków (brak danych nie zawyża wyniku).") +
             '</div></div><div class="ev-big">' + (d.score == null ? "–" : Math.round(d.score)) + '<small>/100</small></div></div>' +
+            optionsHtml(d) +
             '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Zagranie</div><div class="v">' + arrow(p.side) + " " + price(p.zone[0]) + "–" + price(p.zone[1]) + '</div><div class="s">' + (inZone ? "kurs w strefie" : "kurs poza strefą") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Punkt wejścia</div><div class="v">' + price(p.entry) + '</div><div class="s">' + (p.entry_is_zone_mid ? "środek strefy (brak punktu w Form)" : "odległość " + spct(dist)) + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.take_profit) + " / " + price(p.stop_loss) + '</div><div class="s">R:R ' + (rr ? num(rr, 1) : "–") + "</div></div></div>" +
@@ -5925,6 +5968,10 @@ window.Wejscie = (function () {
         const t = e.target; if (!t.closest) return;
         if (t.closest("[data-ev-close]")) { close(); return; }
         if (t.closest("[data-ev-refresh]") && ov.data) { evaluate(ov.data.ticker, ov.data.play.entry_id); return; }
+        if (t.closest("[data-ev-recalc]") && ov.data) {
+            const g = [$("#ev-gd1").value, $("#ev-gd2").value].filter(Boolean).sort();
+            evaluate(ov.data.ticker, ov.data.play.entry_id, { gap_dates: g, calendar: $("#ev-cal").value }); return;
+        }
         const i = t.closest("[data-ev-info]"); if (i) { const el = document.getElementById("ev-d" + i.dataset.evInfo); if (el) el.hidden = !el.hidden; return; }
         if (t.closest("[data-ev-trade]")) { toTrade(); return; }
         if (t.closest("#ev-overlay [data-ev-plan]") || t.closest("#ev-overlay [data-plan]")) close();
@@ -5934,7 +5981,7 @@ window.Wejscie = (function () {
 
     function compact(d) {      // to, co zapisujemy przy transakcji (ocena w chwili wejścia)
         return { entry_score: d.score, entry_eval: { verdict: d.verdict, score: d.score, factor: d.factor, price: d.price, evaluated_at: new Date().toISOString(),
-            recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source, points: d.scoring && d.scoring.points, max_points: d.scoring && d.scoring.max_points, form_score: d.scoring && d.scoring.form_score, entry_points: d.scoring && d.scoring.entry_points,
+            recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source, options: d.options, points: d.scoring && d.scoring.points, max_points: d.scoring && d.scoring.max_points, form_score: d.scoring && d.scoring.form_score, entry_points: d.scoring && d.scoring.entry_points,
             conditions: d.conditions.map(c => ({ id: c.id, score: c.score, status: c.status })) }, summary: {
             verdict: d.verdict, score: d.score, recommended_pct: d.budget.recommended_pct, source: d.budget.source, capital_pln: d.budget.capital_pln, price: d.price } };
     }
