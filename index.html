@@ -5974,6 +5974,7 @@ window.StockDetail = (function () {
         const o = $("#sd-overlay"); if (!o) return;
         o.classList.remove("sd-open"); document.body.style.overflow = "";
         st.seq++;
+        if (st.ctlDetail) st.ctlDetail.abort(); if (st.ctlCvd) st.ctlCvd.abort();
         if (ro) { ro.disconnect(); ro = null; }
         removeCvd();
         if (chart) { chart.remove(); chart = candles = volume = zonesPrim = entriesPrim = null; }
@@ -5994,12 +5995,21 @@ window.StockDetail = (function () {
         if (typeof openCampaignPlanner === "function") openCampaignPlanner(t ? t.id : 0, tk);
     }
 
+    // fetch z limitem czasu i możliwością anulowania poprzedniego zapytania (np. przy szybkiej zmianie zakresu)
+    function fetchGuard(url, slot, ms) {
+        if (st[slot]) st[slot].abort();
+        const ctl = new AbortController(); st[slot] = ctl;
+        const timer = setTimeout(() => ctl.abort(), ms);
+        return fetch(url, { signal: ctl.signal }).finally(() => clearTimeout(timer));
+    }
+    const isAbort = e => e && e.name === "AbortError";
     async function load() {
         const my = ++st.seq;
         showMsg("Ładowanie…");
+        const slow = setTimeout(() => { if (my === st.seq) showMsg("Ładowanie… serwer odpowiada wolno (pierwsze pobranie danych spółki lub uśpiony serwer — do kilkudziesięciu sekund)."); }, 6000);
         try {
             const url = API_BASE_URL + "/api/stock/detail?ticker=" + encodeURIComponent(st.ticker) + "&interval=" + st.interval + "&range=" + st.range;
-            const res = await fetch(url);
+            const res = await fetchGuard(url, "ctlDetail", 90000);
             const d = await res.json().catch(() => ({}));
             if (my !== st.seq) return;
             if (!res.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + res.status));
@@ -6008,8 +6018,8 @@ window.StockDetail = (function () {
             render();
         } catch (e) {
             if (my !== st.seq) return;
-            clearChart(); showMsg("Nie udało się pobrać danych: " + (e.message || e));
-        }
+            clearChart(); showMsg(isAbort(e) ? "Serwer nie odpowiedział w ciągu 90 s. Spróbuj ponownie za chwilę." : "Nie udało się pobrać danych: " + (e.message || e));
+        } finally { clearTimeout(slow); }
     }
     function showMsg(t) { const m = $("#sd-msg"); if (m) { m.textContent = t || ""; m.style.display = t ? "flex" : "none"; } }
 
@@ -6201,10 +6211,7 @@ window.StockDetail = (function () {
                 timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 4 },
                 crosshair: { mode: 0 }
             });
-            chart.timeScale().subscribeVisibleTimeRangeChange(r => {      // oś czasu wykresu CVD podąża za wykresem ceny
-                if (!cvdChart || syncing || !r) return;
-                syncing = true; try { cvdChart.timeScale().setVisibleRange(r); } catch (e) {} syncing = false;
-            });
+            chart.timeScale().subscribeVisibleLogicalRangeChange(r => linkRange(r, cvdChart));
             candles = chart.addCandlestickSeries({ upColor: "#0ecb81", downColor: "#f6465d", borderUpColor: "#0ecb81", borderDownColor: "#f6465d", wickUpColor: "#0ecb81", wickDownColor: "#f6465d" });
             volume = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "" });
             volume.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
@@ -6233,6 +6240,14 @@ window.StockDetail = (function () {
     }
 
     // ---------- CVD: panel pod wykresem ceny (świece / linia / histogram) albo nakładka na wykresie; tryb "Ukryj" ----------
+    // oba wykresy mają tyle samo pozycji (CVD dopełniony pustymi miejscami), więc zakres synchronizujemy po pozycjach świec -
+    // przybliżanie i przesuwanie któregokolwiek wykresu działa identycznie na drugim
+    function linkRange(r, target) {
+        if (!target || syncing || !r) return;
+        syncing = true;
+        try { target.timeScale().setVisibleLogicalRange({ from: r.from, to: r.to }); } catch (e) {}
+        syncing = false;
+    }
     const anchorLabel = a => (CVD_ANCHORS.find(x => x[0] === a) || [a, a])[1];
     const CVD_UP = "#0ecb81", CVD_DN = "#f6465d";
     function setCvdMode(m) {
@@ -6254,10 +6269,10 @@ window.StockDetail = (function () {
         const key = [st.ticker, st.interval, st.range, st.cvdAnchor].join("|");
         if (st.cvdKey === key && st.cvdData) { drawCvd(); return; }
         const my = ++st.cvdSeq;
-        cvdNote("Ładowanie CVD…");
+        cvdNote("Ładowanie CVD… (świece 5m z zewnętrznego źródła, może potrwać kilkanaście sekund)");
         try {
             const url = API_BASE_URL + "/api/stock/cvd?ticker=" + encodeURIComponent(st.ticker) + "&interval=" + st.interval + "&range=" + st.range + "&anchor=" + st.cvdAnchor;
-            const res = await fetch(url);
+            const res = await fetchGuard(url, "ctlCvd", 90000);
             const d = await res.json().catch(() => ({}));
             if (my !== st.cvdSeq) return;
             if (!res.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + res.status));
@@ -6265,7 +6280,7 @@ window.StockDetail = (function () {
         } catch (e) {
             if (my !== st.cvdSeq) return;
             st.cvdData = null; st.cvdKey = null; removeCvd();
-            cvdNote("CVD niedostępne: " + (e.message || e));
+            cvdNote(isAbort(e) ? "CVD: serwer nie odpowiedział w ciągu 90 s." : "CVD niedostępne: " + (e.message || e));
         }
     }
     function drawCvd() {
@@ -6280,7 +6295,8 @@ window.StockDetail = (function () {
                 cvdOverlay = chart.addBaselineSeries(Object.assign({ priceScaleId: "cvd", lastValueVisible: false, priceLineVisible: false }, base));
                 chart.priceScale("cvd").applyOptions({ scaleMargins: { top: 0.55, bottom: 0.2 } });
             }
-            cvdOverlay.setData(S.map(x => ({ time: x.time, value: x.c })));
+            const byO = {}; S.forEach(x => { byO[x.time] = x; });
+            cvdOverlay.setData((st.data.bars || []).map(b => byO[b.time] ? { time: b.time, value: byO[b.time].c } : { time: b.time }));
         } else {
             if (cvdOverlay) { try { chart.removeSeries(cvdOverlay); } catch (e) {} cvdOverlay = null; }
             $("#sd-cvdwrap").hidden = false;
@@ -6293,10 +6309,7 @@ window.StockDetail = (function () {
                     timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 4, timeVisible: intraday, secondsVisible: false },
                     crosshair: { mode: 0 }
                 });
-                cvdChart.timeScale().subscribeVisibleTimeRangeChange(r => {
-                    if (!chart || syncing || !r) return;
-                    syncing = true; try { chart.timeScale().setVisibleRange(r); } catch (e) {} syncing = false;
-                });
+                cvdChart.timeScale().subscribeVisibleLogicalRangeChange(r => linkRange(r, chart));
             }
             cvdChart.applyOptions({ timeScale: { timeVisible: intraday, secondsVisible: false } });
             if (cvdSeries && cvdSeriesMode !== mode) { cvdChart.removeSeries(cvdSeries); cvdSeries = null; }
@@ -6306,11 +6319,13 @@ window.StockDetail = (function () {
                     : cvdChart.addBaselineSeries(base);
                 cvdSeriesMode = mode;
             }
-            cvdSeries.setData(S.map(x => mode === "candles" ? { time: x.time, open: x.o, high: x.h, low: x.l, close: x.c }
+            const by = {}; S.forEach(x => { by[x.time] = x; });
+            // pusta pozycja (sam czas) dla świec ceny bez CVD - dzięki temu obie osie czasu mają ten sam zakres
+            cvdSeries.setData((st.data.bars || []).map(b => { const x = by[b.time]; return !x ? { time: b.time } : mode === "candles" ? { time: x.time, open: x.o, high: x.h, low: x.l, close: x.c }
                 : mode === "hist" ? { time: x.time, value: x.delta, color: x.delta >= 0 ? "rgba(14,203,129,0.7)" : "rgba(246,70,93,0.7)" }
-                : { time: x.time, value: x.c }));
-            const r = chart.timeScale().getVisibleRange();
-            if (r) { syncing = true; try { cvdChart.timeScale().setVisibleRange(r); } catch (e) { cvdChart.timeScale().fitContent(); } syncing = false; } else cvdChart.timeScale().fitContent();
+                : { time: x.time, value: x.c }; }));
+            const r = chart.timeScale().getVisibleLogicalRange();
+            if (r) linkRange(r, cvdChart); else cvdChart.timeScale().fitContent();
         }
         let note = "CVD ze świec " + d.ltf + " (przybliżenie, reguły wskaźnika TradingView) · reset: " + anchorLabel(d.anchor) + " · dostępne od " + d.covered_from;
         if (st.data && d.covered_from > st.data.range_start) note += " — źródło danych ma krótszą historię niż wybrany zakres";
