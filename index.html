@@ -128,6 +128,75 @@
             #hp-positions td:first-child { white-space: normal; } #hp-positions .hp-badge { margin: 2px 4px 0 0; display: inline-block; }
         }
         @media (prefers-reduced-motion: reduce) { .hp-panel, .hp-table tbody tr { animation: none; } .hp-body, .hp-ring .hp-bar, .hp-wfill, .hp-chev { transition: none; } }
+        /* ===== Baza danych (dbx): spójna ze stroną główną, dopasowana do dużych monitorów (25") ===== */
+        #database-module.dbx { max-width: 1680px; padding: 18px 24px 48px; font-size: 15px; }
+        @media (min-width: 1900px) { #database-module.dbx { max-width: 2000px; font-size: 16px; padding: 24px 32px 56px; } }
+        @media (min-width: 2400px) { #database-module.dbx { max-width: 2480px; font-size: 18px; padding: 30px 48px 64px; } .dbx-grid { grid-template-columns: minmax(0, 1fr) 560px !important; } }
+        .dbx-top { display: flex; margin-bottom: 16px; }
+        .dbx-tabs { display: inline-flex; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 4px; gap: 4px; }
+        .dbx-tabs .tab-btn { border: 0 !important; background: none; color: var(--text-muted); padding: 9px 24px; border-radius: 9px; font-weight: 600; font-size: 1em; cursor: pointer; transition: color .2s, background .2s; }
+        .dbx-tabs .tab-btn:hover { color: var(--text-main); }
+        .dbx-tabs .tab-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: #0b0e11; }
+        .dbx-panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; animation: hp-rise .5s cubic-bezier(.22,.8,.24,1) both; }
+        .dbx-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+        .dbx-panel-head h3 { font-size: 1.08em; font-weight: 650; margin-bottom: 2px; }
+        .dbx-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+        .dbx-grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+        @media (min-width: 1280px) { .dbx-grid { grid-template-columns: minmax(0, 1fr) 400px; } .dbx-side { position: sticky; top: 72px; } }
+        .dbx-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+        .dbx-chip { --c: var(--accent); background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 99px; padding: 5px 13px; font-size: 0.84em; cursor: pointer; transition: border-color .2s, transform .2s; }
+        .dbx-chip:hover { transform: translateY(-1px); border-color: var(--c); } .dbx-chip b { color: var(--c); margin-left: 4px; }
+        .dbx-chip.on { border-color: var(--c); background: rgba(255,255,255,.05); }
+        .dbx-in { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 11px; color: var(--text-main); font-size: 0.92em; min-width: 0; width: 100%; font-family: inherit; }
+        .dbx-in:focus, .dbx-pill:focus { outline: 0; border-color: var(--accent); }
+        .dbx-in option, .dbx-pill option { background: var(--bg-card); color: var(--text-main); }
+        .dbx-table th { white-space: nowrap; } .dbx-table td { padding: 11px 10px; }
+        .dbx-filters th { padding: 6px 8px; text-transform: none; letter-spacing: 0; font-weight: 400; cursor: default; }
+        .dbx-range { display: flex; gap: 6px; justify-content: flex-end; } .dbx-range .dbx-in { width: 90px; }
+        .dbx-name { color: var(--text-muted); max-width: 460px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dbx-pill { appearance: none; -webkit-appearance: none; border: 1px solid; border-radius: 99px; padding: 4px 26px 4px 12px; font-weight: 700; font-size: 0.84em; cursor: pointer; font-family: inherit;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23848e9c' stroke-width='1.6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+        .dbx-pill.inv { color: #89b4fa; border-color: rgba(137,180,250,.5); background-color: rgba(137,180,250,.10); }
+        .dbx-pill.spec { color: #fab387; border-color: rgba(250,179,135,.5); background-color: rgba(250,179,135,.10); }
+        .dbx-switch { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; cursor: pointer; }
+        .dbx-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+        .dbx-switch span { position: absolute; inset: 0; background: var(--border-color); border-radius: 99px; transition: background .25s; }
+        .dbx-switch span::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #eaecef; transition: transform .25s; }
+        .dbx-switch input:checked + span { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); }
+        .dbx-switch input:checked + span::after { transform: translateX(18px); background: #0b0e11; }
+        .dbx-prio-l { margin-left: 10px; font-size: 0.84em; color: var(--text-muted); } .dbx-prio-l.on { color: var(--accent-hover); font-weight: 700; }
+        .dbx-icon { background: none; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 8px; width: 32px; height: 30px; cursor: pointer; margin-left: 6px; transition: color .2s, border-color .2s; }
+        .dbx-icon:hover { color: var(--accent-hover); border-color: var(--accent); } .dbx-icon.dbx-del:hover { color: var(--danger); border-color: var(--danger); }
+        .dbx-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+        .dbx-pager-mid { display: flex; gap: 12px; align-items: center; color: var(--text-muted); font-size: 0.9em; } .dbx-size { width: auto; }
+        .dbx-pager .hp-btn:disabled { opacity: .4; pointer-events: none; }
+        .dbx-form { display: flex; flex-direction: column; gap: 10px; }
+        .dbx-prio { padding: 6px 2px; }
+        .dbx-details summary { cursor: pointer; font-weight: 650; list-style: none; } .dbx-details summary::-webkit-details-marker { display: none; }
+        .dbx-dict th, .dbx-dict td { padding: 6px 8px; font-size: 0.8em; }
+        .dbx-cols { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+        @media (min-width: 1100px) { .dbx-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        /* rozmiary względem czcionki modułu (em), żeby skalowały się na dużych monitorach */
+        .dbx .hp-table th { font-size: 0.74em; } .dbx .hp-table td { font-size: 1em; }
+        .dbx .db-help, .dbx .hp-btn { font-size: 0.88em; } .dbx .hp-btn { font-size: 0.92em; }
+        .dbx .hp-empty { font-size: 1em; }
+        .dbx .lim-table small { font-size: 0.85em; }
+        .dbx-dict td, .dbx-dict th { white-space: normal !important; overflow-wrap: break-word; word-break: normal; vertical-align: top; }
+        .dbx-dict td:last-child, .dbx-dict th:last-child { white-space: nowrap !important; } .dbx-dict td:first-child { min-width: 120px; }
+        .dbx-cols .dbx-wide-panel { grid-column: 1 / -1; }
+        .dbx-formgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } .dbx-wide { grid-column: 1 / -1; }
+        .dbx-field { display: flex; flex-direction: column; gap: 5px; } .dbx-field span { color: var(--text-muted); font-size: 0.74em; text-transform: uppercase; letter-spacing: .06em; }
+        .dbx-inline { display: flex; gap: 10px; }
+        .dbx-result { margin-top: 12px; padding: 10px 12px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.9em; line-height: 1.5; }
+        .dbx-logs { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 14px; }
+        .dbx-log { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; font-size: 0.86em; color: var(--text-muted); line-height: 1.5; }
+        .dbx-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; }
+        .dbx-actions .hp-btn { padding: 11px 14px; text-align: left; }
+        .dbx-danger { color: var(--danger); border-color: rgba(246,70,93,.5); } .dbx-blue { color: #60a5fa; border-color: rgba(96,165,250,.5); } .dbx-green { color: var(--success); border-color: rgba(14,203,129,.5); }
+        .dbx-link { color: var(--accent); }
+        .dbx .lim-panel { background: var(--bg-card); }
+        .dbx .lim-table input { width: 110px; }
+        @media (max-width: 760px) { #database-module.dbx { padding: 12px; } .dbx-cols { grid-template-columns: 1fr; } .dbx-formgrid { grid-template-columns: 1fr; } }
         /* ===== Baza danych: zakładki, rodzaje spółek, limity ===== */
         .db-help { color: var(--text-muted); font-size: 0.82rem; line-height: 1.4; }
         .db-select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; width: 100%; }
@@ -627,47 +696,75 @@
         </div> 
     </section>
 
-    <section id="database-module" class="app-module">
-        <div class="tabs" id="db-tabs">
-            <button class="tab-btn active" data-dbtab="tickers" onclick="switchDbTab('tickers')">Tickery</button>
-            <button class="tab-btn" data-dbtab="macro" onclick="switchDbTab('macro')">Makro</button>
-            <button class="tab-btn" data-dbtab="service" onclick="switchDbTab('service')">Serwis</button>
-        </div>
-        <div id="db-tab-tickers" class="db-tab">
-        <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;"> 
-            <h3>Baza tickerów</h3>
-            <p class="db-help">Rodzaj spółki decyduje o sposobie rozgrywania inwestycji i o limitach z zakładki Serwis: <b>Inwestycja</b> lub <b>Spekulacja</b> oraz <b>Priorytet</b> (albo jego brak).</p>
-            <div class="form-row" style="margin-top:15px; align-items:stretch;">
-                <div class="form-group" style="flex:2;"><input type="text" id="new-ticker" placeholder="Wpisz ticker (np. AAPL)"></div>
-                <div class="form-group" style="flex:2;">
-                    <select id="new-ticker-conviction" class="db-select" style="height:100%;">
-                        <option value="Inwestycja (Core)">Inwestycja (mocne fundamenty)</option>
-                        <option value="Spekulacja" selected>Spekulacja (tylko technika)</option>
-                    </select>
-                </div>
-                <div class="form-group" style="flex:1; min-width:120px; justify-content:center;"><label class="db-check"><input type="checkbox" id="new-ticker-priority"> ⚡ Priorytet</label></div>
-                <div class="form-group" style="flex:1;"><button onclick="addTicker()" class="btn-submit" style="height:100%;">Dodaj</button></div>
+    <section id="database-module" class="app-module dbx">
+        <div class="dbx-top">
+            <div class="dbx-tabs" id="db-tabs" role="tablist">
+                <button class="tab-btn active" data-dbtab="tickers" onclick="switchDbTab('tickers')">Tickery</button>
+                <button class="tab-btn" data-dbtab="macro" onclick="switchDbTab('macro')">Makro</button>
+                <button class="tab-btn" data-dbtab="service" onclick="switchDbTab('service')">Serwis</button>
             </div>
-            <div class="db-filter"><span class="db-flabel">Rodzaj</span>
-                <select id="db-kind-filter" class="db-select" onchange="setTickerKindFilter(this.value)">
-                    <option value="all">Wszystkie rodzaje</option><option value="inv_prio">Inwestycja · priorytet</option><option value="inv">Inwestycja</option><option value="spec_prio">Spekulacja · priorytet</option><option value="spec">Spekulacja</option>
-                </select><span id="db-kind-counts" class="db-help"></span></div>
-            <div id="db-list-container"></div> 
-            <div class="pagination-container"><button class="btn-pag" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="ticker-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('database', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="ticker-next-btn" onclick="changeTickerPage(1)">Nast →</button></div> 
-        </div> 
-        <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;"> 
-            <h4 style="color: var(--accent); margin-bottom: 15px;">📖 Słownik Tickerów (Jak poprawnie dodawać instrumenty do bazy)</h4>
-            <div class="table-responsive">
-                <table class="macro-custom-table" style="width:100%; font-size: 0.85em;">
-                    <thead>
-                        <tr>
-                            <th>Rynek / Giełda</th>
-                            <th>Przedrostek (TradingView)</th>
-                            <th>Przykład Wpisu</th>
-                            <th>Rozliczenie (Waluta)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+        </div>
+
+        <!-- ============ TICKERY ============ -->
+        <div id="db-tab-tickers" class="db-tab">
+            <div class="dbx-grid">
+                <div class="dbx-main">
+                    <div class="dbx-panel">
+                        <div class="dbx-panel-head">
+                            <div><h3>Baza tickerów</h3><div class="db-help">Typ inwestycji i priorytet decydują o sposobie rozgrywania spółki oraz o limitach z zakładki Serwis.</div></div>
+                            <button class="hp-btn" type="button" onclick="clearTickerFilters()">Wyczyść filtry</button>
+                        </div>
+                        <div class="dbx-chips" id="db-kind-counts"></div>
+                        <div class="hp-table-wrap">
+                            <table class="hp-table dbx-table" id="db-table">
+                                <thead>
+                                    <tr id="db-head">
+                                        <th data-sort="ticker">Ticker<span class="hp-arrow"></span></th>
+                                        <th data-sort="name">Nazwa<span class="hp-arrow"></span></th>
+                                        <th data-sort="conv">Typ inwestycji<span class="hp-arrow"></span></th>
+                                        <th data-sort="prio">Priorytet<span class="hp-arrow"></span></th>
+                                        <th class="hp-r" data-sort="price">Aktualna cena<span class="hp-arrow"></span></th>
+                                        <th class="hp-r">Akcja</th>
+                                    </tr>
+                                    <tr class="dbx-filters">
+                                        <th><input id="f-ticker" class="dbx-in" placeholder="Filtruj ticker…" autocomplete="off" oninput="setTickerFilter('ticker', this.value)"></th>
+                                        <th><input id="f-name" class="dbx-in" placeholder="Filtruj nazwę…" autocomplete="off" oninput="setTickerFilter('name', this.value)"></th>
+                                        <th><select id="f-conv" class="dbx-in" onchange="setTickerFilter('conv', this.value)"><option value="all">Wszystkie</option><option value="inv">Inwestycja</option><option value="spec">Spekulacja</option></select></th>
+                                        <th><select id="f-prio" class="dbx-in" onchange="setTickerFilter('prio', this.value)"><option value="all">Wszystkie</option><option value="yes">Priorytet</option><option value="no">Brak</option></select></th>
+                                        <th class="hp-r"><span class="dbx-range"><input id="f-pmin" class="dbx-in" type="number" step="any" placeholder="od" oninput="setTickerFilter('pmin', this.value)"><input id="f-pmax" class="dbx-in" type="number" step="any" placeholder="do" oninput="setTickerFilter('pmax', this.value)"></span></th>
+                                        <th class="hp-r"><span class="db-help" id="db-filter-info"></span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="db-tbody"><tr><td colspan="6" class="hp-empty">Ładowanie…</td></tr></tbody>
+                            </table>
+                        </div>
+                        <div class="dbx-pager">
+                            <button class="hp-btn" id="ticker-prev-btn" onclick="changeTickerPage(-1)">← Poprzednia</button>
+                            <div class="dbx-pager-mid"><span id="ticker-page-info">Strona 1 z 1</span>
+                                <select class="dbx-in dbx-size" onchange="setTickerPageSize(this.value)" title="Liczba wierszy na stronie"><option value="25">25 / str.</option><option value="50">50 / str.</option><option value="100">100 / str.</option><option value="all">Wszystkie</option></select></div>
+                            <button class="hp-btn" id="ticker-next-btn" onclick="changeTickerPage(1)">Następna →</button>
+                        </div>
+                    </div>
+                </div>
+                <aside class="dbx-side">
+                    <div class="dbx-panel">
+                        <div class="dbx-panel-head"><h3>Dodaj ticker</h3></div>
+                        <div class="dbx-form">
+                            <input type="text" id="new-ticker" class="dbx-in" placeholder="Ticker (np. AAPL, GPW:CDR)" autocomplete="off">
+                            <select id="new-ticker-conviction" class="dbx-in">
+                                <option value="Inwestycja (Core)">Inwestycja (mocne fundamenty)</option>
+                                <option value="Spekulacja" selected>Spekulacja (tylko technika)</option>
+                            </select>
+                            <label class="db-check dbx-prio"><input type="checkbox" id="new-ticker-priority"> ⚡ Priorytet</label>
+                            <button onclick="addTicker()" class="hp-btn hp-primary" type="button">Dodaj</button>
+                        </div>
+                    </div>
+                    <div class="dbx-panel">
+                        <details open class="dbx-details">
+                            <summary>📖 Słownik tickerów</summary>
+                            <div class="db-help" style="margin:6px 0 10px;">Jak poprawnie dodawać instrumenty do bazy</div>
+                            <div class="hp-table-wrap"><table class="hp-table dbx-dict"><thead><tr><th>Rynek / giełda</th><th>Przedrostek</th><th>Przykład</th><th>Waluta</th></tr></thead>
+<tbody>
                         <tr>
                             <td>Polska (GPW)</td>
                             <td><code>GPW:</code></td>
@@ -740,36 +837,45 @@
                             <td><strong>OMXCOP:NVO</strong> (Novo Nordisk)</td>
                             <td style="color:var(--success); font-weight:bold;">PLN (Celowe)</td>
                         </tr>
-                    </tbody>
-                </table>
-            </div>
-            <p style="font-size: 0.8em; color: var(--text-muted); margin-top: 10px; line-height: 1.4;">
+                    </tbody></table></div>
+                            <p class="db-help" style="margin-top:10px;">
                 * System automatycznie obcina końcówki w kryptowalutach (np. USDT zamienia na parę do USD) i tłumaczy wszystkie przedrostki na format czytelny dla serwerów Yahoo Finance. Dla klasycznych rynków akcyjnych w USA dodawanie przedrostka nie jest wymagane.
             </p>
+                        </details>
+                    </div>
+                </aside>
+            </div>
         </div>
-        </div>
+
+        <!-- ============ MAKRO ============ -->
         <div id="db-tab-macro" class="db-tab" style="display:none;">
-        <div class="macro-header-container" style="display:flex; justify-content:space-between; flex-direction:column; gap:10px;"> 
-            <h3>Makro — panel sentymentu</h3> 
-            <div style="display:flex; gap:10px; flex-wrap:wrap;"> 
-                <button class="btn-submit" style="width:100%; padding:10px; background:#0284c7; color:#fff;" onclick="forceMacroYTDUpdate(event)">📥 Pobierz YTD</button> 
-                <button class="btn-submit" style="width:100%; padding:10px;" onclick="forceMacroUpdate()">Aktualizuj Dzisiaj</button> 
-            </div> 
-        </div> 
-        <div class="table-responsive" style="margin-top:15px;">
-            <table class="macro-custom-table" style="width:100%;">
-                <thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&P 500</th><th>Odczyt</th></tr></thead>
-                <tbody id="macro-table-body"></tbody>
-            </table>
-        </div> 
-        <div class="pagination-container"><button class="btn-pag" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprz</button><div style="display:flex; align-items:center; gap:10px;"><span id="focuslist-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('focuslist', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button class="btn-pag" id="macro-next-btn" onclick="changeMacroPage(1)">Nast →</button></div> 
+            <div class="dbx-panel">
+                <div class="dbx-panel-head">
+                    <div><h3>Makro — panel sentymentu</h3><div class="db-help">Kursy walut, VIX i S&amp;P 500 z kolejnych dni.</div></div>
+                    <div class="dbx-tools"><button class="hp-btn" onclick="forceMacroYTDUpdate(event)">📥 Pobierz YTD</button><button class="hp-btn hp-primary" onclick="forceMacroUpdate()">Aktualizuj dzisiaj</button></div>
+                </div>
+                <div class="hp-table-wrap">
+                    <table class="hp-table">
+                        <thead><tr><th>Data</th><th>EUR/PLN</th><th>USD/PLN</th><th>VIX</th><th>S&amp;P 500</th><th>Odczyt</th></tr></thead>
+                        <tbody id="macro-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="dbx-pager">
+                    <button class="hp-btn" id="macro-prev-btn" onclick="changeMacroPage(-1)">← Poprzednia</button>
+                    <div class="dbx-pager-mid"><span id="macro-page-info">Strona 1 z 1</span>
+                        <select class="dbx-in dbx-size" onchange="setMacroPageSize(this.value)" title="Liczba wierszy na stronie"><option value="20">20 / str.</option><option value="50">50 / str.</option><option value="100">100 / str.</option><option value="all">Wszystkie</option></select></div>
+                    <button class="hp-btn" id="macro-next-btn" onclick="changeMacroPage(1)">Następna →</button>
+                </div>
+            </div>
         </div>
+
+        <!-- ============ SERWIS ============ -->
         <div id="db-tab-service" class="db-tab" style="display:none;">
-        <div class="lim-panel">
-            <h4>📐 Limity inwestycyjne wg rodzaju spółki</h4>
+            <div class="dbx-panel lim-panel">
+                <h4>📐 Limity inwestycyjne wg rodzaju spółki</h4>
             <p class="db-help">Rodzaj spółki wynika z oznaczeń w zakładce Tickery: <b>Inwestycja</b> / <b>Spekulacja</b> oraz <b>Priorytet</b>. Limity są w % kapitału (wpłaty + zysk zrealizowany), puste pole oznacza brak limitu.</p>
             <div class="table-responsive">
-                <table class="macro-custom-table lim-table" style="width:100%;">
+                <table class="hp-table lim-table" style="width:100%;">
                     <thead><tr><th>Rodzaj spółki</th><th>Spółek w bazie</th>
                         <th title="Ile % kapitału wolno zaangażować łącznie we wszystkie wejścia w jednej strefie jednej spółki">Maks. zaangażowanie w jednej strefie<br><small>% kapitału</small></th>
                         <th title="Maksymalna liczba inwestycji (wejść) w jednej spółce">Maks. liczba inwestycji w jednej spółce</th>
@@ -778,60 +884,42 @@
                 </table>
             </div>
             <div class="lim-actions"><button class="btn-submit" style="width:auto; padding:10px 22px;" onclick="saveLimits()">Zapisz limity</button><span id="lim-msg" class="db-help"></span></div>
-        </div>
-        <div class="dashboard-grid" style="grid-template-columns: 1fr; margin: 0; padding: 0;"> 
-            <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;"> 
-                <h4 style="color: var(--accent); margin-bottom: 15px;">💰 Rejestracja Dywidendy</h4> 
-                <form onsubmit="addDividend(event)"> 
-                    <div class="form-group"> <label>Wybierz otwartą pozycję (ID - Ticker)</label> <select id="div-trade-id" required style="background: var(--bg-input);"> <option value="">Ładowanie pozycji...</option> </select> </div> 
-                    <div class="form-row"> <div class="form-group"><label>Data wpłaty</label><input type="date" id="div-date" required></div> <div class="form-group"><label>Kwota (w walucie)</label><input type="number" step="0.01" id="div-amount" required></div> </div> 
-                    <button type="submit" class="btn-submit" style="background: var(--success); color: #fff;">Zapisz Dywidendę</button> 
-                </form> 
-            </div> 
-        </div> 
-        <div style="display: flex; flex-direction: column; gap: 12px; margin-top:10px;"> 
-            <h4 style="margin-bottom: 5px;">Ręczne wywołania (zadania cykliczne)</h4> 
-            <div style="display:flex; gap:10px; margin-bottom: 10px; flex-wrap: wrap;">
-                <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="last-price-update-log">
-                    <strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>
-                    Brak danych w pamięci przeglądarki
+
+            </div>
+            <div class="dbx-cols">
+                <div class="dbx-panel">
+                    <div class="dbx-panel-head"><h3>💰 Rejestracja dywidendy</h3></div>
+                    <form onsubmit="addDividend(event)" class="dbx-formgrid">
+                        <label class="dbx-field dbx-wide"><span>Otwarta pozycja (ID — ticker)</span><select id="div-trade-id" class="dbx-in" required><option value="">Ładowanie pozycji…</option></select></label>
+                        <label class="dbx-field"><span>Data wpłaty</span><input type="date" id="div-date" class="dbx-in" required></label>
+                        <label class="dbx-field"><span>Kwota (w walucie)</span><input type="number" step="0.01" id="div-amount" class="dbx-in" required></label>
+                        <button type="submit" class="hp-btn hp-primary dbx-wide">Zapisz dywidendę</button>
+                    </form>
                 </div>
-                <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="auto-price-update-log">
-                    <strong style="color:#89b4fa;">Automatyczna aktualizacja (CRON):</strong><br>
-                    Ładowanie danych z serwera...
+                <div class="dbx-panel">
+                    <div class="dbx-panel-head"><h3>🔎 Podgląd kursu na żywo</h3></div>
+                    <div class="db-help" style="margin-bottom:10px;">Szybki podgląd zakresu dziennego z Yahoo.</div>
+                    <div class="dbx-inline"><input type="text" id="tickerInput" class="dbx-in" placeholder="Ticker (np. GPW:CDR, BABA)" autocomplete="off" style="text-transform:uppercase;"><button class="hp-btn hp-primary" onclick="checkTickerLive(document.getElementById('tickerInput').value)">Sprawdź kurs</button></div>
+                    <div class="db-help" style="margin-top:10px;">Szybkie linki: <a href="#" class="dbx-link" onclick="checkTickerLive('GPW:CDR'); return false;">GPW:CDR (CD Projekt)</a></div>
+                    <div class="dbx-result" id="live-result" hidden></div>
                 </div>
-                <div style="flex:1; min-width: 250px; background: var(--bg-input); padding: 12px; border-radius: 6px; font-size: 0.85em; color: var(--text-muted); border: 1px solid var(--border-color);" id="system-health-log">
-                    <strong style="color:#fcd535;">Monitor Aplikacji (Health Check):</strong><br>
-                    Skanowanie systemów...
+                <div class="dbx-panel dbx-wide-panel">
+                    <div class="dbx-panel-head"><h3>⏱ Zadania cykliczne</h3><div class="db-help">Status i ręczne wywołania</div></div>
+                    <div class="dbx-logs">
+                        <div class="dbx-log" id="last-price-update-log"><strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>Brak danych w pamięci przeglądarki</div>
+                        <div class="dbx-log" id="auto-price-update-log"><strong style="color:#89b4fa;">Automatyczna aktualizacja (zadanie cykliczne):</strong><br>Ładowanie danych z serwera…</div>
+                        <div class="dbx-log" id="system-health-log"><strong style="color:#fcd535;">Monitor aplikacji (health check):</strong><br>Skanowanie systemów…</div>
+                    </div>
+                    <div class="dbx-actions">
+                        <button class="hp-btn dbx-danger" onclick="forceAlertsCheck()">🔔 Wymuś sprawdzenie alertów</button>
+                        <button class="hp-btn dbx-blue" onclick="forceCronPricesUpdate()">📈 Wymuś aktualizację cen</button>
+                        <button class="hp-btn dbx-green" onclick="fixTickerNames()">🏢 Pobierz nazwy spółek z Yahoo</button>
+                        <button class="hp-btn" onclick="fixHistoricalFxRates()">🛠️ Nadpisz kursy „4.0” w Supabase</button>
+                        <button class="hp-btn" onclick="forceCurrencyUpdate()">🔄 Przelicz i napraw waluty wg giełd</button>
+                    </div>
+                    <div id="service-output" style="margin-top: 16px; padding: 12px; background: var(--bg-input); border-radius: 10px; font-family: monospace; display: none;"></div>
                 </div>
             </div>
-            <button onclick="forceAlertsCheck()" style="background-color: var(--danger); color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🔔 Wymuś sprawdzenie alertów</button> 
-            <button onclick="forceCronPricesUpdate()" style="background-color: #0284c7; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">📈 Wymuś aktualizację cen</button>
-            <button onclick="fixTickerNames()" style="background-color: #a6e3a1; color: #000; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; margin-top: 5px;">🏢 Pobierz nazwy spółek z Yahoo (Baza)</button>
-            
-            <button onclick="fixHistoricalFxRates()" style="background-color: var(--accent); color: #000; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">🛠️ Nadpisz kursy '4.0' w Supabase</button>
-            <button onclick="forceCurrencyUpdate()" style="background-color: var(--accent); color: #000; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; margin-top: 5px;">🔄 Przelicz i napraw waluty wg Giełd (Baza)</button>
-        </div>
-        <div id="service-output" style="margin-top: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; font-family: monospace; display: none;"></div>
-        <div class="service-section" style="margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
-            <h3 style="margin-top: 0;">Szybki podgląd zakresu dziennego (Yahoo Live)</h3>
-            
-            <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
-                <input type="text" id="tickerInput" placeholder="Wpisz ticker (np. GPW:CDR, BABA)..." 
-                       style="padding: 8px; border-radius: 4px; border: 1px solid #aaa; width: 250px; text-transform: uppercase;">
-                <button onclick="checkTickerLive(document.getElementById('tickerInput').value)" 
-                        style="padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Sprawdź kurs
-                </button>
-            </div>
-            
-            <div style="font-size: 0.9em; color: #555;">
-                Szybkie linki: 
-                <span onclick="checkTickerLive('GPW:CDR')" style="color: #007bff; cursor: pointer; text-decoration: underline; margin-left: 5px;">
-                    GPW:CDR (CD Projekt)
-                </span>
-            </div>
-        </div>
         </div>
     </section>
 
@@ -1651,50 +1739,104 @@
             spec_prio: { label: 'Spekulacja · priorytet', color: '#fab387' },
             spec:      { label: 'Spekulacja',             color: '#fab387' }
         };
-        let tickerKindFilter = 'all';
+        const CCY_SYMBOL = { PLN: 'zł', EUR: '€', USD: '$' };
+        const dbxEsc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         function tickerKind(item) {
             const inv = String((item && item.conviction) || '').trim().toLowerCase().startsWith('inwest');
             return (inv ? 'inv' : 'spec') + (item && item.is_priority ? '_prio' : '');
         }
-        function filteredTickers() { return tickerKindFilter === 'all' ? tickerDataArray : tickerDataArray.filter(x => tickerKind(x) === tickerKindFilter); }
-        function setTickerKindFilter(v) { tickerKindFilter = v; currentTickerPage = 1; renderMobileList(); }
-        const CCY_SYMBOL = { PLN: 'zł', EUR: '€', USD: '$' };
+        tickerPageSize = 25;
+        let tickerFilters = { ticker: '', name: '', conv: 'all', prio: 'all', pmin: '', pmax: '' };
+        let tickerSort = { key: 'added', dir: -1 };       // domyślnie jak z serwera: od najnowszych
+        const TICKER_SORT_VAL = {
+            added: x => x.date_added || '', ticker: x => String(x.ticker || '').toLowerCase(), name: x => String(x.stock_name || '').toLowerCase(),
+            conv: x => (tickerKind(x).startsWith('inv') ? 0 : 1), prio: x => (x.is_priority ? 0 : 1),
+            price: x => (x.price === null || x.price === undefined || x.price === '' ? null : Number(x.price))
+        };
+        function filteredTickers() {
+            const f = tickerFilters, tk = f.ticker.trim().toLowerCase(), nm = f.name.trim().toLowerCase();
+            const pmin = f.pmin === '' ? null : Number(f.pmin), pmax = f.pmax === '' ? null : Number(f.pmax);
+            const list = tickerDataArray.filter(x => {
+                const kind = tickerKind(x), p = TICKER_SORT_VAL.price(x);
+                if (tk && !String(x.ticker || '').toLowerCase().includes(tk)) return false;
+                if (nm && !String(x.stock_name || '').toLowerCase().includes(nm)) return false;
+                if (f.conv !== 'all' && !kind.startsWith(f.conv)) return false;
+                if (f.prio === 'yes' && !x.is_priority) return false;
+                if (f.prio === 'no' && x.is_priority) return false;
+                if ((pmin !== null || pmax !== null) && p === null) return false;
+                if (pmin !== null && p < pmin) return false;
+                if (pmax !== null && p > pmax) return false;
+                return true;
+            });
+            const val = TICKER_SORT_VAL[tickerSort.key] || TICKER_SORT_VAL.added, d = tickerSort.dir;
+            return list.slice().sort((a, b) => {
+                const va = val(a), vb = val(b);
+                if (va === null || vb === null) return va === vb ? 0 : va === null ? 1 : -1;     // brak ceny zawsze na końcu
+                return (typeof va === 'string' ? va.localeCompare(vb, 'pl') : va - vb) * d;
+            });
+        }
+        function setTickerFilter(key, value) { tickerFilters[key] = value; currentTickerPage = 1; renderMobileList(); }
+        function clearTickerFilters() {
+            tickerFilters = { ticker: '', name: '', conv: 'all', prio: 'all', pmin: '', pmax: '' };
+            ['f-ticker', 'f-name', 'f-pmin', 'f-pmax'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+            ['f-conv', 'f-prio'].forEach(id => { const e = document.getElementById(id); if (e) e.value = 'all'; });
+            currentTickerPage = 1; renderMobileList();
+        }
+        function applyKindChip(kind) {      // szybki filtr z liczników rodzajów
+            const conv = kind === 'all' ? 'all' : kind.startsWith('inv') ? 'inv' : 'spec', prio = kind === 'all' ? 'all' : kind.endsWith('_prio') ? 'yes' : 'no';
+            tickerFilters.conv = conv; tickerFilters.prio = prio;
+            document.getElementById('f-conv').value = conv; document.getElementById('f-prio').value = prio;
+            currentTickerPage = 1; renderMobileList();
+        }
+        function setTickerPageSize(v) { tickerPageSize = v === 'all' ? 1e9 : Number(v); currentTickerPage = 1; renderMobileList(); }
+        function setMacroPageSize(v) { macroPageSize = v === 'all' ? 1e9 : Number(v); currentMacroPage = 1; renderMacroTable(); }
+        document.addEventListener('click', e => {
+            const th = e.target.closest && e.target.closest('#db-head th[data-sort]');
+            if (!th) return;
+            const k = th.dataset.sort;
+            if (tickerSort.key === k) tickerSort.dir = -tickerSort.dir; else { tickerSort.key = k; tickerSort.dir = k === 'price' ? -1 : 1; }
+            currentTickerPage = 1; renderMobileList();
+        });
 
         function renderMobileList() {
-            const container = document.getElementById('db-list-container'); container.innerHTML = '';
+            const tb = document.getElementById('db-tbody'); if (!tb) return;
             const counts = { inv_prio: 0, inv: 0, spec_prio: 0, spec: 0 };
             tickerDataArray.forEach(x => counts[tickerKind(x)]++);
-            const cn = document.getElementById('db-kind-counts');
-            if (cn) cn.textContent = tickerDataArray.length ? Object.keys(TICKER_KIND).map(k => TICKER_KIND[k].label + ': ' + counts[k]).join(' · ') : '';
-            const list = filteredTickers();
-            if (list.length === 0) { container.innerHTML = '<p class="db-help" style="padding:12px 0;">' + (tickerDataArray.length ? 'Brak spółek tego rodzaju.' : 'Baza tickerów jest pusta.') + '</p>'; updatePageInfo('ticker-page-info', 1, 1, 0, tickerPageSize); return; }
+            const active = (tickerFilters.conv === 'all' && tickerFilters.prio === 'all') ? 'all' : (tickerFilters.conv !== 'all' && tickerFilters.prio !== 'all' ? tickerFilters.conv + (tickerFilters.prio === 'yes' ? '_prio' : '') : '');
+            document.getElementById('db-kind-counts').innerHTML = tickerDataArray.length
+                ? '<button type="button" class="dbx-chip ' + (active === 'all' ? 'on' : '') + '" onclick="applyKindChip(\'all\')">Wszystkie <b>' + tickerDataArray.length + '</b></button>' +
+                  Object.keys(TICKER_KIND).map(k => '<button type="button" class="dbx-chip ' + (active === k ? 'on' : '') + '" style="--c:' + TICKER_KIND[k].color + ';" onclick="applyKindChip(\'' + k + '\')">' + TICKER_KIND[k].label + ' <b>' + counts[k] + '</b></button>').join('')
+                : '';
+            document.querySelectorAll('#db-head th[data-sort]').forEach(th => {
+                const on = th.dataset.sort === tickerSort.key;
+                th.classList.toggle('hp-sorted', on);
+                th.querySelector('.hp-arrow').setAttribute('data-arrow', tickerSort.dir > 0 ? ' ▲' : ' ▼');
+            });
+            const list = filteredTickers(), maxPage = Math.max(1, Math.ceil(list.length / tickerPageSize));
+            if (currentTickerPage > maxPage) currentTickerPage = maxPage;
+            document.getElementById('db-filter-info').textContent = list.length === tickerDataArray.length ? '' : list.length + ' z ' + tickerDataArray.length;
+            if (list.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" class="hp-empty">' + (tickerDataArray.length ? 'Żadna spółka nie pasuje do filtrów.' : 'Baza tickerów jest pusta.') + '</td></tr>';
+                updatePageInfo('ticker-page-info', 1, 1, 0, tickerPageSize); return;
+            }
             const start = (currentTickerPage - 1) * tickerPageSize;
-            const maxPage = Math.ceil(list.length / tickerPageSize) || 1;
-            container.innerHTML = list.slice(start, start + tickerPageSize).map((item) => {
-                const k = tickerKind(item), kd = TICKER_KIND[k], inv = k.startsWith('inv');
+            tb.innerHTML = list.slice(start, start + tickerPageSize).map(item => {
+                const k = tickerKind(item), inv = k.startsWith('inv'), tk = dbxEsc(item.ticker);
                 const sym = CCY_SYMBOL[(typeof getCurrencyForFrontend === 'function' ? getCurrencyForFrontend(item.ticker) : 'USD')] || '';
-                return `
-                <div class="data-card">
-                    <div class="data-card-info">
-                        <h4><span class="sd-link" data-tk="${item.ticker}">${item.ticker}</span></h4>
-                        <p>${item.stock_name ? item.stock_name + ' · ' : ''}${item.date_added ? new Date(item.date_added).toLocaleDateString('pl-PL') : '-'}</p>
-                        <span class="db-kind" style="color:${kd.color}; border-color:${kd.color};">${kd.label}</span>
-                    </div>
-                    <div style="display: flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-                        <select class="db-select db-mini" onchange="setTickerConviction('${item.ticker}', this.value)" title="Rodzaj spółki">
-                            <option value="Inwestycja (Core)" ${inv ? 'selected' : ''}>Inwestycja</option>
-                            <option value="Spekulacja" ${inv ? '' : 'selected'}>Spekulacja</option>
-                        </select>
-                        <label class="db-check" style="color: ${item.is_priority ? 'var(--accent)' : 'var(--text-muted)'};" title="Priorytet">
-                            <input type="checkbox" ${item.is_priority ? 'checked' : ''} onchange="toggleTickerPriority('${item.ticker}', this)"> ⚡ Priorytet
-                        </label>
-                        <span class="price-tag sensitive">${item.price !== null && item.price !== undefined ? item.price + ' ' + sym : '...'}</span>
-                        <button class="btn-edit" onclick="openEditModal('ticker', '${item.ticker}')">✎</button>
-                        <button class="btn-delete" onclick="removeTicker('${item.ticker}')">✖</button>
-                    </div>
-                </div>`;
+                const price = item.price !== null && item.price !== undefined && item.price !== '' ? Number(item.price).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' ' + sym : '—';
+                return `<tr>
+                    <td><span class="hp-tk sd-link" data-tk="${tk}">${tk}</span></td>
+                    <td class="dbx-name sd-link" data-tk="${tk}">${item.stock_name ? dbxEsc(item.stock_name) : '<span class="db-help">—</span>'}</td>
+                    <td><select class="dbx-pill ${inv ? 'inv' : 'spec'}" data-t="${tk}" onchange="setTickerConviction(this.dataset.t, this.value)" title="Typ inwestycji">
+                        <option value="Inwestycja (Core)" ${inv ? 'selected' : ''}>Inwestycja</option><option value="Spekulacja" ${inv ? '' : 'selected'}>Spekulacja</option></select></td>
+                    <td><label class="dbx-switch" title="Priorytet"><input type="checkbox" data-t="${tk}" ${item.is_priority ? 'checked' : ''} onchange="toggleTickerPriority(this.dataset.t, this)"><span></span></label><span class="dbx-prio-l ${item.is_priority ? 'on' : ''}">${item.is_priority ? '⚡ Priorytet' : 'brak'}</span></td>
+                    <td class="hp-r sensitive">${price}</td>
+                    <td class="hp-r"><button class="dbx-icon" data-t="${tk}" onclick="openEditModal('ticker', this.dataset.t)" title="Edytuj">✎</button><button class="dbx-icon dbx-del" data-t="${tk}" onclick="removeTicker(this.dataset.t)" title="Usuń">✖</button></td>
+                </tr>`;
             }).join('');
             updatePageInfo('ticker-page-info', currentTickerPage, maxPage, list.length, tickerPageSize);
+            document.getElementById('ticker-prev-btn').disabled = currentTickerPage <= 1;
+            document.getElementById('ticker-next-btn').disabled = currentTickerPage >= maxPage;
         }
 
         async function setTickerConviction(ticker, value) {
@@ -4197,17 +4339,19 @@ async function handleTradeAutomation(tradeId, tradeData) {
         }
 
     async function checkTickerLive(ticker) {
+        const box = document.getElementById('live-result');
+        const show = (html, bad) => { if (!box) { alert(html.replace(/<[^>]+>/g, ' ')); return; } box.hidden = false; box.style.borderColor = bad ? 'var(--danger)' : 'var(--border-color)'; box.innerHTML = html; };
+        ticker = String(ticker || '').trim();
+        if (!ticker) { show('Podaj ticker.', true); return; }
+        show('Pobieranie…');
         try {
-            const response = await fetch(`https://quant-desk-backend-dr8n.onrender.com/api/utils/ticker-data?ticker=${ticker}`);
+            const response = await fetch(`${API_BASE_URL}/api/utils/ticker-data?ticker=${encodeURIComponent(ticker)}`);
             const data = await response.json();
-            
-            if (data.status === "error") {
-                alert("Błąd: " + data.message);
-            } else {
-                alert(`Ticker: ${data.ticker}\nCena: ${data.current} ${data.currency}\nHigh: ${data.day_high}\nLow: ${data.day_low}`);
-            }
+            if (data.status === "error") show('Błąd: ' + dbxEsc(data.message), true);
+            else show(`<b>${dbxEsc(data.ticker)}</b> — cena: <b>${dbxEsc(data.current)} ${dbxEsc(data.currency)}</b><br>Maks. dnia: ${dbxEsc(data.day_high)} · Min. dnia: ${dbxEsc(data.day_low)}`);
         } catch (e) {
             console.error("Błąd połączenia:", e);
+            show('Błąd połączenia z serwerem.', true);
         }
     }
 
