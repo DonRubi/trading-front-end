@@ -185,7 +185,16 @@
         .sd-delnote { background: none; border: 0; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; } .sd-delnote:hover { color: var(--danger); }
         .sd-tip { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; font-size: 0.8rem; min-height: 30px; }
         .sd-tip.sd-off { visibility: hidden; }
-        .sd-closed summary { cursor: pointer; } .sd-closed .sd-h { display: inline-block; }
+        .sd-sechead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+        .sd-sec { cursor: pointer; user-select: none; } .sd-sec:hover { color: var(--accent); }
+        .sd-secact { display: flex; gap: 6px; flex-wrap: wrap; }
+        .sd-caret { color: var(--accent); display: inline-block; width: 14px; }
+        .sd-sortable { cursor: pointer; user-select: none; white-space: nowrap; } .sd-sortable:hover { color: var(--text-main); }
+        .sd-sorted { color: var(--accent) !important; }
+        .sd-arrow { display: inline-block; width: 11px; margin-left: 3px; font-size: 0.62rem; }
+        .sd-table tr.sd-grp td { background: rgba(201,148,0,0.08); font-weight: 700; cursor: pointer; }
+        .sd-table tr.sd-grp:hover td { background: rgba(201,148,0,0.14); }
+        .sd-table tr.sd-child td:first-child { padding-left: 20px; }
         @media (max-width: 600px) { #sd-overlay { padding: 0; } .sd-panel { border-radius: 0; min-height: 100vh; border: 0; } #sd-chart { height: 320px; } }
     </style>
 </head>
@@ -5802,7 +5811,7 @@ window.StockDetail = (function () {
     const KIND = { open: ["sd-b-open", "OTWARTA POZYCJA"], closed: ["sd-b-closed", "ZAMKNIĘTE"], none: ["sd-b-none", "BEZ HISTORII W TRADES"] };
     const MARK_COLOR = { open: "#f0b90b", win: "#0ecb81", loss: "#f6465d" };
 
-    let st = { ticker: null, interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: 0 };
+    let st = { ticker: null, interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: 0, sort: {}, collapsed: new Set(), groupLev: true, secOpen: true, secClosed: null };
     let chart = null, candles = null, volume = null, zonesPrim = null, entriesPrim = null, ro = null;
 
     // ---------- prymityw rysujący strefy (delikatna poświata za świecami) ----------
@@ -5910,6 +5919,7 @@ window.StockDetail = (function () {
         $("#sd-note-cancel").addEventListener("click", () => { $("#sd-noteform").hidden = true; });
         $("#sd-noteform").addEventListener("submit", saveNote);
         $("#sd-notes").addEventListener("click", delNote);
+        $("#sd-trades").addEventListener("click", tradesClick);
         document.addEventListener("keydown", e => { if (e.key === "Escape" && isOpen()) close(); });
         seg("#sd-ranges", RANGES, () => st.range, setRange);
         seg("#sd-intervals", INTERVALS, () => st.interval, setInterval_);
@@ -5933,7 +5943,8 @@ window.StockDetail = (function () {
     function open(ticker) {
         if (!ticker) return;
         ensureDom();
-        st = { ticker: String(ticker), interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: st.seq };
+        st = { ticker: String(ticker), interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: st.seq,
+               sort: { open: { k: "buy_date", d: -1 }, closed: { k: "buy_date", d: -1 } }, collapsed: new Set(), groupLev: true, secOpen: true, secClosed: null };
         $("#sd-overlay").classList.add("sd-open");
         document.body.style.overflow = "hidden";
         $("#sd-title").textContent = st.ticker; $("#sd-name").textContent = "";
@@ -6026,28 +6037,102 @@ window.StockDetail = (function () {
             renderZoneChips(); applyOverlays();
         };
     }
+    // ---------- tabele inwestycji: sortowanie po kolumnach, kierunek i dźwignia osobno, grupowanie po dźwigni, zwijanie ----------
+    const levTxt = v => "×" + v.toLocaleString("pl-PL", { maximumFractionDigits: 2 });
+    const sideBadge = s => '<span class="sd-side ' + (s === "LONG" ? "sd-long" : s === "SHORT" ? "sd-short" : "") + '" style="margin-left:0">' + s + "</span>";
+    const noteText = t => ((t.comment || "") + " " + (t.notes || "")).trim();
+    const wmean = (rows, f) => { let sw = 0, s = 0; rows.forEach(r => { const v = f(r); if (v == null || !isFinite(v)) return; const w = r.share_pct || 1; sw += w; s += v * w; }); return sw ? s / sw : null; };
+    const sumOf = (rows, f) => rows.reduce((a, r) => a + (f(r) || 0), 0);
     function noteCell(t) {
+        if (!t) return "";
         const bits = [];
-        if (t.comment) bits.push('<div>' + esc(t.comment) + "</div>");
+        if (t.comment) bits.push("<div>" + esc(t.comment) + "</div>");
         if (t.notes) bits.push('<div class="sd-sub" title="' + esc(t.notes) + '">' + esc(t.notes.length > 160 ? t.notes.slice(0, 160) + "…" : t.notes) + "</div>");
         return bits.length ? bits.join("") : "—";
+    }
+    const COLS = {
+        buy_date: { l: "Data wejścia", get: t => t.buy_date, agg: r => r.map(x => x.buy_date).sort()[0], cell: v => esc(v) },
+        sell_date: { l: "Data wyjścia", get: t => t.sell_date || "", agg: r => r.map(x => x.sell_date || "").sort().pop(), cell: v => esc(v || "—") },
+        side: { l: "Kierunek", get: t => t.side, agg: r => r.every(x => x.side === r[0].side) ? r[0].side : "MIX", cell: v => sideBadge(v) },
+        leverage: { l: "Dźwignia", num: 1, get: t => t.leverage, agg: r => r[0].leverage, cell: v => levTxt(v) },
+        buy_price: { l: "Cena zakupu", num: 1, get: t => t.buy_price, agg: r => wmean(r, x => x.buy_price), cell: fmtPrice },
+        return_pct: { l: "Wynik (Trades)", num: 1, get: t => t.return_pct, agg: r => wmean(r, x => x.return_pct), cell: v => '<b class="' + tone(v) + '">' + fmtPct(v) + "</b>" },
+        to_tp_pct: { l: "Do TP", num: 1, tip: "Odległość ceny bieżącej od celu (TP)", get: t => t.to_tp_pct, agg: r => wmean(r, x => x.to_tp_pct), cell: v => fmtPct(v) },
+        to_sl_pct: { l: "Do SL", num: 1, tip: "Odległość ceny bieżącej od stop lossa", get: t => t.to_sl_pct, agg: r => wmean(r, x => x.to_sl_pct), cell: v => fmtPct(v) },
+        lev_share_pct: { l: "Udział w inwestycji", num: 1, tip: "Wartość po zalewarowaniu tej transzy / suma wartości inwestycji w tej spółce", get: t => t.lev_share_pct, agg: r => sumOf(r, x => x.lev_share_pct), cell: v => fmtPlain(v, 1) },
+        share_pct: { l: "Udział w kapitale", num: 1, tip: "Udział zaangażowanych środków w kapitale", get: t => t.share_pct, agg: r => sumOf(r, x => x.share_pct), cell: v => fmtPlain(v, 1) },
+        comment: { l: "Notatka", wrap: 1, get: noteText, agg: () => "", cell: (v, t) => noteCell(t) }
+    };
+    const OPEN_COLS = ["buy_date", "side", "leverage", "buy_price", "return_pct", "to_tp_pct", "to_sl_pct", "lev_share_pct", "share_pct", "comment"];
+    const CLOSED_COLS = ["buy_date", "sell_date", "side", "leverage", "return_pct", "comment"];
+    function cmp(a, b, d) {
+        const an = a == null || a === "" || (typeof a === "number" && !isFinite(a)), bn = b == null || b === "" || (typeof b === "number" && !isFinite(b));
+        if (an || bn) return an && bn ? 0 : an ? 1 : -1;          // puste zawsze na końcu
+        return (typeof a === "string" ? a.localeCompare(b, "pl") : a - b) * d;
+    }
+    const plural = n => n === 1 ? "transza" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? "transze" : "transz";
+    function tradeTable(kind, rows) {
+        const cols = kind === "open" ? OPEN_COLS : CLOSED_COLS, sort = st.sort[kind], col = COLS[sort.k];
+        const head = cols.map(k => { const c = COLS[k], on = sort.k === k;
+            return '<th class="sd-sortable' + (c.wrap ? " sd-wrap" : "") + (on ? " sd-sorted" : "") + '" data-sort="' + kind + ":" + k + '" title="' + esc((c.tip ? c.tip + ". " : "") + "Kliknij, aby sortować") + '">' + c.l + '<span class="sd-arrow">' + (on ? (sort.d > 0 ? "▲" : "▼") : "") + "</span></th>"; }).join("");
+        const sorter = (a, b) => cmp(col.get(a), col.get(b), sort.d);
+        const tdCls = k => COLS[k].wrap ? ' class="sd-wrap"' : "";
+        const rowHtml = (t, cls) => '<tr class="' + (cls || "") + '">' + cols.map(k => "<td" + tdCls(k) + ">" + COLS[k].cell(COLS[k].get(t), t) + "</td>").join("") + "</tr>";
+        let body = "";
+        if (kind === "open" && st.groupLev) {
+            const groups = {};
+            rows.forEach(t => (groups[t.leverage] = groups[t.leverage] || []).push(t));
+            const list = Object.keys(groups).map(key => { const r = groups[key].slice().sort(sorter); return { key: key, rows: r, agg: col.agg(r) }; });
+            list.sort((a, b) => cmp(a.agg, b.agg, sort.d));
+            list.forEach(g => {
+                const folded = st.collapsed.has(g.key);
+                body += '<tr class="sd-grp" data-grp="' + esc(g.key) + '" title="Kliknij, aby ' + (folded ? "rozwinąć" : "zwinąć") + ' transze o tej dźwigni">' + cols.map(k => {
+                    const c = COLS[k];
+                    const av = c.agg(g.rows);
+                    let inner = k === "comment" ? '<span class="sd-note">' + g.rows.length + " " + plural(g.rows.length) + "</span>" : c.cell(k === "buy_price" && av != null ? Math.round(av * 100) / 100 : av, null);
+                    if (k === "leverage") inner = '<span class="sd-caret">' + (folded ? "▸" : "▾") + "</span>" + inner;
+                    return "<td" + tdCls(k) + ">" + inner + "</td>";
+                }).join("") + "</tr>";
+                if (!folded) g.rows.forEach(t => { body += rowHtml(t, "sd-child"); });
+            });
+        } else body = rows.slice().sort(sorter).map(t => rowHtml(t)).join("");
+        return '<div class="table-responsive" style="border:0"><table class="sd-table"><thead><tr>' + head + "</tr></thead><tbody>" + body + "</tbody></table></div>";
+    }
+    function secHead(sec, title, n, isOpen, extra) {
+        return '<div class="sd-sechead"><div class="sd-h sd-sec" data-sec="' + sec + '" title="Kliknij, aby ' + (isOpen ? "zwinąć" : "rozwinąć") + '"><span class="sd-caret">' + (isOpen ? "▾" : "▸") + "</span>" + title + ' <span class="sd-note">(' + n + ")</span></div>" + (isOpen && extra ? '<div class="sd-secact">' + extra + "</div>" : "") + "</div>";
     }
     function renderTrades() {
         const box = $("#sd-trades"), all = st.data.trades || [];
         const open_ = all.filter(t => t.status === "OPEN"), closed = all.filter(t => t.status !== "OPEN");
         let html = "";
         if (open_.length) {
-            const rows = open_.map(t => '<tr><td>' + esc(t.buy_date) + '</td><td><span class="sd-side ' + (t.side === "LONG" ? "sd-long" : "sd-short") + '" style="margin-left:0">' + t.side + "</span> ×" + t.leverage.toLocaleString("pl-PL", { maximumFractionDigits: 2 }) + "</td>" +
-                "<td>" + fmtPrice(t.buy_price) + '</td><td class="' + tone(t.return_pct) + '"><b>' + fmtPct(t.return_pct) + "</b></td>" +
-                "<td>" + fmtPct(t.to_tp_pct) + "</td><td>" + fmtPct(t.to_sl_pct) + "</td><td>" + fmtPlain(t.lev_share_pct, 1) + "</td><td>" + fmtPlain(t.share_pct, 1) + '</td><td class="sd-wrap">' + noteCell(t) + "</td></tr>").join("");
-            html += '<div class="sd-h">Moje inwestycje (otwarte)</div><div class="table-responsive" style="border:0"><table class="sd-table"><thead><tr><th>Data wejścia</th><th>Kierunek</th><th>Cena zakupu</th><th>Wynik (Trades)</th><th title="Odległość ceny bieżącej od celu (TP)">Do TP</th><th title="Odległość ceny bieżącej od stop lossa">Do SL</th><th title="Wartość po zalewarowaniu tej transzy / suma wartości inwestycji w tej spółce">Udział w inwestycji</th><th title="Udział zaangażowanych środków w kapitale">Udział w kapitale</th><th class="sd-wrap">Notatka</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+            const acts = '<button type="button" class="sd-chip' + (st.groupLev ? " sd-on sd-long" : "") + '" data-act="group" title="Grupuj transze według dźwigni">grupuj wg dźwigni</button>' +
+                (st.groupLev ? '<button type="button" class="sd-chip" data-act="foldall">zwiń grupy</button><button type="button" class="sd-chip" data-act="unfoldall">rozwiń grupy</button>' : "");
+            html += secHead("open", "Moje inwestycje (otwarte)", open_.length, st.secOpen, acts) + (st.secOpen ? tradeTable("open", open_) : "");
         }
         if (closed.length) {
-            const rows = closed.map(t => '<tr><td>' + esc(t.buy_date) + "</td><td>" + esc(t.sell_date || "—") + '</td><td><span class="sd-side ' + (t.side === "LONG" ? "sd-long" : "sd-short") + '" style="margin-left:0">' + t.side + "</span> ×" + t.leverage.toLocaleString("pl-PL", { maximumFractionDigits: 2 }) + "</td>" +
-                '<td class="' + tone(t.return_pct) + '"><b>' + fmtPct(t.return_pct) + '</b></td><td class="sd-wrap">' + noteCell(t) + "</td></tr>").join("");
-            html += '<details class="sd-closed"' + (open_.length ? "" : " open") + '><summary class="sd-h">Zamknięte transakcje (' + closed.length + ')</summary><div class="table-responsive" style="border:0"><table class="sd-table"><thead><tr><th>Data wejścia</th><th>Data wyjścia</th><th>Kierunek</th><th>Wynik (Trades)</th><th class="sd-wrap">Notatka</th></tr></thead><tbody>' + rows + "</tbody></table></div></details>";
+            const isOpen = st.secClosed == null ? !open_.length : st.secClosed;
+            html += secHead("closed", "Zamknięte transakcje", closed.length, isOpen) + (isOpen ? tradeTable("closed", closed) : "");
         }
         box.innerHTML = html;
+    }
+    function tradesClick(e) {
+        const th = e.target.closest("th[data-sort]"), grp = e.target.closest("tr[data-grp]"), sec = e.target.closest("[data-sec]"), act = e.target.closest("[data-act]");
+        if (th) {
+            const [kind, k] = th.dataset.sort.split(":"), s = st.sort[kind];
+            if (s.k === k) s.d = -s.d; else { s.k = k; s.d = COLS[k].num ? -1 : 1; }
+        } else if (act) {
+            const a = act.dataset.act;
+            if (a === "group") st.groupLev = !st.groupLev;
+            else if (a === "foldall") (st.data.trades || []).filter(t => t.status === "OPEN").forEach(t => st.collapsed.add(String(t.leverage)));
+            else if (a === "unfoldall") st.collapsed.clear();
+        } else if (grp) {
+            const key = grp.dataset.grp; if (st.collapsed.has(key)) st.collapsed.delete(key); else st.collapsed.add(key);
+        } else if (sec) {
+            if (sec.dataset.sec === "open") st.secOpen = !st.secOpen;
+            else { const cur = st.secClosed == null ? !(st.data.trades || []).some(t => t.status === "OPEN") : st.secClosed; st.secClosed = !cur; }
+        } else return;
+        renderTrades();
     }
     function renderNotes() {
         const box = $("#sd-notes"), notes = st.data.notes || [];
