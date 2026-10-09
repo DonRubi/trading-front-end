@@ -109,6 +109,7 @@
         .hp-ext { font-size: 0.74rem; font-weight: 500; opacity: 0.9; white-space: nowrap; cursor: help; }
         .hp-note-form input, .hp-note-form select { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 9px 12px; min-width: 0; color: var(--text-main); font-size: 0.9rem; }
         .hp-note-form input:focus, .hp-note-form select:focus { outline: 0; border-color: var(--accent); }
+        .hp-note-alert { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; } .hp-alert-chk { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-size: 0.88rem; } .hp-alert { display: inline-block; margin-left: 8px; font-size: 0.78rem; color: var(--accent-hover); white-space: nowrap; } .hp-alert.sent { color: var(--text-muted); }
         .hp-note-row.hp-done td { color: var(--text-muted); }
         .hp-note-row.hp-done .hp-desc, .hp-note-row.hp-done .hp-tk { text-decoration: line-through; }
         .hp-chk { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--text-muted); cursor: pointer; position: relative; transition: background .2s, border-color .2s, transform .15s; background: none; }
@@ -300,7 +301,7 @@
         #fz-chart { height: 430px; width: 100%; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-main); } @media (max-width: 760px) { #fz-chart { height: 330px; } }
         .fz-slots { display: flex; flex-wrap: wrap; gap: 6px; } .fz-slot { border: 1px dashed var(--border-color); border-radius: 8px; padding: 4px 10px; font-size: 0.84rem; color: var(--text-muted); } .fz-slot.cur { border-color: var(--accent); color: var(--text-main); } .fz-slot.done { border-style: solid; border-color: var(--success); color: var(--text-main); }
         .fz-facts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; line-height: 1.45; } .fz-ext { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-bottom: 8px; }
-        .fz-v-OK { border-color: rgba(14,203,129,.6); background: rgba(14,203,129,.12); } .fz-v-PARTIAL { border-color: rgba(252,213,53,.6); background: rgba(252,213,53,.1); } .fz-v-FAIL { border-color: rgba(246,70,93,.6); background: rgba(246,70,93,.1); } .fz-reason a { color: var(--accent-hover); text-decoration: none; }
+        .fz-v-OK { border-color: rgba(14,203,129,.6); background: rgba(14,203,129,.12); } .fz-v-PARTIAL { border-color: rgba(252,213,53,.6); background: rgba(252,213,53,.1); } .fz-v-FAIL { border-color: rgba(246,70,93,.6); background: rgba(246,70,93,.1); } .fz-ended { opacity: .6; text-decoration: line-through; text-decoration-color: rgba(132,142,156,.8); } .fz-reason a { color: var(--accent-hover); text-decoration: none; }
         /* radar zagrań i ocena wejścia */
         #ev-radar { padding: 4px 0 16px; } .ev-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; align-items: center; } .ev-controls input[type=search], .ev-controls select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; }
         .ev-count { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px; } .ev-empty { padding: 24px; text-align: center; color: var(--text-muted); } .ev-bad { color: var(--danger); }
@@ -460,6 +461,10 @@
                         <select id="hp-n-action" aria-label="Akcja"><option value="check">Sprawdź</option><option value="buy">Kup</option><option value="sell">Sprzedaj</option></select>
                         <input id="hp-n-desc" placeholder="Krótki opis (opcjonalnie)" maxlength="500" aria-label="Opis">
                         <button class="hp-btn hp-primary" type="submit">Dodaj</button>
+                        <div class="hp-note-alert">
+                            <label class="hp-alert-chk"><input type="checkbox" id="hp-n-alert"> 🔔 Alert na Discord</label>
+                            <span id="hp-n-alert-fields" hidden><input type="date" id="hp-n-adate" aria-label="Dzień alertu"> <input type="time" id="hp-n-atime" aria-label="Godzina alertu (czas w Polsce)"> <span class="hp-note">czas w Polsce</span></span>
+                        </div>
                     </form>
                     <div class="hp-table-wrap"><table class="hp-table">
                         <thead><tr><th>Ticker</th><th>Akcja</th><th class="hp-col-date">Data</th><th>Opis</th><th class="hp-r">Check</th><th></th></tr></thead>
@@ -1988,6 +1993,7 @@
             if(tickerDataArray.length === 0) await loadDatabase(); 
             fetchFormEntries(); 
             fetchFormReasons();
+            if (window.FormZones) FormZones.refresh();
         }
         
         async function fetchFormEntries(forceFresh = false) { 
@@ -4708,11 +4714,23 @@ window.HomePage = (function () {
 
     // ---------- notatnik ----------
     const ACTION = { check: "Sprawdź", buy: "Kup", sell: "Sprzedaj" };
+    function alertTag(n) {
+        if (!n.alert_at) return "";
+        const t = new Date(n.alert_at).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        return '<span class="hp-alert' + (n.alert_sent ? " sent" : "") + '" title="Alert na Discord (czas w Polsce)">' + (n.alert_sent ? "✓ wysłano " : "🔔 ") + t + "</span>";
+    }
+    const plNow = () => { const p = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Warsaw", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()); return { date: p.slice(0, 10), time: p.slice(11, 16) }; };
+    function setAlertDefaults() {
+        const n = plNow(), d = $("#hp-n-adate"), t = $("#hp-n-atime");
+        d.value = n.date; d.min = n.date;
+        const h = new Date(Date.now() + 3600e3), hh = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Warsaw", hour: "2-digit", hour12: false }).format(h);
+        t.value = hh + ":00";
+    }
     function noteRow(n, i) {
         const date = n.created_at ? new Date(n.created_at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
         return '<tr class="hp-note-row ' + (n.done ? "hp-done" : "") + '" data-id="' + esc(n.id) + '" style="animation-delay:' + (i * 30) + 'ms">' +
             '<td><span class="hp-tk sd-link" data-tk="' + esc(n.ticker) + '">' + esc(n.ticker) + '</span></td><td><span class="hp-badge hp-b-' + esc(n.action) + '" style="margin-left:0">' + (ACTION[n.action] || esc(n.action)) + "</span></td>" +
-            '<td class="hp-col-date" style="white-space:nowrap;color:var(--text-muted)">' + date + '</td><td class="hp-desc">' + esc(n.description) + "</td>" +
+            '<td class="hp-col-date" style="white-space:nowrap;color:var(--text-muted)">' + date + '</td><td class="hp-desc">' + esc(n.description) + alertTag(n) + "</td>" +
             '<td class="hp-r"><input type="checkbox" class="hp-chk" aria-label="Wykreśl notatkę" ' + (n.done ? "checked" : "") + "></td>" +
             '<td class="hp-r"><button class="hp-x" type="button" aria-label="Usuń notatkę">×</button></td></tr>';
     }
@@ -4773,12 +4791,15 @@ window.HomePage = (function () {
             range = b.dataset.r; placePill(); loadChart();
         });
         addEventListener("resize", placePill);
+        $("#hp-n-alert").addEventListener("change", ev => { $("#hp-n-alert-fields").hidden = !ev.target.checked; if (ev.target.checked) setAlertDefaults(); });
         $("#hp-note-form").addEventListener("submit", async ev => {
             ev.preventDefault();
             try {
-                const r = await post("/api/notes/add", { ticker: $("#hp-n-ticker").value, action: $("#hp-n-action").value, description: $("#hp-n-desc").value });
+                const body = { ticker: $("#hp-n-ticker").value, action: $("#hp-n-action").value, description: $("#hp-n-desc").value };
+                if ($("#hp-n-alert").checked) { body.alert_date = $("#hp-n-adate").value; body.alert_time = $("#hp-n-atime").value; }
+                const r = await post("/api/notes/add", body);
                 notes.unshift(r.note); renderNotes(); showErr("notes", null);
-                $("#hp-n-ticker").value = ""; $("#hp-n-desc").value = ""; $("#hp-n-ticker").focus();
+                $("#hp-n-ticker").value = ""; $("#hp-n-desc").value = ""; $("#hp-n-alert").checked = false; $("#hp-n-alert-fields").hidden = true; $("#hp-n-ticker").focus();
             } catch (e) { showErr("notes", e); }
         });
         $("#hp-notes").addEventListener("click", async ev => {
@@ -5885,12 +5906,33 @@ window.FormZones = (function () {
 
     // ---------- widok ----------
     const APPLYL = { entry: "wejście", start: "początek strefy", end: "koniec strefy", tp: "TP" };
+    function activeNote(e, score) {
+        const ended = (Array.isArray(e.reasons_detail) ? e.reasons_detail : []).filter(d => d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły") && (e.reasons || []).some(r => String(r).toLowerCase() === String(d.label).toLowerCase())).length;
+        return ended ? '<div class="ev-muted" style="font-weight:400">aktywne: ' + (score - ended) + "</div>" : "";
+    }
+    async function refresh(force) {          // odświeża zapisane powody (cykl życia); nie częściej niż co 6 h
+        try {
+            const k = "fz.refresh", last = +(localStorage.getItem(k) || 0);
+            if (!force && Date.now() - last < 6 * 3600e3) return;
+            localStorage.setItem(k, String(Date.now()));
+        } catch (e) {}
+        try {
+            const res = await fetch(API_BASE_URL + "/api/form/refresh", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+            const d = await res.json();
+            if (d.status === "success" && d.updated > 0) {
+                if (typeof fetchFormEntries === "function") fetchFormEntries(true);
+                if (d.ended && d.ended.length && window.Planer) Planer.toast("Zakończone (pokryta luka): " + d.ended.map(x => x.entry_id + " " + x.label).join(", "), 9000);
+            }
+        } catch (e) {}
+    }
     function chip(name, e) {      // powód z zapisanym pomiarem: werdykt, wartość odniesienia, linki analiz zewnętrznych
         const d = (Array.isArray(e.reasons_detail) ? e.reasons_detail : []).find(x => String(x.label).toLowerCase() === String(name).toLowerCase());
         if (!d) return '<span class="fz-reason">' + esc(name) + "</span>";
-        const mark = d.verdict === "OK" ? "✓" : d.verdict === "PARTIAL" ? "~" : "✗";
+        const lc = d.lifecycle || {}, ended = lc.status === "zakończony" || lc.status === "wygasły";
+        const mark = ended ? "■" : d.verdict === "OK" ? "✓" : d.verdict === "PARTIAL" ? "~" : "✗";
+        const tail = lc.status === "zakończony" ? " · zakończona" + (lc.ended_at ? " " + new Date(lc.ended_at * 1000).toLocaleDateString("pl-PL") : "") : lc.status === "wygasły" ? " · wygasła" : lc.kind === "trwały" ? " · ∞ trwały" : "";
         const links = (d.items || []).map(i => '<a href="' + esc(i.url) + '" target="_blank" rel="noopener" title="' + esc(i.source || i.url) + '">🔗</a>').join(" ");
-        return '<span class="fz-reason fz-v-' + esc(d.verdict) + '" title="' + esc((d.facts || []).join("\n")) + '">' + esc(name) + " " + mark + " " + Math.round((d.quality || 0) * 100) + "%" +
+        return '<span class="fz-reason fz-v-' + esc(d.verdict) + (ended ? " fz-ended" : "") + '" title="' + esc((d.facts || []).join("\n")) + '">' + esc(name) + " " + mark + " " + Math.round((d.quality || 0) * 100) + "%" + tail +
             (d.ref ? " → " + price(d.ref.value) + " (" + (APPLYL[d.ref.applies_to] || esc(d.ref.role)) + ")" : "") + (links ? " " + links : "") + "</span>";
     }
     function playRows(z) {
@@ -5901,7 +5943,7 @@ window.FormZones = (function () {
                 const mute = p.muted ? '<span style="color:var(--danger);font-weight:700;cursor:pointer;border-bottom:1px dashed var(--danger)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',0)">🔕 Wyciszone</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',1)">🔔 Aktywne</span>';
                 const reasons = (Array.isArray(e.reasons) ? e.reasons : []).map(r => chip(r, e)).join("") || '<span class="ev-muted">brak</span>';
                 return '<tr class="' + (p.muted ? "fz-muted-row" : "") + '"><td><b>' + id + "</b></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
-                    '</td><td style="color:#a6e3a1;font-weight:700">' + p.score + "/5</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
+                    '</td><td style="color:#a6e3a1;font-weight:700">' + p.score + "/5" + activeNote(e, p.score) + "</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
                     '<td style="white-space:nowrap"><button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="openEditModal(\'form\', \'' + id + '\')" title="Edytuj">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
             }).join("") + "</tbody></table>";
     }
@@ -5989,7 +6031,7 @@ window.FormZones = (function () {
     document.addEventListener("mousedown", e => { if (e.target.id === "fz-modal") closeAdd(); });
     document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest && e.target.closest("#fz-measure") && e.target.tagName === "INPUT") e.preventDefault(); });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#fz-modal") && $("#fz-modal").classList.contains("open")) closeAdd(); });
-    return { render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
+    return { refresh: refresh, render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
 })();
 </script>
 <script>
@@ -6010,7 +6052,7 @@ window.Measure = (function () {
         one2one: { label: "Korekta 1:1", slots: ["A – start korekty", "B – koniec pierwszej fali", "C – koniec odbicia"], need: 3, help: "Pierwsza fala korekty A→B, odbicie do C; druga fala ma być równa pierwszej (standardowo i logarytmicznie)." },
         xabcd: { label: "XABCD", slots: ["X", "A", "B", "C", "D"], need: 5, help: "Pięć punktów formacji harmonicznej wg knotów; D to punkt odniesienia (PRZ)." },
         rgr: { label: "RGR", slots: ["Lewe ramię", "Głowa", "Prawe ramię", "Szyja – punkt 1 (opcj.)", "Szyja – punkt 2 (opcj.)"], need: 3, help: "Lewe ramię, głowa, prawe ramię; linię szyi wyznaczę sam, albo wskaż jej dwa punkty." },
-        elliott: { label: "Fale Elliotta", slots: ["0", "1", "2", "3", "4", "5"], need: 3, help: "Punkty 0, 1, 2… (min. 3, max 6) wg knotów. Ostatni punkt wyznacza prognozę kolejnej fali." },
+        elliott: { label: "Fale Elliotta", slots: ["0", "1", "2", "3", "4", "5", "A", "B", "C"], need: 3, help: "Punkty 0–5 impulsu (min. 3) i opcjonalnie korekta A, B, C wg knotów. Ostatni punkt wyznacza prognozę kolejnej fali." },
         vwap: { label: "VWAP", slots: ["Kotwica (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie VWAP kotwiczony od ostatniego dołka i od ostatniego szczytu; możesz wskazać własną świecę." },
         vp: { label: "Volume Profile", slots: ["Początek profilu (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie od początku trendu albo od kontynuacji po wyraźnej korekcie; możesz wskazać własny początek." },
         external: { label: "Analiza zewnętrzna", slots: [], need: 0, external: true, help: "Linki do analiz; kilka analiz liczy się jako jeden punkt." }
@@ -6166,6 +6208,7 @@ window.Measure = (function () {
         const vc = { OK: "var(--success)", PARTIAL: "var(--accent-hover)", FAIL: "var(--danger)" }[r.verdict];
         const vl = r.verdict === "OK" ? (r.type === "elliott" ? "SPÓJNE Z REGUŁAMI" : "POTWIERDZONE") : r.verdict === "PARTIAL" ? "CZĘŚCIOWO" : "NIEPOTWIERDZONE";
         let h = '<div class="ev-verdict" style="border-color:' + vc + ';padding:10px 14px"><div><div class="ev-vtext" style="color:' + vc + ';font-size:1.15em">' + vl + '</div><div class="ev-muted">' + esc(r.label) + '</div></div><div class="ev-big" style="font-size:1.8em">' + Math.round(r.quality * 100) + '<small>%</small></div></div>';
+        if (r.lifecycle && r.lifecycle.kind !== "aktywny") h += '<div class="ev-muted" style="margin-top:6px">Cykl życia: <b>' + ({ "trwały": "trwały – zostaje ważny, nawet gdy cena do niego wraca", "jednorazowy": "jednorazowy – kończy się po pokryciu luki", "wygasa": "wygasa po ok. 90 dniach" }[r.lifecycle.kind] || r.lifecycle.kind) + "</b>" + (r.lifecycle.status !== "aktywny" ? " · status: <b>" + esc(r.lifecycle.status) + (r.lifecycle.ended_at ? " (" + dateOf(r.lifecycle.ended_at) + ")" : "") + "</b>" : "") + "</div>";
         h += '<div class="fz-facts">' + r.facts.map(f => '<div class="fz-fact"><span style="color:' + (f.ok === true ? "var(--success)" : f.ok === false ? "var(--danger)" : "var(--text-muted)") + '">' + (f.ok === true ? "✓" : f.ok === false ? "✗" : "•") + "</span> " + esc(f.text) + "</div>").join("") + "</div>";
         const formation = FORMATIONS.indexOf(r.type) >= 0;
         if (r.ref) {
@@ -6208,7 +6251,7 @@ window.Measure = (function () {
             free.value = r.label;
         }
         M.added = M.added.filter(d => d.type !== r.type);
-        const d = { type: r.type, label: r.label, tf: M.tf, anchors: M.anchors.slice(), params: r.type === "fibo" ? { log: !!M.opts.log } : {}, verdict: r.verdict, quality: r.quality, facts: r.facts.map(f => f.text), verified_at: new Date().toISOString() };
+        const d = { type: r.type, label: r.label, tf: M.tf, anchors: M.anchors.slice(), params: r.type === "fibo" ? { log: !!M.opts.log } : {}, verdict: r.verdict, quality: r.quality, facts: r.facts.map(f => f.text), lifecycle: r.lifecycle, verified_at: new Date().toISOString() };
         if (r.ref) d.ref = { value: r.ref.value, role: r.ref.role, label: r.ref.label, applies_to: M.apply };
         if (r.type === "external") d.items = r.items;
         M.added.push(d); drawAdded(); toast("Dodano powód „" + r.label + "”.");
