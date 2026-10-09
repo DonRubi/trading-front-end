@@ -20,4 +20,5 @@ Plik `index.html` ma końce linii CRLF. Parametr testowy `?api=` podmienia adres
 - Notatnik na stronie głównej: opcjonalny **alert na Discord** (dzień i godzina w czasie polskim; `sql/home_notes_alert.sql` w backendzie, wysyłka przez `/api/cron/note-alerts`).
 - Powody w Form mają **cykl życia** (luka pokryta = zakończona na stałe, OPD i Volume Profile trwałe); `FormZones.refresh()` odświeża je co 6 h.
 - Transakcje nie wymagają już Focus: wybór „Zagranie z Form”, ocena wejścia zapisuje się przy transakcji (`entry_score`, `entry_eval`; `sql/entry_eval.sql`).
+- Strażnik planu (`Planer`, szczegóły planu): stany stref, sygnały siły/słabości po zamknięciu sesji, dokładki (po sygnale siły / mechaniczna) → Ocena wejścia; plakietka jakości strefy w szczegółach Form (`FormZones.zoneQualityBlock`) i w Ocenie wejścia – informacyjna, nie wchodzi do Score; powód „Powtórzenie korekty" w `Measure`.
 - Podgląd konkretnej wersji bez cache: `https://raw.githack.com/DonRubi/trading-front-end/<hash commita>/index.html`.
