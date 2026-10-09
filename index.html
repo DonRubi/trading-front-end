@@ -289,6 +289,22 @@
         .plx-banner a { color: var(--accent-hover); } .plx-banner .dbx-icon { margin-left: 8px; width: 26px; height: 24px; vertical-align: middle; }
         .plx-toast { position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 20px); max-width: min(560px, 92vw); background: var(--bg-card); border: 1px solid var(--accent); color: var(--text-main); padding: 12px 18px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.55); z-index: 1300; opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; font-size: 0.9rem; line-height: 1.45; }
         .plx-toast.show { opacity: 1; transform: translate(-50%, 0); }
+        /* radar zagrań i ocena wejścia */
+        #ev-radar { padding: 4px 0 16px; } .ev-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; align-items: center; } .ev-controls input[type=search], .ev-controls select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; }
+        .ev-count { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px; } .ev-empty { padding: 24px; text-align: center; color: var(--text-muted); } .ev-bad { color: var(--danger); }
+        .ev-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } .ev-table th { text-align: left; color: var(--text-muted); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--border-color); cursor: pointer; white-space: nowrap; }
+        .ev-table td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; } .ev-table tbody tr:hover { background: rgba(201,148,0,.06); } .ev-act { white-space: nowrap; text-align: right; }
+        @media (min-width: 2000px) { .ev-table { font-size: 1.05rem; } }
+        .ev-muted { color: var(--text-muted); font-size: 0.82em; } .ev-pos { color: var(--success); } .ev-warn { color: var(--accent-hover); }
+        .ev-kind { border: 1px solid; border-radius: 999px; padding: 2px 9px; font-size: 0.75rem; white-space: nowrap; } .ev-chip { background: rgba(14,203,129,.15); color: var(--success); border-radius: 999px; padding: 1px 8px; font-size: 0.72rem; }
+        .ev-verdict { display: flex; justify-content: space-between; align-items: center; gap: 16px; border: 1px solid; border-radius: 14px; padding: 14px 18px; background: var(--bg-main); } .ev-vtext { font-size: 1.5em; font-weight: 800; letter-spacing: .02em; } .ev-big { font-size: 2.6em; font-weight: 800; line-height: 1; } .ev-big small { font-size: .4em; color: var(--text-muted); font-weight: 500; }
+        .ev-conds { display: flex; flex-direction: column; gap: 6px; } .ev-cond { display: grid; grid-template-columns: 14px 1fr auto auto; gap: 12px; align-items: start; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; }
+        .ev-dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; background: #848e9c; } .ev-cond.ok .ev-dot { background: var(--success); } .ev-cond.warn .ev-dot { background: var(--accent-hover); } .ev-cond.fail .ev-dot { background: var(--danger); }
+        .ev-w { color: var(--text-muted); font-size: 0.75em; margin-left: 6px; } .ev-score { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; } .ev-info { background: none; border: 0; color: var(--accent); cursor: pointer; font-size: 1.1em; padding: 0 4px; }
+        .ev-desc { margin-top: 8px; padding: 8px 10px; border-left: 2px solid var(--accent); font-size: 0.86em; line-height: 1.5; background: rgba(201,148,0,.06); } .ev-scale { color: var(--text-muted); margin-top: 4px; font-size: .92em; }
+        .ev-note { background: rgba(201,148,0,.10); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 0.88rem; } .ev-go { background: var(--success); color: #fff; border-color: var(--success); }
+        .ev-evalbox { background: rgba(14,203,129,.07); border: 1px solid rgba(14,203,129,.35); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.88rem; line-height: 1.55; }
+        @media (max-width: 760px) { .ev-table thead { display: none; } .ev-table, .ev-table tbody, .ev-table tr, .ev-table td { display: block; width: 100%; } .ev-table tr { border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 10px; padding: 6px 4px; } .ev-table td { border: 0; padding: 4px 10px; } .ev-act { text-align: left; } .ev-verdict { flex-direction: column; align-items: flex-start; } .ev-cond { grid-template-columns: 14px 1fr auto; } .ev-info { grid-column: 3; } }
         .plx-tag { font-size: 0.72rem; color: var(--accent); text-decoration: none; } .plx-tag:hover { text-decoration: underline; }
         /* ===== Okno szczegółów spółki (StockDetail) ===== */
         .sd-link { cursor: pointer; }
@@ -451,7 +467,7 @@
                         <div class="menu-card" onclick="openModule('summary-module', 'Podsumowanie')"><span class="icon">📈</span><h3>Podsumowanie</h3></div>
                         <div class="menu-card" onclick="openModule('database-module', 'Baza danych')"><span class="icon">🗄️</span><h3>Baza danych</h3></div>
                         <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Analiza techniczna')"><span class="icon">📐</span><h3>Analiza techniczna</h3></div>
-                        <div class="menu-card" onclick="openModule('focuslist-module', 'Lista Focus')"><span class="icon">👁️</span><h3>Lista Focus</h3></div>
+                        <div class="menu-card" onclick="openModule('focuslist-module', 'Radar zagrań')"><span class="icon">👁️</span><h3>Radar zagrań</h3></div>
                         <div class="menu-card" onclick="openModule('alerthistory-module', 'Historia alertów')"><span class="icon">🔔</span><h3>Historia alertów</h3></div>
                         <div class="menu-card" onclick="openModule('dailybrief-module', 'Przegląd dnia')"><span class="icon">📰</span><h3>Przegląd dnia</h3></div>
                         <div class="menu-card" onclick="openModule('planner-module', 'Planer')"><span class="icon">🧭</span><h3>Planer</h3></div>
@@ -629,9 +645,11 @@
                                 <option value="Negatywna">Silnie Negatywna (Agresywna dystrybucja)</option>
                         </select>
                     </div>
+                    <div id="trade-eval-box" class="ev-evalbox" style="display:none"></div>
                     <div class="form-row">
                         <div class="form-group"><label>Wybierz Ticker</label><select id="trade-ticker-select" onchange="onTradeTickerChange()"><option value="">Ładowanie...</option></select></div>
-                        <div class="form-group"><label>Analiza Focus (ID)</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Najpierw wybierz ticker...</option></select></div>
+                        <div class="form-group"><label>Zagranie z Form</label><select id="trade-play-id" onchange="onTradePlayChange()"><option value="">Najpierw wybierz ticker...</option></select></div>
+                        <div class="form-group"><label>Analiza Focus (opcjonalnie)</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Najpierw wybierz ticker...</option></select></div>
                     </div>
                     <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);"><div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div><div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div><div class="form-group"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div><div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div><div class="form-group"><label>Max Wyd.</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div></div>
                     <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
@@ -1003,7 +1021,20 @@
     </section>
 
     <section id="focuslist-module" class="app-module"> 
-        <div class="macro-header-container"> <h3>Lista Obserwowanych (Focus List)</h3> </div> 
+        <div id="ev-radar">
+            <div class="macro-header-container"> <h3>Radar zagrań</h3> </div>
+            <div class="ev-muted">Spółki z aktywnymi zagraniami z Form. Odległość liczona od kursu do punktu wejścia. „Oceń wejście” sprawdza warunki w tej chwili i podpowiada budżet.</div>
+            <div class="ev-controls">
+                <input type="search" placeholder="Szukaj tickera lub nazwy…" oninput="Wejscie.setFilter('q', this.value)">
+                <select onchange="Wejscie.setFilter('kind', this.value)"><option value="ALL">Inwestycje i spekulacje</option><option value="inv">Inwestycja</option><option value="spec">Spekulacja</option></select>
+                <select onchange="Wejscie.setFilter('prio', this.value)"><option value="ALL">Priorytet i brak</option><option value="prio">Priorytet</option><option value="none">Brak priorytetu</option></select>
+                <select onchange="Wejscie.setFilter('band', this.value)"><option value="ALL">Dowolna odległość</option><option value="5">do 5% od wejścia</option><option value="10">do 10% od wejścia</option><option value="20">do 20% od wejścia</option></select>
+                <select onchange="Wejscie.setFilter('plan', this.value)"><option value="ALL">Z planem i bez</option><option value="has">Mają plan</option><option value="none">Bez planu</option></select>
+                <button class="hp-btn" onclick="Wejscie.loadRadar(true)">↻ Odśwież</button>
+            </div>
+            <div id="ev-radar-body"></div>
+        </div>
+        <div class="macro-header-container"> <h3>Wszystkie wejścia z Form (Focus List)</h3> </div> 
         <div class="table-controls"> 
             <select id="focuslist-mute-filter" onchange="handleFocusListFilter()"> 
                 <option value="ALL">Wszystkie (Wyciszenie)</option> 
@@ -2607,6 +2638,7 @@
             if(tickerDataArray.length === 0) await loadDatabase(); 
             await fetchFormEntries(true); 
             safeHandleFocusListFilter(); 
+            if (window.Wejscie) Wejscie.loadRadar();
         }
 
         function handleFocusListFilter() { 
@@ -2819,8 +2851,9 @@
                 } catch(e) { console.warn("Nie udało się pobrać cen w TradesList", e); }
             }
 
-            // Unikalne tickery z bazy Focus
-            const uniqueTickers = [...new Set(focusDataArray.map(f => f.ticker))];
+            // Tickery z aktywnymi zagraniami z Form (transakcja nie wymaga już analizy Focus) oraz z dawnych analiz Focus
+            if (!formEntries.length) { try { await fetchFormEntries(true); } catch (e) {} }
+            const uniqueTickers = [...new Set([...formEntries.filter(f => f.mute != 1).map(f => f.ticker), ...focusDataArray.map(f => f.ticker)])].filter(Boolean);
             uniqueTickers.sort((a, b) => {
                 const baseA = a.includes(':') ? a.split(':')[1] : a;
                 const baseB = b.includes(':') ? b.split(':')[1] : b;
@@ -2832,8 +2865,54 @@
             uniqueTickers.forEach(t => { tickerSelect.innerHTML += `<option value="${t}">${t}</option>`; });
 
             document.getElementById('trade-focus-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
+            document.getElementById('trade-play-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
             document.getElementById('trade-buy-date').valueAsDate = new Date(); 
             fetchTradesEntries(); 
+            if (window.__pendingTradePlay) { const p = window.__pendingTradePlay; window.__pendingTradePlay = null; applyTradePlay(p); }
+        }
+
+        // Przejście z oceny wejścia do Transakcji: formularz wypełnia się z zagrania Form, a ocena zostaje zapisana przy transakcji
+        function prefillTradeFromPlay(ticker, entryId, evalData) {
+            window.__pendingTradePlay = { ticker: ticker, entryId: entryId, evalData: evalData };
+            openModule('tradeslist-module', 'Transakcje');
+        }
+        function applyTradePlay(p) {
+            const ts = document.getElementById('trade-ticker-select');
+            if (!Array.prototype.some.call(ts.options, o => o.value === p.ticker)) ts.innerHTML += `<option value="${p.ticker}">${p.ticker}</option>`;
+            ts.value = p.ticker; onTradeTickerChange();
+            document.getElementById('trade-play-id').value = p.entryId;
+            window.__tradeEval = p.evalData ? Object.assign({}, p.evalData, { entryId: p.entryId }) : null;
+            onTradePlayChange();
+            if (p.evalData && p.evalData.summary && p.evalData.summary.price) document.getElementById('trade-buy-price').value = Number(p.evalData.summary.price).toFixed(4);
+            const form = document.getElementById('trade-form'); if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const sp = document.getElementById('trade-spent'); if (sp) setTimeout(() => sp.focus(), 400);
+        }
+        function renderTradeEvalBox() {
+            const box = document.getElementById('trade-eval-box'); if (!box) return;
+            const e = window.__tradeEval;
+            if (!e) { box.style.display = 'none'; box.innerHTML = ''; return; }
+            const s = e.summary, rec = s.recommended_pct, pln = (rec != null && s.capital_pln) ? rec / 100 * s.capital_pln : null;
+            box.style.display = 'block';
+            box.innerHTML = `🎯 <b>Ocena wejścia: ${s.score == null ? '–' : Math.round(s.score)}/100 · ${s.verdict}</b> · rekomendowany budżet: <b>${rec == null ? 'brak limitów' : rec.toFixed(1).replace('.', ',') + '% kapitału'}</b>`
+                + (pln != null ? ` (≈ ${Math.round(pln).toLocaleString('pl-PL')} PLN własnych środków, bez dźwigni)` : '')
+                + ` <button type="button" class="dbx-icon" onclick="clearTradeEval()" title="Odłącz ocenę od transakcji">✕</button>`;
+        }
+        function clearTradeEval() { window.__tradeEval = null; renderTradeEvalBox(); }
+        function onTradePlayChange() {
+            const eid = document.getElementById('trade-play-id').value;
+            if (!eid) { if (!document.getElementById('trade-focus-id').value) onTradeFocusChange(); return; }
+            const form = formEntries.find(f => f.entry_id === eid); if (!form) return;
+            const t = form.ticker, tData = tickerDataArray.find(x => x.ticker === t);
+            document.getElementById('trade-ticker').value = t;
+            document.getElementById('trade-form-id').value = eid;
+            document.getElementById('trade-direction').value = form.direction;
+            document.getElementById('trade-tp').value = form.take_profit || '';
+            document.getElementById('trade-sl').value = form.stop_loss || '';
+            document.getElementById('trade-currency').value = (typeof getCurrencyForFrontend === 'function' ? getCurrencyForFrontend(t) : '') || 'USD';
+            document.getElementById('trade-name').value = tData && tData.stock_name ? tData.stock_name : '';
+            if (!document.getElementById('trade-focus-id').value) { document.getElementById('trade-max-spend').value = ''; document.getElementById('trade-score').value = ''; }
+            if (window.__tradeEval && window.__tradeEval.entryId !== eid) window.__tradeEval = null;
+            renderTradeEvalBox();
         }
 
         // 1. Funkcja generująca listę Tickerów (Tylko spółki z setupami z ostatnich 14 dni)
@@ -2864,6 +2943,7 @@
             
             if (!selectedTicker) {
                 focusSelect.innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
+                document.getElementById('trade-play-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
                 if(typeof onTradeFocusChange === 'function') onTradeFocusChange();
                 return;
             }
@@ -2876,10 +2956,16 @@
                 return diffDays <= 14;
             });
             
-            focusSelect.innerHTML = '<option value="">Wybierz analizę...</option>';
+            const playSelect = document.getElementById('trade-play-id');
+            const plays = formEntries.filter(f => f.ticker === selectedTicker && f.mute != 1);
+            playSelect.innerHTML = plays.length ? '<option value="">Wybierz zagranie...</option>' : '<option value="">Brak aktywnych zagrań w Form</option>';
+            plays.forEach(f => { playSelect.innerHTML += `<option value="${f.entry_id}">${f.direction} · ${f.start_zone}–${f.end_zone} · wejście ${f.entry_point || '–'} (${f.entry_id})</option>`; });
+            window.__tradeEval = null; renderTradeEvalBox();
+
+            focusSelect.innerHTML = '<option value="">Bez analizy Focus</option>';
             
             if (entries.length === 0) {
-                focusSelect.innerHTML = '<option value="">Brak setupów z ostatnich 14 dni</option>';
+                focusSelect.innerHTML = '<option value="">Brak analiz Focus z ostatnich 14 dni (opcjonalne)</option>';
             } else {
                 entries.forEach(f => {
                     const dateAdded = f.created_at ? new Date(f.created_at).toLocaleDateString('pl-PL') : '-';
@@ -2894,6 +2980,8 @@
             const fid = document.getElementById('trade-focus-id').value; 
             // Czyszczenie ukrytych pól jeśli nic nie wybrano
             if (!fid) {
+                document.getElementById('trade-score').value = ''; document.getElementById('trade-max-spend').value = '';
+                if (document.getElementById('trade-play-id').value) { onTradePlayChange(); return; }
                 document.getElementById('trade-ticker').value = ''; 
                 document.getElementById('trade-form-id').value = ''; 
                 document.getElementById('trade-currency').value = ''; 
@@ -2924,6 +3012,7 @@
                 // Ujednolicenie: Pobieramy nazwę natychmiast z naszej globalnej bazy Tickerów
                 const tData = tickerDataArray.find(t => t.ticker === focus.ticker);
                 document.getElementById('trade-name').value = tData && tData.stock_name ? tData.stock_name : '';
+                const ps = document.getElementById('trade-play-id'); if (ps && Array.prototype.some.call(ps.options, o => o.value === focus.entry_id)) ps.value = focus.entry_id;
             } catch(e){} 
         }
     // Główna funkcja dodająca transakcję
@@ -2943,7 +3032,7 @@ async function submitTradeForm(e) {
     const last15 = parseInt(document.getElementById('trade-last15').value) || 0;
             
     const data = { 
-        focus_id: document.getElementById('trade-focus-id').value, 
+        focus_id: document.getElementById('trade-focus-id').value || null, 
         form_id: document.getElementById('trade-form-id').value, // Kluczowe dla automatyzacji
         ticker: document.getElementById('trade-ticker').value, 
         direction: document.getElementById('trade-direction').value, 
@@ -2962,6 +3051,7 @@ async function submitTradeForm(e) {
         news_event: parseInt(document.getElementById('trade-news').value),
         cvd_delta: document.getElementById('trade-cvd-delta').value
     }; 
+    if (window.__tradeEval && window.__tradeEval.entry_eval && document.getElementById('trade-play-id').value === window.__tradeEval.entryId) { data.entry_score = window.__tradeEval.entry_score; data.entry_eval = window.__tradeEval.entry_eval; }
 
     try { 
         const res = await fetch(`${API_BASE_URL}/api/trades/add`, { 
@@ -2974,7 +3064,7 @@ async function submitTradeForm(e) {
         
         if(res.ok) { 
             alert('Zapisano!'); 
-            document.getElementById('trade-form').reset(); 
+            document.getElementById('trade-form').reset(); clearTradeEval(); 
             fetchTradesEntries(true); 
             
             // AUTOMATYZACJA: Wywołanie po sukcesie
@@ -5757,54 +5847,19 @@ window.Planer = (function () {
         } catch (e) { m.textContent = e.message; }
     }
 
-    // ---------- „Zrób zagranie”: przejście do Focus (analiza) albo do Transakcji (dodanie pozycji) ----------
+    // ---------- „Zrób zagranie”: ocena momentu wejścia, a z niej dodanie transakcji ----------
     function toast(text, ms) {
         let el = document.getElementById("plx-toast");
         if (!el) { el = document.createElement("div"); el.id = "plx-toast"; el.className = "plx-toast"; document.body.appendChild(el); }
         el.textContent = text; el.classList.add("show"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), ms || 6000);
     }
-    const waitFor = (fn, ms) => new Promise(res => { const t0 = Date.now(); (function tick() { let ok = false; try { ok = fn(); } catch (e) {} if (ok || Date.now() - t0 > (ms || 6000)) res(ok); else setTimeout(tick, 100); })(); });
     function clearTradeBanner() { const b = document.getElementById("plx-trade-banner"); if (b) b.remove(); }
-    function setTradeBanner(c) {
-        clearTradeBanner(); const form = document.getElementById("trade-form"); if (!form) return;
-        const b = document.createElement("div"); b.id = "plx-trade-banner"; b.className = "plx-banner";
-        b.innerHTML = "🧭 <b>Zagranie z Planera</b> · plan #" + c.planId + " · " + arrow(c.zone.side) + " strefa " + num(c.zone.start, 2) + "–" + num(c.zone.end, 2) + " · wejście " + price(c.play.entry_point) + " · TP " + price(c.play.take_profit) + " · SL " + price(c.play.stop_loss) +
-            "<br>Do dołożenia w strefie: <b>" + pct(c.zone.left_pct) + "</b> kapitału · po inwestycji zostanie <b>" + pct(c.after) + "</b> budżetu spółki · " +
-            '<a href="#" data-plan="' + c.planId + '">wróć do planu</a> <button type="button" class="dbx-icon" onclick="Planer.clearTradeBanner()" title="Ukryj">✕</button>';
-        form.insertBefore(b, form.firstChild);
-    }
-    async function doPlay(entryId, legIdx) {
-        const p = st.detail, leg = p.legs[legIdx]; if (!leg) return;
-        const play = (leg.plays || []).find(x => x.entry_id === entryId); if (!play) return;
-        const c = { planId: p.id, ticker: p.ticker, entryId: entryId, zone: leg, play: play, after: p.remaining_after_pct };
+    function doPlay(entryId) {
+        const p = st.detail; if (!p) return;
         closeOverlay("plx-detail");
-        let focusId = null;
-        try {
-            const rows = await api("/api/focus/entries"), now = Date.now();
-            const recent = (Array.isArray(rows) ? rows : []).filter(f => f.entry_id === entryId && (!f.created_at || (now - new Date(f.created_at)) / 864e5 <= 14))
-                .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
-            if (recent) focusId = recent.id;
-        } catch (e) {}
-        if (focusId != null) {                       // jest świeża analiza Focus -> dodanie transakcji
-            openModule("tradeslist-module", "Transakcje");
-            const ready = await waitFor(() => { const s = document.getElementById("trade-ticker-select"); return s && Array.prototype.some.call(s.options, o => o.value === c.ticker); });
-            if (!ready) { toast("Nie udało się wczytać formularza Transakcji - spróbuj ponownie."); return; }
-            document.getElementById("trade-ticker-select").value = c.ticker; onTradeTickerChange();
-            const fs = document.getElementById("trade-focus-id"); fs.value = String(focusId); await onTradeFocusChange();
-            setTradeBanner(c);
-            const form = document.getElementById("trade-form"); if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
-            const sp = document.getElementById("trade-spent"); if (sp) setTimeout(() => sp.focus(), 400);
-        } else {                                     // brak analizy -> najpierw Focus dla tego zagrania
-            openModule("focus-module", "Focus");
-            const ready = await waitFor(() => { const s = document.getElementById("focus-ticker-select"); return s && Array.prototype.some.call(s.options, o => o.value === c.ticker); });
-            if (ready) {
-                document.getElementById("focus-ticker-select").value = c.ticker; onFocusTickerChange();
-                const fid = document.getElementById("focus-form-id"); fid.value = c.entryId; onFocusIdChange();
-            }
-            toast("To zagranie nie ma jeszcze analizy Focus z ostatnich 14 dni. Uzupełnij ją tutaj - potem zagranie pojawi się w Transakcjach.", 9000);
-        }
+        Wejscie.evaluate(p.ticker, entryId);
     }
-    document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".plx-do"); if (b) { e.preventDefault(); doPlay(b.dataset.do, +b.dataset.leg); } });
+    document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".plx-do"); if (b) { e.preventDefault(); doPlay(b.dataset.do); } });
 
     // ---------- wejścia z innych miejsc aplikacji ----------
     async function openFor(ticker) {         // np. przycisk „Planuj” w Transakcjach i w oknie spółki
@@ -5821,6 +5876,180 @@ window.Planer = (function () {
              openPlan: openPlan, openFor: openFor, onTicker: onTicker, togglePick: togglePick, setPick: setPick, create: create, saveLegs: saveLegs, removeLeg: removeLeg,
              fillAddLeg: fillAddLeg, saveNote: saveNote, closePlan: closePlan, reopenPlan: reopenPlan, deletePlan: deletePlan, goTrades: goTrades, onTradeAdded: onTradeAdded,
              clearTradeBanner: clearTradeBanner, toast: toast };
+})();
+</script>
+<script>
+/* Radar zagrań (Lista Focus) i okno „Ocena wejścia”: kolejne etapy lejka sygnał -> budżet -> ocena -> transakcja. */
+window.Wejscie = (function () {
+    "use strict";
+    const $ = (s, r) => (r || document).querySelector(s);
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const num = (v, d) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const pct = v => (v == null || isNaN(v)) ? "–" : num(v, 1) + "%";
+    const spct = v => (v == null || isNaN(v)) ? "–" : (v > 0 ? "+" : "") + num(v, 1) + "%";
+    const price = v => v == null ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
+    const arrow = s => s === "LONG" ? '<span style="color:var(--success)">▲</span>' : '<span style="color:var(--danger)">▼</span>';
+    const KIND_COLOR = { inv_prio: "#fcd535", inv: "#c99400", spec_prio: "#f6465d", spec: "#9a5160" };
+    const VERDICT_COLOR = { "SPEŁNIA WYMOGI": "var(--success)", "OSTROŻNIE": "var(--accent-hover)", "NIE TERAZ": "var(--danger)" };
+    const PHASE = { PREPARED: "Przygotowany", OPEN: "Otwarty", CLOSED: "Zamknięty" };
+    const kindBadge = (k, l) => '<span class="ev-kind" style="color:' + (KIND_COLOR[k] || "#848e9c") + ';border-color:' + (KIND_COLOR[k] || "#848e9c") + '">' + esc(l) + "</span>";
+
+    async function api(path) {
+        const res = await fetch(API_BASE_URL + path);
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok || d.status === "error") throw new Error(d.message || ("HTTP " + res.status));
+        return d;
+    }
+
+    // ---------- radar ----------
+    const rd = { rows: [], loaded: false, kind: "ALL", prio: "ALL", band: "ALL", plan: "ALL", q: "", key: "dist", dir: 1 };
+    async function loadRadar(force) {
+        const box = $("#ev-radar-body"); if (!box) return;
+        if (!rd.loaded || force) box.innerHTML = '<div class="ev-empty">Ładowanie radaru…</div>';
+        try { rd.rows = (await api("/api/entry/radar")).rows || []; rd.loaded = true; drawRadar(); }
+        catch (e) { box.innerHTML = '<div class="ev-empty ev-bad">Nie udało się wczytać radaru: ' + esc(e.message) + "</div>"; }
+    }
+    const absd = r => r.nearest.distance_pct == null ? 1e9 : Math.abs(r.nearest.distance_pct);
+    const SORTERS = {
+        ticker: r => r.ticker, kind: r => r.kind, price: r => r.price == null ? -1 : r.price, dist: absd,
+        rr: r => r.nearest.rr == null ? -1 : r.nearest.rr, plan: r => r.plan ? (r.plan.phase === "OPEN" ? 2 : 1) : 0
+    };
+    function drawRadar() {
+        const box = $("#ev-radar-body"); if (!box) return;
+        const q = rd.q.trim().toLowerCase(), band = rd.band === "ALL" ? null : +rd.band;
+        let rows = rd.rows.filter(r =>
+            (rd.kind === "ALL" || r.kind.indexOf(rd.kind) === 0) &&
+            (rd.prio === "ALL" || (rd.prio === "prio") === /_prio$/.test(r.kind)) &&
+            (rd.plan === "ALL" || (rd.plan === "has") === !!r.plan) &&
+            (band == null || absd(r) <= band) &&
+            (!q || (r.ticker + " " + r.name).toLowerCase().indexOf(q) >= 0));
+        const f = SORTERS[rd.key] || SORTERS.dist;
+        rows.sort((a, b) => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * rd.dir; });
+        const inZone = rows.filter(r => r.plays.some(p => p.in_zone)).length;
+        const th = (k, t) => '<th data-ev-sort="' + k + '">' + t + (rd.key === k ? (rd.dir > 0 ? " ▲" : " ▼") : "") + "</th>";
+        let h = '<div class="ev-count">' + rows.length + " z " + rd.rows.length + " spółek · w strefie: <b>" + inZone + "</b></div>";
+        if (!rows.length) { box.innerHTML = h + '<div class="ev-empty">Brak spółek spełniających filtry.</div>'; return; }
+        h += '<div class="table-responsive"><table class="ev-table"><thead><tr>' + th("ticker", "Spółka") + th("kind", "Rodzaj") + th("price", "Kurs") + "<th>Najbliższe zagranie</th>" +
+            th("dist", "Odległość od wejścia") + th("rr", "R:R") + th("plan", "Plan") + "<th></th></tr></thead><tbody>";
+        rows.forEach(r => {
+            const n = r.nearest, d = n.distance_pct, zone = n.in_zone;
+            const dcls = zone ? "ev-pos" : (d != null && Math.abs(d) <= 5 ? "ev-warn" : "");
+            const plan = r.plan ? '<a href="#" data-plan="' + r.plan.id + '">' + (PHASE[r.plan.phase] || r.plan.phase) + "</a>" : '<span class="ev-muted">brak</span>';
+            h += '<tr><td><a class="sd-link" data-tk="' + esc(r.ticker) + '"><b>' + esc(r.ticker) + '</b></a><div class="ev-muted">' + esc(r.name) + "</div></td>" +
+                "<td>" + kindBadge(r.kind, r.kind_label) + "</td><td>" + price(r.price) + "</td>" +
+                "<td>" + arrow(n.side) + " " + price(n.zone[0]) + "–" + price(n.zone[1]) + '<div class="ev-muted">wejście ' + price(n.entry) + (n.entry_is_zone_mid ? " (środek strefy)" : "") +
+                (r.plays.length > 1 ? " · +" + (r.plays.length - 1) + " zagr." : "") + "</div></td>" +
+                '<td class="' + dcls + '"><b>' + spct(d) + "</b>" + (zone ? ' <span class="ev-chip">w strefie</span>' : "") + "</td>" +
+                "<td>" + (n.rr != null ? num(n.rr, 1) : "–") + "</td><td>" + plan + "</td>" +
+                '<td class="ev-act"><button class="hp-btn" data-ev-eval="' + esc(r.ticker) + '" data-entry="' + esc(n.entry_id) + '">Oceń wejście</button>' +
+                (r.plan ? "" : ' <button class="hp-btn" data-ev-plan="' + esc(r.ticker) + '">Przygotuj plan</button>') + "</td></tr>";
+        });
+        box.innerHTML = h + "</tbody></table></div>";
+    }
+    document.addEventListener("click", e => {
+        const t = e.target.closest && e.target.closest("[data-ev-sort]");
+        if (t) { const k = t.dataset.evSort; rd.dir = rd.key === k ? -rd.dir : 1; rd.key = k; drawRadar(); return; }
+        const b = e.target.closest && e.target.closest("[data-ev-eval]");
+        if (b) { evaluate(b.dataset.evEval, b.dataset.entry); return; }
+        const p = e.target.closest && e.target.closest("[data-ev-plan]");
+        if (p && window.Planer) Planer.openFor(p.dataset.evPlan);
+    });
+    function setFilter(k, v) { rd[k] = v; drawRadar(); }
+
+    // ---------- okno oceny wejścia ----------
+    const ov = { data: null, plays: [], req: 0 };
+    function overlay() {
+        let o = document.getElementById("ev-overlay");
+        if (!o) { o = document.createElement("div"); o.id = "ev-overlay"; o.className = "plx-overlay"; o.innerHTML = '<div class="plx-panel"></div>'; document.body.appendChild(o);
+            o.addEventListener("mousedown", e => { if (e.target === o) close(); }); }
+        return o;
+    }
+    function close() { const o = document.getElementById("ev-overlay"); if (o) o.classList.remove("open"); if (!document.querySelector(".plx-overlay.open")) document.body.style.overflow = ""; }
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+    function show(html) { const o = overlay(); o.firstChild.innerHTML = html; o.classList.add("open"); document.body.style.overflow = "hidden"; }
+
+    async function playsOf(ticker) {
+        if (!rd.loaded) { try { rd.rows = (await api("/api/entry/radar")).rows || []; rd.loaded = true; } catch (e) {} }
+        const r = rd.rows.find(x => x.ticker === ticker);
+        return r ? r.plays : [];
+    }
+    async function evaluate(ticker, entryId) {
+        const my = ++ov.req;
+        show('<div class="ev-empty">Ocena wejścia ' + esc(ticker) + ' – pobieram świece, CVD i budżet…</div>');
+        try {
+            const [d, plays] = await Promise.all([api("/api/entry/evaluate?ticker=" + encodeURIComponent(ticker) + "&entry_id=" + encodeURIComponent(entryId)), playsOf(ticker)]);
+            if (my !== ov.req) return;
+            ov.data = d; ov.plays = plays; render();
+        } catch (e) {
+            if (my !== ov.req) return;
+            show('<div class="plx-head"><div class="plx-title">Ocena wejścia · ' + esc(ticker) + '</div><button class="hp-btn" data-ev-close>✕</button></div><div class="ev-empty ev-bad">' + esc(e.message) + "</div>");
+        }
+    }
+    function condRow(c, i) {
+        const sc = c.score == null ? "brak danych" : Math.round(c.score * 100) + "%";
+        return '<div class="ev-cond ' + c.status + '"><span class="ev-dot"></span><div class="ev-ctext"><b>' + esc(c.label) + '</b> <span class="ev-w">waga ' + c.weight + "</span>" +
+            '<div class="ev-muted">' + esc(c.detail) + "</div>" +
+            '<div class="ev-desc" id="ev-d' + i + '" hidden>' + esc(c.desc) + '<div class="ev-scale">Skala: ' + esc(c.scale) + "</div></div></div>" +
+            '<span class="ev-score">' + sc + '</span><button class="ev-info" data-ev-info="' + i + '" title="Co to znaczy?">ⓘ</button></div>';
+    }
+    function render() {
+        const d = ov.data, p = d.play, b = d.budget, vc = VERDICT_COLOR[d.verdict] || "var(--text-main)";
+        const opts = ov.plays.map(x => '<option value="' + esc(x.entry_id) + '"' + (x.entry_id === p.entry_id ? " selected" : "") + ">" + (x.side === "LONG" ? "▲" : "▼") + " " + price(x.zone[0]) + "–" + price(x.zone[1]) + " · wejście " + price(x.entry) + "</option>").join("");
+        const rr = (p.take_profit && p.stop_loss && p.entry) ? Math.abs(p.take_profit - p.entry) / Math.abs(p.entry - p.stop_loss) : null;
+        const dist = (d.price && p.entry) ? (d.price / p.entry - 1) * 100 : null;
+        const inZone = d.price != null && d.price >= p.zone[0] && d.price <= p.zone[1];
+        let budget;
+        if (b.base_pct == null) {
+            budget = '<div class="ev-note">Nie ma jeszcze ustawionych limitów dla tego rodzaju spółki (Baza danych → Serwis)' + (b.capital_known ? "" : " ani kapitału") + ", więc rekomendacja budżetu jest niedostępna.</div>";
+        } else {
+            budget = '<div class="plx-kpis">' +
+                '<div class="plx-kpi"><div class="l">Dostępny budżet</div><div class="v">' + pct(b.base_pct) + '</div><div class="s">kapitału · ' + (b.source === "plan" ? "z planu (zostało do dołożenia w strefie)" : "z limitów rodzaju spółki (strefa minus już użyte)") + "</div></div>" +
+                '<div class="plx-kpi"><div class="l">Współczynnik oceny</div><div class="v">' + Math.round(b.factor * 100) + '%</div><div class="s">0% poniżej 45 pkt · 100% od 85 pkt</div></div>' +
+                '<div class="plx-kpi"><div class="l">Rekomendowany budżet</div><div class="v" style="color:' + (b.recommended_pct > 0 ? "var(--success)" : "var(--danger)") + '">' + pct(b.recommended_pct) + '</div><div class="s">kapitału na to wejście</div></div></div>';
+        }
+        const co = b.company || {};
+        const companyLine = '<div class="ev-muted">Spółka: wykorzystano ' + pct(co.used_pct) + (co.max_pct != null ? " z " + pct(co.max_pct) : "") + " budżetu" +
+            (co.max_trades != null ? " · wolnych wejść: " + co.trades_left + " z " + co.max_trades : "") + (b.plan_id ? " · plan #" + b.plan_id : " · brak planu spółki") + "</div>";
+        show(
+            '<div class="plx-head"><div><div class="plx-title">Ocena wejścia · ' + esc(d.ticker) + ' <a class="sd-link" data-tk="' + esc(d.ticker) + '" style="font-size:.6em">wykres</a></div>' +
+            '<div class="plx-sub">' + esc(d.name) + " · " + kindBadge(d.kind, d.kind_label) + " · kurs " + price(d.price) + " (" + (d.price_source === "5m" ? "ostatnia świeca 5m" : "ostatnia świeca 1H") + ")</div></div>" +
+            '<div class="plx-actions">' + (ov.plays.length > 1 ? '<select id="ev-play-sel">' + opts + "</select>" : "") + '<button class="hp-btn" data-ev-refresh>↻ Odśwież</button><button class="hp-btn" data-ev-close>✕</button></div></div>' +
+            '<div class="ev-verdict" style="border-color:' + vc + '"><div><div class="ev-vtext" style="color:' + vc + '">' + esc(d.verdict) + '</div><div class="ev-muted">' +
+            (d.blocked ? "Kurs przebił stop loss – zagranie unieważnione." : "Średnia ważona " + d.conditions.filter(c => c.score != null).length + " z " + d.conditions.length + " warunków (brak danych nie zawyża wyniku).") +
+            '</div></div><div class="ev-big">' + (d.score == null ? "–" : Math.round(d.score)) + '<small>/100</small></div></div>' +
+            '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Zagranie</div><div class="v">' + arrow(p.side) + " " + price(p.zone[0]) + "–" + price(p.zone[1]) + '</div><div class="s">' + (inZone ? "kurs w strefie" : "kurs poza strefą") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">Punkt wejścia</div><div class="v">' + price(p.entry) + '</div><div class="s">' + (p.entry_is_zone_mid ? "środek strefy (brak punktu w Form)" : "odległość " + spct(dist)) + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.take_profit) + " / " + price(p.stop_loss) + '</div><div class="s">R:R ' + (rr ? num(rr, 1) : "–") + "</div></div></div>" +
+            '<div class="plx-h">Warunki w chwili wejścia <span class="ev-muted">(ⓘ – co oznacza dany warunek)</span></div><div class="ev-conds">' + d.conditions.map(condRow).join("") + "</div>" +
+            '<div class="plx-h">Budżet na to wejście</div>' + budget + companyLine +
+            (d.warnings && d.warnings.length ? '<div class="plx-warn">' + d.warnings.map(esc).join("<br>") + "</div>" : "") +
+            '<div class="plx-actions"><button class="hp-btn ev-go" data-ev-trade>Dodaj transakcję →</button>' +
+            (b.plan_id ? '<a href="#" class="plx-tag" data-plan="' + b.plan_id + '">otwórz plan</a>' : '<button class="hp-btn" data-ev-plan="' + esc(d.ticker) + '">Przygotuj plan</button>') + "</div>");
+    }
+    document.addEventListener("click", e => {
+        const t = e.target; if (!t.closest) return;
+        if (t.closest("[data-ev-close]")) { close(); return; }
+        if (t.closest("[data-ev-refresh]") && ov.data) { evaluate(ov.data.ticker, ov.data.play.entry_id); return; }
+        const i = t.closest("[data-ev-info]"); if (i) { const el = document.getElementById("ev-d" + i.dataset.evInfo); if (el) el.hidden = !el.hidden; return; }
+        if (t.closest("[data-ev-trade]")) { toTrade(); return; }
+        if (t.closest("#ev-overlay [data-ev-plan]") || t.closest("#ev-overlay [data-plan]")) close();
+    });
+    document.addEventListener("change", e => { if (e.target.id === "ev-play-sel" && ov.data) evaluate(ov.data.ticker, e.target.value); });
+    document.addEventListener("click", e => { const x = e.target.closest && e.target.closest("#ev-overlay [data-tk]"); if (x) close(); });
+
+    function compact(d) {      // to, co zapisujemy przy transakcji (ocena w chwili wejścia)
+        return { entry_score: d.score, entry_eval: { verdict: d.verdict, score: d.score, factor: d.factor, price: d.price, evaluated_at: new Date().toISOString(),
+            recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source,
+            conditions: d.conditions.map(c => ({ id: c.id, score: c.score, status: c.status })) }, summary: {
+            verdict: d.verdict, score: d.score, recommended_pct: d.budget.recommended_pct, source: d.budget.source, capital_pln: d.budget.capital_pln, price: d.price } };
+    }
+    function toTrade() {
+        const d = ov.data; if (!d) return;
+        if (d.verdict === "NIE TERAZ" && !confirm("Ocena: NIE TERAZ" + (d.blocked ? " (stop loss przebity)" : "") + ". Na pewno dodać transakcję?")) return;
+        close();
+        if (typeof prefillTradeFromPlay === "function") prefillTradeFromPlay(d.ticker, d.play.entry_id, compact(d));
+    }
+    return { loadRadar: loadRadar, setFilter: setFilter, evaluate: evaluate, close: close };
 })();
 </script>
 </body>
