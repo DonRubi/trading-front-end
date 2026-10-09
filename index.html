@@ -2335,7 +2335,7 @@
                       ((parseFloat(entry.entry_point) - parseFloat(entry.stop_loss)) * (['DBR', 'RBR'].includes(entry.direction) ? 1 : -1));
         
         let pointsTotal = candle + volume + gap + calendar + cvd + vix + index + htf;
-        pointsTotal += (Array.isArray(entry.reasons) ? entry.reasons.length * 2.0 : 0);
+        pointsTotal += (window.FormZones ? FormZones.scoreOf(entry) : (Array.isArray(entry.reasons) ? entry.reasons.length : 0)) * 2.0;   // punktacja Form jest ułamkowa (jakość powodów)
         if (rrVal > 4.0) pointsTotal += 2.0;
         else if (rrVal > 2.5) pointsTotal += 1.0;
         if (parseInt(entry.priority) === 1) pointsTotal += 1.0;
@@ -5875,6 +5875,15 @@ window.FormZones = (function () {
     const tickerRow = t => (typeof tickerDataArray !== "undefined" ? tickerDataArray : []).find(x => x.ticker === t);
 
     // ---------- obliczenia (te same reguły statusu i R:R co dotąd) ----------
+    // punktacja ułamkowa: powód zmierzony = jego jakość (60% wypełnienia = 0,6), zakończony/wygasły = 0, niezmierzony (dawny) = 1; razem max 5
+    function reasonPoints(name, e) {
+        const d = (Array.isArray(e.reasons_detail) ? e.reasons_detail : []).find(x => String(x.label).toLowerCase() === String(name).toLowerCase());
+        if (!d) return 1;
+        if (d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) return 0;
+        return Math.max(0, Math.min(1, +d.quality || 0));
+    }
+    const scoreOf = e => Math.min(5, Math.round((Array.isArray(e.reasons) ? e.reasons : []).reduce((s, r) => s + reasonPoints(r, e), 0) * 100) / 100);
+    const fmtScore = v => num(v, 1);
     function view(e) {
         const long = LONG(e.direction), mod = long ? 1 : -1;
         const entry = parseFloat(e.entry_point) || 0, sl = parseFloat(e.stop_loss) || 0, tp = parseFloat(e.take_profit) || 0;
@@ -5889,7 +5898,7 @@ window.FormZones = (function () {
             status = foc ? "Skupienie" : obs ? "Obserwacja" : (Math.abs(raw) > 15 ? "Ignorowanie" : "Czekanie");
         }
         return { e: e, long: long, entry: entry, sl: sl, tp: tp, rr: rr, raw: isFinite(raw) ? raw : null, status: status,
-                 score: Array.isArray(e.reasons) ? e.reasons.length : 0, muted: isMuted(e) };
+                 score: scoreOf(e), muted: isMuted(e) };
     }
     function zonesOf(entries) {
         const map = new Map();
@@ -5962,7 +5971,7 @@ window.FormZones = (function () {
                 const mute = p.muted ? '<span style="color:var(--danger);font-weight:700;cursor:pointer;border-bottom:1px dashed var(--danger)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',0)">🔕 Wyciszone</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',1)">🔔 Aktywne</span>';
                 const reasons = (Array.isArray(e.reasons) ? e.reasons : []).map(r => chip(r, e)).join("") || '<span class="ev-muted">brak</span>';
                 return '<tr class="' + (p.muted ? "fz-muted-row" : "") + '"><td><a href="#" data-fz-detail="' + id + '" title="Szczegóły zagrania"><b>' + id + "</b></a></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
-                    '</td><td style="color:#a6e3a1;font-weight:700">' + p.score + "/5" + activeNote(e, p.score) + "</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
+                    '</td><td style="color:#a6e3a1;font-weight:700" title="Suma jakości powodów (np. powód wypełniony w 60% = 0,6)">' + fmtScore(p.score) + "/5</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
                     '<td style="white-space:nowrap"><button class="btn-edit" data-fz-detail="' + id + '" title="Szczegóły zagrania">🔍</button> <button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="openEditModal(\'form\', \'' + id + '\')" title="Edytuj">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
             }).join("") + "</tbody></table>";
     }
@@ -6023,7 +6032,7 @@ window.FormZones = (function () {
             (zones.length ? zones.map(z => {
                 const muted = z.all.filter(p => p.muted).length;
                 return '<div class="fz-zblock" data-zk="' + esc(z.key) + '"><div class="fz-zhead" data-fz-ztoggle><span class="fz-chev">▸</span>' + arrow(z.long) + " <b>" + price(z.lo) + "–" + price(z.hi) + "</b> <span class=\"ev-muted\">" + z.all.length + " zagr." + (muted ? ", w tym " + muted + " wyciszone" : "") + '</span><button type="button" class="hp-btn" style="margin-left:auto" data-fz-zone="' + esc(z.key) + '">＋ zagranie w tej strefie</button></div>' +
-                    '<div class="fz-zbody">' + z.all.map(p => '<div class="plx-play' + (p.muted ? " fz-muted-row" : "") + '"><b>' + esc(p.e.entry_id) + "</b><span>wejście " + price(p.entry) + "</span><span>TP " + price(p.tp) + "</span><span>R:R " + num(p.rr, 2) + "</span><span>" + p.score + "/5</span>" +
+                    '<div class="fz-zbody">' + z.all.map(p => '<div class="plx-play' + (p.muted ? " fz-muted-row" : "") + '"><b>' + esc(p.e.entry_id) + "</b><span>wejście " + price(p.entry) + "</span><span>TP " + price(p.tp) + "</span><span>R:R " + num(p.rr, 2) + "</span><span>" + fmtScore(p.score) + "/5</span>" +
                         (p.muted ? "<span>🔕 wyciszone</span>" : "") + "<span>" + (Array.isArray(p.e.reasons) ? p.e.reasons.map(r => '<span class="fz-reason">' + esc(r) + "</span>").join("") : "") + "</span></div>").join("") + "</div></div>";
             }).join("") : '<div class="ev-muted">Brak stref – to będzie pierwsza.</div>') +
             '<button type="button" class="hp-btn" data-fz-newzone style="margin-top:6px">＋ Nowa strefa</button>';
@@ -6084,12 +6093,12 @@ window.FormZones = (function () {
             '<div class="fz-nav"><button class="hp-btn" data-fz-nav="prev"' + (prev ? "" : " disabled") + ' title="Niżej (←)">◀ Niżej</button><span class="ev-muted">' + (i + 1) + " z " + items.length + '</span><button class="hp-btn" data-fz-nav="next"' + (next ? "" : " disabled") + ' title="Wyżej (→)">Wyżej ▶</button><button class="hp-btn" data-fz-dclose>✕</button></div></div>';
         h += '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Wejście</div><div class="v">' + price(p.entry) + '</div><div class="s">kurs ' + price(cp) + (dist != null ? " (" + (dist > 0 ? "+" : "") + num(dist, 1) + "% od wejścia)" : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.tp) + " / " + price(p.sl) + '</div><div class="s">R:R ' + num(p.rr, 2) + "</div></div>" +
-            '<div class="plx-kpi"><div class="l">Score</div><div class="v">' + p.score + '/5</div><div class="s">' + activeNote(e, p.score).replace(/<[^>]+>/g, "") + (e.priority === 1 ? " ⚡ priorytet" : "") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">Score</div><div class="v">' + fmtScore(p.score) + '/5</div><div class="s">suma jakości powodów' + (e.priority === 1 ? " · ⚡ priorytet" : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Status</div><div class="v" style="color:' + STCOL[p.status] + '">' + esc(p.status) + '</div><div class="s">dodano ' + (e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–") + "</div></div></div>";
         h += '<div class="plx-h">Sąsiednie zagrania tej spółki</div><div class="fz-neigh">' + neighCard("◀ Niżej (w lewo)", cur, prev) + neighCard("Wyżej (w prawo) ▶", cur, next) + "</div>";
         h += '<div class="plx-h">Powody</div>' + ((e.reasons || []).length ? e.reasons.map(r => reasonBlock(r, e)).join("") : '<div class="ev-muted">Brak powodów.</div>');
         h += '<div class="plx-h">Wszystkie zagrania spółki (od najniższego wejścia)</div><div class="table-responsive"><table class="ev-table fz-ladder"><thead><tr><th>ID</th><th>Wejście</th><th>Od poprzedniego</th><th>Strefa</th><th>Score</th></tr></thead><tbody>' +
-            items.map((it, k) => '<tr class="' + (k === i ? "cur" : "") + '" data-fz-go="' + esc(it.p.e.entry_id) + '"><td>' + esc(it.p.e.entry_id) + (it.p.muted ? " 🔕" : "") + "</td><td>" + price(it.price) + "</td><td>" + (k ? (it.price / items[k - 1].price - 1 >= 0 ? "+" : "") + num((it.price / items[k - 1].price - 1) * 100, 2) + "% " + (it.z.key === items[k - 1].z.key ? '<span class="fz-same">· ta sama strefa</span>' : '<span class="fz-other">· inna strefa</span>') : "–") + "</td><td>" + arrow(it.z.long) + " " + price(it.z.lo) + "–" + price(it.z.hi) + "</td><td>" + it.p.score + "/5</td></tr>").join("") + "</tbody></table></div>";
+            items.map((it, k) => '<tr class="' + (k === i ? "cur" : "") + '" data-fz-go="' + esc(it.p.e.entry_id) + '"><td>' + esc(it.p.e.entry_id) + (it.p.muted ? " 🔕" : "") + "</td><td>" + price(it.price) + "</td><td>" + (k ? (it.price / items[k - 1].price - 1 >= 0 ? "+" : "") + num((it.price / items[k - 1].price - 1) * 100, 2) + "% " + (it.z.key === items[k - 1].z.key ? '<span class="fz-same">· ta sama strefa</span>' : '<span class="fz-other">· inna strefa</span>') : "–") + "</td><td>" + arrow(it.z.long) + " " + price(it.z.lo) + "–" + price(it.z.hi) + "</td><td>" + fmtScore(it.p.score) + "/5</td></tr>").join("") + "</tbody></table></div>";
         h += '<div class="plx-actions"><button class="hp-btn" onclick="FormZones.closeDetail(); copyFormEntry(\'' + esc(e.entry_id) + '\')">📋 Klonuj</button><button class="hp-btn" onclick="openEditModal(\'form\', \'' + esc(e.entry_id) + '\')">✎ Edytuj</button>' +
             '<button class="hp-btn" onclick="updateFormEntryField(\'' + esc(e.entry_id) + "', 'mute', " + (p.muted ? 0 : 1) + ')">' + (p.muted ? "🔔 Włącz" : "🔕 Wycisz") + "</button></div>";
         o.firstChild.innerHTML = h;
@@ -6129,7 +6138,7 @@ window.FormZones = (function () {
         if (e.key === "ArrowLeft") navDetail("prev"); else if (e.key === "ArrowRight") navDetail("next"); else if (e.key === "Escape") closeDetail();
     });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#fz-modal") && $("#fz-modal").classList.contains("open")) closeAdd(); });
-    return { openDetail: openDetail, closeDetail: closeDetail, refresh: refresh, render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
+    return { scoreOf: scoreOf, openDetail: openDetail, closeDetail: closeDetail, refresh: refresh, render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
 })();
 </script>
 <script>
@@ -6333,7 +6342,8 @@ window.Measure = (function () {
     }
     function drawAdded() {
         const box = $("#fz-added"); if (!box) return;
-        box.innerHTML = M.added.length ? '<div class="ev-muted" style="margin:8px 0 4px">Powody mierzone w tym wpisie (kilka analiz zewnętrznych = jeden punkt):</div>' + M.added.map((d, i) => '<span class="fz-reason fz-v-' + d.verdict + '">' + esc(d.label) + " · " + Math.round(d.quality * 100) + "%" + (d.ref ? " → " + price(d.ref.value) + " (" + esc(APPLY[d.ref.applies_to] ? APPLY[d.ref.applies_to][1] : d.ref.role) + ")" : "") + ' <a href="#" data-ms-rm="' + i + '" title="Usuń">✕</a></span>').join("") : "";
+        const sc = M.added.reduce((s, d) => s + ((d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) ? 0 : d.quality), 0);
+        box.innerHTML = M.added.length ? '<div class="ev-muted" style="margin:8px 0 4px">Powody mierzone w tym wpisie – <b>Score ' + num(Math.min(5, sc), 1) + '/5</b> (każdy powód daje tyle punktów, ile wynosi jego wypełnienie; kilka analiz zewnętrznych = jeden punkt):</div>' + M.added.map((d, i) => '<span class="fz-reason fz-v-' + d.verdict + '">' + esc(d.label) + " · " + Math.round(d.quality * 100) + "%" + (d.ref ? " → " + price(d.ref.value) + " (" + esc(APPLY[d.ref.applies_to] ? APPLY[d.ref.applies_to][1] : d.ref.role) + ")" : "") + ' <a href="#" data-ms-rm="' + i + '" title="Usuń">✕</a></span>').join("") : "";
     }
     function selectType(k) {
         M.type = M.type === k ? null : k; M.anchors = []; M.result = null; M.apply = "entry";
