@@ -347,6 +347,7 @@
         .sd-seg button + button { border-left: 1px solid var(--border-color); }
         .sd-seg button.sd-on { background: var(--accent); color: #11111b; }
         .sd-ctl-l { color: var(--text-muted); font-size: 0.72rem; margin-right: 6px; text-transform: uppercase; letter-spacing: .4px; }
+        .ohlc-legend { position: absolute; left: 8px; top: 6px; z-index: 3; pointer-events: none; font-size: 0.78rem; line-height: 1.5; background: rgba(11,14,17,.72); padding: 3px 9px; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 2px 12px; max-width: calc(100% - 100px); } .ohlc-legend span { white-space: nowrap; } .ohlc-legend .k { color: var(--text-muted); margin-right: 3px; } .ohlc-legend .d { color: var(--text-muted); }
         .sd-chart-wrap { position: relative; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; background: var(--bg-main); }
         #sd-chart { width: 100%; height: 420px; }
         .sd-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: .9rem; text-align: center; padding: 20px; pointer-events: none; }
@@ -527,7 +528,7 @@
                         <div class="plx-h" style="margin-top:14px">Powody mierzone na wykresie</div>
                         <div class="ev-muted">Wskaż kotwice kliknięciem w wykres, a aplikacja sprawdzi, czy powód jest prawdziwy i czy Twoja strefa leży tam, gdzie on wskazuje. Strefy z Form i wpisywana strefa są zaznaczone na wykresie.</div>
                         <div class="plx-actions" style="margin:8px 0"><button type="button" class="hp-btn ev-go" data-ms-tf="1d">1D</button><button type="button" class="hp-btn" data-ms-tf="1w">1W</button><span id="fz-chart-note" class="ev-muted"></span></div>
-                        <div id="fz-chart"></div>
+                        <div style="position:relative"><div class="ohlc-legend" id="fz-ohlc"></div><div id="fz-chart"></div></div>
                         <div id="fz-types" class="plx-actions" style="margin:8px 0"></div>
                         <div id="fz-editor"></div>
                         <div id="fz-result"></div>
@@ -4945,7 +4946,7 @@ window.StockDetail = (function () {
             '<div><span class="sd-ctl-l">Wejścia</span><span class="sd-seg" id="sd-markers"></span></div>' +
             '<div><span class="sd-ctl-l">CVD</span><span class="sd-seg" id="sd-cvdmode"></span> <select class="sd-select" id="sd-cvdanchor" title="Kiedy zerować sumę CVD (jak „Anchor period" na TradingView)">' + CVD_ANCHORS.map(a => '<option value="' + a[0] + '">reset: ' + a[1] + "</option>").join("") + "</select></div></div>" +
             '<div class="sd-zones" id="sd-zones"></div>' +
-            '<div class="sd-chart-wrap"><div id="sd-chart"></div><div class="sd-msg" id="sd-msg"></div></div>' +
+            '<div class="sd-chart-wrap"><div class="ohlc-legend" id="sd-ohlc"></div><div id="sd-chart"></div><div class="sd-msg" id="sd-msg"></div></div>' +
             '<div class="sd-chart-wrap sd-cvdwrap" id="sd-cvdwrap" hidden><div id="sd-cvd"></div></div><div class="sd-note" id="sd-cvdnote"></div>' +
             '<div class="sd-legend"><span><i class="sd-dot" style="background:#f0b90b"></i>wejście — pozycja otwarta</span><span><i class="sd-dot" style="background:#0ecb81"></i>zamknięta z zyskiem</span><span><i class="sd-dot" style="background:#f6465d"></i>zamknięta ze stratą</span><span class="sd-note">wielkość kropki = wielkość wejścia (z dźwignią)</span><span class="sd-note" id="sd-info"></span></div><div class="sd-tip sd-off" id="sd-tip">&nbsp;</div>' +
             '<div id="sd-trades"></div><div id="sd-notes"></div></div>';
@@ -5243,7 +5244,7 @@ window.StockDetail = (function () {
             candles.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } });
             zonesPrim = makeZonesPrimitive(); candles.attachPrimitive(zonesPrim);
             entriesPrim = makeEntriesPrimitive(); candles.attachPrimitive(entriesPrim);
-            chart.subscribeCrosshairMove(p => showTip(p));
+            chart.subscribeCrosshairMove(p => { showTip(p); const bars = (st.data && st.data.bars) || []; const b = p && p.time ? bars.find(x => x.time === p.time) : bars[bars.length - 1]; drawOhlc("#sd-ohlc", b ? { t: b.time, o: b.o, h: b.h, l: b.l, c: b.c, v: b.v } : null, st.interval === "1h" || st.interval === "4h"); });
         }
         const intraday = d.interval === "1h" || d.interval === "4h";
         chart.applyOptions({ timeScale: { timeVisible: intraday, secondsVisible: false } });
@@ -5253,6 +5254,7 @@ window.StockDetail = (function () {
         volume.setData(hasVol ? bars.map(b => ({ time: b.time, value: b.v, color: b.c >= b.o ? "rgba(14,203,129,0.40)" : "rgba(246,70,93,0.40)" })) : []);
         applyOverlays();
         chart.timeScale().fitContent();
+        drawOhlc("#sd-ohlc", bars.length ? { t: bars[bars.length - 1].time, o: bars[bars.length - 1].o, h: bars[bars.length - 1].h, l: bars[bars.length - 1].l, c: bars[bars.length - 1].c, v: bars[bars.length - 1].v } : null, intraday);
         showMsg(bars.length ? "" : "Brak świec w wybranym zakresie.");
     }
     function applyOverlays() {
@@ -5359,6 +5361,15 @@ window.StockDetail = (function () {
     }
 
     // podpowiedź przy najechaniu na punkt wejścia: dokładna cena, liczba transakcji, udział w wartości inwestycji
+    function drawOhlc(sel, b, intraday) {
+        const el = $(sel); if (!el) return;
+        if (!b) { el.innerHTML = ""; return; }
+        const up = b.c >= b.o, col = up ? "var(--success)" : "var(--danger)", f = v => v == null ? "–" : v.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+        const vol = v => (v >= 1e9 ? (v / 1e9).toFixed(2) + " mld" : v >= 1e6 ? (v / 1e6).toFixed(2) + " mln" : v >= 1e3 ? (v / 1e3).toFixed(1) + " tys." : String(Math.round(v || 0))).replace(".", ",");
+        let ds = String(b.t);
+        if (typeof b.t === "number") { const d = new Date(b.t * 1000); ds = d.toLocaleDateString("pl-PL", { timeZone: "UTC" }) + (intraday ? " " + d.toLocaleTimeString("pl-PL", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }) : ""); }
+        el.innerHTML = '<span class="d">' + ds + '</span><span style="color:' + col + '"><span class="k">O</span>' + f(b.o) + '</span><span style="color:' + col + '"><span class="k">H</span>' + f(b.h) + '</span><span style="color:' + col + '"><span class="k">L</span>' + f(b.l) + '</span><span style="color:' + col + '"><span class="k">C</span>' + f(b.c) + '</span><span style="color:' + col + '"><span class="k">Wol.</span>' + vol(b.v) + "</span>";
+    }
     function showTip(p) {
         const tip = $("#sd-tip"); if (!tip) return;
         let best = null;
@@ -6106,7 +6117,16 @@ window.Measure = (function () {
         chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
         prim = makePrim(); candle.attachPrimitive(prim);
         chart.subscribeClick(onClick);
+        chart.subscribeCrosshairMove(p => { const b = p && p.time ? M.bars.find(x => x.t === p.time) : M.bars[M.bars.length - 1]; drawOhlc(b); });
         return true;
+    }
+    function drawOhlc(b) {
+        const el = $("#fz-ohlc"); if (!el) return;
+        if (!b) { el.innerHTML = ""; return; }
+        const col = b.c >= b.o ? "var(--success)" : "var(--danger)", f = v => v == null ? "–" : v.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+        const vol = v => (v >= 1e9 ? (v / 1e9).toFixed(2) + " mld" : v >= 1e6 ? (v / 1e6).toFixed(2) + " mln" : v >= 1e3 ? (v / 1e3).toFixed(1) + " tys." : String(Math.round(v || 0))).replace(".", ",");
+        const c = (k, v) => '<span style="color:' + col + '"><span class="k">' + k + "</span>" + v + "</span>";
+        el.innerHTML = '<span class="d">' + dateOf(b.t) + "</span>" + c("O", f(b.o)) + c("H", f(b.h)) + c("L", f(b.l)) + c("C", f(b.c)) + c("Wol.", vol(b.v));
     }
     function setStatus(t) { const el = $("#fz-chart-note"); if (el) el.textContent = t || ""; }
     async function loadBars() {
@@ -6120,7 +6140,7 @@ window.Measure = (function () {
             vol.setData(M.bars.map(b => ({ time: b.t, value: b.v, color: b.c >= b.o ? "rgba(14,203,129,0.25)" : "rgba(246,70,93,0.25)" })));
             const n = M.bars.length; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (M.tf === "1d" ? 160 : 100)), to: n + 6 });
             setStatus(M.bars.length ? "" : "Brak świec dla tego tickera.");
-            drawBase();
+            drawBase(); drawOhlc(M.bars[M.bars.length - 1]);
         } catch (e) { setStatus("Nie udało się wczytać wykresu: " + e.message); }
         fetchAuto();
     }
