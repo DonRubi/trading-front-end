@@ -250,6 +250,8 @@
         .plx-kind { display: inline-block; font-size: 0.72em; font-weight: 700; padding: 2px 9px; border: 1px solid; border-radius: 10px; white-space: nowrap; }
         .plx-status { display: inline-block; font-size: 0.72em; font-weight: 700; padding: 2px 10px; border-radius: 99px; letter-spacing: .04em; }
         .plx-st-open { background: rgba(14,203,129,.15); color: var(--success); } .plx-st-closed { background: rgba(132,142,156,.18); color: var(--text-muted); }
+        .plx-st-prep { background: rgba(137,180,250,.16); color: #89b4fa; }
+        .plx-n { font-size: 0.8em; opacity: .75; margin-left: 2px; } .plx-seg button.on .plx-n { opacity: .9; }
         .plx-zchips { display: flex; flex-wrap: wrap; gap: 5px; }
         .plx-zchip { font-size: 0.78em; border: 1px solid var(--border-color); border-radius: 8px; padding: 2px 8px; background: var(--bg-main); white-space: nowrap; }
         .plx-zchip.long { border-color: rgba(14,203,129,.5); } .plx-zchip.short { border-color: rgba(246,70,93,.5); }
@@ -1393,9 +1395,10 @@
             </div>
             <div class="plx-bar">
                 <div class="plx-seg" id="plx-filter">
-                    <button type="button" data-f="open" class="on" onclick="Planer.setFilter('open')">Otwarte</button>
-                    <button type="button" data-f="closed" onclick="Planer.setFilter('closed')">Zamknięte</button>
-                    <button type="button" data-f="all" onclick="Planer.setFilter('all')">Wszystkie</button>
+                    <button type="button" data-f="open" class="on" onclick="Planer.setFilter('open')" title="Plany, w których wykonano już co najmniej jedno zagranie (transakcję)">Otwarte <span class="plx-n"></span></button>
+                    <button type="button" data-f="prepared" onclick="Planer.setFilter('prepared')" title="Plany bez żadnego zagrania - jeszcze nie wykonano transakcji">Przygotowane <span class="plx-n"></span></button>
+                    <button type="button" data-f="closed" onclick="Planer.setFilter('closed')">Zamknięte <span class="plx-n"></span></button>
+                    <button type="button" data-f="all" onclick="Planer.setFilter('all')">Wszystkie <span class="plx-n"></span></button>
                 </div>
                 <input class="dbx-in plx-search" placeholder="Szukaj tickera lub nazwy…" autocomplete="off" oninput="Planer.setQuery(this.value)">
             </div>
@@ -5513,7 +5516,10 @@ window.Planer = (function () {
     const KIND_COLOR = { inv_prio: "#89b4fa", inv: "#89b4fa", spec_prio: "#fab387", spec: "#fab387" };
     const arrow = side => side === "LONG" ? "▲" : "▼";
 
-    let st = { filter: "open", q: "", plans: [], seq: 0, detail: null, ctxNew: null, tickers: [], pick: {} };
+    let st = { filter: "open", q: "", all: [], plans: [], seq: 0, detail: null, ctxNew: null, tickers: [], pick: {} };
+    const PHASE = { OPEN: ["plx-st-open", "OTWARTY"], PREPARED: ["plx-st-prep", "PRZYGOTOWANY"], CLOSED: ["plx-st-closed", "ZAMKNIĘTY"] };
+    const phaseBadge = ph => { const x = PHASE[ph] || PHASE.OPEN; return '<span class="plx-status ' + x[0] + '">' + x[1] + "</span>"; };
+    const FILTER_PHASE = { open: "OPEN", prepared: "PREPARED", closed: "CLOSED" };
 
     async function api(path, body) {
         const res = await fetch(API_BASE_URL + path, body === undefined ? undefined : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -5525,16 +5531,23 @@ window.Planer = (function () {
 
     // ---------- lista planów ----------
     function open() { st.filter = st.filter || "open"; syncBar(); load(); loadTickers(); }
-    function syncBar() { document.querySelectorAll("#plx-filter button").forEach(b => b.classList.toggle("on", b.dataset.f === st.filter)); }
-    function setFilter(f) { st.filter = f; syncBar(); load(); }
+    function syncBar() {
+        const cnt = { open: 0, prepared: 0, closed: 0, all: st.all.length };
+        st.all.forEach(p => { if (p.phase === "OPEN") cnt.open++; else if (p.phase === "PREPARED") cnt.prepared++; else cnt.closed++; });
+        document.querySelectorAll("#plx-filter button").forEach(b => {
+            b.classList.toggle("on", b.dataset.f === st.filter);
+            const n = b.querySelector(".plx-n"); if (n) n.textContent = st.all.length || cnt[b.dataset.f] ? "(" + cnt[b.dataset.f] + ")" : "";
+        });
+    }
+    function setFilter(f) { st.filter = f; syncBar(); render(); }       // bez ponownego pobierania - lista jest już w pamięci
     function setQuery(q) { st.q = q.trim().toLowerCase(); render(); }
     async function load() {
         const my = ++st.seq, tb = $("#plx-tbody");
         tb.innerHTML = '<tr><td colspan="9" class="hp-empty">Ładowanie…</td></tr>';
         try {
-            const d = await api("/api/planner/plans?status=" + st.filter);
+            const d = await api("/api/planner/plans?status=all");           // jedno zapytanie; filtry liczone w przeglądarce
             if (my !== st.seq) return;
-            st.plans = d.plans; render();
+            st.all = d.plans; syncBar(); render();
         } catch (e) { if (my === st.seq) tb.innerHTML = '<tr><td colspan="9" class="hp-empty plx-err">' + esc(e.message) + "</td></tr>"; }
     }
     function budCell(p) {
@@ -5544,11 +5557,13 @@ window.Planer = (function () {
         return '<div class="plx-bud">' + pct(c.used_pct) + ' <small>z ' + pct(max) + '</small><div class="plx-track"><div class="plx-fill ' + ((c.used_pct || 0) > max ? "over" : "") + '" style="width:' + used + '%"></div><div class="plx-fill res" style="left:' + used + '%;width:' + res + '%"></div></div></div>';
     }
     function render() {
-        const tb = $("#plx-tbody"), q = st.q;
+        const tb = $("#plx-tbody"), q = st.q, ph = FILTER_PHASE[st.filter];
+        st.plans = st.all.filter(p => !ph || p.phase === ph);
         const list = st.plans.filter(p => !q || p.ticker.toLowerCase().includes(q) || String(p.name || "").toLowerCase().includes(q));
         if (!list.length) {
-            tb.innerHTML = '<tr><td colspan="9" class="hp-empty">' + (st.plans.length ? "Żaden plan nie pasuje do wyszukiwania." :
-                st.filter === "open" ? "Brak otwartych planów. Utwórz pierwszy przyciskiem „＋ Nowy plan”." : st.filter === "closed" ? "Brak zamkniętych planów." : "Brak planów.") + "</td></tr>";
+            const empty = { open: "Brak otwartych planów (z wykonanym zagraniem).", prepared: "Brak przygotowanych planów. Utwórz plan przyciskiem „＋ Nowy plan”.", closed: "Brak zamkniętych planów.", all: "Brak planów. Utwórz pierwszy przyciskiem „＋ Nowy plan”." };
+            tb.innerHTML = '<tr><td colspan="9" class="hp-empty">' + (st.plans.length ? "Żaden plan nie pasuje do wyszukiwania." : empty[st.filter]) +
+                (st.filter === "open" && st.all.some(p => p.phase === "PREPARED") ? ' <a href="#" onclick="Planer.setFilter(\'prepared\'); return false;" class="dbx-link">Zobacz przygotowane (' + st.all.filter(p => p.phase === "PREPARED").length + ")</a>" : "") + "</td></tr>";
             return;
         }
         tb.innerHTML = list.map(p => {
@@ -5561,7 +5576,7 @@ window.Planer = (function () {
                 "<td>" + p.open_trade_count + " otw. / " + p.trade_count + (p.company.max_trades != null ? ' <small class="db-help">(limit ' + p.company.max_trades + ")</small>" : "") + "</td>" +
                 "<td>" + budCell(p) + "</td>" +
                 '<td class="hp-r ' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '" title="Budżet spółki, który zostanie po zainwestowaniu pozostałej części budżetów stref">' + pct(after) + "</td>" +
-                '<td><span class="plx-status ' + (p.status === "OPEN" ? "plx-st-open" : "plx-st-closed") + '">' + (p.status === "OPEN" ? "OTWARTY" : "ZAMKNIĘTY") + "</span></td>" +
+                "<td>" + phaseBadge(p.phase) + "</td>" +
                 '<td class="hp-r"><button class="hp-btn" type="button">Szczegóły</button></td></tr>';
         }).join("");
     }
@@ -5607,7 +5622,7 @@ window.Planer = (function () {
         const after = p.remaining_after_pct;
         const trades = (p.trades || []).map(t => "<tr><td>" + esc(t.buy_date) + "</td><td>" + arrow(t.side) + " ×" + num(t.leverage, 2).replace(",00", "") + "</td><td>" + price(t.buy_price) + "</td><td>" + pct(t.invested_pct, 2) + '</td><td class="' + (t.return_pct == null ? "" : t.return_pct >= 0 ? "hp-up" : "hp-down") + '"><b>' + spct(t.return_pct) + "</b></td><td>" + (t.status === "OPEN" ? "otwarta" : "zamknięta " + esc(t.sell_date || "")) + "</td></tr>").join("");
         showOverlay("plx-detail",
-            '<div class="plx-head"><div><div class="plx-title"><span class="sd-link" data-tk="' + esc(p.ticker) + '">' + esc(p.ticker) + "</span> " + kindBadge(p.kind, p.kind_label) + ' <span class="plx-status ' + (open_ ? "plx-st-open" : "plx-st-closed") + '">' + (open_ ? "OTWARTY" : "ZAMKNIĘTY") + '</span></div><div class="plx-sub">' + esc(p.name) + " · plan od " + date(p.created_at) + (p.closed_at ? " do " + date(p.closed_at) : "") + "</div></div>" +
+            '<div class="plx-head"><div><div class="plx-title"><span class="sd-link" data-tk="' + esc(p.ticker) + '">' + esc(p.ticker) + "</span> " + kindBadge(p.kind, p.kind_label) + ' ' + phaseBadge(p.phase) + '</div><div class="plx-sub">' + esc(p.name) + " · plan od " + date(p.created_at) + (p.closed_at ? " do " + date(p.closed_at) : "") + "</div></div>" +
             '<div class="plx-actions"><button class="hp-btn" onclick="Planer.goTrades()">📊 Transakcje</button><button class="hp-btn" onclick="Planer.closeDetail()">✕ Zamknij</button></div></div>' +
             '<div class="plx-kpis">' +
             kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : " <small class='db-help'>bez limitu</small>"), "wykorzystane w otwartych transakcjach (% kapitału)") +
@@ -5736,7 +5751,7 @@ window.Planer = (function () {
         if (!legs.length) { m.textContent = "Wybierz co najmniej jedną strefę."; return; }
         try {
             const d = await api("/api/planner/create", { ticker: st.ctxNew.ticker, legs: legs, note: $("#plx-new-note").value });
-            closeOverlay("plx-new"); st.filter = "open"; syncBar(); await load();
+            closeOverlay("plx-new"); st.filter = d.plan.phase === "PREPARED" ? "prepared" : "open"; await load();
             st.detail = d.plan; drawDetail();
             if (d.warnings && d.warnings.length) { const mm = $("#plx-detail-msg"); if (mm) { mm.className = "plx-warn"; mm.textContent = d.warnings.join(" "); } }
         } catch (e) { m.textContent = e.message; }
