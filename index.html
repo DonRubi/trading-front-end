@@ -297,6 +297,10 @@
         .fz-zblock { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; } .fz-zhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; flex-wrap: wrap; } .fz-zbody { padding: 0 14px 10px; display: none; } .fz-zblock.open .fz-zbody { display: block; } .fz-zblock.open .fz-chev { transform: rotate(90deg); }
         #fz-modal .form-group input, #fz-modal .form-group select { width: 100%; }
         @media (max-width: 760px) { .fz-sub { display: block; overflow-x: auto; } }
+        #fz-chart { height: 430px; width: 100%; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-main); } @media (max-width: 760px) { #fz-chart { height: 330px; } }
+        .fz-slots { display: flex; flex-wrap: wrap; gap: 6px; } .fz-slot { border: 1px dashed var(--border-color); border-radius: 8px; padding: 4px 10px; font-size: 0.84rem; color: var(--text-muted); } .fz-slot.cur { border-color: var(--accent); color: var(--text-main); } .fz-slot.done { border-style: solid; border-color: var(--success); color: var(--text-main); }
+        .fz-facts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; line-height: 1.45; } .fz-ext { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-bottom: 8px; }
+        .fz-v-OK { border-color: rgba(14,203,129,.6); background: rgba(14,203,129,.12); } .fz-v-PARTIAL { border-color: rgba(252,213,53,.6); background: rgba(252,213,53,.1); } .fz-v-FAIL { border-color: rgba(246,70,93,.6); background: rgba(246,70,93,.1); } .fz-reason a { color: var(--accent-hover); text-decoration: none; }
         /* radar zagrań i ocena wejścia */
         #ev-radar { padding: 4px 0 16px; } .ev-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; align-items: center; } .ev-controls input[type=search], .ev-controls select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; }
         .ev-count { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px; } .ev-empty { padding: 24px; text-align: center; color: var(--text-muted); } .ev-bad { color: var(--danger); }
@@ -514,6 +518,16 @@
                     <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01" required></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01" required></div></div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01" required></div>
                     <div class="form-group"><label>Powody wejścia (Opcjonalne)</label><input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2..."><input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3..."><input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4..."><input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5..."><datalist id="reasons-list"></datalist></div>
+                    <div id="fz-measure" style="display:none">
+                        <div class="plx-h" style="margin-top:14px">Powody mierzone na wykresie</div>
+                        <div class="ev-muted">Wskaż kotwice kliknięciem w wykres, a aplikacja sprawdzi, czy powód jest prawdziwy i czy Twoja strefa leży tam, gdzie on wskazuje. Strefy z Form i wpisywana strefa są zaznaczone na wykresie.</div>
+                        <div class="plx-actions" style="margin:8px 0"><button type="button" class="hp-btn ev-go" data-ms-tf="1d">1D</button><button type="button" class="hp-btn" data-ms-tf="1w">1W</button><span id="fz-chart-note" class="ev-muted"></span></div>
+                        <div id="fz-chart"></div>
+                        <div id="fz-types" class="plx-actions" style="margin:8px 0"></div>
+                        <div id="fz-editor"></div>
+                        <div id="fz-result"></div>
+                        <div id="fz-added"></div>
+                    </div>
                     <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
                 </form>
                 <button type="button" onclick="toggleLiquidityHunter()" style="background: none; border: 1px solid #89b4fa; color: #89b4fa; margin-top: 15px; width: 100%; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: bold; transition: 0.2s;">🧲 Otwórz Łowcę Płynności (Liquidity Hunter)</button>
@@ -2006,7 +2020,10 @@
                 document.getElementById('form-reason-5').value
             ].filter(r => r.trim() !== '');
 
+            const chk = window.Measure ? Measure.collect(formReasons) : { ok: true, details: [] };
+            if (!chk.ok) { alert(chk.message); return; }
             const data = { 
+                reasons_detail: chk.details,
                 ticker: document.getElementById('form-ticker').value, 
                 direction: document.getElementById('form-direction').value, 
                 priority: document.getElementById('form-priority').value, 
@@ -5867,13 +5884,22 @@ window.FormZones = (function () {
     }
 
     // ---------- widok ----------
+    const APPLYL = { entry: "wejście", start: "początek strefy", end: "koniec strefy", tp: "TP" };
+    function chip(name, e) {      // powód z zapisanym pomiarem: werdykt, wartość odniesienia, linki analiz zewnętrznych
+        const d = (Array.isArray(e.reasons_detail) ? e.reasons_detail : []).find(x => String(x.label).toLowerCase() === String(name).toLowerCase());
+        if (!d) return '<span class="fz-reason">' + esc(name) + "</span>";
+        const mark = d.verdict === "OK" ? "✓" : d.verdict === "PARTIAL" ? "~" : "✗";
+        const links = (d.items || []).map(i => '<a href="' + esc(i.url) + '" target="_blank" rel="noopener" title="' + esc(i.source || i.url) + '">🔗</a>').join(" ");
+        return '<span class="fz-reason fz-v-' + esc(d.verdict) + '" title="' + esc((d.facts || []).join("\n")) + '">' + esc(name) + " " + mark + " " + Math.round((d.quality || 0) * 100) + "%" +
+            (d.ref ? " → " + price(d.ref.value) + " (" + (APPLYL[d.ref.applies_to] || esc(d.ref.role)) + ")" : "") + (links ? " " + links : "") + "</span>";
+    }
     function playRows(z) {
         return '<table class="fz-sub"><thead><tr><th>ID</th><th>Data</th><th>Wejście</th><th>TP</th><th>SL</th><th>R:R</th><th>Score</th><th>Powody</th><th>Priorytet</th><th>Wyciszenie</th><th></th></tr></thead><tbody>' +
             z.vis.map(p => {
                 const e = p.e, id = esc(e.entry_id), d = e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–";
                 const prio = e.priority === 1 ? '<span style="color:#fcd535;font-weight:700;cursor:pointer;border-bottom:1px dashed #fcd535" onclick="updateFormEntryField(\'' + id + '\',\'priority\',0)">⚡ Wysoki</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'priority\',1)">Normalny</span>';
                 const mute = p.muted ? '<span style="color:var(--danger);font-weight:700;cursor:pointer;border-bottom:1px dashed var(--danger)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',0)">🔕 Wyciszone</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',1)">🔔 Aktywne</span>';
-                const reasons = (Array.isArray(e.reasons) ? e.reasons : []).map(r => '<span class="fz-reason">' + esc(r) + "</span>").join("") || '<span class="ev-muted">brak</span>';
+                const reasons = (Array.isArray(e.reasons) ? e.reasons : []).map(r => chip(r, e)).join("") || '<span class="ev-muted">brak</span>';
                 return '<tr class="' + (p.muted ? "fz-muted-row" : "") + '"><td><b>' + id + "</b></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
                     '</td><td style="color:#a6e3a1;font-weight:700">' + p.score + "/5</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
                     '<td style="white-space:nowrap"><button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="openEditModal(\'form\', \'' + id + '\')" title="Edytuj">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
@@ -5910,7 +5936,7 @@ window.FormZones = (function () {
         $("#fz-search").value = "";
         if (ticker) { const t = tickerRow(ticker); choose(ticker, pre, t); } else setTimeout(() => $("#fz-search").focus(), 50);
     }
-    function closeAdd() { $("#fz-modal").classList.remove("open"); lock(false); }
+    function closeAdd() { $("#fz-modal").classList.remove("open"); lock(false); if (window.Measure) Measure.reset(); }
     function search(q) {
         q = q.trim().toLowerCase(); const box = $("#fz-results");
         if (!q) { box.innerHTML = ""; return; }
@@ -5943,6 +5969,7 @@ window.FormZones = (function () {
         $("#fz-formwrap").style.display = "block";
         const z0 = pre ? zonesOf([pre])[0] : null;
         prefill(pre, pre ? "Nowe zagranie w strefie " + price(z0.lo) + "–" + price(z0.hi) : "Nowe zagranie – nowa strefa");
+        if (window.Measure) Measure.open(ticker);
         if (pre) { const blk = ch.querySelector('.fz-zblock[data-zk="' + (z0.key).replace(/"/g, '\\"') + '"]'); if (blk) blk.classList.add("open"); }
     }
 
@@ -5960,8 +5987,284 @@ window.FormZones = (function () {
         if (t.closest("[data-fz-newzone]")) { prefill(null, "Nowe zagranie – nowa strefa"); $("#fz-formwrap").scrollIntoView({ behavior: "smooth", block: "start" }); }
     });
     document.addEventListener("mousedown", e => { if (e.target.id === "fz-modal") closeAdd(); });
+    document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest && e.target.closest("#fz-measure") && e.target.tagName === "INPUT") e.preventDefault(); });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#fz-modal") && $("#fz-modal").classList.contains("open")) closeAdd(); });
     return { render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
+})();
+</script>
+<script>
+/* Form: powody mierzone na wykresie. Kotwice (świece/punkty) wskazuje się kliknięciem w wykres, weryfikację liczy backend (/api/form/verify). */
+window.Measure = (function () {
+    "use strict";
+    const $ = (s, r) => (r || document).querySelector(s);
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const num = (v, d) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const price = v => v == null ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
+    const dateOf = t => new Date(t * 1000).toISOString().slice(0, 10);
+    const FORMATIONS = ["xabcd", "one2one", "rgr", "elliott", "fibo"];
+    const TYPES = {
+        fvg: { label: "Luka (FVG)", slots: ["Świeca przed luką", "Świeca po luce"], need: 2, bar: true, help: "Kliknij dwie świece, między którymi powstała luka (sąsiednie = luka cenowa, co druga = FVG z trzech świec)." },
+        swing: { label: "Potwierdzony dołek/szczyt", slots: ["Świeca dołka (dla short: szczytu)"], need: 1, bar: true, help: "Kliknij świecę dołka – liczy się dół korpusu (dla short: góra korpusu)." },
+        trend: { label: "Zdrowy trend", slots: [], need: 0, auto: true, help: "Bez kotwic – aplikacja sama znajduje szczyty i dołki (HH/HL) i sprawdza ostatni dołek." },
+        fibo: { label: "Poziomy FIBO", slots: ["Początek swingu", "Koniec swingu"], need: 2, log: true, suggest: "fibo_leg", help: "Kliknij początek i koniec swingu (wg knotów). „Podpowiedz” bierze ostatni ruch trendu." },
+        one2one: { label: "Korekta 1:1", slots: ["A – start korekty", "B – koniec pierwszej fali", "C – koniec odbicia"], need: 3, help: "Pierwsza fala korekty A→B, odbicie do C; druga fala ma być równa pierwszej (standardowo i logarytmicznie)." },
+        xabcd: { label: "XABCD", slots: ["X", "A", "B", "C", "D"], need: 5, help: "Pięć punktów formacji harmonicznej wg knotów; D to punkt odniesienia (PRZ)." },
+        rgr: { label: "RGR", slots: ["Lewe ramię", "Głowa", "Prawe ramię", "Szyja – punkt 1 (opcj.)", "Szyja – punkt 2 (opcj.)"], need: 3, help: "Lewe ramię, głowa, prawe ramię; linię szyi wyznaczę sam, albo wskaż jej dwa punkty." },
+        elliott: { label: "Fale Elliotta", slots: ["0", "1", "2", "3", "4", "5"], need: 3, help: "Punkty 0, 1, 2… (min. 3, max 6) wg knotów. Ostatni punkt wyznacza prognozę kolejnej fali." },
+        vwap: { label: "VWAP", slots: ["Kotwica (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie VWAP kotwiczony od ostatniego dołka i od ostatniego szczytu; możesz wskazać własną świecę." },
+        vp: { label: "Volume Profile", slots: ["Początek profilu (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie od początku trendu albo od kontynuacji po wyraźnej korekcie; możesz wskazać własny początek." },
+        external: { label: "Analiza zewnętrzna", slots: [], need: 0, external: true, help: "Linki do analiz; kilka analiz liczy się jako jeden punkt." }
+    };
+    const ORDER = ["fvg", "swing", "trend", "fibo", "one2one", "xabcd", "rgr", "elliott", "vwap", "vp", "external"];
+    const APPLY = { entry: ["form-entry", "Punkt wejścia"], start: ["form-start", "Początek strefy"], end: ["form-end", "Koniec strefy (SL)"], tp: ["form-tp", "Take Profit"] };
+    const M = { ticker: "", tf: "1d", type: null, anchors: [], bars: [], auto: null, result: null, added: [], items: [{}], opts: {}, apply: "entry" };
+    let chart = null, candle = null, vol = null, prim = null, priceLines = [], extraSeries = [], zoneCache = [];
+
+    // ---------- wykres ----------
+    function makePrim() {
+        const p = {
+            bands: [], profile: null, series: null, request: null,
+            attached(a) { this.series = a.series; this.request = a.requestUpdate; }, detached() { this.series = null; this.request = null; }, updateAllViews() {},
+            set(b, pr) { this.bands = b; this.profile = pr; if (this.request) this.request(); }, paneViews() { return [view]; }
+        };
+        const view = { zOrder: () => "bottom", renderer: () => ({ draw() {}, drawBackground(target) {
+            if (!p.series) return;
+            target.useBitmapCoordinateSpace(({ context: ctx, bitmapSize, verticalPixelRatio: vr }) => {
+                p.bands.forEach(z => {
+                    const y1 = p.series.priceToCoordinate(z.hi), y2 = p.series.priceToCoordinate(z.lo); if (y1 == null || y2 == null) return;
+                    const top = Math.min(y1, y2) * vr, h = Math.max(Math.abs(y2 - y1) * vr, 1);
+                    ctx.fillStyle = z.fill; ctx.fillRect(0, top, bitmapSize.width, h);
+                    ctx.strokeStyle = z.stroke; ctx.lineWidth = Math.max(vr, 1); ctx.setLineDash(z.dash ? [6 * vr, 4 * vr] : []);
+                    ctx.strokeRect(0, top, bitmapSize.width, h); ctx.setLineDash([]);
+                    if (z.label) { ctx.fillStyle = z.stroke; ctx.font = (11 * vr) + "px sans-serif"; ctx.fillText(z.label, 6 * vr, top + 12 * vr); }
+                });
+                const pr = p.profile;
+                if (pr) {
+                    const mx = Math.max.apply(null, pr.bins) || 1, W = bitmapSize.width * 0.28;
+                    pr.bins.forEach((v, i) => {
+                        const y1 = p.series.priceToCoordinate(pr.lo + (i + 1) * pr.step), y2 = p.series.priceToCoordinate(pr.lo + i * pr.step); if (y1 == null || y2 == null) return;
+                        const inVA = pr.lo + i * pr.step >= pr.val - 1e-9 && pr.lo + (i + 1) * pr.step <= pr.vah + 1e-9;
+                        ctx.fillStyle = inVA ? "rgba(249,226,175,0.28)" : "rgba(137,180,250,0.20)";
+                        const w = v / mx * W; ctx.fillRect(bitmapSize.width - w, Math.min(y1, y2) * vr, w, Math.max(Math.abs(y2 - y1) * vr - 1, 1));
+                    });
+                }
+            });
+        } }) };
+        return p;
+    }
+    function ensureChart() {
+        const box = $("#fz-chart"); if (!box) return false;
+        if (typeof LightweightCharts === "undefined") { box.innerHTML = '<div class="ev-empty ev-bad">Biblioteka wykresów nie została wczytana.</div>'; return false; }
+        if (chart) return true;
+        chart = LightweightCharts.createChart(box, { autoSize: true, layout: { background: { type: "solid", color: "transparent" }, textColor: "#848e9c", fontSize: 12 },
+            grid: { vertLines: { color: "rgba(132,142,156,0.08)" }, horzLines: { color: "rgba(132,142,156,0.08)" } }, rightPriceScale: { borderColor: "rgba(132,142,156,0.25)" },
+            timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 6 }, crosshair: { mode: 0 } });
+        candle = chart.addCandlestickSeries({ upColor: "#0ecb81", downColor: "#f6465d", borderUpColor: "#0ecb81", borderDownColor: "#f6465d", wickUpColor: "#0ecb81", wickDownColor: "#f6465d" });
+        vol = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", color: "rgba(132,142,156,0.35)" });
+        chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+        prim = makePrim(); candle.attachPrimitive(prim);
+        chart.subscribeClick(onClick);
+        return true;
+    }
+    function setStatus(t) { const el = $("#fz-chart-note"); if (el) el.textContent = t || ""; }
+    async function loadBars() {
+        if (!ensureChart()) return;
+        setStatus("Ładowanie wykresu…");
+        try {
+            const res = await fetch(API_BASE_URL + "/api/candles?ticker=" + encodeURIComponent(M.ticker) + "&tf=" + M.tf + "&limit=" + (M.tf === "1d" ? 1500 : 520));
+            const d = await res.json(); if (!res.ok || d.status === "error") throw new Error(d.message || "HTTP " + res.status);
+            M.bars = d.bars || [];
+            candle.setData(M.bars.map(b => ({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c })));
+            vol.setData(M.bars.map(b => ({ time: b.t, value: b.v, color: b.c >= b.o ? "rgba(14,203,129,0.25)" : "rgba(246,70,93,0.25)" })));
+            const n = M.bars.length; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (M.tf === "1d" ? 160 : 100)), to: n + 6 });
+            setStatus(M.bars.length ? "" : "Brak świec dla tego tickera.");
+            drawBase();
+        } catch (e) { setStatus("Nie udało się wczytać wykresu: " + e.message); }
+        fetchAuto();
+    }
+    async function fetchAuto() {
+        try {
+            const res = await fetch(API_BASE_URL + "/api/form/auto?ticker=" + encodeURIComponent(M.ticker) + "&tf=" + M.tf);
+            const d = await res.json(); M.auto = res.ok && d.status === "success" ? d : null;
+        } catch (e) { M.auto = null; }
+    }
+    function zoneBands() {
+        const list = (typeof formEntries !== "undefined" ? formEntries : []).filter(e => e.ticker === M.ticker);
+        const seen = new Set(), out = [];
+        list.forEach(e => {
+            const a = parseFloat(e.start_zone), b = parseFloat(e.end_zone), lo = Math.min(a, b), hi = Math.max(a, b), long = e.direction === "DBR" || e.direction === "RBR", muted = e.mute == 1;
+            const k = lo + "|" + hi + "|" + long + "|" + muted; if (seen.has(k)) return; seen.add(k);
+            out.push({ lo: lo, hi: hi, fill: muted ? "rgba(132,142,156,0.08)" : long ? "rgba(14,203,129,0.12)" : "rgba(246,70,93,0.12)", stroke: muted ? "rgba(132,142,156,0.4)" : long ? "rgba(14,203,129,0.5)" : "rgba(246,70,93,0.5)", label: muted ? "strefa (wyciszona)" : "" });
+        });
+        const f = formZone();
+        if (f) out.push({ lo: f.lo, hi: f.hi, fill: "rgba(252,213,53,0.10)", stroke: "#fcd535", dash: true, label: "nowy wpis" });
+        return out;
+    }
+    function drawBase() { if (!prim) return; prim.set(zoneBands().concat(M.result ? ((M.result.overlay || {}).bands || []).map(b => ({ lo: b.lo, hi: b.hi, fill: "rgba(137,180,250,0.16)", stroke: "#89b4fa", label: b.label })) : []), M.result && M.result.overlay ? M.result.overlay.profile : null); }
+    function clearOverlay() {
+        priceLines.forEach(l => { try { candle.removePriceLine(l); } catch (e) {} }); priceLines = [];
+        extraSeries.forEach(s => { try { chart.removeSeries(s); } catch (e) {} }); extraSeries = [];
+        if (candle) candle.setMarkers([]);
+        drawBase();
+    }
+    function pickMarkers() { return M.anchors.map((a, i) => ({ time: a.t, position: "aboveBar", color: "#fcd535", shape: "arrowDown", text: ((TYPES[M.type] || {}).slots || [])[i] ? String(i + 1) : "" })); }
+    function drawResult(r) {
+        clearOverlay(); if (!r) { candle && candle.setMarkers(pickMarkers().sort((a, b) => a.time - b.time)); return; }
+        const ov = r.overlay || {}, ST = { dashed: 2, dotted: 1, solid: 0 };
+        (ov.lines || []).forEach(l => priceLines.push(candle.createPriceLine({ price: l.price, color: l.color || "#f9e2af", lineWidth: 1, lineStyle: ST[l.style] != null ? ST[l.style] : 2, axisLabelVisible: true, title: l.label || "" })));
+        (ov.series || []).forEach(s => { const ls = chart.addLineSeries({ color: s.color, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: s.name }); ls.setData(s.points.map(p => ({ time: p.t, value: p.v }))); extraSeries.push(ls); });
+        (ov.segments || []).forEach(sg => { const ls = chart.addLineSeries({ color: sg.color, lineWidth: 2, priceLineVisible: false, lastValueVisible: false }); ls.setData([{ time: sg.p1.t, value: sg.p1.v }, { time: sg.p2.t, value: sg.p2.v }]); extraSeries.push(ls); });
+        const mk = (ov.markers || []).map(m => ({ time: m.t, position: m.pos === "inBar" ? "aboveBar" : m.pos, color: m.color || "#fcd535", shape: m.pos === "inBar" ? "circle" : (m.pos === "aboveBar" ? "arrowDown" : "arrowUp"), text: m.text || "" }));
+        candle.setMarkers(mk.sort((a, b) => a.time - b.time));
+        drawBase();
+    }
+
+    // ---------- wybór kotwic ----------
+    function onClick(param) {
+        const T = TYPES[M.type]; if (!T || T.external || T.auto || !param || !param.time || !param.point) return;
+        const max = T.slots.length; if (M.anchors.length >= max) return;
+        const bar = M.bars.find(b => b.t === param.time); if (!bar) return;
+        const y = candle.coordinateToPrice(param.point.y);
+        const p = T.bar ? null : (Math.abs(y - bar.h) <= Math.abs(y - bar.l) ? bar.h : bar.l);
+        M.anchors.push({ t: bar.t, p: p }); M.result = null; drawResult(null); drawEditor();
+    }
+
+    // ---------- panel ----------
+    const formZone = () => {
+        const a = parseFloat($("#form-start").value), b = parseFloat($("#form-end").value);
+        return isNaN(a) || isNaN(b) ? null : { lo: Math.min(a, b), hi: Math.max(a, b), side: ["DBR", "RBR"].indexOf($("#form-direction").value) >= 0 ? "LONG" : "SHORT" };
+    };
+    function drawTypes() {
+        const box = $("#fz-types"); if (!box) return;
+        box.innerHTML = ORDER.map(k => '<button type="button" class="hp-btn' + (M.type === k ? " ev-go" : "") + '" data-ms-type="' + k + '">' + esc(TYPES[k].label) + "</button>").join("");
+    }
+    function drawEditor() {
+        const box = $("#fz-editor"); if (!box) return;
+        const T = TYPES[M.type];
+        if (!T) { box.innerHTML = '<div class="ev-muted">Wybierz typ powodu, aby go zmierzyć na wykresie.</div>'; return; }
+        let h = '<div class="ev-muted" style="margin-bottom:6px">' + esc(T.help) + "</div>";
+        if (T.external) {
+            h += M.items.map((it, i) => '<div class="fz-ext"><input data-ms-ext="' + i + '|url" placeholder="Link do analizy (https://…)" value="' + esc(it.url || "") + '"><input data-ms-ext="' + i + '|source" placeholder="Źródło / autor" value="' + esc(it.source || "") + '">' +
+                '<input type="date" data-ms-ext="' + i + '|date" value="' + esc(it.date || "") + '"><select data-ms-ext="' + i + '|direction"><option value="">Kierunek…</option><option value="byczy"' + (it.direction === "byczy" ? " selected" : "") + '>Byczy</option><option value="niedźwiedzi"' + (it.direction === "niedźwiedzi" ? " selected" : "") + '>Niedźwiedzi</option><option value="neutralny"' + (it.direction === "neutralny" ? " selected" : "") + '>Neutralny</option></select>' +
+                '<input data-ms-ext="' + i + '|levels" placeholder="Poziomy (np. 105, 112)" value="' + esc((it.levels || []).join(", ")) + '"><input data-ms-ext="' + i + '|note" placeholder="Notatka" value="' + esc(it.note || "") + '">' +
+                (M.items.length > 1 ? '<button type="button" class="hp-btn" data-ms-extdel="' + i + '">✕</button>' : "") + "</div>").join("") + '<button type="button" class="hp-btn" data-ms-extadd>＋ kolejna analiza</button> ';
+        } else if (T.slots.length) {
+            h += '<div class="fz-slots">' + T.slots.map((s, i) => { const a = M.anchors[i]; const need = i < T.need;
+                return '<span class="fz-slot' + (a ? " done" : i === M.anchors.length ? " cur" : "") + '">' + (i + 1) + ". " + esc(s) + (need ? "" : "") + ": " + (a ? "<b>" + dateOf(a.t) + (a.p != null ? " @ " + price(a.p) : "") + "</b>" : (i === M.anchors.length ? "kliknij na wykresie…" : "—")) + "</span>"; }).join("") + "</div>";
+        }
+        h += '<div class="plx-actions" style="margin-top:8px">';
+        if (T.slots.length && !T.external) h += '<button type="button" class="hp-btn" data-ms-undo>↶ Cofnij punkt</button><button type="button" class="hp-btn" data-ms-clear>Wyczyść punkty</button>';
+        if (T.suggest) h += '<button type="button" class="hp-btn" data-ms-suggest>✨ Podpowiedz z trendu</button>';
+        if (T.log) h += '<label class="ev-muted"><input type="checkbox" data-ms-log' + (M.opts.log ? " checked" : "") + '> skala logarytmiczna</label>';
+        const ready = T.external ? M.items.some(i => i.url) : M.anchors.length >= T.need && !(M.type === "rgr" && M.anchors.length === 4);
+        h += '<button type="button" class="hp-btn ev-go" data-ms-verify' + (ready ? "" : " disabled") + '>Zweryfikuj</button></div>';
+        box.innerHTML = h;
+    }
+    function drawResultCard() {
+        const box = $("#fz-result"); if (!box) return; const r = M.result;
+        if (!r) { box.innerHTML = ""; return; }
+        const vc = { OK: "var(--success)", PARTIAL: "var(--accent-hover)", FAIL: "var(--danger)" }[r.verdict];
+        const vl = r.verdict === "OK" ? (r.type === "elliott" ? "SPÓJNE Z REGUŁAMI" : "POTWIERDZONE") : r.verdict === "PARTIAL" ? "CZĘŚCIOWO" : "NIEPOTWIERDZONE";
+        let h = '<div class="ev-verdict" style="border-color:' + vc + ';padding:10px 14px"><div><div class="ev-vtext" style="color:' + vc + ';font-size:1.15em">' + vl + '</div><div class="ev-muted">' + esc(r.label) + '</div></div><div class="ev-big" style="font-size:1.8em">' + Math.round(r.quality * 100) + '<small>%</small></div></div>';
+        h += '<div class="fz-facts">' + r.facts.map(f => '<div class="fz-fact"><span style="color:' + (f.ok === true ? "var(--success)" : f.ok === false ? "var(--danger)" : "var(--text-muted)") + '">' + (f.ok === true ? "✓" : f.ok === false ? "✗" : "•") + "</span> " + esc(f.text) + "</div>").join("") + "</div>";
+        const formation = FORMATIONS.indexOf(r.type) >= 0;
+        if (r.ref) {
+            h += '<div class="ev-note" style="margin-top:8px">Wartość odniesienia: <b>' + price(r.ref.value) + "</b> (" + esc(r.ref.label) + "). Użyj jako: " +
+                '<select data-ms-apply>' + Object.keys(APPLY).map(k => '<option value="' + k + '"' + (M.apply === k ? " selected" : "") + ">" + APPLY[k][1] + "</option>").join("") + '</select> <button type="button" class="hp-btn" data-ms-fill>Wpisz do pola</button>' +
+                (formation ? '<div class="ev-muted">Formacja wymaga zapisania wartości odniesienia – zostanie zapisana przy powodzie.</div>' : "") + "</div>";
+        } else if (formation) { h += '<div class="plx-err">Formacja bez wartości odniesienia – nie można jej dodać.</div>'; }
+        h += '<div class="plx-actions" style="margin-top:8px"><button type="button" class="hp-btn ev-go" data-ms-add' + (formation && !r.ref ? " disabled" : "") + '>＋ Dodaj powód do wpisu</button></div>';
+        box.innerHTML = h;
+    }
+    function drawAdded() {
+        const box = $("#fz-added"); if (!box) return;
+        box.innerHTML = M.added.length ? '<div class="ev-muted" style="margin:8px 0 4px">Powody mierzone w tym wpisie (kilka analiz zewnętrznych = jeden punkt):</div>' + M.added.map((d, i) => '<span class="fz-reason fz-v-' + d.verdict + '">' + esc(d.label) + " · " + Math.round(d.quality * 100) + "%" + (d.ref ? " → " + price(d.ref.value) + " (" + esc(APPLY[d.ref.applies_to] ? APPLY[d.ref.applies_to][1] : d.ref.role) + ")" : "") + ' <a href="#" data-ms-rm="' + i + '" title="Usuń">✕</a></span>').join("") : "";
+    }
+    function selectType(k) {
+        M.type = M.type === k ? null : k; M.anchors = []; M.result = null; M.apply = "entry";
+        if (M.type === "external") M.items = M.items.length ? M.items : [{}];
+        clearOverlay(); drawTypes(); drawEditor(); drawResultCard();
+        if (M.type && ["trend", "vwap", "vp"].indexOf(M.type) >= 0) { /* działa bez kotwic */ verify(); }
+    }
+    async function verify() {
+        const T = TYPES[M.type], z = formZone();
+        if (!z) { toast("Najpierw wpisz strefę (początek i koniec) – weryfikacja sprawdza, czy strefa pasuje do powodu."); return; }
+        const body = { ticker: M.ticker, tf: M.tf, type: M.type, zone: z, entry: parseFloat($("#form-entry").value) || null, anchors: M.anchors, params: M.type === "fibo" ? { log: !!M.opts.log } : (T.external ? { items: M.items.filter(i => i.url) } : {}) };
+        const box = $("#fz-result"); box.innerHTML = '<div class="ev-empty">Weryfikuję…</div>';
+        try {
+            const res = await fetch(API_BASE_URL + "/api/form/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+            const d = await res.json(); if (!res.ok || d.status === "error") throw new Error(d.message || "HTTP " + res.status);
+            M.result = d; M.apply = d.ref && d.ref.role === "wejście" ? "entry" : (d.ref ? "start" : "entry"); drawResult(d); drawResultCard();
+        } catch (e) { M.result = null; box.innerHTML = '<div class="plx-err">' + esc(e.message) + "</div>"; }
+    }
+    function toast(t) { if (window.Planer) Planer.toast(t); else alert(t); }
+    function addReason() {
+        const r = M.result; if (!r) return;
+        const inputs = [1, 2, 3, 4, 5].map(i => $("#form-reason-" + i));
+        const has = inputs.find(i => i.value.trim().toLowerCase() === r.label.toLowerCase());
+        if (!has) {
+            const free = inputs.find(i => !i.value.trim());
+            if (!free) { toast("Wszystkie 5 pól powodów jest zajętych – usuń jeden powód."); return; }
+            free.value = r.label;
+        }
+        M.added = M.added.filter(d => d.type !== r.type);
+        const d = { type: r.type, label: r.label, tf: M.tf, anchors: M.anchors.slice(), params: r.type === "fibo" ? { log: !!M.opts.log } : {}, verdict: r.verdict, quality: r.quality, facts: r.facts.map(f => f.text), verified_at: new Date().toISOString() };
+        if (r.ref) d.ref = { value: r.ref.value, role: r.ref.role, label: r.ref.label, applies_to: M.apply };
+        if (r.type === "external") d.items = r.items;
+        M.added.push(d); drawAdded(); toast("Dodano powód „" + r.label + "”.");
+    }
+    function removeReason(i) {
+        const d = M.added[i]; if (!d) return;
+        [1, 2, 3, 4, 5].forEach(n => { const el = $("#form-reason-" + n); if (el && el.value.trim().toLowerCase() === d.label.toLowerCase()) el.value = ""; });
+        M.added.splice(i, 1); drawAdded();
+    }
+    // zbiera szczegóły do zapisu i pilnuje, by formacje miały zapisaną wartość odniesienia
+    function collect(reasonNames) {
+        const names = reasonNames.map(r => r.trim().toLowerCase());
+        const details = M.added.filter(d => names.indexOf(d.label.toLowerCase()) >= 0);
+        const missing = FORMATIONS.map(k => TYPES[k].label).filter(l => names.indexOf(l.toLowerCase()) >= 0 && !details.some(d => d.label === l && d.ref));
+        if (missing.length) return { ok: false, message: "Formacja wymaga zmierzenia i zapisania wartości odniesienia: " + missing.join(", ") + ". Zaznacz ją na wykresie i kliknij „Zweryfikuj”, a potem „Dodaj powód do wpisu”." };
+        return { ok: true, details: details };
+    }
+
+    document.addEventListener("click", e => {
+        const t = e.target; if (!t.closest || !t.closest("#fz-measure")) return;
+        let el;
+        if ((el = t.closest("[data-ms-type]"))) { selectType(el.dataset.msType); return; }
+        if (t.closest("[data-ms-verify]")) { verify(); return; }
+        if (t.closest("[data-ms-undo]")) { M.anchors.pop(); M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
+        if (t.closest("[data-ms-clear]")) { M.anchors = []; M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
+        if (t.closest("[data-ms-suggest]")) {
+            const l = M.auto && M.auto.fibo_leg; if (!l) { toast("Brak podpowiedzi – za mało danych o trendzie."); return; }
+            M.anchors = [{ t: l.a.t, p: l.a.price }, { t: l.b.t, p: l.b.price }]; M.result = null; drawResult(null); drawEditor(); return;
+        }
+        if (t.closest("[data-ms-fill]") && M.result && M.result.ref) { const f = $("#" + APPLY[M.apply][0]); if (f) { f.value = Number(M.result.ref.value.toFixed(4)); f.dispatchEvent(new Event("input", { bubbles: true })); toast("Wpisano " + price(M.result.ref.value) + " w pole „" + APPLY[M.apply][1] + "”."); } return; }
+        if (t.closest("[data-ms-add]")) { addReason(); return; }
+        if ((el = t.closest("[data-ms-rm]"))) { e.preventDefault(); removeReason(+el.dataset.msRm); return; }
+        if (t.closest("[data-ms-extadd]")) { M.items.push({}); drawEditor(); return; }
+        if ((el = t.closest("[data-ms-extdel]"))) { M.items.splice(+el.dataset.msExtdel, 1); drawEditor(); return; }
+        if ((el = t.closest("[data-ms-tf]"))) { M.tf = el.dataset.msTf; M.anchors = []; M.result = null; $$tf(); clearOverlay(); loadBars(); drawEditor(); drawResultCard(); }
+    });
+    document.addEventListener("change", e => {
+        const t = e.target;
+        if (t.matches && t.matches("[data-ms-apply]")) M.apply = t.value;
+        if (t.matches && t.matches("[data-ms-log]")) { M.opts.log = t.checked; M.result = null; drawResultCard(); }
+    });
+    document.addEventListener("input", e => {
+        const t = e.target; if (!t.dataset) return;
+        if (t.dataset.msExt) { const [i, f] = t.dataset.msExt.split("|"); M.items[+i][f] = f === "levels" ? t.value.split(/[,;\s]+/).filter(Boolean) : t.value; const b = $("[data-ms-verify]"); if (b) b.disabled = !M.items.some(x => x.url); }
+        else if (["form-start", "form-end", "form-direction", "form-entry"].indexOf(t.id) >= 0) drawBase();
+    });
+    function $$tf() { document.querySelectorAll("[data-ms-tf]").forEach(b => b.classList.toggle("ev-go", b.dataset.msTf === M.tf)); }
+
+    function open(ticker) {
+        const changed = ticker !== M.ticker; M.ticker = ticker;
+        if (changed) { M.added = []; M.anchors = []; M.result = null; M.type = null; }
+        $("#fz-measure").style.display = "block"; drawTypes(); drawEditor(); drawResultCard(); drawAdded(); $$tf();
+        setTimeout(() => { if (changed || !M.bars.length) loadBars(); else { ensureChart(); drawBase(); } }, 30);
+    }
+    function reset() { M.ticker = ""; M.added = []; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; }
+    return { open: open, reset: reset, collect: collect, labels: () => ORDER.map(k => ({ type: k, label: TYPES[k].label })) };
 })();
 </script>
 </body>
