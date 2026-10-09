@@ -1034,46 +1034,6 @@
             </div>
             <div id="ev-radar-body"></div>
         </div>
-        <div class="macro-header-container"> <h3>Wszystkie wejścia z Form (Focus List)</h3> </div> 
-        <div class="table-controls"> 
-            <select id="focuslist-mute-filter" onchange="handleFocusListFilter()"> 
-                <option value="ALL">Wszystkie (Wyciszenie)</option> 
-                <option value="0" selected>Aktywne</option> 
-                <option value="1">Wyciszone</option> 
-            </select>
-            <select id="focuslist-status-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Statusy</option> <option value="Skupienie">Skupienie</option> <option value="Obserwacja">Obserwacja</option> </select> 
-            <select id="focuslist-currency-filter" onchange="handleFocusListFilter()"> <option value="ALL">Wszystkie Waluty</option> <option value="USD">USD</option> <option value="PLN">PLN</option> <option value="EUR">EUR</option> </select> 
-            <select id="focuslist-prio-filter" onchange="handleFocusListFilter()">
-                <option value="ALL">Wszystkie</option>
-                <option value="1">⭐ Tylko Priorytet</option>
-            </select>
-        </div> 
-        <div class="table-responsive"> 
-            <table class="macro-custom-table" style="width:100%; font-size: 0.85em;"> 
-                <thead>
-                    <tr>
-                        <th onclick="handleFocusListSort('created_at')">Data dodania ↕</th>
-                        <th onclick="handleFocusListSort('ticker')">Ticker ↕</th>
-                        <th onclick="handleFocusListSort('calcCurrency')">Waluta ↕</th>
-                        <th onclick="handleFocusListSort('direction')">Kierunek ↕</th>
-                        <th onclick="handleFocusListSort('entry_point')">Wejście ↕</th>
-                        <th onclick="handleFocusListSort('priority')">Prio. ↕</th>
-                        <th onclick="handleFocusListSort('mute')">Mute ↕</th>
-                        <th onclick="handleFocusListSort('calcStatus')">Status ↕</th>
-                        <th onclick="handleFocusListSort('calcDiff')">Dystans % ↕</th>
-                        <th onclick="handleFocusListSort('calcRR')">R:R ↕</th>
-                        <th>Powód 1</th>
-                        <th>Powód 2</th>
-                        <th>Powód 3</th>
-                        <th>Powód 4</th>
-                        <th>Powód 5</th>
-                        <th>Akcje</th>
-                    </tr>
-                </thead> 
-                <tbody id="focuslist-table-body"> <tr><td colspan="16" style="text-align:center;">Ładowanie...</td></tr> </tbody> 
-            </table>
-        </div> 
-        <div class="pagination-container"> <button onclick="changeFocusListPage(-1)" id="focuslist-prev-page" class="btn-pag">◀ Poprzednia</button> <span id="focuslist-page-info">Strona 1 z 1</span> <button onclick="changeFocusListPage(1)" id="focuslist-next-page" class="btn-pag">Następna ▶</button> </div> 
     </section>
 
     <section id="alerthistory-module" class="app-module"> 
@@ -2630,6 +2590,7 @@
         }
 
         function safeHandleFocusListFilter() {
+            if (!document.getElementById('focuslist-mute-filter')) return;   // stara tabela wejść usunięta - został sam Radar zagrań
             try { handleFocusListFilter(); } 
             catch(err) { console.error("FocusList error:", err); }
         }
