@@ -6061,7 +6061,7 @@ window.FormZones = (function () {
         if (!o) return '<div class="fz-ncard off"><div class="t">' + title + '</div>Brak kolejnego zagrania w tym kierunku.</div>';
         const r = relation(cur, o), e = o.p.e;
         return '<div class="fz-ncard" data-fz-go="' + esc(e.entry_id) + '"><div class="t">' + title + "</div><b>" + esc(e.entry_id) + "</b> · wejście <b>" + price(o.price) + "</b>" + (o.p.muted ? " 🔕" : "") +
-            '<div>Odległość: <b style="color:' + (r.pct >= 0 ? "var(--success)" : "var(--danger)") + '">' + (r.pct > 0 ? "+" : "") + num(r.pct, 2) + "%</b> (" + (r.diff > 0 ? "+" : "") + price(r.diff) + ")</div><div>" + r.html + "</div></div>";
+            '<div>Odległość: <b style="color:' + (r.pct >= 0 ? "var(--success)" : "var(--danger)") + '">' + (r.pct > 0 ? "+" : "") + num(r.pct, 2) + "%</b> (" + (r.diff > 0 ? "+" : "") + num(r.diff, 2) + ")</div><div>" + r.html + "</div></div>";
     }
     function reasonBlock(name, e) {
         const d = (Array.isArray(e.reasons_detail) ? e.reasons_detail : []).find(x => String(x.label).toLowerCase() === String(name).toLowerCase());
