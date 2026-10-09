@@ -527,7 +527,7 @@
                     <div id="fz-measure" style="display:none">
                         <div class="plx-h" style="margin-top:14px">Powody mierzone na wykresie</div>
                         <div class="ev-muted">Wskaż kotwice kliknięciem w wykres, a aplikacja sprawdzi, czy powód jest prawdziwy i czy Twoja strefa leży tam, gdzie on wskazuje. Strefy z Form i wpisywana strefa są zaznaczone na wykresie.</div>
-                        <div class="plx-actions" style="margin:8px 0"><button type="button" class="hp-btn ev-go" data-ms-tf="1d">1D</button><button type="button" class="hp-btn" data-ms-tf="1w">1W</button><span id="fz-chart-note" class="ev-muted"></span></div>
+                        <div class="plx-actions" style="margin:8px 0"><button type="button" class="hp-btn ev-go" data-ms-tf="1d">1D</button><button type="button" class="hp-btn" data-ms-tf="1w">1W</button><label class="ev-muted" style="margin-left:10px;cursor:pointer" title="Punkty wskazywane na wykresie przyciągają się do knotów i brzegów korpusów świec"><input type="checkbox" id="fz-magnet" checked> 🧲 Magnes (knoty i korpusy)</label><span id="fz-chart-note" class="ev-muted"></span></div>
                         <div style="position:relative"><div class="ohlc-legend" id="fz-ohlc"></div><div id="fz-chart"></div></div>
                         <div id="fz-types" class="plx-actions" style="margin:8px 0"></div>
                         <div id="fz-editor"></div>
@@ -6058,7 +6058,7 @@ window.Measure = (function () {
     const TYPES = {
         fvg: { label: "Luka (FVG)", slots: ["Świeca przed luką", "Świeca po luce"], need: 2, bar: true, help: "Kliknij dwie świece, między którymi powstała luka (sąsiednie = luka cenowa, co druga = FVG z trzech świec)." },
         swing: { label: "Potwierdzony dołek/szczyt", slots: ["Świeca dołka (dla short: szczytu)"], need: 1, bar: true, help: "Kliknij świecę dołka – liczy się dół korpusu (dla short: góra korpusu)." },
-        trend: { label: "Zdrowy trend", slots: [], need: 0, auto: true, help: "Bez kotwic – aplikacja sama znajduje szczyty i dołki (HH/HL) i sprawdza ostatni dołek." },
+        trend: { label: "Zdrowy trend", slots: ["Ostatni dołek (dla short: szczyt) – opcjonalnie"], need: 0, bar: true, help: "Aplikacja sama znajduje szczyty i dołki (HH/HL). Możesz kliknąć świecę własnego ostatniego dołka (dla short: szczytu) – liczy się dół korpusu – i wtedy to on jest sprawdzany." },
         fibo: { label: "Poziomy FIBO", slots: ["Początek swingu", "Koniec swingu"], need: 2, log: true, suggest: "fibo_leg", help: "Kliknij początek i koniec swingu (wg knotów). „Podpowiedz” bierze ostatni ruch trendu." },
         one2one: { label: "Korekta 1:1", slots: ["A – start korekty", "B – koniec pierwszej fali", "C – koniec odbicia"], need: 3, help: "Pierwsza fala korekty A→B, odbicie do C; druga fala ma być równa pierwszej (standardowo i logarytmicznie)." },
         xabcd: { label: "XABCD", slots: ["X", "A", "B", "C", "D"], need: 5, help: "Pięć punktów formacji harmonicznej wg knotów; D to punkt odniesienia (PRZ)." },
@@ -6070,7 +6070,7 @@ window.Measure = (function () {
     };
     const ORDER = ["fvg", "swing", "trend", "fibo", "one2one", "xabcd", "rgr", "elliott", "vwap", "vp", "external"];
     const APPLY = { entry: ["form-entry", "Punkt wejścia"], start: ["form-start", "Początek strefy"], end: ["form-end", "Koniec strefy (SL)"], tp: ["form-tp", "Take Profit"] };
-    const M = { ticker: "", tf: "1d", type: null, anchors: [], bars: [], auto: null, result: null, added: [], items: [{}], opts: {}, apply: "entry" };
+    const M = { magnet: true, ticker: "", tf: "1d", type: null, anchors: [], bars: [], auto: null, result: null, added: [], items: [{}], opts: {}, apply: "entry" };
     let chart = null, candle = null, vol = null, prim = null, priceLines = [], extraSeries = [], zoneCache = [];
 
     // ---------- wykres ----------
@@ -6111,7 +6111,7 @@ window.Measure = (function () {
         if (chart) return true;
         chart = LightweightCharts.createChart(box, { autoSize: true, layout: { background: { type: "solid", color: "transparent" }, textColor: "#848e9c", fontSize: 12 },
             grid: { vertLines: { color: "rgba(132,142,156,0.08)" }, horzLines: { color: "rgba(132,142,156,0.08)" } }, rightPriceScale: { borderColor: "rgba(132,142,156,0.25)" },
-            timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 6 }, crosshair: { mode: 0 } });
+            timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 6 }, crosshair: { mode: M.magnet ? 1 : 0 } });
         candle = chart.addCandlestickSeries({ upColor: "#0ecb81", downColor: "#f6465d", borderUpColor: "#0ecb81", borderDownColor: "#f6465d", wickUpColor: "#0ecb81", wickDownColor: "#f6465d" });
         vol = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", color: "rgba(132,142,156,0.35)" });
         chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
@@ -6187,8 +6187,13 @@ window.Measure = (function () {
         const max = T.slots.length; if (M.anchors.length >= max) return;
         const bar = M.bars.find(b => b.t === param.time); if (!bar) return;
         const y = candle.coordinateToPrice(param.point.y);
-        const p = T.bar ? null : (Math.abs(y - bar.h) <= Math.abs(y - bar.l) ? bar.h : bar.l);
+        let p = null;
+        if (!T.bar) {              // punkt na cenie: magnes przyciąga do knota (H/L) albo do brzegu korpusu (O/C) najbliżej kliknięcia
+            const cands = M.magnet ? [bar.h, Math.max(bar.o, bar.c), Math.min(bar.o, bar.c), bar.l] : [y];
+            p = cands.reduce((best, c) => Math.abs(c - y) < Math.abs(best - y) ? c : best, cands[0]);
+        }
         M.anchors.push({ t: bar.t, p: p }); M.result = null; drawResult(null); drawEditor();
+        if (T.need === 0) verify();      // typy z opcjonalną kotwicą (trend, VWAP, VP) liczą się od razu po wskazaniu świecy
     }
 
     // ---------- panel ----------
@@ -6310,6 +6315,7 @@ window.Measure = (function () {
     });
     document.addEventListener("change", e => {
         const t = e.target;
+        if (t.id === "fz-magnet") { M.magnet = t.checked; if (chart) chart.applyOptions({ crosshair: { mode: M.magnet ? 1 : 0 } }); return; }
         if (t.matches && t.matches("[data-ms-apply]")) M.apply = t.value;
         if (t.matches && t.matches("[data-ms-log]")) { M.opts.log = t.checked; M.result = null; drawResultCard(); }
     });
