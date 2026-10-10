@@ -1015,6 +1015,12 @@
             <div class="lim-actions"><button class="btn-submit" style="width:auto; padding:10px 22px;" onclick="saveLimits()">Zapisz limity</button><span id="lim-msg" class="db-help"></span></div>
 
             </div>
+            <div class="dbx-panel lim-panel" id="pwatch-panel">
+                <h4>🟨🟧🟥 Kartki planu: maksymalny odstęp do kolejnej strefy</h4>
+                <p class="db-help">Po złamaniu strefy lub OPD strażnik szuka kolejnej strefy poniżej kursu. Jeśli leży dalej niż poniższy odstęp (% od kursu), uznaje, że kolejnej strefy nie ma (czerwona kartka). Dla spółek fundamentalnych odstęp może być większy niż dla spekulacyjnych.</p>
+                <div class="sc-grid" id="pw-gaps"></div>
+                <div class="lim-actions"><button class="btn-submit" style="width:auto; padding:10px 22px;" onclick="saveWatchSettings()">Zapisz odstępy</button><span id="pw-msg" class="db-help"></span></div>
+            </div>
             <div class="dbx-panel lim-panel" id="scoring-panel">
                 <h4>🎯 Punktacja inwestycji i cięcie budżetu</h4>
                 <p class="db-help">Punkty budżetowe = <b>Score z Form × mnożnik</b> + <b>punkty za moment wejścia</b>. Od ich procentu (względem maksimum) zależy, jaka część dostępnego budżetu (limity powyżej / plan) przysługuje na wejście. Punkty za koniec dnia (po zamknięciu sesji) dochodzą do łącznego wyniku, ale nie wpływają na budżet.</p>
@@ -1789,7 +1795,7 @@
             dbTab = tab;
             document.querySelectorAll('#db-tabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.dbtab === tab));
             document.querySelectorAll('#database-module .db-tab').forEach(p => p.style.display = (p.id === 'db-tab-' + tab) ? 'block' : 'none');
-            if (tab === 'service') { loadServiceModule(); loadLimits(); loadScoring(); }
+            if (tab === 'service') { loadServiceModule(); loadLimits(); loadScoring(); loadWatchSettings(); }
         }
 
         // rodzaj spółki = Inwestycja / Spekulacja (kolumna conviction) x Priorytet / brak (is_priority)
@@ -1971,6 +1977,24 @@
             const rows = [...document.querySelectorAll('#sc-tiers tr')].map(tr => ({ p: parseFloat(tr.querySelector('[data-k=min_pct]').value), b: parseFloat(tr.querySelector('[data-k=budget_pct]').value) })).filter(x => !isNaN(x.p)).sort((a, b) => b.p - a.p);
             document.getElementById('sc-summary').innerHTML = `Maksimum punktów budżetowych: <b>${fmt(budget)}</b> (Form 5 × ${fmt(m)} = ${fmt(5 * m)} + wejście ${fmt(e)}); łącznie z końcem dnia: <b>${fmt(budget + d)}</b>. ` +
                 rows.map(x => `od ${fmt(x.p)}% (≥ ${fmt(budget * x.p / 100)} pkt) → ${fmt(x.b)}% budżetu`).join(' · ');
+        }
+        async function loadWatchSettings() {
+            const box = document.getElementById('pw-gaps'), msg = document.getElementById('pw-msg');
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/planner/watch-settings`), d = await res.json();
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                box.innerHTML = Object.keys(d.max_gap_pct).map(k => `<label>${(d.labels && d.labels[k]) || k}<input type="number" data-pwk="${k}" min="1" max="100" step="0.5" value="${d.max_gap_pct[k]}"></label>`).join('');
+                msg.textContent = '';
+            } catch (e) { box.innerHTML = ''; msg.textContent = 'Nie udało się wczytać: ' + (e.message || e); }
+        }
+        async function saveWatchSettings() {
+            const msg = document.getElementById('pw-msg'), gaps = {};
+            document.querySelectorAll('#pw-gaps [data-pwk]').forEach(i => { gaps[i.dataset.pwk] = i.value; });
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/planner/watch-settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max_gap_pct: gaps }) }), d = await res.json();
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                msg.textContent = 'Zapisano.'; msg.style.color = 'var(--success)';
+            } catch (e) { msg.textContent = e.message || String(e); msg.style.color = 'var(--danger)'; }
         }
         async function loadScoring() {
             const msg = document.getElementById('sc-msg');
@@ -5762,14 +5786,45 @@ window.Planer = (function () {
         loadWatch();
     }
     // ---------- strażnik planu: stany stref, sygnały siły/słabości i propozycje dokładek (po zamknięciu sesji) ----------
-    const WSTATE = { W_DRODZE: ["#848e9c", "W drodze – bez analizy"], PRZY_STREFIE: ["#fcd535", "Przy strefie"], UTKNAL: ["#89b4fa", "Utknął (>3 mies.)"], UNIEWAZNIONE: ["#f6465d", "Unieważnione"], CEL: ["#0ecb81", "Cel"] };
+    const WSTATE = { W_DRODZE: ["#848e9c", "W drodze – bez analizy"], PRZY_STREFIE: ["#fcd535", "Przy strefie"], UTKNAL: ["#89b4fa", "Utknął (>3 mies.)"], UNIEWAZNIONE: ["#fcd535", "Strefa złamana"], CEL: ["#0ecb81", "Cel"] };
     const WICON = { "siła": "🟢", "słabość": "🔴", info: "⚪" };
+    const CARD_COL = { yellow: "#fcd535", orange: "#f0883e", red: "#f6465d" };
+    function cardHtml(l) {
+        if (!l.card) return "";
+        const c = l.card, col = CARD_COL[c.level] || "#848e9c", inv = l.investigation;
+        let h = '<div class="plx-play" style="border-left:3px solid ' + col + ';padding-left:8px;margin:6px 0"><b style="color:' + col + '">' + c.icon + " " + esc(c.label) + "</b> " + c.reasons.map(esc).join(" ") + "</div>";
+        if (inv) {
+            h += '<div class="plx-play"><b>Badanie:</b> ' + esc(inv.text) + "</div>";
+            h += '<div class="plx-play">Kolejne wejścia: ' + (inv.next_entries && inv.next_entries.length ? inv.next_entries.map(n => price(n.zone[0]) + "–" + price(n.zone[1]) + " (" + num(n.distance_pct, 1) + "% od kursu" + (n.within_gap ? "" : " – za daleko") + (n.in_plan ? ", w planie" : "") + ")").join(" · ") : "brak stref poniżej w Form") + "</div>";
+            h += '<div class="plx-play">Limity: wolnych wejść ' + (inv.trades_left == null ? "–" : inv.trades_left) + " · wolny budżet spółki " + (inv.remaining_pct == null ? "–" : pct(inv.remaining_pct)) + "</div>";
+            if (inv.market) h += '<div class="plx-play">' + inv.market.lines.map(esc).join("<br>") + (inv.market.verdict ? "<br><b>Rynek: " + esc(inv.market.verdict) + "</b>" : "") + "</div>";
+        }
+        return h;
+    }
+    function watchControlsHtml(d) {
+        const s = d.settings || {}, sl = s.sl;
+        let h = '<div class="plx-play"><label class="db-help">Kluczowa świeca trendu (SL = dół jej korpusu): <input type="date" id="plx-kc" value="' + esc(s.key_candle || "") + '" style="width:auto"></label> <button class="hp-btn" style="padding:3px 10px" data-plx-kc>Zapisz</button> ' +
+            (sl ? '<span class="db-help">SL ' + price(sl.level) + (sl.broken ? ' – <b style="color:var(--danger)">złamany od ' + esc(sl.since) + "</b>" : " – nienaruszony") + "</span>" : '<span class="db-help">Bez wskazanej świecy SL nie jest liczony (tylko strefa i OPD).</span>') + "</div>";
+        const critical = d.legs.some(l => l.card && l.card.investigate);
+        if (s.hold && s.hold.note) h += '<div class="plx-play"><b>Utrzymanie potwierdzone ' + esc(s.hold.date) + ":</b> " + esc(s.hold.note) + ' <button class="hp-btn" style="padding:3px 10px" data-plx-hold-clear>Cofnij</button></div>';
+        else if (critical) h += '<div class="plx-play"><input type="text" id="plx-hold" placeholder="Dlaczego utrzymuję mimo kartki (teza, katalizator)…" style="width:60%"> <button class="hp-btn" style="padding:3px 10px" data-plx-hold>Potwierdzam utrzymanie</button></div>';
+        return h;
+    }
+    document.addEventListener("click", async e => {
+        const t = e.target; if (!t.closest || !st.detail) return;
+        try {
+            if (t.closest("[data-plx-kc]")) { await api("/api/planner/watch-plan", { plan_id: st.detail.id, key_candle: $("#plx-kc").value }); loadWatch(); }
+            else if (t.closest("[data-plx-hold]")) { const v = ($("#plx-hold").value || "").trim(); if (!v) { $("#plx-hold").focus(); return; } await api("/api/planner/watch-plan", { plan_id: st.detail.id, hold_note: v }); loadWatch(); }
+            else if (t.closest("[data-plx-hold-clear]")) { await api("/api/planner/watch-plan", { plan_id: st.detail.id, hold_note: "" }); loadWatch(); }
+        } catch (err) { const b = $("#plx-watch"); if (b) b.insertAdjacentHTML("afterbegin", '<div class="plx-warn">' + esc(err.message) + "</div>"); }
+    });
     function watchHtml(d) {
-        let h = '<div class="plx-h">Strażnik planu <span class="db-help">· po zamknięciu sesji ' + esc(d.bar_date) + ' · między strefami analiza wyłączona, dopóki kurs nie utknął na dłużej</span> <button class="hp-btn" style="padding:3px 10px" data-plx-watch>↻</button></div>';
+        let h = '<div class="plx-h">Strażnik planu <span class="db-help">· po zamknięciu sesji ' + esc(d.bar_date) + ' · między strefami analiza wyłączona, dopóki kurs nie utknął na dłużej</span> <button class="hp-btn" style="padding:3px 10px" data-plx-watch>↻</button>' + (d.card ? ' <span class="ev-kind" style="color:' + (CARD_COL[d.card.level] || "#848e9c") + ';border-color:' + (CARD_COL[d.card.level] || "#848e9c") + '">' + d.card.icon + " " + esc(d.card.label) + "</span>" : "") + '</div>' + watchControlsHtml(d);
         d.legs.forEach(l => {
             const sc = WSTATE[l.state] || ["#848e9c", l.state];
             h += '<div class="plx-zone"><div class="plx-zhead"><span class="plx-zside ' + (l.side === "LONG" ? "long" : "short") + '">' + arrow(l.side) + '</span><span class="plx-zrange">' + price(l.zone[0]) + " – " + price(l.zone[1]) + '</span>' +
                 '<span class="ev-kind" style="color:' + sc[0] + ';border-color:' + sc[0] + '">' + esc(sc[1]) + '</span><span class="db-help">' + esc(l.why || "") + "</span></div>" +
+                cardHtml(l) +
                 (l.signals.length ? l.signals.map(s => '<div class="plx-play" style="color:var(--text-main)">' + (WICON[s.kind] || "⚪") + " " + esc(s.text) + "</div>").join("") : '<div class="plx-play db-help">Brak sygnałów.</div>') +
                 '<div class="plx-play">' + l.proposals.map(p => p.available
                     ? '<span class="ev-chip" title="' + esc(p.reason) + '">➕ ' + esc(p.label) + ": do " + pct(p.cap_pct) + " kapitału</span>"
