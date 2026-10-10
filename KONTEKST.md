@@ -22,4 +22,5 @@ Plik `index.html` ma końce linii CRLF. Parametr testowy `?api=` podmienia adres
 - Transakcje nie wymagają już Focus: wybór „Zagranie z Form”, ocena wejścia zapisuje się przy transakcji (`entry_score`, `entry_eval`; `sql/entry_eval.sql`).
 - Strażnik planu (`Planer`, szczegóły planu): stany stref, sygnały siły/słabości po zamknięciu sesji, dokładki (po sygnale siły / mechaniczna) → Ocena wejścia; plakietka jakości strefy w szczegółach Form (`FormZones.zoneQualityBlock`) i w Ocenie wejścia – informacyjna, nie wchodzi do Score; powód „Powtórzenie korekty" w `Measure`.
 - Summary → zakładka **Audyt zasad (SL/TP)** (`loadRuleAudit`): zachowanie kursu po zakupach, wynik wg zasad vs faktyczny, drawdown przed zyskiem; tryb SL: zamknięcie dnia lub dotknięcie.
+- Summary → **Symulator wyjść** (`loadExitSim`): macierz stop × TP z wynikiem ważonym, najgorszą transakcją i liczbą uruchomień; klik w komórkę pokazuje transakcje, w których reguła zadziałała.
 - Podgląd konkretnej wersji bez cache: `https://raw.githack.com/DonRubi/trading-front-end/<hash commita>/index.html`.

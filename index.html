@@ -730,7 +730,8 @@
             <button class="tab-btn" onclick="switchSummaryTab('open')">Podsumowanie otwartych</button> 
             <button class="tab-btn" onclick="switchSummaryTab('closed')">Podsumowanie zamkniętych</button> 
             <button class="tab-btn" onclick="switchSummaryTab('score')">Skuteczność wg punktów</button>
-            <button class="tab-btn" onclick="switchSummaryTab('audit')">Audyt zasad (SL/TP)</button> 
+            <button class="tab-btn" onclick="switchSummaryTab('audit')">Audyt zasad (SL/TP)</button>
+            <button class="tab-btn" onclick="switchSummaryTab('sim')">Symulator wyjść</button> 
         </div> 
         <div id="tab-dashboard" class="tab-content active"> 
             <div class="kpi-grid"> 
@@ -800,6 +801,12 @@
             <div class="ev-muted">Co działo się z kursem po Twoich zakupach i czy trzymanie własnych zasad (SL, TP) dałoby lepszy wynik. Liczone na świecach dziennych od dnia po zakupie; wyniki <b>cenowe</b> (bez dźwigni, walut, dywidend i kosztów), średnie ważone wielkością pozycji. Rozdzielam <b>naruszenia zasad</b> (SL/TP padły przed Twoim wyjściem) od <b>wyjść ręcznych</b> (sprzedałeś, zanim cokolwiek padło).</div>
             <div class="plx-actions" style="margin:10px 0"><label class="ev-muted">SL uznaję za wybity, gdy: <select id="audit-mode" onchange="loadRuleAudit()"><option value="close">zamknięcie dnia za SL (korpus)</option><option value="touch">kurs dotknie SL (knot)</option></select></label></div>
             <div id="audit-body"><div class="ev-empty">Ładowanie audytu…</div></div>
+        </div>
+        <div id="tab-sim" class="tab-content">
+            <div class="ev-muted">Co by się stało z Twoimi transakcjami, gdybyś dodał inną regułę stopu i/lub TP. Reguła działa od dnia po zakupie do faktycznego wyjścia (lub dziś); jeśli się nie uruchomi, zostaje wynik faktyczny – testuję więc, czy <b>dodanie reguły</b> poprawiłoby wynik, nie zmieniam Twoich wyjść ręcznych. Wyniki cenowe, średnie ważone wielkością pozycji.</div>
+            <div class="plx-actions" style="margin:10px 0;gap:14px"><label class="ev-muted">Zakres: <select id="sim-scope" onchange="loadExitSim()"><option value="closed">tylko zamknięte</option><option value="all">zamknięte + otwarte (do dziś)</option></select></label>
+                <label class="ev-muted">Reguła złamana, gdy: <select id="sim-mode" onchange="loadExitSim()"><option value="close">zamknięcie dnia (korpus)</option><option value="touch">kurs dotknie poziomu (knot)</option></select></label></div>
+            <div id="sim-body"><div class="ev-empty">Ładowanie symulacji…</div></div>
         </div>
         <div id="tab-closed" class="tab-content"> 
             <div class="table-controls"> 
@@ -3281,7 +3288,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
         }
 
         // --- SUMMARY MODULE ---
-        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'score') loadScoreReport(); if(tab === 'audit') loadRuleAudit(); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
+        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'score') loadScoreReport(); if(tab === 'audit') loadRuleAudit(); if(tab === 'sim') loadExitSim(); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
         
         async function initSummaryModule() {
             if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); allTradesData = await res.json() || []; } catch(e) {} }
@@ -3314,6 +3321,55 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 box.innerHTML = h;
             } catch (e) { box.innerHTML = '<div class="ev-empty ev-bad">Nie udało się wczytać raportu: ' + (e.message || e) + '</div>'; }
         }
+
+        // --- Summary: symulator reguł wyjścia ---
+        let simState = { grid: null, stops: [], tps: [] };
+        async function loadExitSim() {
+            const box = document.getElementById('sim-body'), mode = document.getElementById('sim-mode').value, scope = document.getElementById('sim-scope').value;
+            box.innerHTML = '<div class="ev-empty">Symuluję 21 kombinacji reguł na świecach dziennych (może potrwać)…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/summary/exit-sim?mode=${mode}&scope=${scope}`), d = await res.json();
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                simState = { grid: d.grid, stops: d.stops, tps: d.tps };
+                const f = (v, dec, suf) => v == null ? '–' : String(Math.round(v * Math.pow(10, dec)) / Math.pow(10, dec)).replace('.', ',') + (suf || '');
+                const sg = (v, dec, suf) => v == null ? '–' : (v > 0 ? '+' : '') + f(v, dec, suf);
+                const col = v => v == null ? '' : (v >= 0 ? 'var(--success)' : 'var(--danger)');
+                const all = []; d.stops.forEach(s => d.tps.forEach(t => all.push({ s: s.key, t: t.key, v: d.grid[s.key][t.key].w_avg_pct })));
+                const best = all.reduce((a, b) => (b.v != null && (a == null || b.v > a.v)) ? b : a, null);
+                const base = d.grid.none.none;
+                let h = `<div class="kpi-grid" style="margin:12px 0"><div class="kpi-card"><h4>Transakcje w symulacji</h4><div class="value">${d.n}</div><div class="ev-muted">${scope === 'all' ? 'zamknięte + otwarte (otwarte do dziś)' : 'tylko zamknięte'}</div></div>` +
+                    `<div class="kpi-card"><h4>Wynik faktyczny (ważony)</h4><div class="value" style="color:${col(base.w_avg_pct)}">${sg(base.w_avg_pct, 1, '%')}</div><div class="ev-muted">mediana ${f(base.median_pct, 1, '%')} · najgorsza ${f(base.worst_pct, 1, '%')} · skuteczność ${f(base.win_rate, 0, '%')}</div></div>` +
+                    `<div class="kpi-card"><h4>Najlepsza reguła wg średniej</h4><div class="value" style="color:${col(best && best.v)}">${best ? sg(best.v, 1, '%') : '–'}</div><div class="ev-muted">${best ? d.stops.find(s => s.key === best.s).label + ' + ' + d.tps.find(t => t.key === best.t).label : ''}</div></div></div>`;
+                h += '<div class="ev-muted" style="margin:6px 0">Komórka: średni wynik ważony po zastosowaniu reguły (zielony/czerwony), Δ względem faktycznego, najgorsza transakcja, liczba stopów (w ilu spółkach) i TP. Kliknij komórkę, by zobaczyć uruchomienia.</div>';
+                h += '<div class="table-responsive"><table class="hp-table" style="width:100%"><thead><tr><th>Stop \\ TP</th>' + d.tps.map(t => `<th>${t.label}</th>`).join('') + '</tr></thead><tbody>' +
+                    d.stops.map(s => `<tr><td><b>${s.label}</b></td>` + d.tps.map(t => {
+                        const c = d.grid[s.key][t.key], isBest = best && best.s === s.key && best.t === t.key, isBase = s.key === 'none' && t.key === 'none';
+                        return `<td data-sim-stop="${s.key}" data-sim-tp="${t.key}" style="cursor:pointer;${isBest ? 'outline:2px solid var(--accent-hover);' : ''}${isBase ? 'background:rgba(255,255,255,.04);' : ''}"><div style="font-weight:700;color:${col(c.w_avg_pct)}">${sg(c.w_avg_pct, 1, '%')} <span class="ev-muted" style="font-weight:400">Δ ${sg(c.delta_pp, 1, ' pp')}</span></div>` +
+                            `<div class="ev-muted">najgorsza ${f(c.worst_pct, 1, '%')} · stopów ${c.stopped}${c.stopped ? ' (' + c.stopped_tickers + ' sp.)' : ''} · TP ${c.tp_hits}</div></td>`;
+                    }).join('') + '</tr>').join('') + '</tbody></table></div>';
+                h += '<div id="sim-detail" style="margin-top:14px"></div>';
+                if (d.skipped.length) h += `<div class="ev-note" style="margin-top:10px"><b>Pominięto ${d.skipped.length} transakcji:</b><br>` + d.skipped.slice(0, 15).map(x => `${x.ticker} #${x.id}: ${x.reason}`).join('<br>') + '</div>';
+                h += '<div class="ev-muted" style="margin-top:12px">' + d.caveats.join(' ') + '</div>';
+                box.innerHTML = h;
+            } catch (e) { box.innerHTML = '<div class="ev-empty ev-bad">Nie udało się wykonać symulacji: ' + (e.message || e) + '</div>'; }
+        }
+        document.addEventListener('click', async e => {
+            const td = e.target.closest && e.target.closest('[data-sim-stop]'); if (!td) return;
+            const stop = td.dataset.simStop, tp = td.dataset.simTp, box = document.getElementById('sim-detail'); if (!box) return;
+            const mode = document.getElementById('sim-mode').value, scope = document.getElementById('sim-scope').value;
+            const f = (v, dec, suf) => v == null ? '–' : String(Math.round(v * Math.pow(10, dec)) / Math.pow(10, dec)).replace('.', ',') + (suf || '');
+            const sg = (v, dec, suf) => v == null ? '–' : (v > 0 ? '+' : '') + f(v, dec, suf);
+            const col = v => v == null ? '' : (v >= 0 ? 'var(--success)' : 'var(--danger)');
+            box.innerHTML = '<div class="ev-empty">Wczytuję uruchomienia…</div>';
+            try {
+                const r = await fetch(`${API_BASE_URL}/api/summary/exit-sim?mode=${mode}&scope=${scope}&stop=${stop}&tp=${tp}`), d = await r.json();
+                if (!r.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + r.status));
+                const c = simState.grid[stop][tp], sl = simState.stops.find(s => s.key === stop).label, tl = simState.tps.find(t => t.key === tp).label;
+                box.innerHTML = `<div class="plx-h">${sl} + ${tl}</div><div class="ev-muted" style="margin-bottom:8px">Wynik ważony ${sg(c.w_avg_pct, 1, '%')} (Δ ${sg(c.delta_pp, 1, ' pp')}): reguła <b style="color:var(--success)">uratowała ${sg(c.saved_pp, 2, ' pp')}</b> (tam, gdzie wyszła lepiej niż faktycznie) i <b style="color:var(--danger)">odcięła/pogorszyła ${sg(c.cut_pp, 2, ' pp')}</b> (tam, gdzie gorzej). Najgorsze 10% transakcji: ${f(c.p10_pct, 1, '%')}. Uruchomień: ${d.triggered}${d.triggered > d.trades.length ? ' (pokazano ' + d.trades.length + ' najbardziej niekorzystnych)' : ''}.</div>` +
+                    '<div class="table-responsive"><table class="hp-table" style="width:100%"><thead><tr><th>Zakup</th><th>Spółka</th><th>Reguła</th><th>Dzień wyjścia</th><th>Wg reguły</th><th>Faktycznie</th><th>Różnica</th></tr></thead><tbody>' +
+                    (d.trades.length ? d.trades.map(x => `<tr><td>${x.buy_date}</td><td><b>${x.ticker}</b>${x.status === 'OPEN' ? ' <span class="ev-muted">otwarta</span>' : ''}</td><td>${x.reason}</td><td>${x.date}</td><td style="color:${col(x.sim_pct)}">${f(x.sim_pct, 1, '%')}</td><td style="color:${col(x.actual_pct)}">${f(x.actual_pct, 1, '%')}</td><td style="color:${col(x.diff_pp)};font-weight:700">${sg(x.diff_pp, 1, ' pp')}</td></tr>`).join('') : '<tr><td colspan="7" class="ev-muted">Reguła nigdy się nie uruchomiła.</td></tr>') + '</tbody></table></div>';
+            } catch (err) { box.innerHTML = '<div class="ev-empty ev-bad">Nie udało się wczytać: ' + (err.message || err) + '</div>'; }
+        });
 
         // --- Summary: audyt zasad SL/TP ---
         async function loadRuleAudit() {
