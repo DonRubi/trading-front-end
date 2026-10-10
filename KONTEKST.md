@@ -27,4 +27,5 @@ Plik `index.html` ma końce linii CRLF. Parametr testowy `?api=` podmienia adres
 - **Planer automatyczny**: plan z pierwszej transakcji, wszystkie strefy z Form (liczba stref, limit/wykorzystanie na strefę, budżet spółki z polem „Maks. budżet spółki”), pole świecy SL w Form (dodawanie i szczegóły zagrania), pole „Maks. budżet spółki” w Focus (obowiązkowe przed wejściem).
 - **Take Profit**: w szczegółach planu (Strażnik) linia TP1 i przycisk „Sugestie TP” (tabela celów: sufit, opory, szczyty, Volume Profile, strefy podaży; „Ustaw TP” zapisuje TP w Form); Ocena wejścia pokazuje źródło TP i SL.
 - Strażnik planu: panel **pozycji** (średnia cena zakupu, kurs vs średnia, SL planu, TP planu, R:R od średniej, ryzyko do SL) oraz **przegląd TP** (świeca + wolumen: SIŁA / UMIARKOWANIE / SŁABOŚĆ) przy każdej strefie.
+- **Form v2**: ID zagrań w formacie `TICKER-L01a` nadaje backend; wpisy poprzedniej wersji (archiwum) backend już nie zwraca, więc frontend ich nie pokazuje (bez zmian w kodzie).
 - Podgląd konkretnej wersji bez cache: `https://raw.githack.com/DonRubi/trading-front-end/<hash commita>/index.html`.
