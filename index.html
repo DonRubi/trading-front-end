@@ -5850,10 +5850,27 @@ window.Planer = (function () {
     const WSTATE = { W_DRODZE: ["#848e9c", "W drodze – bez analizy"], PRZY_STREFIE: ["#fcd535", "Przy strefie"], UTKNAL: ["#89b4fa", "Utknął (>3 mies.)"], UNIEWAZNIONE: ["#fcd535", "Strefa złamana"], CEL: ["#0ecb81", "Cel"] };
     const WICON = { "siła": "🟢", "słabość": "🔴", info: "⚪" };
     const CARD_COL = { yellow: "#fcd535", orange: "#f0883e", red: "#f6465d" };
+    const REV_COL = { "SIŁA": "#0ecb81", UMIARKOWANIE: "#fcd535", "SŁABOŚĆ": "#f6465d" };
+    function tpReviewHtml(l) {
+        const r = l.tp_review; if (!r) return "";
+        const col = REV_COL[r.verdict] || "#848e9c";
+        return '<div class="plx-play" style="border-left:3px solid ' + col + ';padding-left:8px;margin:6px 0"><b style="color:' + col + '">TP ' + price(r.tp) + " osiągnięty – " + esc(r.verdict) + "</b> (świeca z " + esc(r.bar_date) + ", wynik " + r.score + ")<br>" + esc(r.action) +
+            '<div class="db-help">' + r.evidence.map(esc).join("<br>") + "</div></div>";
+    }
+    function positionHtml(d) {
+        const p = d.position; if (!p) return "";
+        const c = (v) => v == null ? "" : (v >= 0 ? "var(--success)" : "var(--danger)");
+        return '<div class="plx-kpis" style="margin:8px 0">' +
+            '<div class="plx-kpi"><div class="l">Średnia cena zakupu</div><div class="v">' + price(p.avg_price) + '</div><div class="s">' + p.n + " otw. transakcji · koszt pozycji / liczba jednostek (ważona)</div></div>" +
+            '<div class="plx-kpi"><div class="l">Kurs vs średnia</div><div class="v" style="color:' + c(p.vs_avg_pct) + '">' + spct(p.vs_avg_pct) + '</div><div class="s">kurs ' + price(p.price) + " (zakupy " + price(p.lowest_buy) + "–" + price(p.highest_buy) + ")</div></div>" +
+            '<div class="plx-kpi"><div class="l">SL planu</div><div class="v">' + price(p.sl_plan) + '</div><div class="s">' + (p.sl_plan ? spct(p.to_sl_pct) + " od średniej · SL najniższej strefy" : "brak świec SL stref") + (p.risk_to_sl_pct != null ? "<br>ryzyko do SL: " + pct(p.risk_to_sl_pct) + " kapitału" : "") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">TP planu</div><div class="v">' + price(p.tp_plan) + '</div><div class="s">' + (p.tp_plan ? spct(p.to_tp_pct) + " od średniej" + (p.rr_from_avg != null ? " · R:R od średniej " + num(p.rr_from_avg, 1) : "") + (p.tp_reached ? " · <b>osiągnięty</b>" : "") : "brak TP nad średnią") + "</div></div></div>" +
+            '<div class="db-help" style="margin-bottom:6px">Wspólny punkt odniesienia dla całej pozycji; sygnały i kartki nadal działają na poziomie stref (SL i TP każdej strefy zostają).</div>';
+    }
     function cardHtml(l) {
         if (!l.card) return "";
         const c = l.card, col = CARD_COL[c.level] || "#848e9c", inv = l.investigation;
-        const t1 = l.tp1 && l.tp1.price ? '<div class="plx-play db-help">TP1: <b>' + price(l.tp1.price) + "</b> (" + (l.tp1.source === "sl_strefy_wyzej" ? "SL strefy wyżej " + price(l.tp1.zone[0]) + "–" + price(l.tp1.zone[1]) : "TP z Form – brak strefy wyżej ze świecą SL") + ') <button class="hp-btn" style="padding:2px 9px" data-plx-tp="' + esc(l.entry_id) + '">Sugestie TP</button></div><div id="plx-tp-' + esc(l.entry_id) + '"></div>'
+        const t1 = l.tp1 && l.tp1.price ? '<div class="plx-play db-help">TP1: <b>' + price(l.tp1.price) + "</b> (" + (l.tp1.source === "sl_strefy_wyzej" ? "SL strefy wyżej " + price(l.tp1.zone[0]) + "–" + price(l.tp1.zone[1]) : "TP z Form – brak strefy wyżej ze świecą SL") + ') <button class="hp-btn" style="padding:2px 9px" data-plx-tp="' + esc(l.entry_id) + '">Sugestie TP</button></div><div id="plx-tp-' + esc(l.entry_id) + '"></div>' + tpReviewHtml(l)
             : '<div class="plx-play db-help">TP1: brak (ustaw świecę SL strefy wyżej albo TP w Form) <button class="hp-btn" style="padding:2px 9px" data-plx-tp="' + esc(l.entry_id) + '">Sugestie TP</button></div><div id="plx-tp-' + esc(l.entry_id) + '"></div>';
         let h = t1 + (l.sl ? '<div class="plx-play db-help">SL strefy (dół korpusu świecy ' + esc(l.sl.candle) + ", z " + (l.sl.source === "Form" ? "Form" : "planu") + "): " + price(l.sl.level) + (l.sl.broken ? ' – <b style="color:var(--danger)">złamany od ' + esc(l.sl.since) + "</b>" : " – nienaruszony") + "</div>" : '<div class="plx-play db-help">Brak świecy SL tej strefy – ustaw ją w Form (szczegóły zagrania).</div>') +
             '<div class="plx-play" style="border-left:3px solid ' + col + ';padding-left:8px;margin:6px 0"><b style="color:' + col + '">' + c.icon + " " + esc(c.label) + "</b> " + c.reasons.map(esc).join(" ") + "</div>";
@@ -5883,7 +5900,7 @@ window.Planer = (function () {
         } catch (err) { const b = $("#plx-watch"); if (b) b.insertAdjacentHTML("afterbegin", '<div class="plx-warn">' + esc(err.message) + "</div>"); }
     });
     function watchHtml(d) {
-        let h = '<div class="plx-h">Strażnik planu <span class="db-help">· po zamknięciu sesji ' + esc(d.bar_date) + ' · między strefami analiza wyłączona, dopóki kurs nie utknął na dłużej</span> <button class="hp-btn" style="padding:3px 10px" data-plx-watch>↻</button>' + (d.card ? ' <span class="ev-kind" style="color:' + (CARD_COL[d.card.level] || "#848e9c") + ';border-color:' + (CARD_COL[d.card.level] || "#848e9c") + '">' + d.card.icon + " " + esc(d.card.label) + "</span>" : "") + '</div>' + watchControlsHtml(d);
+        let h = '<div class="plx-h">Strażnik planu <span class="db-help">· po zamknięciu sesji ' + esc(d.bar_date) + ' · między strefami analiza wyłączona, dopóki kurs nie utknął na dłużej</span> <button class="hp-btn" style="padding:3px 10px" data-plx-watch>↻</button>' + (d.card ? ' <span class="ev-kind" style="color:' + (CARD_COL[d.card.level] || "#848e9c") + ';border-color:' + (CARD_COL[d.card.level] || "#848e9c") + '">' + d.card.icon + " " + esc(d.card.label) + "</span>" : "") + '</div>' + positionHtml(d) + watchControlsHtml(d);
         d.legs.forEach(l => {
             const sc = WSTATE[l.state] || ["#848e9c", l.state];
             h += '<div class="plx-zone"><div class="plx-zhead"><span class="plx-zside ' + (l.side === "LONG" ? "long" : "short") + '">' + arrow(l.side) + '</span><span class="plx-zrange">' + price(l.zone[0]) + " – " + price(l.zone[1]) + '</span>' +
