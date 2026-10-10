@@ -488,7 +488,7 @@
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
                     <div class="dashboard-grid">
                         <div class="menu-card" onclick="openModule('form-module', 'Form')"><span class="icon">📝</span><h3>Form</h3></div>
-                        <div class="menu-card" onclick="openModule('focus-module', 'Focus')"><span class="icon">🎯</span><h3>Focus</h3></div>
+                        <!-- Focus wygaszony (ujednolicenie: Form + ocena wejścia + koniec dnia; maks. budżet spółki w Ocenie wejścia i Planerze) -->
                         <div class="menu-card" onclick="openModule('tradeslist-module', 'Transakcje')"><span class="icon">📊</span><h3>Transakcje</h3></div>
                         <div class="menu-card" onclick="openModule('summary-module', 'Podsumowanie')"><span class="icon">📈</span><h3>Podsumowanie</h3></div>
                         <div class="menu-card" onclick="openModule('database-module', 'Baza danych')"><span class="icon">🗄️</span><h3>Baza danych</h3></div>
@@ -1030,6 +1030,7 @@
                     <label>Mnożnik Score z Form<input type="number" id="sc-mult" min="0.5" max="10" step="0.5"></label>
                     <label>Maks. punktów za moment wejścia<input type="number" id="sc-entry" min="0" max="20" step="0.5"></label>
                     <label>Maks. punktów za koniec dnia<input type="number" id="sc-eod" min="0" max="20" step="0.5"></label>
+                    <label title="Spółki oznaczone jako priorytet (Inwestycja/Spekulacja · priorytet) dostają tyle punktów gratis do punktów budżetowych (bez przekraczania maksimum).">Bonus za spółkę z priorytetem (pkt)<input type="number" id="sc-prio" min="0" max="5" step="0.5"></label>
                     <label title="Gdy ocena momentu wejścia (0–100) jest niższa, dostępny budżet = 0 niezależnie od punktów Form. 0 = bramka wyłączona. Zalecane ok. 50.">Bramka: min. ocena wejścia (0–100)<input type="number" id="sc-gate" min="0" max="100" step="5"></label>
                 </div>
                 <div class="db-help" id="sc-summary"></div>
@@ -1968,7 +1969,7 @@
         function fillScoring(r) {
             document.getElementById('sc-wentry').innerHTML = Object.keys(r.entry_weights || {}).map(k => scWRow('entry', k, scLabels.entry[k] || k, r.entry_weights[k])).join('');
             document.getElementById('sc-weod').innerHTML = Object.keys(r.eod_weights || {}).map(k => scWRow('eod', k, scLabels.eod[k] || k, r.eod_weights[k])).join('');
-            document.getElementById('sc-mult').value = r.form_mult; document.getElementById('sc-entry').value = r.entry_max; document.getElementById('sc-eod').value = r.eod_max; document.getElementById('sc-gate').value = r.entry_gate_score || 0;
+            document.getElementById('sc-mult').value = r.form_mult; document.getElementById('sc-entry').value = r.entry_max; document.getElementById('sc-eod').value = r.eod_max; document.getElementById('sc-gate').value = r.entry_gate_score || 0; document.getElementById('sc-prio').value = r.priority_bonus != null ? r.priority_bonus : 1;
             document.getElementById('sc-tiers').innerHTML = r.tiers.map(scTierRow).join('');
             updateScoringSummary();
         }
@@ -2010,7 +2011,7 @@
         function resetScoring() { if (scoringDefaults) fillScoring(scoringDefaults); }
         async function saveScoring() {
             const msg = document.getElementById('sc-msg');
-            const rules = { form_mult: document.getElementById('sc-mult').value, entry_max: document.getElementById('sc-entry').value, eod_max: document.getElementById('sc-eod').value, entry_gate_score: document.getElementById('sc-gate').value,
+            const rules = { form_mult: document.getElementById('sc-mult').value, entry_max: document.getElementById('sc-entry').value, eod_max: document.getElementById('sc-eod').value, entry_gate_score: document.getElementById('sc-gate').value, priority_bonus: document.getElementById('sc-prio').value,
                 tiers: [...document.querySelectorAll('#sc-tiers tr')].map(tr => ({ min_pct: tr.querySelector('[data-k=min_pct]').value, budget_pct: tr.querySelector('[data-k=budget_pct]').value })), entry_weights: {}, eod_weights: {} };
             document.querySelectorAll('#scoring-panel [data-w]').forEach(i => { rules[i.dataset.w === 'entry' ? 'entry_weights' : 'eod_weights'][i.dataset.k] = i.value; });
             msg.style.color = ''; msg.textContent = 'Zapisywanie…';
@@ -3969,9 +3970,22 @@ async function handleTradeAutomation(tradeId, tradeData) {
             const ep = item.entry_eval && item.entry_eval.entry_points != null ? item.entry_eval.entry_points : (item.entry_score != null ? item.entry_score / 20 : null);
             const eod = item.eod_score;
             const eodTitle = item.eod_eval && item.eod_eval.components ? item.eod_eval.components.map(c => c.label + ': ' + f1(c.norm * 100) + '%').join(' · ') : '';
-            const eodStr = eod != null ? `<b title="${eodTitle}">${f1(parseFloat(eod))}/5</b>` : `<a href="#" data-eod-trade="${item.id}" title="Policz po zamknięciu sesji (świeca, indeks, VIX, wolumen, HTF)">policz</a>`;
+            const man = item.eod_eval && item.eod_eval.manual;
+            const eodStr = eod != null ? `<b title="${eodTitle}${man ? ' · ręcznie (rekomendacja ' + f1(parseFloat(man.auto)) + ')' + (man.note ? ': ' + man.note : '') : ' · rekomendacja automatyczna'}">${f1(parseFloat(eod))}/5${man ? '✎' : ''}</b> <a href="#" data-eod-man="${item.id}" data-eod-val="${man ? man.score : ''}" title="Popraw punkty końca dnia ręcznie">popraw</a>` : `<a href="#" data-eod-trade="${item.id}" title="Policz po zamknięciu sesji (świeca, indeks, VIX, wolumen, HTF)">policz</a>`;
             return `<br><span style="font-size:0.78em; color:var(--text-muted);">Wejście: ${ep != null ? '<b>' + f1(ep) + '/5</b>' : '–'} · Koniec dnia: ${eodStr}</span>`;
         }
+        document.addEventListener('click', async e => {
+            const m = e.target.closest && e.target.closest('[data-eod-man]'); if (!m) return;
+            e.preventDefault();
+            const v = prompt('Punkty końca dnia 0–5 (puste = wróć do rekomendacji automatycznej):', m.dataset.eodVal || ''); if (v === null) return;
+            const note = v.trim() === '' ? '' : (prompt('Krótko: dlaczego zmieniasz ocenę?', '') || '');
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/eod-manual`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ trade_id: +m.dataset.eodMan, score: v.trim(), note: note }) });
+                const d = await res.json().catch(() => ({}));
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                fetchTradesEntries(true);
+            } catch (err) { alert(err.message || err); }
+        });
         document.addEventListener('click', async e => {
             const a = e.target.closest && e.target.closest('[data-eod-trade]'); if (!a) return;
             e.preventDefault(); a.textContent = '…';
@@ -6170,7 +6184,7 @@ window.Wejscie = (function () {
         const my = ++ov.req;
         if (newOpts) ov.opts[optKey(ticker, entryId)] = newOpts;
         const o = ov.opts[optKey(ticker, entryId)] || {};
-        const qs = (o.gap_dates && o.gap_dates.length ? "&gap_dates=" + encodeURIComponent(o.gap_dates.join(",")) : "") + (o.calendar !== undefined && o.calendar !== "" ? "&calendar=" + encodeURIComponent(o.calendar) : "");
+        const qs = (o.entry_manual !== undefined && o.entry_manual !== "" ? "&entry_manual=" + encodeURIComponent(o.entry_manual) + "&entry_note=" + encodeURIComponent(o.entry_note || "") : "") + (o.gap_dates && o.gap_dates.length ? "&gap_dates=" + encodeURIComponent(o.gap_dates.join(",")) : "") + (o.calendar !== undefined && o.calendar !== "" ? "&calendar=" + encodeURIComponent(o.calendar) : "");
         show('<div class="ev-empty">Ocena wejścia ' + esc(ticker) + ' – pobieram świece, CVD i budżet…</div>');
         try {
             const [d, plays] = await Promise.all([api("/api/entry/evaluate?ticker=" + encodeURIComponent(ticker) + "&entry_id=" + encodeURIComponent(entryId) + qs), playsOf(ticker)]);
@@ -6211,7 +6225,8 @@ window.Wejscie = (function () {
                 '<div class="plx-kpi"><div class="l">Rekomendowany budżet</div><div class="v" style="color:' + (b.recommended_pct > 0 ? "var(--success)" : "var(--danger)") + '">' + pct(b.recommended_pct) + '</div><div class="s">kapitału na to wejście</div></div></div>';
         }
         const co = b.company || {};
-        const companyLine = '<div class="ev-muted">Spółka: wykorzystano ' + pct(co.used_pct) + (co.max_pct != null ? " z " + pct(co.max_pct) : "") + " budżetu" +
+        const companyLine = '<div class="ev-muted" style="margin:6px 0">Maks. budżet spółki: <input id="ev-maxb" type="number" step="0.1" min="0.1" max="100" value="' + (co.max_pct != null ? co.max_pct : "") + '" style="width:80px"> % kapitału <button class="hp-btn" style="padding:2px 8px" data-ev-maxb>Zapisz</button> <span>(ustal przed wejściem; puste = limit z Serwisu)</span></div>' +
+            '<div class="ev-muted">Spółka: wykorzystano ' + pct(co.used_pct) + (co.max_pct != null ? " z " + pct(co.max_pct) : "") + " budżetu" +
             (co.max_trades != null ? " · wolnych wejść: " + co.trades_left + " z " + co.max_trades : "") + (b.plan_id ? " · plan #" + b.plan_id : " · brak planu spółki") + "</div>";
         show(
             '<div class="plx-head"><div><div class="plx-title">Ocena wejścia · ' + esc(d.ticker) + ' <a class="sd-link" data-tk="' + esc(d.ticker) + '" style="font-size:.6em">wykres</a> <a class="sd-link" href="' + esc(getTradingViewLink(d.ticker)) + '" target="_blank" rel="noopener" style="font-size:.6em">TradingView</a></div>' +
@@ -6226,8 +6241,10 @@ window.Wejscie = (function () {
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.take_profit) + " / " + price(p.stop_loss) + '</div><div class="s">R:R ' + (rr ? num(rr, 1) : "–") + '<br>TP: ' + esc(p.tp_source || "Form") + (p.tp_zone ? " " + price(p.tp_zone[0]) + "–" + price(p.tp_zone[1]) : "") + ' · SL: ' + esc(p.sl_source || "Form") + "</div></div></div>" +
             (d.coverage != null && d.coverage < 0.7 ? '<div class="ev-note">⚠ Ocena opiera się na ' + Math.round(d.coverage * 100) + '% wag – brakuje danych do części warunków (np. CVD, świece), więc wynik może być zawyżony.</div>' : "") +
             '<div id="ev-zq"></div>' +
-            (d.scoring ? '<div class="plx-h">Punktacja (zasady z Serwisu)</div><div class="plx-kpis"><div class="plx-kpi"><div class="l">Form × ' + num(d.scoring.form_mult, 1) + '</div><div class="v">' + num(d.scoring.form_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.form_max_points, 0) + '</small></div><div class="s">Score z Form ' + num(d.scoring.form_score, 1) + '/5</div></div>' +
-                '<div class="plx-kpi"><div class="l">Moment wejścia</div><div class="v">' + num(d.scoring.entry_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.entry_max, 0) + '</small></div><div class="s">ocena ' + (d.score == null ? "–" : Math.round(d.score)) + '/100</div></div>' +
+            (d.scoring ? '<div class="plx-h">Punktacja (zasady z Serwisu)</div><div class="plx-kpis"><div class="plx-kpi"><div class="l">Form × ' + num(d.scoring.form_mult, 1) + '</div><div class="v">' + num(d.scoring.form_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.form_max_points, 0) + '</small></div><div class="s">Score z Form ' + num(d.scoring.form_score, 1) + '/5' + (d.scoring.form_manual ? ' (ręcznie; rekomendacja ' + num(d.scoring.form_score_auto, 1) + ')' : ' (rekomendacja – popraw w Form)') + '</div></div>' +
+                '<div class="plx-kpi"><div class="l">Moment wejścia</div><div class="v">' + num(d.scoring.entry_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.entry_max, 0) + '</small></div><div class="s">' + (d.scoring.entry_manual != null ? 'ręcznie; rekomendacja ' + num(d.scoring.entry_points_auto, 1) : 'rekomendacja') + ' (ocena ' + (d.score == null ? "–" : Math.round(d.score)) + '/100)</div>' +
+                    '<div class="s" style="margin-top:6px"><input id="ev-man" type="number" step="0.1" min="0" max="' + d.scoring.entry_max + '" value="' + (d.scoring.entry_manual != null ? d.scoring.entry_manual : "") + '" placeholder="' + num(d.scoring.entry_points_auto, 1) + '" style="width:70px"> <input id="ev-man-note" type="text" placeholder="dlaczego zmieniasz" value="' + esc(d.scoring.entry_note || "") + '" style="width:130px"> <button class="hp-btn" style="padding:2px 8px" data-ev-man>Popraw</button></div></div>' +
+                (d.scoring.priority ? '<div class="plx-kpi"><div class="l">Priorytet</div><div class="v">+' + num(d.scoring.priority_bonus, 0) + '</div><div class="s">punkt gratis dla spółki z priorytetem</div></div>' : "") +
                 '<div class="plx-kpi"><div class="l">Razem do budżetu</div><div class="v">' + num(d.scoring.points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.max_points, 0) + '</small></div><div class="s">' + num(d.scoring.pct, 1) + '% punktów</div></div>' +
                 '<div class="plx-kpi"><div class="l">Koniec dnia</div><div class="v">– <small class="ev-muted">/ ' + num(d.scoring.eod_max, 0) + '</small></div><div class="s">dojdzie po sesji (łącznie max ' + num(d.scoring.total_max, 0) + ')</div></div></div>' : "") +
             '<div class="plx-h">Warunki w chwili wejścia <span class="ev-muted">(ⓘ – co oznacza dany warunek)</span></div><div class="ev-conds">' + d.conditions.map(condRow).join("") + "</div>" +
@@ -6241,9 +6258,21 @@ window.Wejscie = (function () {
         const t = e.target; if (!t.closest) return;
         if (t.closest("[data-ev-close]")) { close(); return; }
         if (t.closest("[data-ev-refresh]") && ov.data) { evaluate(ov.data.ticker, ov.data.play.entry_id); return; }
+        if (t.closest("[data-ev-man]") && ov.data) {             // ręczna korekta punktów za moment wejścia (automatyka = rekomendacja)
+            const prev = ov.opts[optKey(ov.data.ticker, ov.data.play.entry_id)] || {};
+            evaluate(ov.data.ticker, ov.data.play.entry_id, { ...prev, entry_manual: ($("#ev-man").value || "").trim(), entry_note: ($("#ev-man-note").value || "").trim() }); return;
+        }
+        if (t.closest("[data-ev-maxb]") && ov.data) {
+            const v = ($("#ev-maxb").value || "").trim();
+            fetch(API_BASE_URL + "/api/planner/company-budget", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: ov.data.ticker, max_budget_pct: v }) })
+                .then(r => r.json()).then(j => { if (j.status !== "success") throw new Error(j.message || "błąd"); evaluate(ov.data.ticker, ov.data.play.entry_id); })
+                .catch(err => alert("Nie zapisano budżetu: " + (err.message || err)));
+            return;
+        }
         if (t.closest("[data-ev-recalc]") && ov.data) {
             const g = [$("#ev-gd1").value, $("#ev-gd2").value].filter(Boolean).sort();
-            evaluate(ov.data.ticker, ov.data.play.entry_id, { gap_dates: g, calendar: $("#ev-cal").value }); return;
+            const prev = ov.opts[optKey(ov.data.ticker, ov.data.play.entry_id)] || {};
+            evaluate(ov.data.ticker, ov.data.play.entry_id, { ...prev, gap_dates: g, calendar: $("#ev-cal").value }); return;
         }
         const i = t.closest("[data-ev-info]"); if (i) { const el = document.getElementById("ev-d" + i.dataset.evInfo); if (el) el.hidden = !el.hidden; return; }
         if (t.closest("[data-ev-trade]")) { toTrade(); return; }
@@ -6254,7 +6283,7 @@ window.Wejscie = (function () {
 
     function compact(d) {      // to, co zapisujemy przy transakcji (ocena w chwili wejścia)
         return { entry_score: d.score, entry_eval: { verdict: d.verdict, score: d.score, factor: d.factor, price: d.price, evaluated_at: new Date().toISOString(),
-            recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source, options: d.options, points: d.scoring && d.scoring.points, max_points: d.scoring && d.scoring.max_points, form_score: d.scoring && d.scoring.form_score, entry_points: d.scoring && d.scoring.entry_points,
+            recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source, options: d.options, points: d.scoring && d.scoring.points, entry_points: d.scoring && d.scoring.entry_points, entry_points_auto: d.scoring && d.scoring.entry_points_auto, entry_manual: d.scoring && d.scoring.entry_manual, entry_note: d.scoring && d.scoring.entry_note, form_score: d.scoring && d.scoring.form_score, form_score_auto: d.scoring && d.scoring.form_score_auto, priority_bonus: d.scoring && d.scoring.priority_bonus, max_points: d.scoring && d.scoring.max_points, form_score: d.scoring && d.scoring.form_score, entry_points: d.scoring && d.scoring.entry_points,
             conditions: d.conditions.map(c => ({ id: c.id, score: c.score, status: c.status })) }, summary: {
             verdict: d.verdict, score: d.score, recommended_pct: d.budget.recommended_pct, source: d.budget.source, capital_pln: d.budget.capital_pln, price: d.price } };
     }
@@ -6291,7 +6320,8 @@ window.FormZones = (function () {
         if (d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) return 0;
         return Math.max(0, Math.min(1, +d.quality || 0));
     }
-    const scoreOf = e => Math.min(5, Math.round((Array.isArray(e.reasons) ? e.reasons : []).reduce((s, r) => s + reasonPoints(r, e), 0) * 100) / 100);
+    const scoreAuto = e => Math.min(5, Math.round((Array.isArray(e.reasons) ? e.reasons : []).reduce((s, r) => s + reasonPoints(r, e), 0) * 100) / 100);
+    const scoreOf = e => (e.score_manual != null && e.score_manual !== "") ? Math.max(0, Math.min(5, +e.score_manual)) : scoreAuto(e);     // ręczna korekta ma pierwszeństwo przed rekomendacją
     const fmtScore = v => num(v, 1);
     function view(e) {
         const long = LONG(e.direction), mod = long ? 1 : -1;
@@ -6518,6 +6548,17 @@ window.FormZones = (function () {
             msg.textContent = val ? "Zapisano (" + d.entries.length + " wpisów strefy)." : "Usunięto."; msg.style.color = "var(--success)";
         } catch (err) { msg.textContent = err.message; msg.style.color = "var(--danger)"; }
     });
+    document.addEventListener("click", async ev => {
+        const b = ev.target.closest && ev.target.closest("[data-fz-score]"); if (!b) return;
+        const msg = $("#fz-score-msg"), val = ($("#fz-score").value || "").trim(), note = ($("#fz-score-note").value || "").trim();
+        try {
+            const r = await fetch(API_BASE_URL + "/api/form/score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entry_id: b.dataset.fzScore, score: val, note: note }) });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + r.status));
+            (formEntries || []).forEach(x => { if (x.entry_id === b.dataset.fzScore) { x.score_manual = d.score_manual; x.score_note = d.score_manual != null ? note : null; } });
+            renderDetail(); render();
+        } catch (err) { msg.textContent = err.message; msg.style.color = "var(--danger)"; }
+    });
     function renderDetail() {
         const e = (formEntries || []).find(x => x.entry_id === D.id), o = $("#fz-detail");
         if (!e) { closeDetail(); return; }
@@ -6531,10 +6572,11 @@ window.FormZones = (function () {
             '<div class="fz-nav"><button class="hp-btn" data-fz-nav="prev"' + (prev ? "" : " disabled") + ' title="Niżej (←)">◀ Niżej</button><span class="ev-muted">' + (i + 1) + " z " + items.length + '</span><button class="hp-btn" data-fz-nav="next"' + (next ? "" : " disabled") + ' title="Wyżej (→)">Wyżej ▶</button><button class="hp-btn" data-fz-dclose>✕</button></div></div>';
         h += '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Wejście</div><div class="v">' + price(p.entry) + '</div><div class="s">kurs ' + price(cp) + (dist != null ? " (" + (dist > 0 ? "+" : "") + num(dist, 1) + "% od wejścia)" : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.tp) + " / " + price(p.sl) + '</div><div class="s">R:R ' + num(p.rr, 2) + "</div></div>" +
-            '<div class="plx-kpi"><div class="l">Score</div><div class="v">' + fmtScore(p.score) + '/5</div><div class="s">suma jakości powodów' + (e.priority === 1 ? " · ⚡ priorytet" : "") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">Score</div><div class="v">' + fmtScore(p.score) + '/5</div><div class="s">' + (e.score_manual != null && e.score_manual !== "" ? "ręcznie; rekomendacja " + fmtScore(scoreAuto(e)) : "rekomendacja: suma jakości powodów") + (e.priority === 1 ? " · ⚡ priorytet" : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Status</div><div class="v" style="color:' + STCOL[p.status] + '">' + esc(p.status) + '</div><div class="s">dodano ' + (e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–") + "</div></div></div>";
         const zoneIds = new Set(((cur.z && cur.z.all) || []).map(x => x.e.entry_id).concat([e.entry_id])), slc = ((formEntries || []).find(x => zoneIds.has(x.entry_id) && x.sl_candle) || {}).sl_candle || "";
         h += '<div class="plx-play" style="margin:8px 0"><label class="ev-muted">Świeca SL strefy (przebicie jej korpusu = SL): <input type="date" id="fz-slc" value="' + esc(String(slc).slice(0, 10)) + '" style="width:auto"></label> <button class="hp-btn" style="padding:3px 10px" data-fz-slc="' + esc(e.entry_id) + '" data-fz-tk="' + esc(e.ticker) + '">Zapisz</button> <span id="fz-slc-msg" class="ev-muted">' + (slc ? "" : "nie ustawiono – SL nie jest liczony przez strażnika planu") + "</span></div>";
+        h += '<div class="plx-play" style="margin:8px 0"><label class="ev-muted">Score ręcznie (0–5, puste = rekomendacja ' + fmtScore(scoreAuto(e)) + '): <input type="number" id="fz-score" min="0" max="5" step="0.1" value="' + (e.score_manual != null ? esc(e.score_manual) : "") + '" style="width:70px"></label> <input type="text" id="fz-score-note" placeholder="dlaczego zmieniasz" value="' + esc(e.score_note || "") + '" style="width:200px"> <button class="hp-btn" style="padding:3px 10px" data-fz-score="' + esc(e.entry_id) + '">Zapisz</button> <span id="fz-score-msg" class="ev-muted"></span></div>';
         h += '<div id="fz-zq" data-for="' + esc(e.entry_id) + '"><div class="ev-muted">Jakość strefy: liczę…</div></div>';
         h += '<div class="plx-h">Sąsiednie zagrania tej spółki</div><div class="fz-neigh">' + neighCard("◀ Niżej (w lewo)", cur, prev) + neighCard("Wyżej (w prawo) ▶", cur, next) + "</div>";
         h += '<div class="plx-h">Powody</div>' + ((e.reasons || []).length ? e.reasons.map(r => reasonBlock(r, e)).join("") : '<div class="ev-muted">Brak powodów.</div>');

@@ -28,4 +28,5 @@ Plik `index.html` ma końce linii CRLF. Parametr testowy `?api=` podmienia adres
 - **Take Profit**: w szczegółach planu (Strażnik) linia TP1 i przycisk „Sugestie TP” (tabela celów: sufit, opory, szczyty, Volume Profile, strefy podaży; „Ustaw TP” zapisuje TP w Form); Ocena wejścia pokazuje źródło TP i SL.
 - Strażnik planu: panel **pozycji** (średnia cena zakupu, kurs vs średnia, SL planu, TP planu, R:R od średniej, ryzyko do SL) oraz **przegląd TP** (świeca + wolumen: SIŁA / UMIARKOWANIE / SŁABOŚĆ) przy każdej strefie.
 - **Form v2**: ID zagrań w formacie `TICKER-L01a` nadaje backend; wpisy poprzedniej wersji (archiwum) backend już nie zwraca, więc frontend ich nie pokazuje (bez zmian w kodzie).
+- **Ujednolicenie**: Focus usunięty z menu; Ocena wejścia: ręczna korekta punktów wejścia („Popraw” + notatka), bonus za priorytet, pole maks. budżetu spółki; Form (szczegóły): Score ręcznie + notatka; Transakcje: „popraw” punkty końca dnia; Serwis: bonus za priorytet.
 - Podgląd konkretnej wersji bez cache: `https://raw.githack.com/DonRubi/trading-front-end/<hash commita>/index.html`.
