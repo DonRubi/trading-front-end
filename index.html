@@ -729,7 +729,8 @@
             <button class="tab-btn" onclick="switchSummaryTab('deposits')">Historia depozytu</button> 
             <button class="tab-btn" onclick="switchSummaryTab('open')">Podsumowanie otwartych</button> 
             <button class="tab-btn" onclick="switchSummaryTab('closed')">Podsumowanie zamkniętych</button> 
-            <button class="tab-btn" onclick="switchSummaryTab('score')">Skuteczność wg punktów</button> 
+            <button class="tab-btn" onclick="switchSummaryTab('score')">Skuteczność wg punktów</button>
+            <button class="tab-btn" onclick="switchSummaryTab('audit')">Audyt zasad (SL/TP)</button> 
         </div> 
         <div id="tab-dashboard" class="tab-content active"> 
             <div class="kpi-grid"> 
@@ -794,6 +795,11 @@
         <div id="tab-score" class="tab-content">
             <div class="ev-muted">Czy wyższa punktacja faktycznie daje lepsze wyniki? Raport z zamkniętych transakcji: skuteczność, zwrot na środkach własnych (%) i wielokrotność ryzyka R w przedziałach punktów zapisanych przy transakcji (Form, moment wejścia, razem do budżetu, koniec dnia). Wyniki w % – bez kwot.</div>
             <div id="score-report-body"><div class="ev-empty">Ładowanie raportu…</div></div>
+        </div>
+        <div id="tab-audit" class="tab-content">
+            <div class="ev-muted">Co działo się z kursem po Twoich zakupach i czy trzymanie własnych zasad (SL, TP) dałoby lepszy wynik. Liczone na świecach dziennych od dnia po zakupie; wyniki <b>cenowe</b> (bez dźwigni, walut, dywidend i kosztów).</div>
+            <div class="plx-actions" style="margin:10px 0"><label class="ev-muted">SL uznaję za wybity, gdy: <select id="audit-mode" onchange="loadRuleAudit()"><option value="close">zamknięcie dnia za SL (korpus)</option><option value="touch">kurs dotknie SL (knot)</option></select></label></div>
+            <div id="audit-body"><div class="ev-empty">Ładowanie audytu…</div></div>
         </div>
         <div id="tab-closed" class="tab-content"> 
             <div class="table-controls"> 
@@ -3275,7 +3281,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
         }
 
         // --- SUMMARY MODULE ---
-        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'score') loadScoreReport(); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
+        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'score') loadScoreReport(); if(tab === 'audit') loadRuleAudit(); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
         
         async function initSummaryModule() {
             if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); allTradesData = await res.json() || []; } catch(e) {} }
@@ -3307,6 +3313,42 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 h += `<div class="ev-muted" style="margin-top:12px">Uwaga: przedział z mniej niż ${d.min_n} transakcjami jest anegdotą, nie dowodem; korelacja liczona od ${d.min_corr_n} transakcji. Punkty zapisane są w chwili transakcji, więc późniejsza zmiana zasad w Serwisie nie przestawia historii.</div>`;
                 box.innerHTML = h;
             } catch (e) { box.innerHTML = '<div class="ev-empty ev-bad">Nie udało się wczytać raportu: ' + (e.message || e) + '</div>'; }
+        }
+
+        // --- Summary: audyt zasad SL/TP ---
+        async function loadRuleAudit() {
+            const box = document.getElementById('audit-body'), mode = document.getElementById('audit-mode').value;
+            box.innerHTML = '<div class="ev-empty">Analizuję świece dzienne wszystkich spółek (przy pierwszym wejściu może to potrwać)…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/summary/rule-audit?mode=${mode}`), d = await res.json();
+                if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
+                const f = (v, dec, suf) => v == null ? '–' : String(Math.round(v * Math.pow(10, dec)) / Math.pow(10, dec)).replace('.', ',') + (suf || '');
+                const col = v => v == null ? '' : (v >= 0 ? 'var(--success)' : 'var(--danger)');
+                const px = v => v == null ? '–' : Number(v).toLocaleString('pl-PL', { maximumFractionDigits: v < 10 ? 4 : 2 });
+                const s = d.summary;
+                let h = `<div class="kpi-grid" style="margin:12px 0">` +
+                    `<div class="kpi-card"><h4>Zamknięte / otwarte</h4><div class="value">${s.closed} / ${s.open}</div></div>` +
+                    `<div class="kpi-card"><h4>Suma wyników (faktycznie)</h4><div class="value" style="color:${col(s.actual.sum_pct)}">${f(s.actual.sum_pct, 1, '%')}</div><div class="ev-muted">śr. ${f(s.actual.avg_pct, 1, '%')} · skuteczność ${f(s.actual.win_rate, 0, '%')}</div></div>` +
+                    `<div class="kpi-card"><h4>Suma wyników (wg zasad)</h4><div class="value" style="color:${col(s.rules.sum_pct)}">${f(s.rules.sum_pct, 1, '%')}</div><div class="ev-muted">śr. ${f(s.rules.avg_pct, 1, '%')} · skuteczność ${f(s.rules.win_rate, 0, '%')}</div></div>` +
+                    `<div class="kpi-card"><h4>Doszło do TP / SL jako pierwszego</h4><div class="value">${s.tp_reached} / ${s.sl_first}</div><div class="ev-muted">wśród zamkniętych</div></div></div>`;
+                h += '<div class="plx-h">Odpowiedzi</div><div>';
+                const li = t => `<div style="padding:9px 12px;border:1px solid var(--border-color);border-radius:8px;margin-bottom:6px;line-height:1.5">${t}</div>`;
+                h += li(`<b>Trzymanie zasad vs faktycznie:</b> suma wyników cenowych zamkniętych transakcji wg zasad <b>${f(s.rules.sum_pct, 1, '%')}</b>, faktycznie <b>${f(s.actual.sum_pct, 1, '%')}</b> (dotyczy ${s.rules.n} transakcji; „wg zasad” = wyjście przy pierwszym z SL/TP, a gdy żaden się nie uruchomił – wynik faktyczny).`);
+                if (s.held_through_sl.n) h += li(`<b>Przetrzymane po SL:</b> ${s.held_through_sl.n} transakcji, z czego <b>${s.held_through_sl.recovered}</b> odrobiło (kurs wrócił do TP lub ceny zakupu). Średnio faktycznie ${f(s.held_through_sl.avg_actual_pct, 1, '%')}, a przy wyjściu na SL byłoby ${f(s.held_through_sl.avg_rule_pct, 1, '%')}.`);
+                else h += li('<b>Przetrzymane po SL:</b> brak takich zamkniętych transakcji w próbie.');
+                if (s.early_exit.n) h += li(`<b>Wyjścia przed TP:</b> ${s.early_exit.n} transakcji sprzedanych, zanim kurs doszedł do TP (który osiągnął później). Średnio faktycznie ${f(s.early_exit.avg_actual_pct, 1, '%')}, przy dojściu do TP byłoby ${f(s.early_exit.avg_rule_pct, 1, '%')}.`);
+                if (s.winners.n) h += li(`<b>Drawdown przed zyskiem:</b> wśród ${s.winners.n} zyskownych transakcji mediana najgłębszego spadku po zakupie to <b>${f(s.winners.median_mae_pct, 1, '%')}</b>, a najgłębsze 10% sięga ${f(s.winners.p90_mae_pct, 1, '%')}. <b>${s.winners.would_be_stopped}</b> z nich miało w trakcie spadek głębszy niż odległość do SL (stop wyrzuciłby Cię z pozycji, która ostatecznie zarobiła).`);
+                if (s.open_state.n) h += li(`<b>Otwarte pozycje:</b> ${s.open_state.n}, z czego SL wybity: ${s.open_state.sl_hit}, TP osiągnięty: ${s.open_state.tp_hit}; średni wynik cenowy ${f(s.open_state.avg_pct, 1, '%')}, mediana najgłębszego spadku ${f(s.open_state.median_mae_pct, 1, '%')}.`);
+                h += '</div>';
+                h += '<div class="plx-h" style="margin-top:16px">Transakcje</div><div class="table-responsive"><table class="hp-table" style="width:100%"><thead><tr><th>Zakup</th><th>Spółka</th><th>Cena</th><th>SL</th><th>TP</th><th>Wyjście / teraz</th><th>Faktycznie</th><th>Wg zasad</th><th>Maks. spadek</th><th>Maks. zysk</th><th>Dni</th><th>Po wyjściu</th><th>Werdykt</th></tr></thead><tbody>' +
+                    d.trades.map(r => `<tr><td>${r.buy_date}</td><td><b>${r.ticker}</b> <span class="ev-muted">${r.direction === 'SHORT' ? '▼' : '▲'}${r.status === 'OPEN' ? ' otwarta' : ''}</span></td><td>${px(r.buy)}</td><td>${px(r.sl)}</td><td>${px(r.tp)}</td><td>${r.status === 'CLOSED' ? px(r.sell) : '<span class="ev-muted">w grze</span>'}</td>` +
+                        `<td style="color:${col(r.actual_pct)};font-weight:700">${f(r.actual_pct, 1, '%')}</td><td style="color:${col(r.rule_pct)}">${f(r.rule_pct, 1, '%')}${r.first_event ? ' <span class="ev-muted">(' + r.first_event + ' ' + (r.first_event === 'SL' ? r.sl_date : r.tp_date) + ')</span>' : ''}</td>` +
+                        `<td style="color:var(--danger)">${f(r.mae_pct, 1, '%')}</td><td style="color:var(--success)">${f(r.mfe_pct, 1, '%')}</td><td>${r.days_held}</td><td>${r.after_exit_pct == null ? '–' : f(r.after_exit_pct, 1, '%')}</td><td>${r.verdict}${(r.notes || []).length ? ' <span class="ev-muted">· ' + r.notes.join('; ') + '</span>' : ''}</td></tr>`).join('') +
+                    '</tbody></table></div>';
+                if (d.skipped.length || Object.keys(d.failed_tickers || {}).length) h += `<div class="ev-note" style="margin-top:10px">Pominięto ${d.skipped.length} transakcji (brak świec albo ceny/daty zakupu)${Object.keys(d.failed_tickers || {}).length ? '; nie udało się pobrać świec dla: ' + Object.keys(d.failed_tickers).join(', ') : ''}.</div>`;
+                h += '<div class="ev-muted" style="margin-top:12px">' + d.caveats.join(' ') + '</div>';
+                box.innerHTML = h;
+            } catch (e) { box.innerHTML = '<div class="ev-empty ev-bad">Nie udało się wczytać audytu: ' + (e.message || e) + '</div>'; }
         }
 
         function calculateAndRenderSummary() {
