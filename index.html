@@ -531,6 +531,7 @@
                                         <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div></div>
                     <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01" required></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01" required></div></div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01" required></div>
+                    <div class="form-group"><label>Świeca SL – data świecy, której przebicie korpusem (zamknięciem) oznacza SL</label><input type="date" id="form-slc"></div>
                     <div class="form-group" style="display:none" aria-hidden="true"><label>Powody wejścia (Opcjonalne)</label><input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2..."><input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3..."><input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4..."><input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5..."><datalist id="reasons-list"></datalist></div>
                     <div id="fz-measure" style="display:none">
                         <div class="plx-h" style="margin-top:14px">Powody mierzone na wykresie</div>
@@ -578,6 +579,7 @@
                         <div class="form-group"><label>Wybierz Setup (ID Form)</label><select id="focus-form-id" onchange="onFocusIdChange()"><option value="">Najpierw wybierz ticker...</option></select></div>
                     </div>
                     <div class="form-group" style="margin-bottom: 10px;"><label>Data Analizy</label><input type="date" id="focus-date" required></div>
+                    <div class="form-group" style="margin-bottom: 10px;"><label>Maks. budżet spółki (% kapitału) – ustal przed wejściem</label><input type="number" id="focus-maxbudget" step="0.1" min="0.1" max="100" placeholder="np. 15"><small id="focus-maxbudget-hint" style="color:var(--text-muted)"></small></div>
                     <div class="form-row" style="background: rgba(201,148,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(201,148,0,0.15);">
                         <div class="form-group">
                             <label style="display: flex; justify-content: space-between;">Wybrany Ticker <a id="focus-tv-link" href="#" target="_blank" style="display:none; color: var(--accent); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dashed var(--accent);">📈 TV</a></label>
@@ -2152,6 +2154,7 @@
                 end_zone: document.getElementById('form-end').value, 
                 entry_point: document.getElementById('form-entry').value, 
                 take_profit: document.getElementById('form-tp').value,
+                sl_candle: document.getElementById('form-slc').value,
                 reasons: formReasons
             }; 
             try { 
@@ -2273,13 +2276,25 @@
         }
 
         // Nowa funkcja wywoływana po wybraniu Tickera (Z uwzględnieniem filtra Mute)
+        async function loadFocusBudget(ticker) {
+            const inp = document.getElementById('focus-maxbudget'), hint = document.getElementById('focus-maxbudget-hint');
+            if (!inp) return;
+            inp.value = ''; hint.textContent = '';
+            if (!ticker) return;
+            try {
+                const r = await fetch(`${API_BASE_URL}/api/planner/company-budget?ticker=${encodeURIComponent(ticker)}`), d = await r.json();
+                if (!r.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + r.status));
+                inp.value = d.effective_pct != null ? d.effective_pct : ''; inp.dataset.initial = inp.value;
+                hint.textContent = (d.override_pct != null ? 'ustawione ręcznie' : (d.serwis_pct != null ? 'z Serwisu' : 'brak limitu w Serwisie – podaj budżet')) + ' · ' + d.kind_label + ' · wykorzystano ' + (d.used_pct != null ? Math.round(d.used_pct * 100) / 100 + '%' : '—');
+            } catch (e) { hint.textContent = 'Nie udało się pobrać budżetu: ' + (e.message || e); }
+        }
         function onFocusTickerChange() {
             if(document.getElementById('focus-preview-box')) {
             document.getElementById('focus-preview-box').style.display = 'none';
             }
             const selectedTicker = document.getElementById('focus-ticker-select').value;
             const formSelect = document.getElementById('focus-form-id');
-            
+            loadFocusBudget(selectedTicker);
             if (!selectedTicker) {
                 formSelect.innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
                 onFocusIdChange();
@@ -2488,6 +2503,15 @@
         
         async function submitFocusForm(e) { 
             e.preventDefault(); 
+            const mb = (document.getElementById('focus-maxbudget').value || '').trim(), tk = document.getElementById('focus-ticker').value;
+            if (!mb) { alert('Podaj maksymalny budżet spółki (% kapitału) przed wejściem – wpisz wartość albo ustaw limit w Serwisie.'); document.getElementById('focus-maxbudget').focus(); return; }
+            try {
+              if (mb !== (document.getElementById('focus-maxbudget').dataset.initial || '')) {        // zapisujemy tylko zmianę względem limitu z Serwisu / poprzedniego ustawienia
+                const rb = await fetch(`${API_BASE_URL}/api/planner/company-budget`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ticker: tk, max_budget_pct: mb }) }), jb = await rb.json().catch(() => ({}));
+                if (!rb.ok || jb.status !== 'success') { alert(jb.message || 'Nie udało się zapisać maksymalnego budżetu spółki.'); return; }
+                document.getElementById('focus-maxbudget').dataset.initial = mb;
+              }
+            } catch (err) { alert('Nie udało się zapisać maksymalnego budżetu: ' + (err.message || err)); return; }
             const d = { 
                 entry_id: document.getElementById('focus-form-id').value, 
                 ticker: document.getElementById('focus-ticker').value, 
@@ -5756,9 +5780,19 @@ window.Planer = (function () {
         return '<div class="plx-zone"><div class="plx-zhead"><span class="plx-zside ' + (l.side === "LONG" ? "long" : "short") + '">' + arrow(l.side) + '</span><span class="plx-zrange">' + num(l.start, 2) + " – " + num(l.end, 2) + "</span>" +
             (l.missing ? '<span class="plx-warn">strefa nie istnieje już w Form</span>' : "") +
             '<div class="plx-zbud"><span class="db-help">zainwestowano ' + pct(l.used_pct) + " · do dołożenia " + pct(l.left_pct) + (l.zone_limit_pct != null ? " · limit strefy " + pct(l.zone_limit_pct) : "") + "</span>" +
-            (editable ? '<label class="dbx-field" style="flex-direction:row;align-items:center;gap:6px;"><span>Budżet strefy</span><input class="dbx-in" type="number" step="0.1" min="0.1" max="100" data-leg="' + i + '" value="' + l.planned_pct + '"> %</label><button class="dbx-icon dbx-del" type="button" onclick="Planer.removeLeg(' + i + ')" title="Usuń strefę z planu">✕</button>'
-                : "<b>budżet " + pct(l.planned_pct) + "</b>") + "</div></div>" + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l, i, editable && !l.missing) + "</div>";
+            (editable && !l.auto ? '<label class="dbx-field" style="flex-direction:row;align-items:center;gap:6px;"><span>Budżet strefy</span><input class="dbx-in" type="number" step="0.1" min="0.1" max="100" data-leg="' + i + '" value="' + l.planned_pct + '"> %</label><button class="dbx-icon dbx-del" type="button" onclick="Planer.removeLeg(' + i + ')" title="Usuń strefę z planu">✕</button>'
+                : (l.auto ? "<b>limit strefy " + (l.planned_pct != null ? pct(l.planned_pct) : "—") + "</b>" : "<b>budżet " + pct(l.planned_pct) + "</b>")) + "</div></div>" + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l, i, editable && !l.missing) + "</div>";
     }
+    function maxBudgetHtml(p) {
+        const m = p.max_budget || {}, c = p.company;
+        return '<div class="plx-play" style="margin:8px 0"><label class="db-help">Maks. budżet spółki: <input type="number" id="plx-maxb" step="0.1" min="0.1" max="100" value="' + (m.override_pct != null ? m.override_pct : "") + '" placeholder="' + (m.serwis_pct != null ? m.serwis_pct : "bez limitu") + '" style="width:90px"> % kapitału</label> ' +
+            '<button class="hp-btn" style="padding:3px 10px" data-plx-maxb="' + esc(p.ticker) + '">Zapisz</button> <span class="db-help">' + (m.override_pct != null ? "ustawione ręcznie" : "z Serwisu" + (m.serwis_pct != null ? " (" + pct(m.serwis_pct) + ")" : " – brak limitu")) + ' · puste pole = limit z Serwisu · wykorzystano ' + pct(c.used_pct) + "</span></div>";
+    }
+    document.addEventListener("click", async e => {
+        const b = e.target.closest && e.target.closest("[data-plx-maxb]"); if (!b || !st.detail) return;
+        try { await api("/api/planner/company-budget", { ticker: b.dataset.plxMaxb, max_budget_pct: $("#plx-maxb").value }); openPlan(st.detail.id); load(); }
+        catch (err) { msg(err.message); }
+    });
     function drawDetail() {
         const p = st.detail, c = p.company, open_ = p.status === "OPEN";
         const kpi = (l, v, s) => '<div class="plx-kpi"><div class="l">' + l + '</div><div class="v">' + v + "</div>" + (s ? '<div class="s">' + s + "</div>" : "") + "</div>";
@@ -5769,14 +5803,17 @@ window.Planer = (function () {
             '<div class="plx-actions"><button class="hp-btn" onclick="Planer.goTrades()">📊 Transakcje</button><button class="hp-btn" onclick="Planer.closeDetail()">✕ Zamknij</button></div></div>' +
             '<div class="plx-kpis">' +
             kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : " <small class='db-help'>bez limitu</small>"), "wykorzystane w otwartych transakcjach (% kapitału)") +
-            kpi("Zarezerwowane w planie", pct(p.reserved_pct), "do dołożenia w strefach planu") +
+            kpi("Strefy spółki", (p.zones ? p.zones.total : p.legs.length) + ' <small class="db-help">z transakcjami: ' + (p.zones ? p.zones.with_trades : "—") + "</small>", p.zones && p.zones.limit_pct != null ? "limit na strefę: " + pct(p.zones.limit_pct) + " kapitału" : "bez limitu na strefę") +
+            (p.reserved_pct > 0 ? kpi("Zarezerwowane w planie", pct(p.reserved_pct), "do dołożenia w ręcznie wybranych strefach") : "") +
             kpi("Zostaje po inwestycji", '<span class="' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '">' + pct(after) + "</span>", "budżet spółki po zainwestowaniu całego planu") +
             kpi("Inwestycje w spółce", c.open_trades + (c.max_trades != null ? " / " + c.max_trades : ""), c.trades_left != null ? (c.trades_left > 0 ? "wolnych miejsc: " + c.trades_left : '<span class="plx-neg">limit wyczerpany</span>') : "bez limitu liczby") + "</div>" +
             (p.capital_known ? "" : '<div class="plx-warn">Nie udało się wyliczyć kapitału - procenty budżetu są niedostępne.</div>') +
+            maxBudgetHtml(p) +
+            (p.unassigned_pct > 0 ? '<div class="plx-warn">Transakcje poza strefami: ' + pct(p.unassigned_pct) + " kapitału (cena zakupu daleko od stref z Form i brak powiązanego zagrania).</div>" : "") +
             (open_ ? '<div id="plx-watch" class="plx-watch"></div>' : "") +
-            '<div class="plx-h">Strefy planu i dostępne zagrania z Form</div>' +
+            '<div class="plx-h">Strefy spółki z Form i dostępne zagrania</div>' +
             (p.legs.length ? p.legs.map((l, i) => legCard(l, i, open_)).join("") : '<div class="db-help">Plan nie ma stref.</div>') +
-            (open_ ? '<div class="plx-actions"><select id="plx-addleg" class="dbx-in" style="max-width:340px" onfocus="Planer.fillAddLeg()"><option value="">＋ Dodaj strefę z Form…</option></select><button class="hp-btn hp-primary" onclick="Planer.saveLegs()">Zapisz budżety stref</button><span id="plx-detail-msg" class="plx-err"></span></div>' : "") +
+            (open_ && p.legs.some(l => !l.auto) ? '<div class="plx-actions"><select id="plx-addleg" class="dbx-in" style="max-width:340px" onfocus="Planer.fillAddLeg()"><option value="">＋ Dodaj strefę z Form…</option></select><button class="hp-btn hp-primary" onclick="Planer.saveLegs()">Zapisz budżety stref</button><span id="plx-detail-msg" class="plx-err"></span></div>' : "") +
             '<div class="plx-h">Transakcje w planie (z zakładki Transakcje)</div>' +
             (trades ? '<div class="hp-table-wrap"><table class="hp-table"><thead><tr><th>Data</th><th>Kierunek</th><th>Cena zakupu</th><th>Zaangażowano</th><th>Wynik</th><th>Status</th></tr></thead><tbody>' + trades + "</tbody></table></div>"
                 : '<div class="db-help">Brak transakcji w tym planie. Nowa transakcja spółki dodana w Transakcjach trafi tu automatycznie, dopóki plan jest otwarty.</div>') +
@@ -5792,7 +5829,8 @@ window.Planer = (function () {
     function cardHtml(l) {
         if (!l.card) return "";
         const c = l.card, col = CARD_COL[c.level] || "#848e9c", inv = l.investigation;
-        let h = '<div class="plx-play" style="border-left:3px solid ' + col + ';padding-left:8px;margin:6px 0"><b style="color:' + col + '">' + c.icon + " " + esc(c.label) + "</b> " + c.reasons.map(esc).join(" ") + "</div>";
+        let h = (l.sl ? '<div class="plx-play db-help">SL strefy (dół korpusu świecy ' + esc(l.sl.candle) + ", z " + (l.sl.source === "Form" ? "Form" : "planu") + "): " + price(l.sl.level) + (l.sl.broken ? ' – <b style="color:var(--danger)">złamany od ' + esc(l.sl.since) + "</b>" : " – nienaruszony") + "</div>" : '<div class="plx-play db-help">Brak świecy SL tej strefy – ustaw ją w Form (szczegóły zagrania).</div>') +
+            '<div class="plx-play" style="border-left:3px solid ' + col + ';padding-left:8px;margin:6px 0"><b style="color:' + col + '">' + c.icon + " " + esc(c.label) + "</b> " + c.reasons.map(esc).join(" ") + "</div>";
         if (inv) {
             h += '<div class="plx-play"><b>Badanie:</b> ' + esc(inv.text) + "</div>";
             h += '<div class="plx-play">Kolejne wejścia: ' + (inv.next_entries && inv.next_entries.length ? inv.next_entries.map(n => price(n.zone[0]) + "–" + price(n.zone[1]) + " (" + num(n.distance_pct, 1) + "% od kursu" + (n.within_gap ? "" : " – za daleko") + (n.in_plan ? ", w planie" : "") + ")").join(" · ") : "brak stref poniżej w Form") + "</div>";
@@ -6426,6 +6464,17 @@ window.FormZones = (function () {
         const ref = d.ref ? "<div>Wartość odniesienia: <b>" + price(d.ref.value) + "</b> (" + esc(d.ref.label || d.ref.role) + ") → " + (APPLYL[d.ref.applies_to] || "–") + "</div>" : "";
         return '<details class="fz-rblock"><summary>' + chip(name, e) + "</summary>" + ref + items + facts + '<div class="ev-muted">zweryfikowano: ' + esc((d.verified_at || "").slice(0, 10)) + "</div></details>";
     }
+    document.addEventListener("click", async ev => {
+        const b = ev.target.closest && ev.target.closest("[data-fz-slc]"); if (!b) return;
+        const msg = $("#fz-slc-msg"), val = ($("#fz-slc").value || "").trim();
+        try {
+            const r = await fetch(API_BASE_URL + "/api/form/sl-candle", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: b.dataset.fzTk, entry_id: b.dataset.fzSlc, sl_candle: val }) });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + r.status));
+            (formEntries || []).forEach(x => { if ((d.entries || []).indexOf(x.entry_id) >= 0) x.sl_candle = val || null; });
+            msg.textContent = val ? "Zapisano (" + d.entries.length + " wpisów strefy)." : "Usunięto."; msg.style.color = "var(--success)";
+        } catch (err) { msg.textContent = err.message; msg.style.color = "var(--danger)"; }
+    });
     function renderDetail() {
         const e = (formEntries || []).find(x => x.entry_id === D.id), o = $("#fz-detail");
         if (!e) { closeDetail(); return; }
@@ -6441,6 +6490,8 @@ window.FormZones = (function () {
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.tp) + " / " + price(p.sl) + '</div><div class="s">R:R ' + num(p.rr, 2) + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Score</div><div class="v">' + fmtScore(p.score) + '/5</div><div class="s">suma jakości powodów' + (e.priority === 1 ? " · ⚡ priorytet" : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Status</div><div class="v" style="color:' + STCOL[p.status] + '">' + esc(p.status) + '</div><div class="s">dodano ' + (e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–") + "</div></div></div>";
+        const zoneIds = new Set(((cur.z && cur.z.all) || []).map(x => x.e.entry_id).concat([e.entry_id])), slc = ((formEntries || []).find(x => zoneIds.has(x.entry_id) && x.sl_candle) || {}).sl_candle || "";
+        h += '<div class="plx-play" style="margin:8px 0"><label class="ev-muted">Świeca SL strefy (przebicie jej korpusu = SL): <input type="date" id="fz-slc" value="' + esc(String(slc).slice(0, 10)) + '" style="width:auto"></label> <button class="hp-btn" style="padding:3px 10px" data-fz-slc="' + esc(e.entry_id) + '" data-fz-tk="' + esc(e.ticker) + '">Zapisz</button> <span id="fz-slc-msg" class="ev-muted">' + (slc ? "" : "nie ustawiono – SL nie jest liczony przez strażnika planu") + "</span></div>";
         h += '<div id="fz-zq" data-for="' + esc(e.entry_id) + '"><div class="ev-muted">Jakość strefy: liczę…</div></div>';
         h += '<div class="plx-h">Sąsiednie zagrania tej spółki</div><div class="fz-neigh">' + neighCard("◀ Niżej (w lewo)", cur, prev) + neighCard("Wyżej (w prawo) ▶", cur, next) + "</div>";
         h += '<div class="plx-h">Powody</div>' + ((e.reasons || []).length ? e.reasons.map(r => reasonBlock(r, e)).join("") : '<div class="ev-muted">Brak powodów.</div>');
