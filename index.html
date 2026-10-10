@@ -5783,6 +5783,30 @@ window.Planer = (function () {
             (editable && !l.auto ? '<label class="dbx-field" style="flex-direction:row;align-items:center;gap:6px;"><span>Budżet strefy</span><input class="dbx-in" type="number" step="0.1" min="0.1" max="100" data-leg="' + i + '" value="' + l.planned_pct + '"> %</label><button class="dbx-icon dbx-del" type="button" onclick="Planer.removeLeg(' + i + ')" title="Usuń strefę z planu">✕</button>'
                 : (l.auto ? "<b>limit strefy " + (l.planned_pct != null ? pct(l.planned_pct) : "—") + "</b>" : "<b>budżet " + pct(l.planned_pct) + "</b>")) + "</div></div>" + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l, i, editable && !l.missing) + "</div>";
     }
+    function tpTable(d) {
+        const st_ = c => '<span style="display:inline-block;height:6px;width:' + Math.round(c.strength * 60) + 'px;background:var(--accent-hover);border-radius:3px"></span> ' + num(c.strength, 2);
+        let h = '<div class="plx-play"><b>Cele dla strefy ' + price(d.zone[0]) + "–" + price(d.zone[1]) + "</b> · wejście " + price(d.entry) + " · SL " + price(d.sl) + " (" + esc(d.sl_source) + ") · ATR " + price(d.atr) + "</div>";
+        if (d.ladder && d.ladder.length) h += '<div class="plx-play"><b>Proponowana drabinka:</b> ' + d.ladder.map(c => c.role + " " + price(c.price) + " (" + (c.rr != null ? "R:R " + num(c.rr, 1) + ", " : "") + (c.dist_pct > 0 ? "+" : "") + num(c.dist_pct, 1) + "%)").join(" → ") + "</div>";
+        if (d.rr_marks) h += '<div class="plx-play db-help">Dla porównania mechaniczne R:R 2 = ' + price(d.rr_marks.rr2) + ", R:R 3 = " + price(d.rr_marks.rr3) + ".</div>";
+        h += '<div class="table-responsive"><table class="ev-table"><thead><tr><th>Poziom</th><th>Cena</th><th>Odl.</th><th>R:R</th><th>Siła</th><th>Uwagi</th><th></th></tr></thead><tbody>' +
+            (d.candidates.length ? d.candidates.map(c => "<tr><td>" + esc(c.label) + '</td><td><b>' + (c.lo != null && c.hi != null && c.kind !== "strefa_podazy" ? price(c.lo) + "–" + price(c.hi) : price(c.price)) + "</b></td><td>" + (c.dist_pct > 0 ? "+" : "") + num(c.dist_pct, 1) + "%</td><td>" + (c.rr != null ? num(c.rr, 1) : "–") + "</td><td>" + st_(c) + "</td><td class='db-help'>" + c.notes.map(esc).join("; ") + '</td><td><button class="hp-btn" style="padding:2px 9px" data-plx-tpset="' + esc(d.entry_id) + '" data-price="' + c.price + '" title="Zapisz jako Take Profit tego zagrania w Form">Ustaw TP</button></td></tr>').join("") : '<tr><td colspan="7" class="db-help">Brak kandydatów powyżej wejścia.</td></tr>') + "</tbody></table></div>";
+        h += '<div class="db-help">Sufit = wsparcie testowane ≥3 razy, przebite w dół, do którego cena nie wróciła (często z wysokimi słupkami Volume Profile). Pełne wyjście na TP z zapisu średnio nie poprawiało wyników w historii – traktuj cele jako punkty częściowej realizacji i przeglądu pozycji.</div><div id="plx-tp-msg-' + esc(d.entry_id) + '" class="db-help"></div>';
+        return h;
+    }
+    document.addEventListener("click", async e => {
+        const b = e.target.closest && e.target.closest("[data-plx-tp]"), set = e.target.closest && e.target.closest("[data-plx-tpset]");
+        if (b && st.detail) {
+            const box = $("#plx-tp-" + b.dataset.plxTp); if (!box) return;
+            if (box.innerHTML) { box.innerHTML = ""; return; }
+            box.innerHTML = '<div class="db-help">Szukam celów (sufity, opory, Volume Profile)…</div>';
+            try { const d = await api("/api/planner/tp-suggestions?ticker=" + encodeURIComponent(st.detail.ticker) + "&entry_id=" + encodeURIComponent(b.dataset.plxTp)); box.innerHTML = tpTable(d); }
+            catch (err) { box.innerHTML = '<div class="plx-warn">' + esc(err.message) + "</div>"; }
+        } else if (set && st.detail) {
+            const id = set.dataset.plxTpset, m = $("#plx-tp-msg-" + id);
+            try { await api("/api/form/edit", { old_entry_id: id, take_profit: set.dataset.price }); if (m) { m.textContent = "Zapisano TP " + price(parseFloat(set.dataset.price)) + " w Form (zagranie " + id + ")."; m.style.color = "var(--success)"; } if (typeof fetchFormEntries === "function") fetchFormEntries(true); }
+            catch (err) { if (m) { m.textContent = err.message; m.style.color = "var(--danger)"; } }
+        }
+    });
     function maxBudgetHtml(p) {
         const m = p.max_budget || {}, c = p.company;
         return '<div class="plx-play" style="margin:8px 0"><label class="db-help">Maks. budżet spółki: <input type="number" id="plx-maxb" step="0.1" min="0.1" max="100" value="' + (m.override_pct != null ? m.override_pct : "") + '" placeholder="' + (m.serwis_pct != null ? m.serwis_pct : "bez limitu") + '" style="width:90px"> % kapitału</label> ' +
@@ -5829,7 +5853,9 @@ window.Planer = (function () {
     function cardHtml(l) {
         if (!l.card) return "";
         const c = l.card, col = CARD_COL[c.level] || "#848e9c", inv = l.investigation;
-        let h = (l.sl ? '<div class="plx-play db-help">SL strefy (dół korpusu świecy ' + esc(l.sl.candle) + ", z " + (l.sl.source === "Form" ? "Form" : "planu") + "): " + price(l.sl.level) + (l.sl.broken ? ' – <b style="color:var(--danger)">złamany od ' + esc(l.sl.since) + "</b>" : " – nienaruszony") + "</div>" : '<div class="plx-play db-help">Brak świecy SL tej strefy – ustaw ją w Form (szczegóły zagrania).</div>') +
+        const t1 = l.tp1 && l.tp1.price ? '<div class="plx-play db-help">TP1: <b>' + price(l.tp1.price) + "</b> (" + (l.tp1.source === "sl_strefy_wyzej" ? "SL strefy wyżej " + price(l.tp1.zone[0]) + "–" + price(l.tp1.zone[1]) : "TP z Form – brak strefy wyżej ze świecą SL") + ') <button class="hp-btn" style="padding:2px 9px" data-plx-tp="' + esc(l.entry_id) + '">Sugestie TP</button></div><div id="plx-tp-' + esc(l.entry_id) + '"></div>'
+            : '<div class="plx-play db-help">TP1: brak (ustaw świecę SL strefy wyżej albo TP w Form) <button class="hp-btn" style="padding:2px 9px" data-plx-tp="' + esc(l.entry_id) + '">Sugestie TP</button></div><div id="plx-tp-' + esc(l.entry_id) + '"></div>';
+        let h = t1 + (l.sl ? '<div class="plx-play db-help">SL strefy (dół korpusu świecy ' + esc(l.sl.candle) + ", z " + (l.sl.source === "Form" ? "Form" : "planu") + "): " + price(l.sl.level) + (l.sl.broken ? ' – <b style="color:var(--danger)">złamany od ' + esc(l.sl.since) + "</b>" : " – nienaruszony") + "</div>" : '<div class="plx-play db-help">Brak świecy SL tej strefy – ustaw ją w Form (szczegóły zagrania).</div>') +
             '<div class="plx-play" style="border-left:3px solid ' + col + ';padding-left:8px;margin:6px 0"><b style="color:' + col + '">' + c.icon + " " + esc(c.label) + "</b> " + c.reasons.map(esc).join(" ") + "</div>";
         if (inv) {
             h += '<div class="plx-play"><b>Badanie:</b> ' + esc(inv.text) + "</div>";
@@ -6180,7 +6206,7 @@ window.Wejscie = (function () {
             optionsHtml(d) +
             '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Zagranie</div><div class="v">' + arrow(p.side) + " " + price(p.zone[0]) + "–" + price(p.zone[1]) + '</div><div class="s">' + (inZone ? "kurs w strefie" : "kurs poza strefą") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Punkt wejścia</div><div class="v">' + price(p.entry) + '</div><div class="s">' + (p.entry_is_zone_mid ? "środek strefy (brak punktu w Form)" : "odległość " + spct(dist)) + "</div></div>" +
-            '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.take_profit) + " / " + price(p.stop_loss) + '</div><div class="s">R:R ' + (rr ? num(rr, 1) : "–") + "</div></div></div>" +
+            '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.take_profit) + " / " + price(p.stop_loss) + '</div><div class="s">R:R ' + (rr ? num(rr, 1) : "–") + '<br>TP: ' + esc(p.tp_source || "Form") + (p.tp_zone ? " " + price(p.tp_zone[0]) + "–" + price(p.tp_zone[1]) : "") + ' · SL: ' + esc(p.sl_source || "Form") + "</div></div></div>" +
             (d.coverage != null && d.coverage < 0.7 ? '<div class="ev-note">⚠ Ocena opiera się na ' + Math.round(d.coverage * 100) + '% wag – brakuje danych do części warunków (np. CVD, świece), więc wynik może być zawyżony.</div>' : "") +
             '<div id="ev-zq"></div>' +
             (d.scoring ? '<div class="plx-h">Punktacja (zasady z Serwisu)</div><div class="plx-kpis"><div class="plx-kpi"><div class="l">Form × ' + num(d.scoring.form_mult, 1) + '</div><div class="v">' + num(d.scoring.form_points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.form_max_points, 0) + '</small></div><div class="s">Score z Form ' + num(d.scoring.form_score, 1) + '/5</div></div>' +
