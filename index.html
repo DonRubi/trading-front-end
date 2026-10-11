@@ -2299,7 +2299,7 @@
             const chk = window.Measure ? Measure.collect(formReasons) : { ok: true, details: [] };
             if (!chk.ok) { alert(chk.message); return; }
             const opd = window.Measure ? Measure.opdCheck() : null;
-            if (opd && opd.ok === false && !confirm(opd.text + "\n\nZapisać mimo to?")) return;
+            if (opd && (opd.ok === false || opd.far) && !confirm(opd.text + "\n\nZapisać mimo to?")) return;
             const data = { 
                 reasons_detail: chk.details,
                 ticker: document.getElementById('form-ticker').value, 
@@ -7065,10 +7065,17 @@ window.Measure = (function () {
         let res = { ok: null, text: name + " " + price(o.level) + " (" + dateOf(o.t) + ")." + prev };
         if (z) {
             const ok = long ? z.lo > o.level : z.hi < o.level;
-            res = { ok: ok, text: (ok ? "✓ Strefa " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dateOf(o.t) + ") – zgodnie z zasadą " + (long ? "wyższych dołków" : "niższych szczytów") + "."
+            // odległość strefy od OPD w ATR (im dalej, tym większe ryzyko przy SL na OPD): ≤ 1,5 ATR ok, 1,5–2 uwaga, > 2 ostrzeżenie
+            const seg = M.bars.slice(-15), atr = seg.length > 1 ? seg.slice(1).reduce((a, b, k) => a + Math.max(b.h - b.l, Math.abs(b.h - seg[k].c), Math.abs(b.l - seg[k].c)), 0) / (seg.length - 1) : 0;
+            const gap = long ? z.lo - o.level : o.level - z.hi, gapAtr = atr ? gap / atr : null;
+            const entry = parseFloat($("#form-entry").value) || (z.lo + z.hi) / 2, riskPct = Math.abs(entry - o.level) / entry * 100;
+            const far = ok && gapAtr != null && gapAtr > 2, mid = ok && gapAtr != null && gapAtr > 1.5 && !far;
+            const dist = gapAtr == null ? "" : " Odległość strefy od " + name + ": " + num(gapAtr, 1) + " ATR (" + num(Math.abs(gap) / o.level * 100, 1) + "%), od wejścia do " + name + " " + num(riskPct, 1) + "%" +
+                (far ? " – ⚠ za daleko (> 2 ATR): duże ryzyko przy SL na " + name + "; rozważ strefę bliżej " + name + " albo mniejszą pozycję." : mid ? " – uwaga, blisko granicy 2 ATR." : " – w normie (≤ 1,5 ATR).");
+            res = { ok: ok, far: far, mid: mid, gap_atr: gapAtr, text: (ok ? "✓ Strefa " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dateOf(o.t) + ") – zgodnie z zasadą " + (long ? "wyższych dołków" : "niższych szczytów") + "." + dist
                 : "✗ Strefa nie leży " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dateOf(o.t) + ") – dla " + (long ? "LONG strefa musi być powyżej ostatniego potwierdzonego dołka" : "SHORT strefa musi być poniżej ostatniego potwierdzonego szczytu") + ".") + prev };
         }
-        if (box) { box.textContent = res.text; box.style.color = res.ok === false ? "var(--danger)" : res.ok ? "var(--success)" : ""; }
+        if (box) { box.textContent = res.text; box.style.color = res.ok === false || res.far ? "var(--danger)" : res.mid ? "var(--accent-hover)" : res.ok ? "var(--success)" : ""; }
         const sl = parseFloat($("#form-sl").value);
         if (slb && z && !isNaN(sl)) {
             const okSl = long ? sl <= z.lo : sl >= z.hi;
@@ -7077,7 +7084,7 @@ window.Measure = (function () {
         }
         return res;
     }
-    document.addEventListener("input", e => { if (["form-start", "form-end", "form-sl"].indexOf(e.target.id) >= 0 && candle) { drawBase(); opdCheck(); } });
+    document.addEventListener("input", e => { if (["form-start", "form-end", "form-sl", "form-entry"].indexOf(e.target.id) >= 0 && candle) { drawBase(); opdCheck(); } });
     document.addEventListener("change", e => { if (e.target.id === "form-direction" && candle) { drawBase(); opdCheck(); } });
     document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-pick]"); if (b) { e.preventDefault(); if (M.pick === "zone" && b.dataset.pick === "zone" && M.pickT.length) { M.pick = null; setStatus(""); drawPickButtons(); } else startPick(b.dataset.pick); } });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && M.pick) { M.pick = null; setStatus(""); drawPickButtons(); e.stopPropagation(); } }, true);
