@@ -369,6 +369,7 @@
         .fz-zblock { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; } .fz-zhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; flex-wrap: wrap; } .fz-zbody { padding: 0 14px 10px; display: none; } .fz-zblock.open .fz-zbody { display: block; } .fz-zblock.open .fz-chev { transform: rotate(90deg); }
         #fz-modal .form-group input, #fz-modal .form-group select { width: 100%; }
         @media (max-width: 760px) { .fz-sub { display: block; overflow-x: auto; } }
+        .fz-side { border: 1px solid var(--accent); background: transparent; color: var(--accent-hover); border-radius: 999px; padding: 0 8px; font-size: .78rem; cursor: pointer; margin-left: 4px; }
         .fz-q { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--accent); background: transparent; color: var(--accent-hover); font-weight: 700; font-size: 12px; cursor: pointer; padding: 0; margin-left: 4px; vertical-align: middle; }
         .fz-help { background: rgba(252,213,53,.06); border: 1px solid rgba(252,213,53,.35); border-radius: 10px; padding: 10px 14px; margin: 6px 0 10px; font-size: .9em; line-height: 1.5; color: var(--text-main); white-space: normal; }
         .eod-det td { vertical-align: top; } .eod-det tr.eod-off { opacity: .55; } .eod-det tr.eod-sum td { border-top: 2px solid var(--border-color); } .eod-rule { margin-top: 4px; font-size: .85em; }
@@ -6853,7 +6854,7 @@ window.Measure = (function () {
         trend: { label: "Zdrowy trend", slots: ["Ostatni dołek (dla short: szczyt) – opcjonalnie"], need: 0, bar: true, help: "Aplikacja sama znajduje szczyty i dołki (HH/HL). Możesz kliknąć świecę własnego ostatniego dołka (dla short: szczytu) – liczy się dół korpusu – i wtedy to on jest sprawdzany." },
         fibo: { label: "Poziomy FIBO", slots: ["Początek swingu", "Koniec swingu"], need: 2, log: true, suggest: "fibo_leg", help: "Kliknij początek i koniec swingu (wg knotów). „Podpowiedz” bierze ostatni ruch trendu." },
         one2one: { label: "Korekta 1:1", slots: ["A – start korekty", "B – koniec pierwszej fali", "C – koniec odbicia"], need: 3, help: "Pierwsza fala korekty A→B, odbicie do C; druga fala ma być równa pierwszej (standardowo i logarytmicznie)." },
-        xabcd: { label: "XABCD", slots: ["X", "A", "B", "C", "D"], need: 5, help: "Pięć punktów formacji harmonicznej wg knotów; D to punkt odniesienia (PRZ)." },
+        xabcd: { label: "XABCD", slots: ["X", "A", "B", "C"], need: 4, help: "Cztery punkty formacji harmonicznej (X, A, B, C) – punkt D i strefę odwrócenia (PRZ) aplikacja wyliczy z proporcji. Góra/dół świecy dobiera się automatycznie (punkt wyżej od sąsiadów = góra), możesz to zmienić przy punkcie." },
         rgr: { label: "RGR", slots: ["Lewe ramię", "Głowa", "Prawe ramię", "Szyja – punkt 1 (opcj.)", "Szyja – punkt 2 (opcj.)"], need: 3, help: "Lewe ramię, głowa, prawe ramię; linię szyi wyznaczę sam, albo wskaż jej dwa punkty." },
         elliott: { label: "Fale Elliotta", slots: ["0", "1", "2", "3", "4", "5", "A", "B", "C"], need: 3, help: "Punkty 0–5 impulsu (min. 3) i opcjonalnie korekta A, B, C wg knotów. Ostatni punkt wyznacza prognozę kolejnej fali." },
         vwap: { label: "VWAP", slots: ["Kotwica (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie VWAP kotwiczony od ostatniego dołka i od ostatniego szczytu; możesz wskazać własną świecę." },
@@ -6903,13 +6904,13 @@ window.Measure = (function () {
         if (chart) return true;
         chart = LightweightCharts.createChart(box, { autoSize: true, layout: { background: { type: "solid", color: "transparent" }, textColor: "#848e9c", fontSize: 12 },
             grid: { vertLines: { color: "rgba(132,142,156,0.08)" }, horzLines: { color: "rgba(132,142,156,0.08)" } }, rightPriceScale: { borderColor: "rgba(132,142,156,0.25)" },
-            timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 6 }, crosshair: { mode: M.magnet ? 1 : 0 } });
+            timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 6 }, crosshair: { mode: 0 } });      // magnes własny (knoty i korpusy), nie tylko zamknięcie
         candle = chart.addCandlestickSeries({ upColor: "#0ecb81", downColor: "#f6465d", borderUpColor: "#0ecb81", borderDownColor: "#f6465d", wickUpColor: "#0ecb81", wickDownColor: "#f6465d" });
         vol = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", color: "rgba(132,142,156,0.35)" });
         chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
         prim = makePrim(); candle.attachPrimitive(prim);
         chart.subscribeClick(onClick);
-        chart.subscribeCrosshairMove(p => { const b = p && p.time ? M.bars.find(x => x.t === p.time) : M.bars[M.bars.length - 1]; drawOhlc(b); });
+        chart.subscribeCrosshairMove(p => { const b = p && p.time ? M.bars.find(x => x.t === p.time) : M.bars[M.bars.length - 1]; drawOhlc(b); previewSnap(p); });
         return true;
     }
     function drawOhlc(b) {
@@ -6961,7 +6962,10 @@ window.Measure = (function () {
         if (candle) candle.setMarkers([]);
         drawBase();
     }
-    function pickMarkers() { return M.anchors.map((a, i) => ({ time: a.t, position: "aboveBar", color: "#fcd535", shape: "arrowDown", text: ((TYPES[M.type] || {}).slots || [])[i] ? String(i + 1) : "" })); }
+    function pickMarkers() {
+        const sl = (TYPES[M.type] || {}).slots || [];
+        return M.anchors.map((a, i) => ({ time: a.t, position: a.kind === "L" ? "belowBar" : "aboveBar", color: "#fcd535", shape: a.kind === "L" ? "arrowUp" : "arrowDown", text: sl[i] ? (sl[i].length <= 2 ? sl[i] : String(i + 1)) : "" }));
+    }
     function drawResult(r) {
         clearOverlay(); if (!r) { candle && candle.setMarkers(pickMarkers().sort((a, b) => a.time - b.time)); return; }
         const ov = r.overlay || {}, ST = { dashed: 2, dotted: 1, solid: 0 };
@@ -6979,13 +6983,48 @@ window.Measure = (function () {
         const max = T.slots.length; if (M.anchors.length >= max) return;
         const bar = M.bars.find(b => b.t === param.time); if (!bar) return;
         const y = candle.coordinateToPrice(param.point.y);
-        let p = null;
-        if (!T.bar) {              // punkt na cenie: magnes przyciąga do knota (H/L) albo do brzegu korpusu (O/C) najbliżej kliknięcia
-            const cands = M.magnet ? [bar.h, Math.max(bar.o, bar.c), Math.min(bar.o, bar.c), bar.l] : [y];
-            p = cands.reduce((best, c) => Math.abs(c - y) < Math.abs(best - y) ? c : best, cands[0]);
-        }
-        M.anchors.push({ t: bar.t, p: p }); M.result = null; drawResult(null); drawEditor();
+        if (!T.bar) { M.anchors.push({ t: bar.t, y: y, side: "auto" }); resnap(); }      // punkt na cenie: strona świecy (góra/dół) i magnes (knot/korpus)
+        else M.anchors.push({ t: bar.t, p: null });
+        M.result = null; drawResult(null); drawEditor();
         if (T.need === 0) verify();      // typy z opcjonalną kotwicą (trend, VWAP, VP) liczą się od razu po wskazaniu świecy
+    }
+
+    // ---------- strona świecy (góra / dół) i magnes: knoty i korpusy po obu stronach ----------
+    const ALT = { xabcd: 1, one2one: 1, elliott: 1, fibo: 1 };          // formacje z naprzemiennymi szczytami i dołkami
+    function snapFor(bar, y, side) {
+        const up = [[bar.h, "knot górny"], [Math.max(bar.o, bar.c), "korpus górny"]], dn = [[bar.l, "knot dolny"], [Math.min(bar.o, bar.c), "korpus dolny"]];
+        const c = side === "H" ? up : side === "L" ? dn : up.concat(dn);
+        if (!M.magnet) return side ? c[0] : [y, "kliknięcie"];
+        return c.reduce((b, x) => Math.abs(x[0] - y) < Math.abs(b[0] - y) ? x : b, c[0]);
+    }
+    function autoSide(i) {                                               // naprzemienność: punkt wyżej od sąsiednich punktów = góra świecy
+        if (!ALT[M.type]) return null;
+        const a = M.anchors, me = a[i], val = x => x.y != null ? x.y : x.p;
+        const nb = [a[i - 1], a[i + 1]].filter(x => x && val(x) != null).map(val);
+        if (!nb.length || val(me) == null) return null;
+        return val(me) >= nb.reduce((s, v) => s + v, 0) / nb.length ? "H" : "L";
+    }
+    function resnap() {
+        M.anchors.forEach((a, i) => {
+            if (a.y == null) return;
+            const bar = M.bars.find(b => b.t === a.t); if (!bar) return;
+            const side = a.side && a.side !== "auto" ? a.side : autoSide(i);
+            const r = snapFor(bar, a.y, side);
+            a.p = r[0]; a.src = r[1]; a.kind = side || (r[0] >= (bar.h + bar.l) / 2 ? "H" : "L");
+        });
+    }
+    let snapLine = null;
+    function previewSnap(p) {                                            // podgląd magnesu: linia ceny, do której przyciągnie kliknięcie
+        const T = TYPES[M.type];
+        const hide = () => { if (snapLine) { try { candle.removePriceLine(snapLine); } catch (e) {} snapLine = null; } };
+        if (!candle || !T || T.bar || T.external || !M.magnet || !p || !p.time || !p.point || M.anchors.length >= T.slots.length) { hide(); return; }
+        const bar = M.bars.find(b => b.t === p.time); if (!bar) { hide(); return; }
+        const y = candle.coordinateToPrice(p.point.y); if (y == null) { hide(); return; }
+        const last = M.anchors[M.anchors.length - 1];
+        const side = ALT[M.type] && last && last.kind ? (last.kind === "H" ? "L" : "H") : null;
+        const r = snapFor(bar, y, side);
+        const opts = { price: r[0], color: "#fcd535", lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: "🧲 " + r[1] };
+        if (snapLine) snapLine.applyOptions(opts); else snapLine = candle.createPriceLine(opts);
     }
 
     // ---------- panel ----------
@@ -7010,7 +7049,8 @@ window.Measure = (function () {
                 (M.items.length > 1 ? '<button type="button" class="hp-btn" data-ms-extdel="' + i + '">✕</button>' : "") + "</div>").join("") + '<button type="button" class="hp-btn" data-ms-extadd>＋ kolejna analiza</button> ';
         } else if (T.slots.length) {
             h += '<div class="fz-slots">' + T.slots.map((s, i) => { const a = M.anchors[i]; const need = i < T.need;
-                return '<span class="fz-slot' + (a ? " done" : i === M.anchors.length ? " cur" : "") + '">' + (i + 1) + ". " + esc(s) + (need ? "" : "") + ": " + (a ? "<b>" + dateOf(a.t) + (a.p != null ? " @ " + price(a.p) : "") + "</b>" : (i === M.anchors.length ? "kliknij na wykresie…" : "—")) + "</span>"; }).join("") + "</div>";
+                return '<span class="fz-slot' + (a ? " done" : i === M.anchors.length ? " cur" : "") + '">' + (i + 1) + ". " + esc(s) + (need ? "" : "") + ": " + (a ? "<b>" + dateOf(a.t) + (a.p != null ? " @ " + price(a.p) : "") + "</b>" +
+                    (a.y != null ? ' <button type="button" class="fz-side" data-ms-side="' + i + '" title="Która strona świecy: auto (wg sąsiednich punktów) → góra → dół">' + (a.side === "auto" || !a.side ? "auto: " : "") + (a.kind === "H" ? "góra" : "dół") + " · " + esc(a.src || "") + "</button>" : "") : (i === M.anchors.length ? "kliknij na wykresie…" : "—")) + "</span>"; }).join("") + "</div>";
         }
         h += '<div class="plx-actions" style="margin-top:8px">';
         if (T.slots.length && !T.external) h += '<button type="button" class="hp-btn" data-ms-undo>↶ Cofnij punkt</button><button type="button" class="hp-btn" data-ms-clear>Wyczyść punkty</button>';
@@ -7098,7 +7138,9 @@ window.Measure = (function () {
         if ((el = t.closest("[data-ms-type]"))) { M.helpOpen = false; selectType(el.dataset.msType); return; }
         if (t.closest("[data-ms-help]")) { M.helpOpen = !M.helpOpen; drawEditor(); return; }
         if (t.closest("[data-ms-verify]")) { verify(); return; }
-        if (t.closest("[data-ms-undo]")) { M.anchors.pop(); M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
+        if (t.closest("[data-ms-undo]")) { M.anchors.pop(); resnap(); M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
+        const sd = t.closest("[data-ms-side]");
+        if (sd) { const a = M.anchors[+sd.dataset.msSide]; if (a) { a.side = { auto: "H", H: "L", L: "auto" }[a.side || "auto"]; resnap(); M.result = null; drawResult(null); drawEditor(); drawResultCard(); } return; }
         if (t.closest("[data-ms-clear]")) { M.anchors = []; M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
         if (t.closest("[data-ms-suggest]")) {
             const l = M.auto && M.auto.fibo_leg; if (!l) { toast("Brak podpowiedzi – za mało danych o trendzie."); return; }
@@ -7113,7 +7155,7 @@ window.Measure = (function () {
     });
     document.addEventListener("change", e => {
         const t = e.target;
-        if (t.id === "fz-magnet") { M.magnet = t.checked; if (chart) chart.applyOptions({ crosshair: { mode: M.magnet ? 1 : 0 } }); return; }
+        if (t.id === "fz-magnet") { M.magnet = t.checked; resnap(); M.result = null; drawResult(null); drawEditor(); return; }
         if (t.matches && t.matches("[data-ms-apply]")) M.apply = t.value;
         if (t.matches && t.matches("[data-ms-log]")) { M.opts.log = t.checked; M.result = null; drawResultCard(); }
     });
@@ -7274,6 +7316,11 @@ window.FocusEod = (function () {
             '<br><br><b>Jak zmierzyć?</b> Najpierw wpisz Take Profit w formularzu (to Twój cel). Aplikacja sama znajdzie OPS i ZS. Możesz je wskazać ręcznie na wykresie: 1. świeca szczytu OPS, 2. świeca bazy ZS.' +
             '<br><br><b>Co policzy aplikacja?</b> Poziomy OPS i ZS, czy są przebite zamknięciem, inne strefy podaży na drodze i % od kursu do celu. Wartość odniesienia = poziom do przebicia.' +
             '<br><br><b>Przykład (CPS):</b> ZS 17,99–18,515 i OPS nad kursem – „przebić ZS i OPS = droga otwarta na 20,56” (+16,5%).',
+        xabcd: '<b>Co to jest?</b> Formacja harmoniczna: cena porusza się w 4 falach (X→A, A→B, B→C, C→D), a ich długości mają określone proporcje Fibonacciego. W punkcie <b>D</b> (strefa odwrócenia, PRZ) cena często zawraca – tam planuje się wejście.' +
+            '<br><br><b>Jak zaznaczyć?</b> Kliknij kolejno 4 świece: <b>X</b> (początek), <b>A</b> (pierwszy szczyt/dołek), <b>B</b> (cofnięcie), <b>C</b> (odbicie). Punktu D nie zaznaczasz – aplikacja wyliczy go z proporcji X-A-B-C. W formacji byczej X i B to dołki, A i C to szczyty (D będzie dołkiem do kupna); w niedźwiedziej odwrotnie.' +
+            '<br><br><b>Góra czy dół świecy?</b> Automatycznie: punkt wyżej od sąsiednich punktów = góra świecy, niżej = dół. Możesz to zmienić przyciskiem przy punkcie (auto → góra → dół). Magnes przyciąga do knota albo do korpusu – tego, który jest bliżej kliknięcia; podgląd pokazuje żółta linia „🧲”.' +
+            '<br><br><b>Co policzy aplikacja?</b> Proporcje B (cofnięcie XA) i C (cofnięcie AB), najbliższy wzorzec (Gartley, Bat, Butterfly, Crab, Deep Crab, Cypher), punkt D (np. Gartley: 0,786 XA, Bat: 0,886, Butterfly: 1,27, Crab: 1,618) i strefę PRZ – część wspólną D liczonego od XA i rozszerzenia BC. Jeśli te same punkty pasują do kilku wzorców, pokaże też alternatywne D.' +
+            '<br><br><b>Jak wykorzystać?</b> Punkt D (wartość odniesienia) wpisz jako punkt wejścia, a strefę w Form ustaw wokół PRZ.',
         entry_type: '<b>Korekta</b> (dotychczasowy sposób): kupujesz, gdy cena cofa się do strefy (np. nieco nad OPD). Ocena wejścia sprawdza m.in. <b>głębokość wejścia w strefę</b> i reakcję świec 1H na strefę.' +
             '<br><br><b>Wybicie</b>: kupujesz, gdy cena wychodzi z konsolidacji lub przebija opór. Strefa w Form = poziom oporu (np. górna krawędź konsolidacji): jej górna krawędź to <b>poziom wybicia</b>, SL ustaw pod strefą. Ocena wejścia zamiast głębokości sprawdza warunek <b>„Wybicie”</b>: czy świeca dzienna zamknęła się nad poziomem, jaki był wolumen świecy wybicia, czy był <b>retest</b> (powrót do poziomu i jego obrona zamknięciem) i czy kurs nie odjechał za daleko (pościg).' +
             '<br><br>Najlepsze wejście na wybiciu: retest obroniony zamknięciem. Kurs z powrotem pod poziomem po wybiciu = <b>fałszywe wybicie</b> (ocena 0).'
