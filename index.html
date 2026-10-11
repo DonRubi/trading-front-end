@@ -147,8 +147,7 @@
         .hp-x:hover { color: var(--danger); background: rgba(246,70,93,.1); }
         .hp-panel .dashboard-grid { padding: 0; }
         .mn-label { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin: 4px 0 10px; } .mn-label:not(:first-child) { margin-top: 18px; }
-        .menu-card.mn-step { position: relative; gap: 6px; } .mn-num { position: absolute; top: 8px; left: 10px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #111; font-weight: 800; font-size: .78rem; display: flex; align-items: center; justify-content: center; }
-        .mn-sub { margin: 0; font-size: .78rem; color: var(--text-muted); }
+        .menu-card.mn-step { position: relative; gap: 6px; }
         @media (min-width: 1200px) { .dashboard-grid.mn-flow { grid-template-columns: repeat(6, 1fr); } .mn-flow .mn-step:not(:last-child)::after { content: "→"; position: absolute; right: -11px; top: 50%; transform: translateY(-50%); color: var(--accent); font-weight: 800; z-index: 1; } }
 
         @media (max-width: 640px) {
@@ -332,15 +331,21 @@
         @media (max-width: 760px) { .fz-sub { display: block; overflow-x: auto; } }
         .rc-ana { border: 1px solid rgba(166,227,161,.45); background: rgba(166,227,161,.06); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
         .rc-ana-h { font-weight: 700; font-size: 1.05em; color: #a6e3a1; } .rc-ana-item + .rc-ana-item { border-top: 1px solid var(--border-color); padding-top: 10px; }
-        .rc-ana-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .rc-ana-link { margin-left: auto; text-decoration: none; border-color: #a6e3a1 !important; color: #a6e3a1 !important; font-weight: 600; }
-        .rc-ana-dir { border: 1px solid; border-radius: 999px; padding: 1px 8px; font-size: .85em; } .rc-ana-note { font-size: 1.12em; line-height: 1.45; margin: 6px 0 2px; color: var(--text-main); font-style: italic; }
+        .rc-ana-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .rc-ana-link { margin-top: 2px; text-decoration: none; border-color: #a6e3a1 !important; color: #a6e3a1 !important; font-weight: 600; }
+        .rc-ana-dir { border: 1px solid; border-radius: 999px; padding: 1px 8px; font-size: .85em; } .rc-ana-note { font-size: 1.02em; line-height: 1.45; margin: 6px 0 2px; color: var(--text-main); font-style: italic; }
         .rc-ana-url { font-size: .82em; word-break: break-all; } .rc-ana-url a { color: var(--text-muted); }
-        .rc-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; } .rc-chips { display: flex; gap: 6px; flex-wrap: wrap; } .rc-tf { display: flex; gap: 6px; }
+        .rc-headrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; } .rc-tf { display: flex; gap: 6px; }
+        .rc-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; align-items: stretch; } @media (min-width: 2400px) { .rc-layout { grid-template-columns: minmax(0, 1fr) 420px; } } @media (max-width: 1000px) { .rc-layout { grid-template-columns: 1fr; } }
+        .rc-side { border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-main); padding: 12px; display: flex; flex-direction: column; gap: 10px; max-height: 560px; overflow-y: auto; } @media (min-width: 2400px) { .rc-side { max-height: 640px; } } @media (max-width: 1000px) { .rc-side { max-height: none; } }
+        .rc-side-h { font-size: .75em; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); }
+        .rc-list { display: flex; flex-direction: column; gap: 4px; } .rc-row { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; color: var(--text-main); cursor: pointer; font: inherit; font-size: .9em; }
+        .rc-row:hover { border-color: var(--border-color); background: var(--bg-card); } .rc-row i { width: 10px; height: 10px; border-radius: 3px; flex: none; background: var(--border-color); } .rc-row.off { opacity: .45; }
+        .rc-row-t { flex: 1; display: flex; flex-direction: column; min-width: 0; } .rc-row-t small { color: var(--text-muted); font-size: .85em; } .rc-row-q { font-weight: 700; white-space: nowrap; } .rc-eye { font-size: .85em; opacity: .7; }
         .rc-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 999px; padding: 4px 11px; font-size: .85em; cursor: pointer; }
-        .rc-chip i, .rc-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; } .rc-chip.off { opacity: .45; } .rc-chip.off i { filter: grayscale(1); }
-        .rc-box { position: relative; } #rc-chart { height: 480px; width: 100%; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-main); }
-        @media (min-width: 2400px) { #rc-chart { height: 620px; } } @media (max-width: 760px) { #rc-chart { height: 320px; } }
-        .rc-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .82em; color: var(--text-muted); } .rc-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .rc-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+        .rc-box { position: relative; } #rc-chart { height: 560px; width: 100%; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-main); }
+        @media (min-width: 2400px) { #rc-chart { height: 640px; } } @media (max-width: 760px) { #rc-chart { height: 320px; } }
+        .rc-legend { display: flex; flex-direction: column; gap: 5px; font-size: .82em; color: var(--text-muted); } .rc-legend span { display: inline-flex; align-items: center; gap: 6px; }
         .rc-badge { display: inline-block; margin: 4px 4px 0 0; padding: 2px 9px; border-radius: 999px; border: 1px solid #a6e3a1; color: #a6e3a1; font-weight: 600; font-size: .85em; text-decoration: none; }
         .rc-badge-note { font-size: .82em; color: var(--text-main); font-style: italic; margin-top: 3px; max-width: 360px; }
         #fz-chart { height: 430px; width: 100%; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-main); } @media (max-width: 760px) { #fz-chart { height: 330px; } }
@@ -530,14 +535,14 @@
             <section class="hp-panel" data-hp-panel="modules">
                 <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Moduły</h2><span class="hp-peek"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
-                    <div class="mn-label">Ścieżka inwestycji – w kolejności wypełniania</div>
+                    <div class="mn-label">Ścieżka inwestycji</div>
                     <div class="dashboard-grid mn-flow">
-                        <div class="menu-card mn-step" onclick="openModule('form-module', 'Form')"><span class="mn-num">1</span><span class="icon">📝</span><h3>Form</h3><p class="mn-sub">strefy, SL, TP i powody</p></div>
-                        <div class="menu-card mn-step" onclick="openModule('focuslist-module', 'Radar zagrań')"><span class="mn-num">2</span><span class="icon">👁️</span><h3>Radar zagrań</h3><p class="mn-sub">ocena momentu wejścia</p></div>
-                        <div class="menu-card mn-step" onclick="openModule('focus2-module', 'Focus')"><span class="mn-num">3</span><span class="icon">🎯</span><h3>Focus</h3><p class="mn-sub">zapisane oceny wejścia</p></div>
-                        <div class="menu-card mn-step" onclick="openModule('tradeslist-module', 'Transakcje')"><span class="mn-num">4</span><span class="icon">📊</span><h3>Transakcje</h3><p class="mn-sub">zakup z wpisu Focus</p></div>
-                        <div class="menu-card mn-step" onclick="openModule('eod-module', 'Koniec dnia (EOD)')"><span class="mn-num">5</span><span class="icon">🌙</span><h3>EOD</h3><p class="mn-sub">ocena po zamknięciu sesji</p></div>
-                        <div class="menu-card mn-step" onclick="openModule('planner-module', 'Planer')"><span class="mn-num">6</span><span class="icon">🧭</span><h3>Planer</h3><p class="mn-sub">prowadzenie pozycji, kartki, TP</p></div>
+                        <div class="menu-card mn-step" onclick="openModule('form-module', 'Form')"><span class="icon">📝</span><h3>Form</h3></div>
+                        <div class="menu-card mn-step" onclick="openModule('focuslist-module', 'Radar zagrań')"><span class="icon">👁️</span><h3>Radar zagrań</h3></div>
+                        <div class="menu-card mn-step" onclick="openModule('focus2-module', 'Focus')"><span class="icon">🎯</span><h3>Focus</h3></div>
+                        <div class="menu-card mn-step" onclick="openModule('tradeslist-module', 'Transakcje')"><span class="icon">📊</span><h3>Transakcje</h3></div>
+                        <div class="menu-card mn-step" onclick="openModule('eod-module', 'Koniec dnia (EOD)')"><span class="icon">🌙</span><h3>EOD</h3></div>
+                        <div class="menu-card mn-step" onclick="openModule('planner-module', 'Planer')"><span class="icon">🧭</span><h3>Planer</h3></div>
                     </div>
                     <div class="mn-label">Narzędzia i analiza</div>
                     <div class="dashboard-grid">
@@ -6755,7 +6760,6 @@ window.FormZones = (function () {
         let h = '<div class="plx-head"><div><div class="plx-title">' + esc(e.ticker) + ' <a class="sd-link" data-tk="' + esc(e.ticker) + '" style="font-size:.6em">wykres</a> <a class="sd-link" href="' + esc(getTradingViewLink(e.ticker)) + '" target="_blank" rel="noopener" style="font-size:.6em">TradingView</a></div>' +
             '<div class="plx-sub">' + esc((tm && tm.stock_name) || "") + " · zagranie " + esc(e.entry_id) + " · " + arrow(p.long) + " strefa " + price(cur.z.lo) + "–" + price(cur.z.hi) + (p.muted ? " · 🔕 wyciszone" : "") + "</div></div>" +
             '<div class="fz-nav"><button class="hp-btn" data-fz-nav="prev"' + (prev ? "" : " disabled") + ' title="Niżej (←)">◀ Niżej</button><span class="ev-muted">' + (i + 1) + " z " + items.length + '</span><button class="hp-btn" data-fz-nav="next"' + (next ? "" : " disabled") + ' title="Wyżej (→)">Wyżej ▶</button><button class="hp-btn" data-fz-dclose>✕</button></div></div>';
-        h += ReasonChart.analysisHtml(e);
         h += '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Wejście</div><div class="v">' + price(p.entry) + '</div><div class="s">kurs ' + price(cp) + (dist != null ? " (" + (dist > 0 ? "+" : "") + num(dist, 1) + "% od wejścia)" : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.tp) + " / " + price(p.sl) + '</div><div class="s">R:R ' + num(p.rr, 2) + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Score</div><div class="v">' + fmtScore(p.score) + '/5</div><div class="s">' + (e.score_manual != null && e.score_manual !== "" ? "ręcznie; rekomendacja " + fmtScore(scoreAuto(e)) : "rekomendacja: suma jakości powodów") + (e.priority === 1 ? " · ⚡ priorytet" : "") + "</div></div>" +
@@ -7220,8 +7224,9 @@ window.ReasonChart = (function () {
 
     // ---------- szkielet sekcji wykresu ----------
     function sectionHtml(e) {
-        return '<div class="plx-h">Wykres i powody</div><div class="rc-bar"><div id="rc-chips" class="rc-chips"></div><div class="rc-tf"><button class="hp-btn" data-rc-tf="1d">1D</button><button class="hp-btn" data-rc-tf="1w">1W</button></div></div>' +
-            '<div class="rc-box"><div id="rc-chart"></div></div><div id="rc-legend" class="rc-legend"></div>';
+        return '<div class="plx-h rc-headrow">Wykres i powody<span class="rc-tf"><button class="hp-btn" data-rc-tf="1d">1D</button><button class="hp-btn" data-rc-tf="1w">1W</button></span></div>' +
+            '<div class="rc-layout"><div class="rc-box"><div id="rc-chart"></div></div><aside class="rc-side">' + analysisHtml(e) +
+            '<div class="rc-side-h">Powody na wykresie</div><div id="rc-chips" class="rc-list"></div><div class="rc-side-h">Legenda</div><div id="rc-legend" class="rc-legend"></div></aside></div>';
     }
 
     // ---------- wykres ----------
@@ -7361,8 +7366,11 @@ window.ReasonChart = (function () {
             const off = S.hidden.has(d.type), col = COL[d.type] || "#cdd6f4";
             const q = r && r.quality != null ? r.quality : d.quality;
             const ttl = other ? "Zmierzone na " + (tfOf(d) === "1w" ? "1W" : "1D") + " – przełącz interwał" : err ? "Nie udało się odtworzyć: " + err : (d.facts || []).join("\n");
-            return '<button type="button" class="rc-chip' + (off || other ? " off" : "") + '" data-rc-tg="' + esc(d.type) + '" title="' + esc(ttl) + '"><i style="background:' + col + '"></i>' + esc(d.label) + " " + Math.round((q || 0) * 100) + "%" + (err ? " ⚠" : "") + (other ? " · " + (tfOf(d) === "1w" ? "1W" : "1D") : "") + "</button>";
-        }).join("") + names.map(n => '<span class="rc-chip off" title="Powód bez pomiaru na wykresie">' + esc(n) + "</span>").join("") || '<span class="ev-muted">Brak powodów z pomiarem.</span>';
+            const v = (r && r.verdict) || d.verdict, vm = v === "OK" ? ["✓", "var(--success)"] : v === "PARTIAL" ? ["~", "var(--accent-hover)"] : ["✗", "var(--danger)"];
+            const lc = (r && r.lifecycle) || d.lifecycle || {}, refv = (r && r.ref) || d.ref;
+            const sub = [refv ? (refv.label || refv.role || "poziom") + " " + price(refv.value) : "", lc.status === "zakończony" ? "zakończona" : lc.status === "wygasły" ? "wygasła" : "", other ? "zmierzone na " + (tfOf(d) === "1w" ? "1W" : "1D") : "", err ? "⚠ nie odtworzono" : ""].filter(Boolean).join(" · ");
+            return '<button type="button" class="rc-row' + (off || other ? " off" : "") + '" data-rc-tg="' + esc(d.type) + '" title="' + esc(ttl) + '"><i style="background:' + col + '"></i><span class="rc-row-t"><b>' + esc(d.label) + "</b>" + (sub ? "<small>" + esc(sub) + "</small>" : "") + '</span><span class="rc-row-q" style="color:' + vm[1] + '">' + vm[0] + " " + Math.round((q || 0) * 100) + '%</span><span class="rc-eye">' + (off ? "🙈" : "👁") + "</span></button>";
+        }).join("") + names.map(n => '<div class="rc-row off" title="Powód bez pomiaru na wykresie"><i></i><span class="rc-row-t"><b>' + esc(n) + "</b><small>bez pomiaru</small></span></div>").join("") || '<span class="ev-muted">Brak powodów z pomiarem.</span>';
         document.querySelectorAll("[data-rc-tf]").forEach(b => b.classList.toggle("ev-go", b.dataset.rcTf === S.tf));
     }
     async function load() {
