@@ -684,27 +684,8 @@
                         <div id="fz-result"></div>
                         <div id="fz-added"></div>
                     </div>
-                    <button type="submit" class="btn-submit">Zapisz Setup do Bazy</button>
+                    <button type="submit" class="btn-submit" id="fz-submit">Zapisz Setup do Bazy</button>
                 </form>
-                <button type="button" onclick="toggleLiquidityHunter()" style="background: none; border: 1px solid #89b4fa; color: #89b4fa; margin-top: 15px; width: 100%; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: bold; transition: 0.2s;">🧲 Otwórz Łowcę Płynności (Liquidity Hunter)</button>
-                <div id="liquidity-drawer" style="display:none; margin-top: 10px; padding: 15px; background: rgba(137, 180, 250, 0.05); border: 1px solid #89b4fa; border-radius: 8px;">
-                    <div class="form-group">
-                        <label style="color:#89b4fa; font-weight:bold;">Cel Główny (Historyczny Szczyt / Dołek / POC)</label>
-                        <input type="number" id="liq-target" step="0.01" placeholder="np. 154.50" oninput="updateLiquidityLabels()">
-                    </div>
-                    <div class="form-group">
-                        <label>Taktyka realizacji (Smart Money)</label>
-                        <select id="liq-strategy" onchange="updateLiquidityLabels()">
-                            <option value="frontrun">Front-run (Wyjdź 1.5% przed ścianą / szczytem)</option>
-                            <option value="exact">Perfect Touch (Równo w cel / Środek FVG)</option>
-                            <option value="sweep">Liquidity Sweep (Zbierz Stop Lossy: +1% za szczytem)</option>
-                        </select>
-                    </div>
-                    <div id="liq-preview" style="margin-top: 10px; margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted); text-align: center;">
-                        Wpisz poziom docelowej płynności...
-                    </div>
-                    <button type="button" onclick="applyLiquidity()" style="width:100%; background:#89b4fa; color:#11111b; border-radius:6px; padding:10px; border:none; font-weight:bold; cursor:pointer;">Ustaw jako Take Profit</button>
-                </div>
                 </div>
             </div>
         </div>
@@ -2314,6 +2295,20 @@
                 sl_candle: document.getElementById('form-slc').value,
                 reasons: formReasons
             }; 
+            const editId = window.FormZones && FormZones.editingId();
+            if (editId) {                                   // edycja w oknie Form: wszystkie pola, SL (puste = koniec strefy) i powody ze szczegółami
+                data.old_entry_id = editId; data.stop_loss = data.stop_loss || data.end_zone;
+                try {
+                    const r = await fetch(`${API_BASE_URL}/api/form/edit`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+                    const j = await r.json().catch(() => ({}));
+                    if (!r.ok || j.status !== 'success') throw new Error(j.message || ('HTTP ' + r.status));
+                    document.getElementById('trading-form').reset();
+                    await fetchFormEntries(true); fetchFormReasons();
+                    FormZones.closeAdd(); if (window.Planer) Planer.toast("Zapisano zmiany wpisu " + (j.new_id || editId) + (j.new_id && j.new_id !== editId ? " (nowe ID – zmieniła się strefa)" : "") + ".");
+                    FormZones.openDetail(j.new_id || editId);
+                } catch (err) { alert('Błąd zapisu: ' + err.message); }
+                return;
+            }
             try { 
                 const addRes = await fetch(`${API_BASE_URL}/api/form/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }); 
                 const addJson = await addRes.json().catch(() => ({}));
@@ -2352,57 +2347,6 @@
             if (item) FormZones.openAdd(item.ticker, item);   // klon: kierunek, strefa, TP i priorytet; wejście i powody puste
         }
     
-        // --- ŁOWCA PŁYNNOŚCI (Zastępuje Fibo) ---
-        function toggleLiquidityHunter() { 
-            const drawer = document.getElementById('liquidity-drawer'); 
-            drawer.style.display = drawer.style.display === 'block' ? 'none' : 'block'; 
-            if (drawer.style.display === 'block') updateLiquidityLabels(); 
-        }
-
-        function updateLiquidityLabels() {
-            const target = parseFloat(document.getElementById('liq-target').value);
-            const strategy = document.getElementById('liq-strategy').value;
-            const direction = document.getElementById('form-direction').value;
-            const preview = document.getElementById('liq-preview');
-
-            if (isNaN(target)) {
-                preview.innerHTML = "Wpisz poziom docelowej płynności...";
-                return;
-            }
-
-            const isLong = (direction === 'DBR' || direction === 'RBR');
-            let finalTp = target;
-
-            // Wyliczanie taktyki (Mnożniki uwzględniają kierunek pozycji)
-            if (strategy === 'frontrun') {
-                finalTp = isLong ? target * 0.985 : target * 1.015; // 1.5% przed celem
-            } else if (strategy === 'sweep') {
-                finalTp = isLong ? target * 1.01 : target * 0.99;   // 1% za celem (wybicie stopów)
-            }
-
-            preview.innerHTML = `Ostateczny cel Smart Money: <br><b style="color:var(--success); font-size: 1.3em;">${finalTp.toFixed(2)} $</b>`;
-        }
-
-        function applyLiquidity() {
-            const target = parseFloat(document.getElementById('liq-target').value);
-            const strategy = document.getElementById('liq-strategy').value;
-            const direction = document.getElementById('form-direction').value;
-            
-            if(isNaN(target)) return alert('Podaj poprawny poziom płynności (Cel Główny).');
-
-            const isLong = (direction === 'DBR' || direction === 'RBR');
-            let finalTp = target;
-
-            if (strategy === 'frontrun') {
-                finalTp = isLong ? target * 0.985 : target * 1.015;
-            } else if (strategy === 'sweep') {
-                finalTp = isLong ? target * 1.01 : target * 0.99;
-            }
-
-            document.getElementById('form-tp').value = finalTp.toFixed(2); 
-            toggleLiquidityHunter();
-        }
-
         function updateFormTvLink() {}
 
         // --- FOCUS MODULE ---
@@ -6622,7 +6566,7 @@ window.FormZones = (function () {
                 const reasons = ((Array.isArray(e.reasons) ? e.reasons : []).map(r => chip(r, e)).join("") || '<span class="ev-muted">brak</span>') + ReasonChart.analysisBadge(e);
                 return '<tr class="' + (p.muted ? "fz-muted-row" : "") + '"><td><a href="#" data-fz-detail="' + id + '" title="Szczegóły zagrania"><b>' + id + "</b></a></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
                     '</td><td style="color:#a6e3a1;font-weight:700" title="Suma jakości powodów (np. powód wypełniony w 60% = 0,6)">' + fmtScore(p.score) + "/5</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
-                    '<td style="white-space:nowrap"><button class="btn-edit" data-fz-detail="' + id + '" title="Szczegóły zagrania">🔍</button> <button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="openEditModal(\'form\', \'' + id + '\')" title="Edytuj">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
+                    '<td style="white-space:nowrap"><button class="btn-edit" data-fz-detail="' + id + '" title="Szczegóły zagrania">🔍</button> <button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="FormZones.openEdit(\'' + id + '\')" title="Edytuj w oknie Form">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
             }).join("") + "</tbody></table>";
     }
     function render() {
@@ -6650,13 +6594,34 @@ window.FormZones = (function () {
 
     // ---------- okno „Dodaj nowy wpis” ----------
     function lock(on) { document.body.style.overflow = on ? "hidden" : (document.querySelector(".plx-overlay.open") ? "hidden" : ""); }
-    function openAdd(ticker, pre) {
+    let editId = null;                                   // edycja istniejącego wpisu w tym samym oknie co dodawanie
+    function setMode(id) {
+        editId = id || null;
+        const t = $("#fz-modal .plx-title"), sub = $("#fz-modal .plx-sub"), btn = $("#fz-submit");
+        if (t) t.textContent = editId ? "Edycja wpisu " + editId : "Nowy wpis w Form";
+        if (sub) sub.textContent = editId ? "Zmień dowolne pola, strefę, SL i powody – zmiana spółki, zakresu albo kierunku nada wpisowi nowe ID." : "Wybierz spółkę, zobacz jej obecne strefy i dodaj zagranie w istniejącej albo w nowej strefie.";
+        if (btn) btn.textContent = editId ? "Zapisz zmiany wpisu" : "Zapisz Setup do Bazy";
+    }
+    function openEdit(id) {
+        const e = (formEntries || []).find(x => x.entry_id === id); if (!e) return;
+        closeDetail();
+        openAdd(e.ticker, e, true);
+        setMode(id);
+        const set = (k, v) => { const el = document.getElementById(k); if (el) el.value = v == null ? "" : v; };
+        set("form-entry", e.entry_point);
+        (Array.isArray(e.reasons) ? e.reasons : []).slice(0, 5).forEach((r, i) => set("form-reason-" + (i + 1), r));
+        $("#fz-formtitle").textContent = "Wpis " + id + " · strefa " + price(Math.min(+e.start_zone, +e.end_zone)) + "–" + price(Math.max(+e.start_zone, +e.end_zone));
+        if (window.Measure) Measure.setAdded(Array.isArray(e.reasons_detail) ? e.reasons_detail : [], Array.isArray(e.reasons) ? e.reasons : []);
+    }
+    const editingId = () => editId;
+    function openAdd(ticker, pre, keepMode) {
+        if (!keepMode) setMode(null);
         const o = $("#fz-modal"); o.classList.add("open"); lock(true);
         $("#fz-results").innerHTML = ""; $("#fz-chosen").style.display = "none"; $("#fz-formwrap").style.display = "none";
         $("#fz-search").value = "";
         if (ticker) { const t = tickerRow(ticker); choose(ticker, pre, t); } else setTimeout(() => $("#fz-search").focus(), 50);
     }
-    function closeAdd() { $("#fz-modal").classList.remove("open"); lock(false); if (window.Measure) Measure.reset(); }
+    function closeAdd() { $("#fz-modal").classList.remove("open"); lock(false); if (window.Measure) Measure.reset(); setMode(null); }
     function search(q) {
         q = q.trim().toLowerCase(); const box = $("#fz-results");
         if (!q) { box.innerHTML = ""; return; }
@@ -6689,7 +6654,7 @@ window.FormZones = (function () {
             '<button type="button" class="hp-btn" data-fz-newzone style="margin-top:6px">＋ Nowa strefa</button>';
         $("#fz-formwrap").style.display = "block";
         const z0 = pre ? zonesOf([pre])[0] : null;
-        prefill(pre, pre ? "Nowe zagranie w strefie " + price(z0.lo) + "–" + price(z0.hi) : "Nowe zagranie – nowa strefa");
+        if (!(editId && !pre)) prefill(pre, pre ? "Nowe zagranie w strefie " + price(z0.lo) + "–" + price(z0.hi) : "Nowe zagranie – nowa strefa");   // przy edycji zmiana spółki zostawia wpisane wartości
         if (window.Measure) Measure.open(ticker);
         if (pre) { const blk = ch.querySelector('.fz-zblock[data-zk="' + (z0.key).replace(/"/g, '\\"') + '"]'); if (blk) blk.classList.add("open"); }
     }
@@ -6807,7 +6772,7 @@ window.FormZones = (function () {
         h += '<div class="plx-h">Powody</div>' + ((e.reasons || []).length ? e.reasons.map(r => reasonBlock(r, e)).join("") : '<div class="ev-muted">Brak powodów.</div>');
         h += '<div class="plx-h">Wszystkie zagrania spółki (od najniższego wejścia)</div><div class="table-responsive"><table class="ev-table fz-ladder"><thead><tr><th>ID</th><th>Wejście</th><th>Od poprzedniego</th><th>Strefa</th><th>Score</th></tr></thead><tbody>' +
             items.map((it, k) => '<tr class="' + (k === i ? "cur" : "") + '" data-fz-go="' + esc(it.p.e.entry_id) + '"><td>' + esc(it.p.e.entry_id) + (it.p.muted ? " 🔕" : "") + "</td><td>" + price(it.price) + "</td><td>" + (k ? (it.price / items[k - 1].price - 1 >= 0 ? "+" : "") + num((it.price / items[k - 1].price - 1) * 100, 2) + "% " + (it.z.key === items[k - 1].z.key ? '<span class="fz-same">· ta sama strefa</span>' : '<span class="fz-other">· inna strefa</span>') : "–") + "</td><td>" + arrow(it.z.long) + " " + price(it.z.lo) + "–" + price(it.z.hi) + "</td><td>" + fmtScore(it.p.score) + "/5</td></tr>").join("") + "</tbody></table></div>";
-        h += '<div class="plx-actions"><button class="hp-btn" onclick="FormZones.closeDetail(); copyFormEntry(\'' + esc(e.entry_id) + '\')">📋 Klonuj</button><button class="hp-btn" onclick="openEditModal(\'form\', \'' + esc(e.entry_id) + '\')">✎ Edytuj</button>' +
+        h += '<div class="plx-actions"><button class="hp-btn" onclick="FormZones.closeDetail(); copyFormEntry(\'' + esc(e.entry_id) + '\')">📋 Klonuj</button><button class="hp-btn" onclick="FormZones.openEdit(\'' + esc(e.entry_id) + '\')">✎ Edytuj</button>' +
             '<button class="hp-btn" onclick="updateFormEntryField(\'' + esc(e.entry_id) + "', 'mute', " + (p.muted ? 0 : 1) + ')">' + (p.muted ? "🔔 Włącz" : "🔕 Wycisz") + "</button></div>";
         o.firstChild.innerHTML = h;
         ReasonChart.mount(e);
@@ -6849,7 +6814,7 @@ window.FormZones = (function () {
         if (e.key === "ArrowLeft") navDetail("prev"); else if (e.key === "ArrowRight") navDetail("next"); else if (e.key === "Escape") closeDetail();
     });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#fz-modal") && $("#fz-modal").classList.contains("open")) closeAdd(); });
-    return { zoneQualityBlock: zoneQualityBlock, scoreOf: scoreOf, openDetail: openDetail, closeDetail: closeDetail, refresh: refresh, render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, closeAdd: closeAdd, search: search };
+    return { zoneQualityBlock: zoneQualityBlock, scoreOf: scoreOf, openDetail: openDetail, closeDetail: closeDetail, refresh: refresh, render: render, set: set, sort: sort, toggleAll: toggleAll, openAdd: openAdd, openEdit: openEdit, editingId: editingId, closeAdd: closeAdd, search: search };
 })();
 </script>
 <script>
@@ -7267,7 +7232,7 @@ window.Measure = (function () {
     function collect(reasonNames) {
         const names = reasonNames.map(r => r.trim().toLowerCase());
         const details = M.added.filter(d => names.indexOf(d.label.toLowerCase()) >= 0);
-        const missing = FORMATIONS.map(k => TYPES[k].label).filter(l => names.indexOf(l.toLowerCase()) >= 0 && !details.some(d => d.label === l && d.ref));
+        const missing = FORMATIONS.map(k => TYPES[k].label).filter(l => names.indexOf(l.toLowerCase()) >= 0 && !details.some(d => d.label === l && d.ref) && (M.saved || []).indexOf(l.toLowerCase()) < 0);   // formacje zapisane wcześniej (edycja) nie wymagają ponownego pomiaru
         if (missing.length) return { ok: false, message: "Formacja wymaga zmierzenia i zapisania wartości odniesienia: " + missing.join(", ") + ". Zaznacz ją na wykresie i kliknij „Zweryfikuj”, a potem „Dodaj powód do wpisu”." };
         return { ok: true, details: details };
     }
@@ -7312,8 +7277,13 @@ window.Measure = (function () {
         $("#fz-measure").style.display = "block"; drawTypes(); drawEditor(); drawResultCard(); drawAdded(); $$tf();
         setTimeout(() => { if (changed || !M.bars.length) loadBars(); else { ensureChart(); drawBase(); } }, 30);
     }
-    function reset() { M.pick = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
-    return { open: open, reset: reset, collect: collect, opdCheck: opdCheck, labels: () => ORDER.map(k => ({ type: k, label: TYPES[k].label })) };
+    function reset() { M.pick = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.saved = []; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
+    function setAdded(details, savedNames) {                         // edycja wpisu: zapisane zmierzone powody wracają do listy (można je usuwać i dodawać nowe)
+        M.added = (details || []).map(d => JSON.parse(JSON.stringify(d)));
+        M.saved = (savedNames || []).map(r => String(r).trim().toLowerCase());
+        drawAdded();
+    }
+    return { open: open, reset: reset, collect: collect, opdCheck: opdCheck, setAdded: setAdded, labels: () => ORDER.map(k => ({ type: k, label: TYPES[k].label })) };
 })();
 </script>
 <script>
