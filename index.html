@@ -405,7 +405,9 @@
         #fz-chart { height: 430px; width: 100%; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-main); } @media (max-width: 760px) { #fz-chart { height: 330px; } }
         .fz-slots { display: flex; flex-wrap: wrap; gap: 6px; } .fz-slot { border: 1px dashed var(--border-color); border-radius: 8px; padding: 4px 10px; font-size: 0.84rem; color: var(--text-muted); } .fz-slot.cur { border-color: var(--accent); color: var(--text-main); } .fz-slot.done { border-style: solid; border-color: var(--success); color: var(--text-main); }
         .fz-facts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; line-height: 1.45; } .fz-ext { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-bottom: 8px; }
-        .fz-v-OK { border-color: rgba(14,203,129,.6); background: rgba(14,203,129,.12); } .fz-v-PARTIAL { border-color: rgba(252,213,53,.6); background: rgba(252,213,53,.1); } .fz-v-FAIL { border-color: rgba(246,70,93,.6); background: rgba(246,70,93,.1); } .fz-ended { opacity: .6; text-decoration: line-through; text-decoration-color: rgba(132,142,156,.8); } .fz-reason a { color: var(--accent-hover); text-decoration: none; }
+        .fz-v-OK { border-color: rgba(14,203,129,.6); background: rgba(14,203,129,.12); } .fz-v-PARTIAL { border-color: rgba(252,213,53,.6); background: rgba(252,213,53,.1); } .fz-v-FAIL { border-color: rgba(246,70,93,.6); background: rgba(246,70,93,.1); } .fz-ended { opacity: .6; text-decoration: line-through; text-decoration-color: rgba(132,142,156,.8); } .fz-reason a { color: var(--accent-hover); text-decoration: none; } .fz-reason a + a { margin-left: 6px; } .fz-reason.fz-editing { outline: 2px solid var(--accent); }
+        .fz-repick { border: 1px solid var(--border-color); background: transparent; color: var(--text-muted); border-radius: 999px; padding: 0 7px; font-size: .78rem; cursor: pointer; margin-left: 4px; } .fz-repick:hover, .fz-slot.repick .fz-repick { border-color: var(--accent); color: var(--accent-hover); }
+        .fz-slot.repick { border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(252,213,53,.25); } .fz-editbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--accent); border-radius: 8px; background: rgba(252,213,53,.08); font-size: .86rem; }
         .fz-detail .plx-kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } .fz-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .fz-neigh { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } @media (max-width: 760px) { .fz-neigh { grid-template-columns: 1fr; } }
         .fz-ncard { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; cursor: pointer; font-size: 0.9rem; line-height: 1.55; } .fz-ncard:hover { border-color: var(--accent); } .fz-ncard.off { opacity: .5; cursor: default; } .fz-ncard .t { color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase; letter-spacing: .05em; }
@@ -6954,7 +6956,8 @@ window.Measure = (function () {
         (ov.lines || []).forEach(l => priceLines.push(candle.createPriceLine({ price: l.price, color: l.color || "#f9e2af", lineWidth: 1, lineStyle: ST[l.style] != null ? ST[l.style] : 2, axisLabelVisible: true, title: l.label || "" })));
         (ov.series || []).forEach(s => { const ls = chart.addLineSeries({ color: s.color, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: s.name }); ls.setData(s.points.map(p => ({ time: p.t, value: p.v }))); extraSeries.push(ls); });
         (ov.segments || []).forEach(sg => { const ls = chart.addLineSeries({ color: sg.color, lineWidth: 2, priceLineVisible: false, lastValueVisible: false }); ls.setData([{ time: sg.p1.t, value: sg.p1.v }, { time: sg.p2.t, value: sg.p2.v }]); extraSeries.push(ls); });
-        const mk = (ov.markers || []).map(m => ({ time: m.t, position: m.pos === "inBar" ? "aboveBar" : m.pos, color: m.color || "#fcd535", shape: m.pos === "inBar" ? "circle" : (m.pos === "aboveBar" ? "arrowDown" : "arrowUp"), text: m.text || "" }));
+        let mk = (ov.markers || []).map(m => ({ time: m.t, position: m.pos === "inBar" ? "aboveBar" : m.pos, color: m.color || "#fcd535", shape: m.pos === "inBar" ? "circle" : (m.pos === "aboveBar" ? "arrowDown" : "arrowUp"), text: m.text || "" }));
+        if (!mk.length) mk = pickMarkers();                                   // wynik bez znaczników (np. niepotwierdzony) – zostają wskazane punkty
         candle.setMarkers(mk.sort((a, b) => a.time - b.time));
         drawBase();
     }
@@ -7060,16 +7063,18 @@ window.Measure = (function () {
     document.addEventListener("input", e => { if (["form-start", "form-end", "form-sl", "form-entry"].indexOf(e.target.id) >= 0 && candle) { drawBase(); opdCheck(); } });
     document.addEventListener("change", e => { if (e.target.id === "form-direction" && candle) { drawBase(); opdCheck(); } });
     document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-pick]"); if (b) { e.preventDefault(); startPick(b.dataset.pick); } });
-    document.addEventListener("keydown", e => { if (e.key === "Escape" && M.pick) { M.pick = null; if (pickLine) { try { candle.removePriceLine(pickLine); } catch (x) {} pickLine = null; } setStatus(""); drawPickButtons(); e.stopPropagation(); } }, true);
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && M.repick != null) { M.repick = null; setStatus(""); drawEditor(); e.stopPropagation(); return; } if (e.key === "Escape" && M.pick) { M.pick = null; if (pickLine) { try { candle.removePriceLine(pickLine); } catch (x) {} pickLine = null; } setStatus(""); drawPickButtons(); e.stopPropagation(); } }, true);
 
     function onClick(param) {
         if (M.pick && param && param.time) { handlePick(param); return; }
         const T = TYPES[M.type]; if (!T || T.external || T.auto || !param || !param.time || !param.point) return;
-        const max = T.slots.length; if (M.anchors.length >= max) return;
+        const max = T.slots.length, ri = M.repick; if (ri == null && M.anchors.length >= max) return;
         const bar = M.bars.find(b => b.t === param.time); if (!bar) return;
         const y = candle.coordinateToPrice(param.point.y);
-        if (!T.bar) { M.anchors.push({ t: bar.t, y: y, side: "auto" }); resnap(); }      // punkt na cenie: strona świecy (góra/dół) i magnes (knot/korpus)
-        else M.anchors.push({ t: bar.t, p: null });
+        const old = ri != null ? M.anchors[ri] : null;
+        const a = !T.bar ? { t: bar.t, y: y, side: old && old.side ? old.side : "auto" } : { t: bar.t, p: null };   // punkt na cenie: strona świecy (góra/dół) i magnes (knot/korpus)
+        if (ri != null) { M.anchors[ri] = a; M.repick = null; setStatus(""); } else M.anchors.push(a);    // ↻ = wymiana jednego punktu, reszta zostaje
+        if (!T.bar) resnap();
         M.result = null; drawResult(null); drawEditor();
         if (T.need === 0) verify();      // typy z opcjonalną kotwicą (trend, VWAP, VP) liczą się od razu po wskazaniu świecy
     }
@@ -7102,11 +7107,11 @@ window.Measure = (function () {
     function previewSnap(p) {                                            // podgląd magnesu: linia ceny, do której przyciągnie kliknięcie
         const T = TYPES[M.type], zoneMode = M.pick === "zone";                // wskazywanie strefy też z podglądem magnesu
         const hide = () => { if (snapLine) { try { candle.removePriceLine(snapLine); } catch (e) {} snapLine = null; } };
-        if (!candle || !M.magnet || !p || !p.time || !p.point || M.pick === "sl" || (!zoneMode && (!T || T.bar || T.external || M.anchors.length >= T.slots.length))) { hide(); return; }
+        if (!candle || !M.magnet || !p || !p.time || !p.point || M.pick === "sl" || (!zoneMode && (!T || T.bar || T.external || (M.anchors.length >= T.slots.length && M.repick == null)))) { hide(); return; }
         const bar = M.bars.find(b => b.t === p.time); if (!bar) { hide(); return; }
         const y = candle.coordinateToPrice(p.point.y); if (y == null) { hide(); return; }
-        const last = M.anchors[M.anchors.length - 1];
-        const side = !zoneMode && ALT[M.type] && last && last.kind ? (last.kind === "H" ? "L" : "H") : null;
+        const last = M.repick != null ? null : M.anchors[M.anchors.length - 1], cur = M.repick != null ? M.anchors[M.repick] : null;
+        const side = zoneMode ? null : cur ? (cur.side && cur.side !== "auto" ? cur.side : cur.kind || null) : ALT[M.type] && last && last.kind ? (last.kind === "H" ? "L" : "H") : null;
         const r = snapFor(bar, y, side);
         const opts = { price: r[0], color: "#fcd535", lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: "🧲 " + r[1] };
         if (snapLine) snapLine.applyOptions(opts); else snapLine = candle.createPriceLine(opts);
@@ -7125,7 +7130,8 @@ window.Measure = (function () {
         const box = $("#fz-editor"); if (!box) return;
         const T = TYPES[M.type];
         if (!T) { box.innerHTML = '<div class="ev-muted">Wybierz typ powodu, aby go zmierzyć na wykresie.</div>'; return; }
-        let h = '<div class="ev-muted" style="margin-bottom:6px">' + esc(T.help) + (window.FORM_HELP && FORM_HELP[M.type] ? ' <button type="button" class="fz-q" data-ms-help title="Objaśnienie">?</button>' : "") + "</div>" +
+        let h = (M.editing === M.type ? '<div class="fz-editbar">✎ Edytujesz zapisany powód „' + esc(T.label) + '”. Popraw punkty (↻ = wskaż ten punkt ponownie), kliknij „Zweryfikuj”, a potem „Zapisz zmiany powodu”. <button type="button" class="hp-btn" data-ms-editcancel>Anuluj edycję</button></div>' : "") +
+            '<div class="ev-muted" style="margin-bottom:6px">' + esc(T.help) + (window.FORM_HELP && FORM_HELP[M.type] ? ' <button type="button" class="fz-q" data-ms-help title="Objaśnienie">?</button>' : "") + "</div>" +
             (M.helpOpen && window.FORM_HELP && FORM_HELP[M.type] ? '<div class="fz-help">' + FORM_HELP[M.type] + "</div>" : "");
         if (T.external) {
             h += M.items.map((it, i) => '<div class="fz-ext"><input data-ms-ext="' + i + '|url" placeholder="Link do analizy (https://…)" value="' + esc(it.url || "") + '"><input data-ms-ext="' + i + '|source" placeholder="Źródło / autor" value="' + esc(it.source || "") + '">' +
@@ -7134,8 +7140,9 @@ window.Measure = (function () {
                 (M.items.length > 1 ? '<button type="button" class="hp-btn" data-ms-extdel="' + i + '">✕</button>' : "") + "</div>").join("") + '<button type="button" class="hp-btn" data-ms-extadd>＋ kolejna analiza</button> ';
         } else if (T.slots.length) {
             h += '<div class="fz-slots">' + T.slots.map((s, i) => { const a = M.anchors[i]; const need = i < T.need;
-                return '<span class="fz-slot' + (a ? " done" : i === M.anchors.length ? " cur" : "") + '">' + (i + 1) + ". " + esc(s) + (need ? "" : "") + ": " + (a ? "<b>" + dateOf(a.t) + (a.p != null ? " @ " + price(a.p) : "") + "</b>" +
-                    (a.y != null ? ' <button type="button" class="fz-side" data-ms-side="' + i + '" title="Która strona świecy: auto (wg sąsiednich punktów) → góra → dół">' + (a.side === "auto" || !a.side ? "auto: " : "") + (a.kind === "H" ? "góra" : "dół") + " · " + esc(a.src || "") + "</button>" : "") : (i === M.anchors.length ? "kliknij na wykresie…" : "—")) + "</span>"; }).join("") + "</div>";
+                return '<span class="fz-slot' + (M.repick === i ? " repick" : a ? " done" : i === M.anchors.length && M.repick == null ? " cur" : "") + '">' + (i + 1) + ". " + esc(s) + (need ? "" : "") + ": " + (a ? "<b>" + dateOf(a.t) + (a.p != null ? " @ " + price(a.p) : "") + "</b>" +
+                    (a.y != null ? ' <button type="button" class="fz-side" data-ms-side="' + i + '" title="Która strona świecy: auto (wg sąsiednich punktów) → góra → dół">' + (a.side === "auto" || !a.side ? "auto: " : "") + (a.kind === "H" ? "góra" : "dół") + " · " + esc(a.src || "") + "</button>" : "") +
+                    ' <button type="button" class="fz-repick" data-ms-repick="' + i + '" title="Wskaż ten punkt ponownie na wykresie (pozostałe punkty zostają)">' + (M.repick === i ? "↻ kliknij świecę… (Esc = anuluj)" : "↻") + "</button>" : (i === M.anchors.length ? "kliknij na wykresie…" : "—")) + "</span>"; }).join("") + "</div>";
         }
         h += '<div class="plx-actions" style="margin-top:8px">';
         if (T.slots.length && !T.external) h += '<button type="button" class="hp-btn" data-ms-undo>↶ Cofnij punkt</button><button type="button" class="hp-btn" data-ms-clear>Wyczyść punkty</button>';
@@ -7159,7 +7166,7 @@ window.Measure = (function () {
                 '<select data-ms-apply>' + Object.keys(APPLY).map(k => '<option value="' + k + '"' + (M.apply === k ? " selected" : "") + ">" + APPLY[k][1] + "</option>").join("") + '</select> <button type="button" class="hp-btn" data-ms-fill>Wpisz do pola</button>' +
                 (formation ? '<div class="ev-muted">Formacja wymaga zapisania wartości odniesienia – zostanie zapisana przy powodzie.</div>' : "") + "</div>";
         } else if (formation) { h += '<div class="plx-err">Formacja bez wartości odniesienia – nie można jej dodać.</div>'; }
-        h += '<div class="plx-actions" style="margin-top:8px"><button type="button" class="hp-btn ev-go" data-ms-add' + (formation && !r.ref ? " disabled" : "") + '>＋ Dodaj powód do wpisu</button><span class="ev-muted">dodaje <b>+' + num(Math.max(0, Math.min(1, r.quality || 0)), 2) + "</b> do Score</span></div>";
+        h += '<div class="plx-actions" style="margin-top:8px"><button type="button" class="hp-btn ev-go" data-ms-add' + (formation && !r.ref ? " disabled" : "") + '>' + (M.added.some(d => d.type === r.type) ? "✓ Zapisz zmiany powodu" : "＋ Dodaj powód do wpisu") + '</button><span class="ev-muted">' + (M.added.some(d => d.type === r.type) ? "zastępuje poprzedni pomiar tego powodu – " : "dodaje ") + '<b>+' + num(Math.max(0, Math.min(1, r.quality || 0)), 2) + "</b> do Score</span></div>";
         box.innerHTML = h;
         drawScore();
     }
@@ -7185,10 +7192,10 @@ window.Measure = (function () {
         drawScore();
         const box = $("#fz-added"); if (!box) return;
         const sc = M.added.reduce((s, d) => s + ((d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) ? 0 : d.quality), 0);
-        box.innerHTML = M.added.length ? '<div class="ev-muted" style="margin:8px 0 4px">Powody mierzone w tym wpisie – <b>Score ' + num(Math.min(5, sc), 1) + '/5</b> (każdy powód daje tyle punktów, ile wynosi jego wypełnienie; kilka analiz zewnętrznych = jeden punkt):</div>' + M.added.map((d, i) => '<span class="fz-reason fz-v-' + d.verdict + '">' + esc(d.label) + " · " + Math.round(d.quality * 100) + "%" + (d.ref ? " → " + price(d.ref.value) + " (" + esc(APPLY[d.ref.applies_to] ? APPLY[d.ref.applies_to][1] : d.ref.role) + ")" : "") + ' <a href="#" data-ms-rm="' + i + '" title="Usuń">✕</a></span>').join("") : "";
+        box.innerHTML = M.added.length ? '<div class="ev-muted" style="margin:8px 0 4px">Powody mierzone w tym wpisie – <b>Score ' + num(Math.min(5, sc), 1) + '/5</b> (każdy powód daje tyle punktów, ile wynosi jego wypełnienie; kilka analiz zewnętrznych = jeden punkt):</div>' + M.added.map((d, i) => '<span class="fz-reason fz-v-' + d.verdict + (M.editing === d.type ? " fz-editing" : "") + '">' + esc(d.label) + " · " + Math.round(d.quality * 100) + "%" + (d.ref ? " → " + price(d.ref.value) + " (" + esc(APPLY[d.ref.applies_to] ? APPLY[d.ref.applies_to][1] : d.ref.role) + ")" : "") + ' <a href="#" data-ms-edit="' + i + '" title="Edytuj pomiar (punkty, interwał, ustawienia)">✎</a><a href="#" data-ms-rm="' + i + '" title="Usuń">✕</a></span>').join("") : "";
     }
     function selectType(k) {
-        M.type = M.type === k ? null : k; M.anchors = []; M.result = null; M.apply = "entry";
+        M.type = M.type === k ? null : k; M.anchors = []; M.result = null; M.apply = "entry"; M.editing = null; M.editApply = null; M.repick = null; drawAdded();
         if (M.type === "external") M.items = M.items.length ? M.items : [{}];
         clearOverlay(); drawTypes(); drawEditor(); drawResultCard();
         if (M.type && ["trend", "correction", "vwap", "vp", "range", "path"].indexOf(M.type) >= 0) { /* działa bez kotwic */ verify(); }
@@ -7204,7 +7211,9 @@ window.Measure = (function () {
         try {
             const res = await fetch(API_BASE_URL + "/api/form/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
             const d = await res.json(); if (!res.ok || d.status === "error") throw new Error(d.message || "HTTP " + res.status);
-            M.result = d; M.apply = d.ref && d.ref.role === "wejście" ? "entry" : d.ref && d.ref.role === "take profit" ? "tp" : (d.ref ? "start" : "entry"); drawResult(d); drawResultCard();
+            M.result = d; M.apply = d.ref && d.ref.role === "wejście" ? "entry" : d.ref && d.ref.role === "take profit" ? "tp" : (d.ref ? "start" : "entry");
+            if (M.editing === M.type && M.editApply && d.ref) M.apply = M.editApply;          // edycja: zachowaj wcześniejsze „Użyj jako”
+            drawResult(d); drawResultCard();
         } catch (e) { M.result = null; box.innerHTML = '<div class="plx-err">' + esc(e.message) + "</div>"; }
     }
     function toast(t) { if (window.Planer) Planer.toast(t); else alert(t); }
@@ -7217,16 +7226,35 @@ window.Measure = (function () {
             if (!free) { toast("Wszystkie 5 pól powodów jest zajętych – usuń jeden powód."); return; }
             free.value = r.label;
         }
+        const pos = M.added.findIndex(x => x.type === r.type), was = pos >= 0;      // poprawiony powód zostaje na swoim miejscu
         M.added = M.added.filter(d => d.type !== r.type);
         const d = { type: r.type, label: r.label, tf: M.tf, anchors: M.anchors.slice(), params: r.type === "external" ? {} : (M.lastParams || {}), verdict: r.verdict, quality: r.quality, facts: r.facts.map(f => f.text), lifecycle: r.lifecycle, verified_at: new Date().toISOString() };
         if (r.ref) d.ref = { value: r.ref.value, role: r.ref.role, label: r.ref.label, applies_to: M.apply };
         if (r.type === "external") d.items = r.items;
-        M.added.push(d); drawAdded(); toast("Dodano powód „" + r.label + "”.");
+        if (was) M.added.splice(pos, 0, d); else M.added.push(d); M.editing = null; M.editApply = null; M.repick = null;
+        drawAdded(); drawEditor(); drawResultCard(); toast((was ? "Zapisano zmiany powodu „" : "Dodano powód „") + r.label + "”.");
+    }
+    async function editReason(i) {                       // ✎: zapisany pomiar wraca do edytora (typ, interwał, punkty, ustawienia)
+        const d = M.added[i]; if (!d || !TYPES[d.type]) return;
+        M.type = d.type; M.editing = d.type; M.repick = null; M.helpOpen = false; M.result = null;
+        M.anchors = JSON.parse(JSON.stringify(d.anchors || []));
+        M.editApply = d.ref && APPLY[d.ref.applies_to] ? d.ref.applies_to : null; M.apply = M.editApply || "entry";
+        if (d.type === "fibo") M.opts.log = !!(d.params || {}).log;
+        if (d.type === "external") M.items = JSON.parse(JSON.stringify(d.items && d.items.length ? d.items : [{}]));
+        drawTypes(); drawEditor(); drawResultCard(); drawAdded();
+        const ed = $("#fz-editor"); if (ed && ed.scrollIntoView) ed.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (d.tf && d.tf !== M.tf) { M.tf = d.tf; $$tf(); clearOverlay(); await loadBars(); }
+        resnap(); drawResult(null); drawEditor();
+        const ts = M.anchors.map(a => M.bars.findIndex(b => b.t === a.t)).filter(x => x >= 0);   // pokaż na wykresie najwcześniejszy punkt
+        if (chart && ts.length) { const lo = Math.min.apply(null, ts), n = M.bars.length, r = chart.timeScale().getVisibleLogicalRange(); if (r && lo < r.from) chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, lo - 10), to: n + 6 }); }
+        const T = TYPES[d.type];
+        if (T.external ? M.items.some(x => x.url) : M.anchors.length >= T.need) verify();       // od razu bieżący wynik – po zmianach „Zweryfikuj” ponownie
     }
     function removeReason(i) {
         const d = M.added[i]; if (!d) return;
         [1, 2, 3, 4, 5].forEach(n => { const el = $("#form-reason-" + n); if (el && el.value.trim().toLowerCase() === d.label.toLowerCase()) el.value = ""; });
-        M.added.splice(i, 1); drawAdded();
+        if (M.editing === d.type) { M.editing = null; M.editApply = null; }
+        M.added.splice(i, 1); drawAdded(); drawEditor(); drawResultCard();
     }
     // zbiera szczegóły do zapisu i pilnuje, by formacje miały zapisaną wartość odniesienia
     function collect(reasonNames) {
@@ -7243,10 +7271,10 @@ window.Measure = (function () {
         if ((el = t.closest("[data-ms-type]"))) { M.helpOpen = false; selectType(el.dataset.msType); return; }
         if (t.closest("[data-ms-help]")) { M.helpOpen = !M.helpOpen; drawEditor(); return; }
         if (t.closest("[data-ms-verify]")) { verify(); return; }
-        if (t.closest("[data-ms-undo]")) { M.anchors.pop(); resnap(); M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
+        if (t.closest("[data-ms-undo]")) { M.repick = null; M.anchors.pop(); resnap(); M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
         const sd = t.closest("[data-ms-side]");
         if (sd) { const a = M.anchors[+sd.dataset.msSide]; if (a) { a.side = { auto: "H", H: "L", L: "auto" }[a.side || "auto"]; resnap(); M.result = null; drawResult(null); drawEditor(); drawResultCard(); } return; }
-        if (t.closest("[data-ms-clear]")) { M.anchors = []; M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
+        if (t.closest("[data-ms-clear]")) { M.repick = null; M.anchors = []; M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
         if (t.closest("[data-ms-suggest]")) {
             const l = M.auto && M.auto.fibo_leg; if (!l) { toast("Brak podpowiedzi – za mało danych o trendzie."); return; }
             M.anchors = [{ t: l.a.t, p: l.a.price }, { t: l.b.t, p: l.b.price }]; M.result = null; drawResult(null); drawEditor(); return;
@@ -7254,6 +7282,9 @@ window.Measure = (function () {
         if (t.closest("[data-ms-fill]") && M.result && M.result.ref) { const f = $("#" + APPLY[M.apply][0]); if (f) { f.value = Number(M.result.ref.value.toFixed(4)); f.dispatchEvent(new Event("input", { bubbles: true })); toast("Wpisano " + price(M.result.ref.value) + " w pole „" + APPLY[M.apply][1] + "”."); } return; }
         if (t.closest("[data-ms-add]")) { addReason(); return; }
         if ((el = t.closest("[data-ms-rm]"))) { e.preventDefault(); removeReason(+el.dataset.msRm); return; }
+        if ((el = t.closest("[data-ms-edit]"))) { e.preventDefault(); editReason(+el.dataset.msEdit); return; }
+        if ((el = t.closest("[data-ms-repick]"))) { const i = +el.dataset.msRepick; M.repick = M.repick === i ? null : i; setStatus(M.repick != null ? "Kliknij świecę dla punktu " + (i + 1) + " – zastąpi poprzedni (Esc = anuluj)." : ""); drawEditor(); return; }
+        if (t.closest("[data-ms-editcancel]")) { M.type = null; M.anchors = []; M.result = null; M.editing = null; M.editApply = null; M.repick = null; setStatus(""); drawResult(null); drawTypes(); drawEditor(); drawResultCard(); drawAdded(); return; }
         if (t.closest("[data-ms-extadd]")) { M.items.push({}); drawEditor(); return; }
         if ((el = t.closest("[data-ms-extdel]"))) { M.items.splice(+el.dataset.msExtdel, 1); drawEditor(); return; }
         if ((el = t.closest("[data-ms-tf]"))) { M.tf = el.dataset.msTf; M.anchors = []; M.result = null; $$tf(); clearOverlay(); loadBars(); drawEditor(); drawResultCard(); }
@@ -7273,11 +7304,11 @@ window.Measure = (function () {
 
     function open(ticker) {
         const changed = ticker !== M.ticker; M.ticker = ticker;
-        if (changed) { M.added = []; M.anchors = []; M.result = null; M.type = null; }
+        if (changed) { M.added = []; M.anchors = []; M.result = null; M.type = null; M.editing = M.editApply = M.repick = null; }
         $("#fz-measure").style.display = "block"; drawTypes(); drawEditor(); drawResultCard(); drawAdded(); $$tf();
         setTimeout(() => { if (changed || !M.bars.length) loadBars(); else { ensureChart(); drawBase(); } }, 30);
     }
-    function reset() { M.pick = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.saved = []; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
+    function reset() { M.pick = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.saved = []; M.editing = M.editApply = M.repick = null; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
     function setAdded(details, savedNames) {                         // edycja wpisu: zapisane zmierzone powody wracają do listy (można je usuwać i dodawać nowe)
         M.added = (details || []).map(d => JSON.parse(JSON.stringify(d)));
         M.saved = (savedNames || []).map(r => String(r).trim().toLowerCase());
