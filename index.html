@@ -378,6 +378,7 @@
         .fz-ssub { font-size: .84rem; color: var(--text-muted); } .fz-ssub b { color: var(--text-main); } .fz-safter { color: var(--accent-hover); } .fz-safter b { color: var(--accent-hover); }
         .fz-schips { display: flex; flex-wrap: wrap; gap: 4px; } .fz-schip { font-size: .78rem; border: 1px solid var(--border-color); border-radius: 999px; padding: 1px 8px; } .fz-schip b { color: var(--success); } .fz-schip.off { opacity: .5; text-decoration: line-through; }
         @media (max-width: 760px) { .fz-scorebar { top: 0; gap: 10px; padding: 8px 10px; } .fz-sbig { min-width: 80px; } .fz-sbig b { font-size: 1.8rem; } }
+        .fz-pickrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -2px 0 10px; } .fz-pickrow .ev-muted { font-size: .84rem; }
         .fz-side { border: 1px solid var(--accent); background: transparent; color: var(--accent-hover); border-radius: 999px; padding: 0 8px; font-size: .78rem; cursor: pointer; margin-left: 4px; }
         .fz-q { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--accent); background: transparent; color: var(--accent-hover); font-weight: 700; font-size: 12px; cursor: pointer; padding: 0; margin-left: 4px; vertical-align: middle; }
         .fz-help { background: rgba(252,213,53,.06); border: 1px solid rgba(252,213,53,.35); border-radius: 10px; padding: 10px 14px; margin: 6px 0 10px; font-size: .9em; line-height: 1.5; color: var(--text-main); white-space: normal; }
@@ -667,9 +668,11 @@
                 <form id="trading-form" onsubmit="submitAdvancedForm(event)">
                     <input type="hidden" id="form-ticker">
                                         <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div><div class="form-group"><label>Typ wejścia <button type="button" class="fz-q" data-help-toggle="form-etype-help" title="Objaśnienie">?</button></label><select id="form-etype"><option value="korekta">Korekta do strefy</option><option value="wybicie">Wybicie (zamknięcie nad oporem)</option></select></div></div><div class="fz-help" id="form-etype-help" hidden></div>
-                    <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01" required></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01" required></div></div>
-                    <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01" required></div>
-                    <div class="form-group"><label>Świeca SL – data świecy, której przebicie korpusem (zamknięciem) oznacza SL</label><input type="date" id="form-slc"></div>
+                    <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="any" required></div><div class="form-group"><label>Koniec strefy</label><input type="number" id="form-end" step="any" required></div></div>
+                    <div class="fz-pickrow"><button type="button" class="hp-btn" data-pick="zone">🎯 Strefa z wykresu (korpus świecy)</button><span id="fz-opd-check" class="ev-muted"></span></div>
+                    <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="any" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="any" required></div>
+                    <div class="form-row"><div class="form-group"><label>Stop loss (korpus świecy SL)</label><input type="number" id="form-sl" step="any" placeholder="domyślnie koniec strefy"></div><div class="form-group"><label>Świeca SL – jej przebicie korpusem (zamknięciem) = SL</label><input type="date" id="form-slc"></div></div>
+                    <div class="fz-pickrow"><button type="button" class="hp-btn" data-pick="sl">🎯 Świeca SL z wykresu</button><span id="fz-sl-check" class="ev-muted">LONG: SL = dół korpusu wskazanej świecy, SHORT: góra korpusu.</span></div>
                     <div class="form-group" style="display:none" aria-hidden="true"><label>Powody wejścia (Opcjonalne)</label><input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2..."><input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3..."><input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4..."><input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5..."><datalist id="reasons-list"></datalist></div>
                     <div id="fz-measure" style="display:none">
                         <div class="plx-h" style="margin-top:14px">Powody mierzone na wykresie</div>
@@ -2295,6 +2298,8 @@
 
             const chk = window.Measure ? Measure.collect(formReasons) : { ok: true, details: [] };
             if (!chk.ok) { alert(chk.message); return; }
+            const opd = window.Measure ? Measure.opdCheck() : null;
+            if (opd && opd.ok === false && !confirm(opd.text + "\n\nZapisać mimo to?")) return;
             const data = { 
                 reasons_detail: chk.details,
                 ticker: document.getElementById('form-ticker').value, 
@@ -2303,6 +2308,7 @@
                 entry_type: document.getElementById('form-etype').value,
                 start_zone: document.getElementById('form-start').value, 
                 end_zone: document.getElementById('form-end').value, 
+                stop_loss: document.getElementById('form-sl').value,
                 entry_point: document.getElementById('form-entry').value, 
                 take_profit: document.getElementById('form-tp').value,
                 sl_candle: document.getElementById('form-slc').value,
@@ -6661,6 +6667,7 @@ window.FormZones = (function () {
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? "" : v; };
         set("form-direction", pre && pre.direction || "DBR"); set("form-priority", pre && pre.priority || 0); set("form-etype", pre && pre.entry_type || "korekta");
         set("form-start", pre && pre.start_zone); set("form-end", pre && pre.end_zone); set("form-tp", pre && pre.take_profit);
+        set("form-sl", pre && pre.stop_loss != null && pre.stop_loss !== pre.end_zone ? pre.stop_loss : ""); set("form-slc", pre && pre.sl_candle ? String(pre.sl_candle).slice(0, 10) : "");
         set("form-entry", ""); for (let i = 1; i <= 5; i++) set("form-reason-" + i, "");
         $("#fz-formtitle").textContent = title;
     }
@@ -6943,7 +6950,7 @@ window.Measure = (function () {
             vol.setData(M.bars.map(b => ({ time: b.t, value: b.v, color: b.c >= b.o ? "rgba(14,203,129,0.25)" : "rgba(246,70,93,0.25)" })));
             const n = M.bars.length; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (M.tf === "1d" ? 160 : 100)), to: n + 6 });
             setStatus(M.bars.length ? "" : "Brak świec dla tego tickera.");
-            drawBase(); drawOhlc(M.bars[M.bars.length - 1]);
+            drawBase(); drawOhlc(M.bars[M.bars.length - 1]); opdLine = slLine = null; opdCheck();
         } catch (e) { setStatus("Nie udało się wczytać wykresu: " + e.message); }
         fetchAuto();
     }
@@ -6988,7 +6995,95 @@ window.Measure = (function () {
     }
 
     // ---------- wybór kotwic ----------
+    // ---------- wskazywanie kliknięciem: strefa z korpusu świecy (1–2 świece) i świeca SL; kontrola OPD ----------
+    const isLong = () => ["DBR", "RBR"].indexOf($("#form-direction").value) >= 0;
+    const r4 = v => Math.abs(v) < 10 ? Math.round(v * 10000) / 10000 : Math.round(v * 100) / 100;
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); } };
+    function startPick(mode) {
+        if (!chart || !M.bars.length) { toast("Najpierw wybierz spółkę – wykres pojawi się poniżej formularza."); return; }
+        M.pick = M.pick === mode ? null : mode; M.pickT = [];
+        setStatus(M.pick === "zone" ? "🎯 Kliknij świecę strefy – strefa = jej korpus. Druga świeca (opcjonalnie) obejmie kilka świec bazy." : M.pick === "sl" ? "🎯 Kliknij świecę SL – stop loss = " + (isLong() ? "dół" : "góra") + " jej korpusu." : "");
+        drawPickButtons();
+        if (M.pick) $("#fz-chart").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    function drawPickButtons() {
+        document.querySelectorAll("[data-pick]").forEach(b => {
+            const on = M.pick === b.dataset.pick;
+            b.classList.toggle("ev-go", on);
+            b.textContent = b.dataset.pick === "zone" ? (on ? (M.pickT.length ? "✓ Gotowe (strefa)" : "✕ Anuluj wskazywanie") : "🎯 Strefa z wykresu (korpus świecy)") : (on ? "✕ Anuluj wskazywanie" : "🎯 Świeca SL z wykresu");
+        });
+    }
+    function handlePick(param) {
+        const bar = M.bars.find(b => b.t === param.time); if (!bar) return;
+        const long = isLong();
+        if (M.pick === "sl") {
+            setVal("form-sl", r4(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)));
+            setVal("form-slc", dateOf(bar.t));
+            M.pick = null; setStatus("SL: " + (long ? "dół" : "góra") + " korpusu świecy z " + dateOf(bar.t) + " = " + price(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)));
+        } else {
+            M.pickT.push(bar.t);
+            const t0 = Math.min.apply(null, M.pickT), t1 = Math.max.apply(null, M.pickT);
+            const seg = M.bars.filter(b => b.t >= t0 && b.t <= t1);
+            const top = Math.max.apply(null, seg.map(b => Math.max(b.o, b.c))), bot = Math.min.apply(null, seg.map(b => Math.min(b.o, b.c)));
+            setVal("form-start", r4(long ? top : bot)); setVal("form-end", r4(long ? bot : top));
+            setStatus("Strefa z korpus" + (seg.length > 1 ? "ów " + seg.length + " świec " + dateOf(t0) + " – " + dateOf(t1) : "u świecy " + dateOf(t0)) + ": " + price(bot) + "–" + price(top) +
+                (M.pickT.length < 2 ? ". Kliknij drugą świecę, aby objąć kilka świec, albo „✓ Gotowe”." : "."));
+            if (M.pickT.length >= 2) M.pick = null;
+        }
+        drawPickButtons(); drawBase(); opdCheck();
+    }
+    function opdOf(bars, long) {                        // ostatni potwierdzony dołek (SHORT: szczyt) po korpusach, N=3, NIEPRZEBITY zamknięciem; przebite -> kolejny niższy
+        const v = b => long ? Math.min(b.o, b.c) : -Math.max(b.o, b.c), c = b => long ? b.c : -b.c, n = 3, piv = [];
+        for (let i = n; i < bars.length - n; i++) {
+            const x = v(bars[i]); let ok = true;
+            for (let k = i - n; k < i && ok; k++) if (!(v(bars[k]) > x)) ok = false;
+            for (let k = i + 1; k <= i + n && ok; k++) if (!(v(bars[k]) >= x)) ok = false;
+            if (ok) piv.push(i);
+        }
+        const broken = [];
+        for (let k = piv.length - 1; k >= 0; k--) {
+            const i = piv[k], lv = v(bars[i]);
+            const br = bars.slice(i + 1).find(b => c(b) < lv);
+            const lvl = long ? lv : -lv;
+            if (!br) return { level: lvl, t: bars[i].t, broken: broken };
+            if (broken.length < 3) broken.push({ level: lvl, t: bars[i].t, at: br.t });
+        }
+        return null;
+    }
+    let opdLine = null, slLine = null;
+    function opdCheck() {
+        const box = $("#fz-opd-check"), slb = $("#fz-sl-check");
+        if (!candle || !M.bars.length) return null;
+        const long = isLong(), o = opdOf(M.bars, long), name = long ? "OPD" : "OPS", z = formZone();
+        if (opdLine) { try { candle.removePriceLine(opdLine); } catch (e) {} opdLine = null; }
+        if (!o) { if (box) box.textContent = "Brak potwierdzonego " + (long ? "dołka" : "szczytu") + " na wykresie."; return null; }
+        opdLine = candle.createPriceLine({ price: o.level, color: "#f38ba8", lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: name + " " + price(o.level) });
+        if (slLine) { try { candle.removePriceLine(slLine); } catch (e) {} slLine = null; }
+        const slv = parseFloat($("#form-sl").value);
+        if (!isNaN(slv)) slLine = candle.createPriceLine({ price: slv, color: "#f6465d", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "SL " + price(slv) });
+        const prev = o.broken.length ? " Przebite zamknięciem: " + o.broken.map(b => price(b.level) + " (" + dateOf(b.at) + ")").join(", ") + " → obowiązuje kolejny " + (long ? "niższy" : "wyższy") + " " + name + "." : "";
+        let res = { ok: null, text: name + " " + price(o.level) + " (" + dateOf(o.t) + ")." + prev };
+        if (z) {
+            const ok = long ? z.lo > o.level : z.hi < o.level;
+            res = { ok: ok, text: (ok ? "✓ Strefa " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dateOf(o.t) + ") – zgodnie z zasadą " + (long ? "wyższych dołków" : "niższych szczytów") + "."
+                : "✗ Strefa nie leży " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dateOf(o.t) + ") – dla " + (long ? "LONG strefa musi być powyżej ostatniego potwierdzonego dołka" : "SHORT strefa musi być poniżej ostatniego potwierdzonego szczytu") + ".") + prev };
+        }
+        if (box) { box.textContent = res.text; box.style.color = res.ok === false ? "var(--danger)" : res.ok ? "var(--success)" : ""; }
+        const sl = parseFloat($("#form-sl").value);
+        if (slb && z && !isNaN(sl)) {
+            const okSl = long ? sl <= z.lo : sl >= z.hi;
+            slb.textContent = (okSl ? "✓ SL " + price(sl) + " " + (long ? "pod" : "nad") + " strefą" : "✗ SL " + price(sl) + " leży w strefie lub po złej stronie") + " · " + (long ? (sl < o.level ? "pod" : "nad") : (sl > o.level ? "nad" : "pod")) + " " + name + " " + price(o.level) + ".";
+            slb.style.color = okSl ? "" : "var(--danger)";
+        }
+        return res;
+    }
+    document.addEventListener("input", e => { if (["form-start", "form-end", "form-sl"].indexOf(e.target.id) >= 0 && candle) { drawBase(); opdCheck(); } });
+    document.addEventListener("change", e => { if (e.target.id === "form-direction" && candle) { drawBase(); opdCheck(); } });
+    document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-pick]"); if (b) { e.preventDefault(); if (M.pick === "zone" && b.dataset.pick === "zone" && M.pickT.length) { M.pick = null; setStatus(""); drawPickButtons(); } else startPick(b.dataset.pick); } });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && M.pick) { M.pick = null; setStatus(""); drawPickButtons(); e.stopPropagation(); } }, true);
+
     function onClick(param) {
+        if (M.pick && param && param.time) { handlePick(param); return; }
         const T = TYPES[M.type]; if (!T || T.external || T.auto || !param || !param.time || !param.point) return;
         const max = T.slots.length; if (M.anchors.length >= max) return;
         const bar = M.bars.find(b => b.t === param.time); if (!bar) return;
@@ -7202,8 +7297,8 @@ window.Measure = (function () {
         $("#fz-measure").style.display = "block"; drawTypes(); drawEditor(); drawResultCard(); drawAdded(); $$tf();
         setTimeout(() => { if (changed || !M.bars.length) loadBars(); else { ensureChart(); drawBase(); } }, 30);
     }
-    function reset() { M.ticker = ""; M.added = []; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
-    return { open: open, reset: reset, collect: collect, labels: () => ORDER.map(k => ({ type: k, label: TYPES[k].label })) };
+    function reset() { M.pick = null; opdLine = slLine = null; snapLine = null; M.ticker = ""; M.added = []; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
+    return { open: open, reset: reset, collect: collect, opdCheck: opdCheck, labels: () => ORDER.map(k => ({ type: k, label: TYPES[k].label })) };
 })();
 </script>
 <script>
