@@ -2889,7 +2889,7 @@
             const ee = e.entry_eval || {};
             box.innerHTML = `🎯 <b>${e.focusEvalId ? 'Focus #' + e.focusEvalId + ': ' : 'Ocena wejścia: '}${ee.points != null ? String(Math.round(ee.points * 10) / 10).replace('.', ',') + '/' + (ee.max_points || 15) + ' pkt · ' : ''}${s.score == null ? '–' : Math.round(s.score)}/100 · ${s.verdict}</b> · rekomendowany budżet: <b>${rec == null ? 'brak limitów' : rec.toFixed(1).replace('.', ',') + '% kapitału'}</b>`
                 + (s.recommended_ccy != null ? ` ≈ <b>${Math.round(s.recommended_ccy).toLocaleString('pl-PL')} ${s.currency}</b>${s.units ? ' (' + s.units + ' szt.)' : ''}` : '')
-                + (pln != null ? ` (≈ ${Math.round(pln).toLocaleString('pl-PL')} PLN własnych środków, bez dźwigni)` : '')
+                + (pln != null ? ` (≈ ${Math.round(pln).toLocaleString('pl-PL')} PLN ekspozycji – przy dźwigni wpłacasz tę kwotę podzieloną przez dźwignię)` : '')
                 + ` <button type="button" class="dbx-icon" onclick="clearTradeEval()" title="Odłącz ocenę od transakcji">✕</button>`;
         }
         function clearTradeEval() { window.__tradeEval = null; renderTradeEvalBox(); }
@@ -6029,7 +6029,7 @@ window.Planer = (function () {
             '<div class="plx-head"><div><div class="plx-title"><span class="sd-link" data-tk="' + esc(p.ticker) + '">' + esc(p.ticker) + "</span> " + kindBadge(p.kind, p.kind_label) + ' ' + phaseBadge(p.phase) + '</div><div class="plx-sub">' + esc(p.name) + " · plan od " + date(p.created_at) + (p.closed_at ? " do " + date(p.closed_at) : "") + "</div></div>" +
             '<div class="plx-actions"><button class="hp-btn" onclick="Planer.goTrades()">📊 Transakcje</button><button class="hp-btn" onclick="Planer.closeDetail()">✕ Zamknij</button></div></div>' +
             '<div class="plx-kpis">' +
-            kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : " <small class='db-help'>bez limitu</small>"), (amt(c.used_pct, p.money) ? "<b>" + amt(c.used_pct, p.money) + "</b>" + (c.max_pct != null ? " z " + amt(c.max_pct, p.money) : "") + " · " : "") + "wykorzystane w otwartych transakcjach") +
+            kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : " <small class='db-help'>bez limitu</small>"), (amt(c.used_pct, p.money) ? "<b>" + amt(c.used_pct, p.money) + "</b>" + (c.max_pct != null ? " z " + amt(c.max_pct, p.money) : "") + " · " : "") + "zaangażowane w otwartych transakcjach (z dźwignią)") +
             kpi("Strefy spółki", (p.zones ? p.zones.total : p.legs.length) + ' <small class="db-help">z transakcjami: ' + (p.zones ? p.zones.with_trades : "—") + "</small>", p.zones && p.zones.limit_pct != null ? "limit na strefę: " + pct(p.zones.limit_pct) + (amt(p.zones.limit_pct, p.money) ? " ≈ " + amt(p.zones.limit_pct, p.money) : "") : "bez limitu na strefę") +
             (p.reserved_pct > 0 ? kpi("Zarezerwowane w planie", pctA(p.reserved_pct, p.money), "do dołożenia w strefach planu") : "") +
             kpi("Zostaje po inwestycji", '<span class="' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '">' + pct(after) + "</span>", (amt(after, p.money) ? "<b>" + amt(after, p.money) + "</b> · " : "") + "budżet spółki po zainwestowaniu całego planu") +
@@ -6275,7 +6275,7 @@ window.Wejscie = (function () {
         const my = ++ov.req; ov.editCond = null;
         if (newOpts) ov.opts[optKey(ticker, entryId)] = newOpts;
         const o = ov.opts[optKey(ticker, entryId)] || {};
-        const qs = (o.entry_manual !== undefined && o.entry_manual !== "" ? "&entry_manual=" + encodeURIComponent(o.entry_manual) + "&entry_note=" + encodeURIComponent(o.entry_note || "") : "") + (o.gap_dates && o.gap_dates.length ? "&gap_dates=" + encodeURIComponent(o.gap_dates.join(",")) : "") + (o.calendar !== undefined && o.calendar !== "" ? "&calendar=" + encodeURIComponent(o.calendar) : "") +
+        const qs = (o.entry_manual !== undefined && o.entry_manual !== "" ? "&entry_manual=" + encodeURIComponent(o.entry_manual) + "&entry_note=" + encodeURIComponent(o.entry_note || "") : "") + (o.calendar !== undefined && o.calendar !== "" ? "&calendar=" + encodeURIComponent(o.calendar) : "") +
             (o.cond_manual && Object.keys(o.cond_manual).length ? "&cond_manual=" + encodeURIComponent(Object.keys(o.cond_manual).map(k => k + ":" + o.cond_manual[k]).join(",")) : "");
         show('<div class="ev-empty">Ocena wejścia ' + esc(ticker) + ' – pobieram świece, CVD i budżet…</div>');
         try {
@@ -6288,9 +6288,8 @@ window.Wejscie = (function () {
         }
     }
     function optionsHtml(d) {
-        const o = ov.opts[optKey(d.ticker, d.play.entry_id)] || {}, gd = o.gap_dates || [], cal = o.calendar === undefined ? "" : String(o.calendar);
-        const src = d.options && d.options.gap_source ? "Luka: " + esc(d.options.gap_source) + (d.options.gap_dates && d.options.gap_dates.length ? " (" + d.options.gap_dates.map(esc).join(" → ") + ")" : "") : "Luka: nie wskazano";
-        return '<div class="ev-opts"><span class="ev-muted">' + src + '</span><label>Luka – data powstania <input type="date" id="ev-gd1" value="' + esc(gd[0] || "") + '"> <input type="date" id="ev-gd2" value="' + esc(gd[1] || "") + '" title="Druga data (opcjonalnie): świeca po luce"></label>' +
+        const o = ov.opts[optKey(d.ticker, d.play.entry_id)] || {}, cal = o.calendar === undefined ? "" : String(o.calendar);
+        return '<div class="ev-opts">' +
             '<label>Kalendarz – moja ocena <select id="ev-cal"><option value=""' + (cal === "" ? " selected" : "") + '>nie oceniam (z kalendarza zdarzeń)</option><option value="1"' + (cal === "1" ? " selected" : "") + '>brak ryzyka</option><option value="0.6"' + (cal === "0.6" ? " selected" : "") + '>umiarkowane</option><option value="0.2"' + (cal === "0.2" ? " selected" : "") + '>wysokie</option></select></label>' +
             '<button type="button" class="hp-btn" data-ev-recalc>Przelicz</button></div>';
     }
@@ -6325,13 +6324,14 @@ window.Wejscie = (function () {
             budget = '<div class="plx-kpis">' +
                 '<div class="plx-kpi"><div class="l">Dostępny budżet</div><div class="v">' + pct(b.base_pct) + (b.base_ccy != null ? ' <small class="ev-muted">≈ ' + ccy(b.base_ccy, b.currency) + "</small>" : "") + '</div><div class="s">kapitału · ' + (b.source === "plan" ? "z planu (zostało do dołożenia w strefie)" : "z limitów rodzaju spółki (strefa minus już użyte)") + "</div></div>" +
                 '<div class="plx-kpi"><div class="l">Część budżetu wg punktów</div><div class="v">' + Math.round(b.factor * 100) + '%</div><div class="s">' + (d.scoring ? esc(d.scoring.tier) : "") + "</div></div>" +
-                '<div class="plx-kpi"><div class="l">Rekomendowany budżet</div><div class="v" style="color:' + (b.recommended_pct > 0 ? "var(--success)" : "var(--danger)") + '">' + pct(b.recommended_pct) + '</div><div class="s">kapitału na to wejście' +
+                '<div class="plx-kpi"><div class="l">Rekomendowany budżet</div><div class="v" style="color:' + (b.recommended_pct > 0 ? "var(--success)" : "var(--danger)") + '">' + pct(b.recommended_pct) + '</div><div class="s">kapitału na to wejście (ekspozycja z dźwignią)' +
                     (b.recommended_ccy != null ? '<br><b style="color:var(--text-main);font-size:1.15em">≈ ' + ccy(b.recommended_ccy, b.currency) + "</b>" + (b.units ? " · " + b.units + " szt. po " + price(d.price) : "") + (b.currency !== "PLN" && b.recommended_pln != null ? " · " + ccy(b.recommended_pln, "PLN") : "") : "") + "</div></div></div>";
         }
         const co = b.company || {};
         const companyLine = '<div class="ev-muted" style="margin:6px 0">Maks. budżet spółki: <input id="ev-maxb" type="number" step="0.1" min="0.1" max="100" value="' + (co.max_pct != null ? co.max_pct : "") + '" style="width:80px"> % kapitału <button class="hp-btn" style="padding:2px 8px" data-ev-maxb>Zapisz</button> <span>(ustal przed wejściem; puste = limit z Serwisu)</span></div>' +
-            '<div class="ev-muted">Spółka: wykorzystano ' + pct(co.used_pct) + (co.max_pct != null ? " z " + pct(co.max_pct) : "") + " budżetu" +
-            (co.max_trades != null ? " · wolnych wejść: " + co.trades_left + " z " + co.max_trades : "") + (b.plan_id ? " · plan #" + b.plan_id : " · brak planu spółki") + "</div>";
+            '<div class="ev-muted">Spółka: zaangażowano ' + pct(co.used_pct) + (co.max_pct != null ? " z " + pct(co.max_pct) : "") + " budżetu (ekspozycja z dźwignią)" +
+            (b.used_ccy != null ? " ≈ " + ccy(b.used_ccy, b.currency) : "") + (b.remaining_ccy != null ? " · zostaje " + ccy(b.remaining_ccy, b.currency) : "") +
+            (co.max_trades != null ? " · wolnych wejść: " + co.trades_left + " z " + co.max_trades : "") + (b.plan_id ? " · plan #" + b.plan_id : " · plan powstanie przy pierwszej transakcji") + "</div>";
         show(
             '<div class="plx-head"><div><div class="plx-title">Ocena wejścia · ' + esc(d.ticker) + ' <a class="sd-link" data-tk="' + esc(d.ticker) + '" style="font-size:.6em">wykres</a> <a class="sd-link" href="' + esc(getTradingViewLink(d.ticker)) + '" target="_blank" rel="noopener" style="font-size:.6em">TradingView</a></div>' +
             '<div class="plx-sub">' + esc(d.name) + " · " + kindBadge(d.kind, d.kind_label) + " · kurs " + price(d.price) + " (" + (d.price_source === "5m" ? "ostatnia świeca 5m" : "ostatnia świeca 1H") + ")</div></div>" +
@@ -6375,9 +6375,8 @@ window.Wejscie = (function () {
             return;
         }
         if (t.closest("[data-ev-recalc]") && ov.data) {
-            const g = [$("#ev-gd1").value, $("#ev-gd2").value].filter(Boolean).sort();
             const prev = ov.opts[optKey(ov.data.ticker, ov.data.play.entry_id)] || {};
-            evaluate(ov.data.ticker, ov.data.play.entry_id, { ...prev, gap_dates: g, calendar: $("#ev-cal").value }); return;
+            evaluate(ov.data.ticker, ov.data.play.entry_id, { ...prev, calendar: $("#ev-cal").value }); return;
         }
         const ce = t.closest("[data-ev-cedit]"); if (ce && ov.data) { ov.editCond = ce.dataset.evCedit; render(); const inp = $("#ev-cv"); if (inp) { inp.focus(); inp.select(); } return; }
         const cok = t.closest("[data-ev-cok]"); if (cok && ov.data) { const v = ($("#ev-cv").value || "").trim().replace(",", "."); if (v === "" || isNaN(+v)) { alert("Podaj ocenę 0–100%."); return; } setCond(cok.dataset.evCok, +v); return; }
