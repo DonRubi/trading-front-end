@@ -369,6 +369,7 @@
         .fz-zblock { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; } .fz-zhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; flex-wrap: wrap; } .fz-zbody { padding: 0 14px 10px; display: none; } .fz-zblock.open .fz-zbody { display: block; } .fz-zblock.open .fz-chev { transform: rotate(90deg); }
         #fz-modal .form-group input, #fz-modal .form-group select { width: 100%; }
         @media (max-width: 760px) { .fz-sub { display: block; overflow-x: auto; } }
+        .eod-det td { vertical-align: top; } .eod-det tr.eod-off { opacity: .55; } .eod-det tr.eod-sum td { border-top: 2px solid var(--border-color); } .eod-rule { margin-top: 4px; font-size: .85em; }
         .rc-ana { border: 1px solid rgba(166,227,161,.45); background: rgba(166,227,161,.06); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
         .rc-ana-h { font-weight: 700; font-size: 1.05em; color: #a6e3a1; } .rc-ana-item + .rc-ana-item { border-top: 1px solid var(--border-color); padding-top: 10px; }
         .rc-ana-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .rc-ana-link { margin-top: 2px; text-decoration: none; border-color: #a6e3a1 !important; color: #a6e3a1 !important; font-weight: 600; }
@@ -7165,17 +7166,62 @@ window.FocusEod = (function () {
                 "<td>" + (t.entry_score != null ? f1(t.entry_score) : "–") + " → " + (rc ? "<b>" + f1(rc.score) + "</b>" + delta : "–") + "</td>" +
                 "<td>" + (comps || '<span class="tr-cnt">–</span>') + "</td>" +
                 "<td><b>" + (total != null ? f1(total) + "/20" : "–") + "</b></td>" +
-                '<td style="white-space:nowrap"><button class="hp-btn" style="padding:4px 10px" data-eod-calc="' + t.id + '">' + (eodPts != null ? "↻ Policz" : "Policz") + '</button> <button class="hp-btn" style="padding:4px 10px" data-eod-fix="' + t.id + '" data-val="' + (man ? man.score : "") + '">✎ Popraw</button></td></tr>';
+                '<td style="white-space:nowrap"><button class="hp-btn" style="padding:4px 10px" data-eod-det="' + t.id + '" title="Szczegóły obliczeń">🔍 Szczegóły</button> <button class="hp-btn" style="padding:4px 10px" data-eod-calc="' + t.id + '">' + (eodPts != null ? "↻ Policz" : "Policz") + '</button> <button class="hp-btn" style="padding:4px 10px" data-eod-fix="' + t.id + '" data-val="' + (man ? man.score : "") + '">✎ Popraw</button></td></tr>';
         }).join("");
     }
+    // ---------- okno: szczegóły obliczeń EOD ----------
+    const plNum = x => String(x == null ? "" : x).replace(/(\d)\.(\d)/g, "$1,$2");
+    function detailHtml(t) {
+        const ev = t.entry_eval || {}, eod = t.eod_eval || {}, man = eod.manual, rc = eod.entry_recheck, comps = eod.components || [];
+        const mx = eod.max_points || 5, used = comps.filter(c => c.weight > 0), wsum = used.reduce((a, c) => a + c.weight, 0);
+        const auto = man ? man.auto : (t.eod_score != null ? parseFloat(t.eod_score) : null);
+        let h = '<div class="plx-head"><div><div class="plx-title">Szczegóły EOD · <span class="sd-link" data-tk="' + esc(t.ticker) + '">' + esc(t.ticker) + "</span> #" + t.id + '</div><div class="plx-sub">' +
+            "zakup " + esc(t.buy_date || "–") + (eod.bar_date ? " · sesja oceniona: <b>" + esc(eod.bar_date) + "</b>" : "") + (eod.direction ? " · " + esc(eod.direction) : "") + (eod.benchmark ? " · indeks odniesienia " + esc(eod.benchmark) : "") +
+            (eod.computed_at ? " · policzono " + esc(eod.computed_at) : "") + '</div></div><div class="plx-actions"><button class="hp-btn" data-eod-calc="' + t.id + '">↻ Przelicz</button><button class="hp-btn" data-eod-close>✕</button></div></div>';
+        if (!comps.length) return h + '<div class="ev-empty">Punkty końca dnia nie zostały jeszcze policzone. Kliknij „↻ Przelicz” po zamknięciu sesji.</div>';
+        const focusPts = ev.points != null ? ev.points : null, eodPts = t.eod_score != null ? parseFloat(t.eod_score) : null;
+        h += '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Punkty EOD</div><div class="v">' + f1(eodPts) + " / " + f1(mx) + '</div><div class="s">' + (man ? "✎ ręcznie" + (man.note ? ": " + esc(man.note) : "") + " · automat " + f1(man.auto) : "wynik automatyczny") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">Focus (wejście)</div><div class="v">' + (focusPts != null ? f1(focusPts) + " / " + f1(ev.max_points || 15) : "–") + '</div><div class="s">' + (t.focus_eval_id ? "wpis Focus #" + t.focus_eval_id : "bez wpisu Focus") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">Razem</div><div class="v">' + ((focusPts != null || eodPts != null) ? f1((focusPts || 0) + (eodPts || 0)) + " / 20" : "–") + '</div><div class="s">Focus + EOD</div></div></div>';
+        h += '<div class="plx-h">Jak policzono punkty</div><div class="ev-muted">Każdy składnik dostaje ocenę 0–100%. Punkty = Σ (waga × ocena) / Σ wag × ' + f1(mx) +
+            " = " + (wsum ? used.map(c => c.weight + "×" + Math.round(c.norm * 100) + "%").join(" + ") + " / " + wsum + " × " + f1(mx) + " = <b>" + f1(auto) + "</b>" : "–") + ". Wagi ustawiasz w Serwisie (Baza danych → Serwis → Punktacja).</div>";
+        h += '<div class="table-responsive"><table class="ev-table eod-det"><thead><tr><th>Składnik</th><th>Wynik</th><th>Ocena</th><th>Waga</th><th>Wkład w punkty</th><th>Co zmierzono i według jakiej zasady</th></tr></thead><tbody>' +
+            comps.map(c => {
+                const contrib = c.weight > 0 && wsum ? c.weight * c.norm / wsum * mx : 0, col = c.norm >= 0.7 ? "var(--success)" : c.norm >= 0.4 ? "var(--accent-hover)" : "var(--danger)";
+                return '<tr class="' + (c.weight > 0 ? "" : "eod-off") + '"><td><b>' + esc(c.label) + "</b></td><td>" + f1(c.raw) + " / " + f1(c.max) + '</td><td><b style="color:' + col + '">' + Math.round(c.norm * 100) + "%</b></td><td>" + (c.weight > 0 ? c.weight : "0 (info)") +
+                    "</td><td><b>" + (c.weight > 0 ? f1(contrib) : "–") + "</b> pkt</td><td>" + ((c.facts || []).map(x => "<div>• " + esc(plNum(x)) + "</div>").join("") || '<div class="ev-muted">brak zapisanych wartości – kliknij „↻ Przelicz”</div>') +
+                    (c.rule ? '<div class="ev-muted eod-rule">Zasada: ' + esc(c.rule) + "</div>" : "") + "</td></tr>";
+            }).join("") + '<tr class="eod-sum"><td colspan="3"><b>Razem (automat)</b></td><td>' + wsum + '</td><td><b>' + f1(auto) + " / " + f1(mx) + "</b></td><td></td></tr></tbody></table></div>";
+        if (eod.info && eod.info.obv_raw != null) h += '<div class="ev-muted">Informacyjnie (bez wpływu na punkty): OBV z 10 sesji ' + f1(eod.info.obv_raw) + " / " + f1(eod.info.obv_max || 3) + ".</div>";
+        if (rc) {
+            const at = {}; (ev.conditions || []).forEach(c => { at[c.id] = c.score; });
+            h += '<div class="plx-h">Ocena wejścia: przy wejściu → na zamknięciu</div><div class="ev-muted">Wynik ' + f1(rc.entry_score) + " → <b>" + f1(rc.score) + "</b>/100" + (rc.delta != null ? ' (<b style="color:' + (rc.delta >= 0 ? "var(--success)" : "var(--danger)") + '">' + (rc.delta > 0 ? "+" : "") + f1(rc.delta) + "</b>)" : "") + " · " + esc(rc.verdict || "") + "</div>" +
+                '<div class="table-responsive"><table class="ev-table"><thead><tr><th>Warunek</th><th>Przy wejściu</th><th>Na zamknięciu</th><th>Zmiana</th><th>Co widać na zamknięciu</th></tr></thead><tbody>' +
+                (rc.conditions || []).map(c => { const a = at[c.id], b = c.score, d = (a != null && b != null) ? (b - a) * 100 : null;
+                    return "<tr><td>" + esc(c.label) + (c.weight === 0 ? ' <span class="ev-muted">(waga 0)</span>' : "") + "</td><td>" + (a == null ? "–" : Math.round(a * 100) + "%") + "</td><td><b>" + (b == null ? "brak danych" : Math.round(b * 100) + "%") + "</b></td><td>" +
+                        (d == null ? "–" : '<span style="color:' + (d >= 0 ? "var(--success)" : "var(--danger)") + '">' + (d > 0 ? "+" : "") + Math.round(d) + " pp</span>") + '</td><td class="ev-muted">' + esc(plNum(c.detail)) + "</td></tr>"; }).join("") + "</tbody></table></div>";
+        } else if (t.form_id) h += '<div class="ev-muted">Powtórzona ocena wejścia: brak (zagranie z Form niedostępne albo brak danych w chwili liczenia).</div>';
+        if ((eod.warnings || []).length) h += '<div class="plx-warn">' + eod.warnings.map(esc).join("<br>") + "</div>";
+        return h;
+    }
+    function openDetail(id) {
+        const t = TR.find(x => String(x.id) === String(id)); if (!t) return;
+        let o = document.getElementById("eod-det");
+        if (!o) { o = document.createElement("div"); o.id = "eod-det"; o.className = "plx-overlay"; o.innerHTML = '<div class="plx-panel"></div>'; document.body.appendChild(o); o.addEventListener("mousedown", e => { if (e.target === o) closeDetail(); }); }
+        o.firstChild.innerHTML = detailHtml(t); o.classList.add("open"); document.body.style.overflow = "hidden"; o.dataset.id = id;
+    }
+    function closeDetail() { const o = document.getElementById("eod-det"); if (o) { o.classList.remove("open"); o.dataset.id = ""; } if (!document.querySelector(".plx-overlay.open")) document.body.style.overflow = ""; }
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
     document.addEventListener("click", async e => {
         const t = e.target; if (!t.closest) return;
+        const det = t.closest("[data-eod-det]"); if (det) { openDetail(det.dataset.eodDet); return; }
+        if (t.closest("[data-eod-close]")) { closeDetail(); return; }
         const tr = t.closest("[data-fe-trade]"), ev = t.closest("[data-fe-eval]"), del = t.closest("[data-fe-del]"), calc = t.closest("[data-eod-calc]"), fix = t.closest("[data-eod-fix]");
         try {
             if (tr) { const f = FE.find(x => String(x.id) === tr.dataset.feTrade); if (f) prefillTradeFromPlay(f.ticker, f.entry_id, { entry_score: f.score, entry_eval: f.entry_eval, summary: f.summary }, f.id); }
             else if (ev) { const f = FE.find(x => String(x.id) === ev.dataset.feEval); if (f && window.Wejscie) Wejscie.evaluate(f.ticker, f.entry_id); }
             else if (del) { if (!confirm("Usunąć wpis Focus #" + del.dataset.feDel + "?")) return; await j("/api/focus/evals/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: +del.dataset.feDel }) }); loadFocus(); }
-            else if (calc) { calc.textContent = "…"; await j("/api/trades/eod-score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trade_id: +calc.dataset.eodCalc }) }); loadEod(); }
+            else if (calc) { calc.textContent = "…"; await j("/api/trades/eod-score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trade_id: +calc.dataset.eodCalc }) }); await loadEod(); const o = document.getElementById("eod-det"); if (o && o.dataset.id) openDetail(o.dataset.id); }
             else if (fix) {
                 const v = prompt("Punkty końca dnia 0–5 (puste = wróć do rekomendacji automatycznej):", fix.dataset.val || ""); if (v === null) return;
                 const note = v.trim() === "" ? "" : (prompt("Krótko: dlaczego zmieniasz ocenę?", "") || "");
