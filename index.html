@@ -1194,6 +1194,7 @@
                         <div class="dbx-log" id="last-price-update-log"><strong style="color:var(--accent);">Ręczna aktualizacja (Ty):</strong><br>Brak danych w pamięci przeglądarki</div>
                         <div class="dbx-log" id="auto-price-update-log"><strong style="color:#89b4fa;">Automatyczna aktualizacja (zadanie cykliczne):</strong><br>Ładowanie danych z serwera…</div>
                         <div class="dbx-log" id="system-health-log"><strong style="color:#fcd535;">Monitor aplikacji (health check):</strong><br>Skanowanie systemów…</div>
+                        <div class="dbx-log" id="server-memory-log"><strong style="color:#a6e3a1;">Pamięć serwera:</strong><br>Sprawdzanie…</div>
                     </div>
                     <div class="dbx-actions">
                         <button class="hp-btn dbx-danger" onclick="forceAlertsCheck()">🔔 Wymuś sprawdzenie alertów</button>
@@ -4390,6 +4391,19 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     } else {
                         autoEl.innerHTML = `<strong style="color:#89b4fa;">Automatyczna aktualizacja (CRON):</strong><br>Czekam na pierwsze wywołanie przez bota po restarcie serwera...`;
                     }
+                }
+            } catch(e) {}
+            // Pamięć serwera (darmowy Render: 512 MB) i pamięć świec z limitem
+            try {
+                const mr = await fetch(`${API_BASE_URL}/api/service/memory`); const m = await mr.json();
+                const el = document.getElementById('server-memory-log');
+                if (el && m.status === 'success') {
+                    const pct = m.rss_mb != null ? Math.round(m.rss_mb / m.limit_mb * 100) : null, c = m.candles || {};
+                    const col = pct == null ? 'var(--text-muted)' : pct >= 85 ? 'var(--danger)' : pct >= 70 ? 'var(--accent-hover)' : 'var(--success)';
+                    const n = v => String(v).replace('.', ',');
+                    el.innerHTML = `<strong style="color:#a6e3a1;">Pamięć serwera:</strong><br>Zajęte: <strong style="color:${col}">${m.rss_mb != null ? n(m.rss_mb) + ' MB z ' + m.limit_mb + ' MB (' + pct + '%)' : 'brak odczytu'}</strong>` +
+                        `<br>Świece w pamięci: ${n(c.mb)} MB z limitu ${c.limit_mb} MB · ${c.symbols} spółek · ${c.entries} zestawów` +
+                        `<br><span style="color:var(--text-muted)">Trafienia ${c.hits} · pobrania ${c.misses} · usunięte (limit) ${c.evicted} · przeterminowane ${c.expired}</span>`;
                 }
             } catch(e) {}
             // Pobieranie statusu HEALTH CHECK
