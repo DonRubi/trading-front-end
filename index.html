@@ -665,7 +665,8 @@
                     <div id="trade-eval-box" class="ev-evalbox" style="display:none"></div>
                     <div class="tr-grid">
                         <label class="tr-f"><span>Spółka</span><select id="trade-ticker-select" onchange="onTradeTickerChange()"><option value="">Ładowanie...</option></select></label>
-                        <label class="tr-f"><span>Zagranie z Form</span><select id="trade-play-id" onchange="onTradePlayChange()"><option value="">Najpierw wybierz spółkę...</option></select></label>
+                        <label class="tr-f"><span>Wpis z Focus (ocena wejścia)</span><select id="trade-focus-eval" onchange="onTradeFocusEvalChange()"><option value="">Najpierw wybierz spółkę...</option></select></label>
+                        <label class="tr-f" id="trade-play-wrap" style="display:none"><span>Zagranie z Form (bez wpisu Focus)</span><select id="trade-play-id" onchange="onTradePlayChange()"><option value="">Najpierw wybierz spółkę...</option></select></label>
                         <label class="tr-f"><span>Pełna nazwa spółki</span><input type="text" id="trade-name" placeholder="uzupełnia się sama"></label>
                     </div>
                     <div class="tr-grid tr-info">
@@ -2787,8 +2788,8 @@
         }
 
         // Przejście z oceny wejścia do Transakcji: formularz wypełnia się z zagrania Form, a ocena zostaje zapisana przy transakcji
-        function prefillTradeFromPlay(ticker, entryId, evalData) {
-            window.__pendingTradePlay = { ticker: ticker, entryId: entryId, evalData: evalData };
+        function prefillTradeFromPlay(ticker, entryId, evalData, focusEvalId) {
+            window.__pendingTradePlay = { ticker: ticker, entryId: entryId, evalData: evalData, focusEvalId: focusEvalId };
             openModule('tradeslist-module', 'Transakcje');
         }
         function applyTradePlay(p) {
@@ -2796,9 +2797,12 @@
             const ts = document.getElementById('trade-ticker-select');
             if (!Array.prototype.some.call(ts.options, o => o.value === p.ticker)) ts.innerHTML += `<option value="${p.ticker}">${p.ticker}</option>`;
             ts.value = p.ticker; onTradeTickerChange();
-            document.getElementById('trade-play-id').value = p.entryId;
-            window.__tradeEval = p.evalData ? Object.assign({}, p.evalData, { entryId: p.entryId }) : null;
-            onTradePlayChange();
+            if (p.focusEvalId) { loadFocusEvals(p.ticker, p.focusEvalId); }
+            else {
+                document.getElementById('trade-play-id').value = p.entryId;
+                window.__tradeEval = p.evalData ? Object.assign({}, p.evalData, { entryId: p.entryId }) : null;
+                onTradePlayChange();
+            }
             if (p.evalData && p.evalData.summary && p.evalData.summary.price) document.getElementById('trade-buy-price').value = Number(p.evalData.summary.price).toFixed(4);
             const form = document.getElementById('trade-form'); if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
             const sp = document.getElementById('trade-spent'); if (sp) setTimeout(() => sp.focus(), 400);
@@ -2809,7 +2813,8 @@
             if (!e) { box.style.display = 'none'; box.innerHTML = ''; return; }
             const s = e.summary, rec = s.recommended_pct, pln = (rec != null && s.capital_pln) ? rec / 100 * s.capital_pln : null;
             box.style.display = 'block';
-            box.innerHTML = `🎯 <b>Ocena wejścia: ${s.score == null ? '–' : Math.round(s.score)}/100 · ${s.verdict}</b> · rekomendowany budżet: <b>${rec == null ? 'brak limitów' : rec.toFixed(1).replace('.', ',') + '% kapitału'}</b>`
+            const ee = e.entry_eval || {};
+            box.innerHTML = `🎯 <b>${e.focusEvalId ? 'Focus #' + e.focusEvalId + ': ' : 'Ocena wejścia: '}${ee.points != null ? String(Math.round(ee.points * 10) / 10).replace('.', ',') + '/' + (ee.max_points || 15) + ' pkt · ' : ''}${s.score == null ? '–' : Math.round(s.score)}/100 · ${s.verdict}</b> · rekomendowany budżet: <b>${rec == null ? 'brak limitów' : rec.toFixed(1).replace('.', ',') + '% kapitału'}</b>`
                 + (pln != null ? ` (≈ ${Math.round(pln).toLocaleString('pl-PL')} PLN własnych środków, bez dźwigni)` : '')
                 + ` <button type="button" class="dbx-icon" onclick="clearTradeEval()" title="Odłącz ocenę od transakcji">✕</button>`;
         }
@@ -2878,6 +2883,7 @@
             playSelect.innerHTML = plays.length ? '<option value="">Wybierz zagranie...</option>' : '<option value="">Brak aktywnych zagrań w Form</option>';
             plays.forEach(f => { playSelect.innerHTML += `<option value="${f.entry_id}">${f.direction} · ${f.start_zone}–${f.end_zone} · wejście ${f.entry_point || '–'} (${f.entry_id})</option>`; });
             window.__tradeEval = null; renderTradeEvalBox();
+            loadFocusEvals(selectedTicker);
 
             focusSelect.innerHTML = '<option value="">Bez analizy Focus</option>';
             
@@ -2893,6 +2899,42 @@
             if(typeof onTradeFocusChange === 'function') onTradeFocusChange();
         }
 
+        // --- Focus (nowy): transakcja wynika z zapisanej oceny wejścia ---
+        window.__focusEvals = [];
+        async function loadFocusEvals(ticker, selectId) {
+            const sel = document.getElementById('trade-focus-eval'); if (!sel) return;
+            sel.innerHTML = '<option value="">Wczytuję wpisy Focus…</option>';
+            const my = window.__feSeq = (window.__feSeq || 0) + 1;            // ignorujemy spóźnione odpowiedzi
+            try {
+                const r = await fetch(`${API_BASE_URL}/api/focus/evals?ticker=${encodeURIComponent(ticker)}&days=30`), d = await r.json();
+                if (my !== window.__feSeq) return;
+                if (!r.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + r.status));
+                window.__focusEvals = d.evals || [];
+            } catch (e) { if (my !== window.__feSeq) return; window.__focusEvals = []; sel.innerHTML = `<option value="">${(e.message || e)}</option><option value="__none">— bez wpisu Focus (np. transakcja historyczna)</option>`; return; }
+            const f1 = v => v == null ? '–' : String(Math.round(v * 10) / 10).replace('.', ',');
+            sel.innerHTML = (window.__focusEvals.length ? '<option value="">Wybierz wpis Focus…</option>' : '<option value="">Brak wpisów Focus z 30 dni – oceń wejście w Radarze zagrań</option>') +
+                window.__focusEvals.map(f => `<option value="${f.id}">${new Date(f.created_at).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · ${f.entry_id || '–'} · ${f1(f.points)}/${f1(f.max_points)} pkt · rek. ${f.recommended_pct == null ? '–' : f1(f.recommended_pct) + '%'} · ${f.verdict || ''}${(f.trade_ids || []).length ? ' · użyty (#' + f.trade_ids.join(', #') + ')' : ''}</option>`).join('') +
+                '<option value="__none">— bez wpisu Focus (np. transakcja historyczna)</option>';
+            if (selectId) { sel.value = String(selectId); onTradeFocusEvalChange(); }
+        }
+        function onTradeFocusEvalChange() {
+            const v = document.getElementById('trade-focus-eval').value, wrap = document.getElementById('trade-play-wrap');
+            wrap.style.display = v === '__none' ? '' : 'none';
+            if (v === '__none' || !v) { window.__tradeEval = null; renderTradeEvalBox(); if (v === '__none') onTradePlayChange(); return; }
+            const f = window.__focusEvals.find(x => String(x.id) === v); if (!f) return;
+            const t = f.ticker, tData = tickerDataArray.find(x => x.ticker === t), form = formEntries.find(x => x.entry_id === f.entry_id) || {};
+            const ev = f.entry_eval || {};
+            document.getElementById('trade-ticker').value = t;
+            document.getElementById('trade-form-id').value = f.entry_id || '';
+            document.getElementById('trade-direction').value = form.direction || ev.direction || '';
+            document.getElementById('trade-tp').value = ev.tp != null ? ev.tp : (form.take_profit || '');
+            document.getElementById('trade-sl').value = ev.sl != null ? ev.sl : (form.stop_loss || '');
+            document.getElementById('trade-currency').value = (typeof getCurrencyForFrontend === 'function' ? getCurrencyForFrontend(t) : '') || 'USD';
+            document.getElementById('trade-name').value = tData && tData.stock_name ? tData.stock_name : '';
+            if (f.price) document.getElementById('trade-buy-price').value = Number(f.price).toFixed(4);
+            window.__tradeEval = { entry_score: f.score, entry_eval: ev, summary: f.summary || {}, entryId: f.entry_id, focusEvalId: f.id };
+            renderTradeEvalBox();
+        }
         async function onTradeFocusChange() { 
             const fid = document.getElementById('trade-focus-id').value; 
             // Czyszczenie ukrytych pól jeśli nic nie wybrano
@@ -2965,7 +3007,10 @@ async function submitTradeForm(e) {
         comment: document.getElementById('trade-comment').value,
         last_15_min: last15
     }; 
-    if (window.__tradeEval && window.__tradeEval.entry_eval && document.getElementById('trade-play-id').value === window.__tradeEval.entryId) { data.entry_score = window.__tradeEval.entry_score; data.entry_eval = window.__tradeEval.entry_eval; }
+    const feSel = document.getElementById('trade-focus-eval');
+    if (feSel && !feSel.value) { alert('Wybierz wpis z Focus (ocenę wejścia), z którego wynika ta inwestycja – albo „bez wpisu Focus” dla transakcji historycznej.'); return; }
+    if (window.__tradeEval && window.__tradeEval.focusEvalId) data.focus_eval_id = window.__tradeEval.focusEvalId;
+    if (window.__tradeEval && window.__tradeEval.entry_eval && (window.__tradeEval.focusEvalId || document.getElementById('trade-play-id').value === window.__tradeEval.entryId)) { data.entry_score = window.__tradeEval.entry_score; data.entry_eval = window.__tradeEval.entry_eval; }
     if (last15 && data.entry_eval) {               // wejście w ostatnim kwadransie sesji: +1 pkt do oceny wejścia (bez przekraczania maksimum)
         data.entry_eval = { ...data.entry_eval, last15_bonus: 1 };
         if (data.entry_eval.points != null) data.entry_eval.points = Math.min((data.entry_eval.points || 0) + 1, data.entry_eval.max_points || 1e9);
@@ -6317,7 +6362,7 @@ window.Wejscie = (function () {
             '<div class="plx-h">Warunki w chwili wejścia <span class="ev-muted">(ⓘ – co oznacza dany warunek)</span></div><div class="ev-conds">' + d.conditions.map(condRow).join("") + "</div>" +
             '<div class="plx-h">Budżet na to wejście</div>' + budget + companyLine +
             (d.warnings && d.warnings.length ? '<div class="plx-warn">' + d.warnings.map(esc).join("<br>") + "</div>" : "") +
-            '<div class="plx-actions"><button class="hp-btn ev-go" data-ev-trade>Dodaj transakcję →</button>' +
+            '<div class="plx-actions"><button class="hp-btn" data-ev-focus>💾 Zapisz w Focus</button><button class="hp-btn ev-go" data-ev-trade>Zapisz w Focus i dodaj transakcję →</button><span id="ev-focus-msg" class="ev-muted"></span>' +
             (b.plan_id ? '<a href="#" class="plx-tag" data-plan="' + b.plan_id + '">otwórz plan</a>' : '<button class="hp-btn" data-ev-plan="' + esc(d.ticker) + '">Przygotuj plan</button>') + "</div>");
         if (window.FormZones) FormZones.zoneQualityBlock(d.ticker, p.entry_id).then(html => { const el = $("#ev-zq"); if (el && ov.data === d) el.innerHTML = html; });
     }
@@ -6343,6 +6388,7 @@ window.Wejscie = (function () {
         }
         const i = t.closest("[data-ev-info]"); if (i) { const el = document.getElementById("ev-d" + i.dataset.evInfo); if (el) el.hidden = !el.hidden; return; }
         if (t.closest("[data-ev-trade]")) { toTrade(); return; }
+        if (t.closest("[data-ev-focus]")) { toFocus(); return; }
         if (t.closest("#ev-overlay [data-ev-plan]") || t.closest("#ev-overlay [data-plan]")) close();
     });
     document.addEventListener("change", e => { if (e.target.id === "ev-play-sel" && ov.data) evaluate(ov.data.ticker, e.target.value); });
@@ -6350,15 +6396,32 @@ window.Wejscie = (function () {
 
     function compact(d) {      // to, co zapisujemy przy transakcji (ocena w chwili wejścia)
         return { entry_score: d.score, entry_eval: { verdict: d.verdict, score: d.score, factor: d.factor, price: d.price, evaluated_at: new Date().toISOString(),
-            recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source, options: d.options, points: d.scoring && d.scoring.points, entry_points: d.scoring && d.scoring.entry_points, entry_points_auto: d.scoring && d.scoring.entry_points_auto, entry_manual: d.scoring && d.scoring.entry_manual, entry_note: d.scoring && d.scoring.entry_note, form_score: d.scoring && d.scoring.form_score, form_score_auto: d.scoring && d.scoring.form_score_auto, priority_bonus: d.scoring && d.scoring.priority_bonus, max_points: d.scoring && d.scoring.max_points, form_score: d.scoring && d.scoring.form_score, entry_points: d.scoring && d.scoring.entry_points,
+            recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source, options: d.options, tp: d.play.take_profit, sl: d.play.stop_loss, direction: d.play.direction, zone: d.play.zone, points: d.scoring && d.scoring.points, entry_points: d.scoring && d.scoring.entry_points, entry_points_auto: d.scoring && d.scoring.entry_points_auto, entry_manual: d.scoring && d.scoring.entry_manual, entry_note: d.scoring && d.scoring.entry_note, form_score: d.scoring && d.scoring.form_score, form_score_auto: d.scoring && d.scoring.form_score_auto, priority_bonus: d.scoring && d.scoring.priority_bonus, max_points: d.scoring && d.scoring.max_points, form_score: d.scoring && d.scoring.form_score, entry_points: d.scoring && d.scoring.entry_points,
             conditions: d.conditions.map(c => ({ id: c.id, score: c.score, status: c.status })) }, summary: {
             verdict: d.verdict, score: d.score, recommended_pct: d.budget.recommended_pct, source: d.budget.source, capital_pln: d.budget.capital_pln, price: d.price } };
     }
-    function toTrade() {
+    async function saveFocus(d) {
+        if (d.__focusEval) return d.__focusEval;              // ta sama ocena zapisana już wcześniej - bez duplikatu
+        const c = compact(d);
+        const r = await fetch(API_BASE_URL + "/api/focus/evals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: d.ticker, entry_id: d.play.entry_id, ...c }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.status !== "success") throw new Error(j.message || ("HTTP " + r.status));
+        d.__focusEval = j.eval;
+        return j.eval;
+    }
+    async function toFocus() {
+        const d = ov.data; if (!d) return;
+        const m = $("#ev-focus-msg");
+        try { const e = await saveFocus(d); if (m) { m.textContent = "Zapisano w Focus (wpis #" + e.id + ")."; m.style.color = "var(--success)"; } }
+        catch (err) { if (m) { m.textContent = err.message; m.style.color = "var(--danger)"; } }
+    }
+    async function toTrade() {
         const d = ov.data; if (!d) return;
         if (d.verdict === "NIE TERAZ" && !confirm("Ocena: NIE TERAZ" + (d.blocked ? " (stop loss przebity)" : "") + ". Na pewno dodać transakcję?")) return;
+        let fe = null;
+        try { fe = await saveFocus(d); } catch (err) { if (!confirm("Nie udało się zapisać wpisu Focus (" + err.message + "). Przejść do transakcji bez wpisu?")) return; }
         close();
-        if (typeof prefillTradeFromPlay === "function") prefillTradeFromPlay(d.ticker, d.play.entry_id, compact(d));
+        if (typeof prefillTradeFromPlay === "function") prefillTradeFromPlay(d.ticker, d.play.entry_id, compact(d), fe && fe.id);
     }
     return { loadRadar: loadRadar, setFilter: setFilter, evaluate: evaluate, close: close };
 })();
