@@ -369,6 +369,15 @@
         .fz-zblock { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; } .fz-zhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; flex-wrap: wrap; } .fz-zbody { padding: 0 14px 10px; display: none; } .fz-zblock.open .fz-zbody { display: block; } .fz-zblock.open .fz-chev { transform: rotate(90deg); }
         #fz-modal .form-group input, #fz-modal .form-group select { width: 100%; }
         @media (max-width: 760px) { .fz-sub { display: block; overflow-x: auto; } }
+        .fz-scorebar { position: sticky; top: -18px; z-index: 6; display: flex; gap: 16px; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; margin: 0 0 10px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+        .fz-sbig { display: flex; flex-direction: column; align-items: flex-start; min-width: 110px; } .fz-slbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
+        .fz-sbig b { font-size: 2.3rem; line-height: 1; font-weight: 800; } .fz-sbig small { color: var(--text-muted); font-size: .9rem; margin-left: 2px; } .fz-sbig { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 4px; } .fz-slbl { width: 100%; }
+        .fz-smid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; } .fz-sbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+        .fz-sseg { position: relative; height: 10px; border-radius: 5px; background: var(--bg-input); overflow: hidden; } .fz-sseg i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 5px; transition: width .3s; }
+        .fz-sseg i.fz-spend { background: repeating-linear-gradient(45deg, rgba(252,213,53,.55) 0 4px, rgba(252,213,53,.2) 4px 8px); border-radius: 0; }
+        .fz-ssub { font-size: .84rem; color: var(--text-muted); } .fz-ssub b { color: var(--text-main); } .fz-safter { color: var(--accent-hover); } .fz-safter b { color: var(--accent-hover); }
+        .fz-schips { display: flex; flex-wrap: wrap; gap: 4px; } .fz-schip { font-size: .78rem; border: 1px solid var(--border-color); border-radius: 999px; padding: 1px 8px; } .fz-schip b { color: var(--success); } .fz-schip.off { opacity: .5; text-decoration: line-through; }
+        @media (max-width: 760px) { .fz-scorebar { top: 0; gap: 10px; padding: 8px 10px; } .fz-sbig { min-width: 80px; } .fz-sbig b { font-size: 1.8rem; } }
         .fz-side { border: 1px solid var(--accent); background: transparent; color: var(--accent-hover); border-radius: 999px; padding: 0 8px; font-size: .78rem; cursor: pointer; margin-left: 4px; }
         .fz-q { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--accent); background: transparent; color: var(--accent-hover); font-weight: 700; font-size: 12px; cursor: pointer; padding: 0; margin-left: 4px; vertical-align: middle; }
         .fz-help { background: rgba(252,213,53,.06); border: 1px solid rgba(252,213,53,.35); border-radius: 10px; padding: 10px 14px; margin: 6px 0 10px; font-size: .9em; line-height: 1.5; color: var(--text-main); white-space: normal; }
@@ -653,6 +662,7 @@
                 <div id="fz-results"></div>
                 <div id="fz-chosen" style="display:none"></div>
                 <div id="fz-formwrap" style="display:none">
+                    <div id="fz-scorebar" class="fz-scorebar"></div>
                     <div class="plx-h" id="fz-formtitle">Nowe zagranie</div>
                 <form id="trading-form" onsubmit="submitAdvancedForm(event)">
                     <input type="hidden" id="form-ticker">
@@ -7062,7 +7072,7 @@ window.Measure = (function () {
     }
     function drawResultCard() {
         const box = $("#fz-result"); if (!box) return; const r = M.result;
-        if (!r) { box.innerHTML = ""; return; }
+        if (!r) { box.innerHTML = ""; drawScore(); return; }
         const vc = { OK: "var(--success)", PARTIAL: "var(--accent-hover)", FAIL: "var(--danger)" }[r.verdict];
         const vl = r.verdict === "OK" ? (r.type === "elliott" ? "SPÓJNE Z REGUŁAMI" : "POTWIERDZONE") : r.verdict === "PARTIAL" ? "CZĘŚCIOWO" : "NIEPOTWIERDZONE";
         let h = '<div class="ev-verdict" style="border-color:' + vc + ';padding:10px 14px"><div><div class="ev-vtext" style="color:' + vc + ';font-size:1.15em">' + vl + '</div><div class="ev-muted">' + esc(r.label) + '</div></div><div class="ev-big" style="font-size:1.8em">' + Math.round(r.quality * 100) + '<small>%</small></div></div>';
@@ -7074,10 +7084,30 @@ window.Measure = (function () {
                 '<select data-ms-apply>' + Object.keys(APPLY).map(k => '<option value="' + k + '"' + (M.apply === k ? " selected" : "") + ">" + APPLY[k][1] + "</option>").join("") + '</select> <button type="button" class="hp-btn" data-ms-fill>Wpisz do pola</button>' +
                 (formation ? '<div class="ev-muted">Formacja wymaga zapisania wartości odniesienia – zostanie zapisana przy powodzie.</div>' : "") + "</div>";
         } else if (formation) { h += '<div class="plx-err">Formacja bez wartości odniesienia – nie można jej dodać.</div>'; }
-        h += '<div class="plx-actions" style="margin-top:8px"><button type="button" class="hp-btn ev-go" data-ms-add' + (formation && !r.ref ? " disabled" : "") + '>＋ Dodaj powód do wpisu</button></div>';
+        h += '<div class="plx-actions" style="margin-top:8px"><button type="button" class="hp-btn ev-go" data-ms-add' + (formation && !r.ref ? " disabled" : "") + '>＋ Dodaj powód do wpisu</button><span class="ev-muted">dodaje <b>+' + num(Math.max(0, Math.min(1, r.quality || 0)), 2) + "</b> do Score</span></div>";
         box.innerHTML = h;
+        drawScore();
+    }
+    // ---------- aktualny Score wpisu (wyraźnie, przyklejony u góry okna) ----------
+    const ended = d => d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły");
+    function drawScore() {
+        const box = $("#fz-scorebar"); if (!box) return;
+        const pts = d => ended(d) ? 0 : Math.max(0, Math.min(1, +d.quality || 0));
+        const raw = M.added.reduce((s, d) => s + pts(d), 0), sc = Math.min(5, raw);
+        const r = M.result, pending = r && !M.added.some(d => d.type === r.type && d.quality === r.quality) && r.type;
+        const same = pending ? M.added.find(d => d.type === r.type) : null;          // ponowne dodanie tego samego typu zastępuje poprzedni pomiar
+        const after = pending ? Math.min(5, raw - (same ? pts(same) : 0) + (r.quality || 0)) : null;
+        const col = sc >= 3.5 ? "var(--success)" : sc >= 2 ? "var(--accent-hover)" : sc > 0 ? "#f0883e" : "var(--text-muted)";
+        const seg = i => { const f = Math.max(0, Math.min(1, sc - i)), g = after != null ? Math.max(0, Math.min(1, after - i)) : 0;
+            return '<span class="fz-sseg"><i style="width:' + f * 100 + '%;background:' + col + '"></i>' + (g > f ? '<i class="fz-spend" style="left:' + f * 100 + '%;width:' + (g - f) * 100 + '%"></i>' : "") + "</span>"; };
+        box.innerHTML = '<div class="fz-sbig"><span class="fz-slbl">Aktualny Score</span><b style="color:' + col + '">' + num(sc, 2) + '</b><small>/ 5</small></div>' +
+            '<div class="fz-smid"><div class="fz-sbar">' + [0, 1, 2, 3, 4].map(seg).join("") + "</div>" +
+            '<div class="fz-ssub">' + (M.added.length ? M.added.length + (M.added.length === 1 ? " powód" : M.added.length < 5 ? " powody" : " powodów") + " · w ocenie wejścia: Form ×2 = <b>" + num(sc * 2, 2) + "</b> / 10 pkt" + (raw > 5 ? " · suma " + num(raw, 1) + " (maks. 5)" : "") : "Dodaj zmierzone powody – każdy daje tyle punktów, ile wynosi jego wypełnienie (np. 80% = 0,8).") +
+            (after != null ? ' · <span class="fz-safter">po dodaniu „' + esc(r.label) + '”: <b>' + num(after, 2) + "</b> (" + (after - sc >= 0 ? "+" : "") + num(after - sc, 2) + ")</span>" : "") + "</div>" +
+            (M.added.length ? '<div class="fz-schips">' + M.added.map(d => '<span class="fz-schip' + (ended(d) ? " off" : "") + '">' + esc(d.label) + " <b>+" + num(pts(d), 2) + "</b></span>").join("") + "</div>" : "") + "</div>";
     }
     function drawAdded() {
+        drawScore();
         const box = $("#fz-added"); if (!box) return;
         const sc = M.added.reduce((s, d) => s + ((d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) ? 0 : d.quality), 0);
         box.innerHTML = M.added.length ? '<div class="ev-muted" style="margin:8px 0 4px">Powody mierzone w tym wpisie – <b>Score ' + num(Math.min(5, sc), 1) + '/5</b> (każdy powód daje tyle punktów, ile wynosi jego wypełnienie; kilka analiz zewnętrznych = jeden punkt):</div>' + M.added.map((d, i) => '<span class="fz-reason fz-v-' + d.verdict + '">' + esc(d.label) + " · " + Math.round(d.quality * 100) + "%" + (d.ref ? " → " + price(d.ref.value) + " (" + esc(APPLY[d.ref.applies_to] ? APPLY[d.ref.applies_to][1] : d.ref.role) + ")" : "") + ' <a href="#" data-ms-rm="' + i + '" title="Usuń">✕</a></span>').join("") : "";
@@ -7172,7 +7202,7 @@ window.Measure = (function () {
         $("#fz-measure").style.display = "block"; drawTypes(); drawEditor(); drawResultCard(); drawAdded(); $$tf();
         setTimeout(() => { if (changed || !M.bars.length) loadBars(); else { ensureChart(); drawBase(); } }, 30);
     }
-    function reset() { M.ticker = ""; M.added = []; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; }
+    function reset() { M.ticker = ""; M.added = []; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
     return { open: open, reset: reset, collect: collect, labels: () => ORDER.map(k => ({ type: k, label: TYPES[k].label })) };
 })();
 </script>
