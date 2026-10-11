@@ -369,6 +369,8 @@
         .fz-zblock { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; } .fz-zhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; flex-wrap: wrap; } .fz-zbody { padding: 0 14px 10px; display: none; } .fz-zblock.open .fz-zbody { display: block; } .fz-zblock.open .fz-chev { transform: rotate(90deg); }
         #fz-modal .form-group input, #fz-modal .form-group select { width: 100%; }
         @media (max-width: 760px) { .fz-sub { display: block; overflow-x: auto; } }
+        .fz-q { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--accent); background: transparent; color: var(--accent-hover); font-weight: 700; font-size: 12px; cursor: pointer; padding: 0; margin-left: 4px; vertical-align: middle; }
+        .fz-help { background: rgba(252,213,53,.06); border: 1px solid rgba(252,213,53,.35); border-radius: 10px; padding: 10px 14px; margin: 6px 0 10px; font-size: .9em; line-height: 1.5; color: var(--text-main); white-space: normal; }
         .eod-det td { vertical-align: top; } .eod-det tr.eod-off { opacity: .55; } .eod-det tr.eod-sum td { border-top: 2px solid var(--border-color); } .eod-rule { margin-top: 4px; font-size: .85em; }
         .rc-ana { border: 1px solid rgba(166,227,161,.45); background: rgba(166,227,161,.06); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
         .rc-ana-h { font-weight: 700; font-size: 1.05em; color: #a6e3a1; } .rc-ana-item + .rc-ana-item { border-top: 1px solid var(--border-color); padding-top: 10px; }
@@ -653,7 +655,7 @@
                     <div class="plx-h" id="fz-formtitle">Nowe zagranie</div>
                 <form id="trading-form" onsubmit="submitAdvancedForm(event)">
                     <input type="hidden" id="form-ticker">
-                                        <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div></div>
+                                        <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div><div class="form-group"><label>Typ wejścia <button type="button" class="fz-q" data-help-toggle="form-etype-help" title="Objaśnienie">?</button></label><select id="form-etype"><option value="korekta">Korekta do strefy</option><option value="wybicie">Wybicie (zamknięcie nad oporem)</option></select></div></div><div class="fz-help" id="form-etype-help" hidden></div>
                     <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="0.01" required></div><div class="form-group"><label>Koniec strefy (SL)</label><input type="number" id="form-end" step="0.01" required></div></div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="0.01" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="0.01" required></div>
                     <div class="form-group"><label>Świeca SL – data świecy, której przebicie korpusem (zamknięciem) oznacza SL</label><input type="date" id="form-slc"></div>
@@ -2287,6 +2289,7 @@
                 ticker: document.getElementById('form-ticker').value, 
                 direction: document.getElementById('form-direction').value, 
                 priority: document.getElementById('form-priority').value, 
+                entry_type: document.getElementById('form-etype').value,
                 start_zone: document.getElementById('form-start').value, 
                 end_zone: document.getElementById('form-end').value, 
                 entry_point: document.getElementById('form-entry').value, 
@@ -6296,11 +6299,13 @@ window.Wejscie = (function () {
             h += '<tr><td><a class="sd-link" data-tk="' + esc(r.ticker) + '"><b>' + esc(r.ticker) + '</b></a><div class="ev-muted">' + esc(r.name) + "</div></td>" +
                 "<td>" + kindBadge(r.kind, r.kind_label) + "</td><td>" + price(r.price) + "</td>" +
                 "<td>" + arrow(n.side) + " " + price(n.zone[0]) + "–" + price(n.zone[1]) + '<div class="ev-muted">wejście ' + price(n.entry) + (n.entry_is_zone_mid ? " (środek strefy)" : "") +
-                (r.plays.length > 1 ? " · +" + (r.plays.length - 1) + " zagr." : "") + "</div></td>" +
+                (r.plays.length > 1 ? " · +" + (r.plays.length - 1) + " zagr." : "") + "</div>" +
+                (r.plays.filter(p => p.breakout).map(p => '<span class="ev-chip" style="' + (p.breakout.broken ? "color:var(--success);border-color:var(--success)" : "") + '" title="Poziom wybicia z powodu „Konsolidacja” (' + esc(p.entry_id) + ')">' + (p.breakout.broken ? "⚡ kurs nad poziomem wybicia " : "konsolidacja – wybicie nad ") + price(p.breakout.level) + "</span>").join(" ")) +
+                (r.plays.some(p => p.entry_type === "wybicie") ? ' <span class="ev-chip">typ: wybicie</span>' : "") + "</td>" +
                 '<td class="' + dcls + '"><b>' + spct(d) + "</b>" + (zone ? ' <span class="ev-chip">w strefie</span>' : "") + "</td>" +
                 "<td>" + (n.rr != null ? num(n.rr, 1) : "–") + "</td><td>" + plan + "</td>" +
                 '<td class="ev-act"><a class="hp-btn ev-tv" href="' + esc(getTradingViewLink(r.ticker)) + '" target="_blank" rel="noopener" title="Otwórz w TradingView">📈 TV</a> <button class="hp-btn" data-ev-eval="' + esc(r.ticker) + '" data-entry="' + esc(n.entry_id) + '">Oceń wejście</button>' +
-                (r.plan ? "" : ' <button class="hp-btn" data-ev-plan="' + esc(r.ticker) + '">Przygotuj plan</button>') + "</td></tr>";
+                "</td></tr>";
         });
         box.innerHTML = h + "</tbody></table></div>";
     }
@@ -6402,7 +6407,7 @@ window.Wejscie = (function () {
             (d.score_auto != null ? '<div class="ev-muted">✎ ' + d.conditions.filter(c => c.manual).length + ' warunk. poprawione ręcznie · automat: <b>' + Math.round(d.score_auto) + '/100</b> <a href="#" data-ev-call style="color:var(--accent-hover)">przywróć automat</a></div>' : "") +
             '</div></div><div class="ev-big">' + (d.score == null ? "–" : Math.round(d.score)) + '<small>/100</small></div></div>' +
             optionsHtml(d) +
-            '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Zagranie</div><div class="v">' + arrow(p.side) + " " + price(p.zone[0]) + "–" + price(p.zone[1]) + '</div><div class="s">' + (inZone ? "kurs w strefie" : "kurs poza strefą") + "</div></div>" +
+            '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Zagranie</div><div class="v">' + arrow(p.side) + " " + price(p.zone[0]) + "–" + price(p.zone[1]) + '</div><div class="s">' + (inZone ? "kurs w strefie" : "kurs poza strefą") + " · typ wejścia: <b>" + (p.entry_type === "wybicie" ? "wybicie" : "korekta") + "</b></div></div>" +
             '<div class="plx-kpi"><div class="l">Punkt wejścia</div><div class="v">' + price(p.entry) + '</div><div class="s">' + (p.entry_is_zone_mid ? "środek strefy (brak punktu w Form)" : "odległość " + spct(dist)) + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.take_profit) + " / " + price(p.stop_loss) + '</div><div class="s">R:R ' + (rr ? num(rr, 1) : "–") + '<br>TP: ' + esc(p.tp_source || "Form") + (p.tp_zone ? " " + price(p.tp_zone[0]) + "–" + price(p.tp_zone[1]) : "") + ' · SL: ' + esc(p.sl_source || "Form") + "</div></div></div>" +
             (d.coverage != null && d.coverage < 0.7 ? '<div class="ev-note">⚠ Ocena opiera się na ' + Math.round(d.coverage * 100) + '% wag – brakuje danych do części warunków (np. CVD, świece), więc wynik może być zawyżony.</div>' : "") +
@@ -6413,7 +6418,7 @@ window.Wejscie = (function () {
                 (d.scoring.priority ? '<div class="plx-kpi"><div class="l">Priorytet</div><div class="v">+' + num(d.scoring.priority_bonus, 0) + '</div><div class="s">punkt gratis dla spółki z priorytetem</div></div>' : "") +
                 '<div class="plx-kpi"><div class="l">Razem do budżetu</div><div class="v">' + num(d.scoring.points, 1) + '<small class="ev-muted"> / ' + num(d.scoring.max_points, 0) + '</small></div><div class="s">' + num(d.scoring.pct, 1) + '% punktów</div></div>' +
                 '<div class="plx-kpi"><div class="l">Koniec dnia</div><div class="v">– <small class="ev-muted">/ ' + num(d.scoring.eod_max, 0) + '</small></div><div class="s">dojdzie po sesji (łącznie max ' + num(d.scoring.total_max, 0) + ')</div></div></div>' : "") +
-            '<div class="plx-h">Warunki w chwili wejścia <span class="ev-muted">(ⓘ – co oznacza dany warunek)</span></div><div class="ev-conds">' + d.conditions.map(condRow).join("") + "</div>" +
+            '<div class="plx-h">Warunki w chwili wejścia <span class="ev-muted">(ⓘ – co oznacza dany warunek)</span></div><div class="ev-conds">' + d.conditions.map((c, i) => /^nie dotyczy/.test(c.detail || "") ? "" : condRow(c, i)).join("") + "</div>" +
             '<div class="plx-h">Budżet na to wejście</div>' + budget + companyLine +
             (d.warnings && d.warnings.length ? '<div class="plx-warn">' + d.warnings.map(esc).join("<br>") + "</div>" : "") +
             '<div class="plx-actions"><button class="hp-btn" data-ev-focus>💾 Zapisz w Focus</button><button class="hp-btn ev-go" data-ev-trade>Zapisz w Focus i dodaj transakcję →</button><span id="ev-focus-msg" class="ev-muted"></span>' +
@@ -6643,7 +6648,7 @@ window.FormZones = (function () {
     }
     function prefill(pre, title) {
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? "" : v; };
-        set("form-direction", pre && pre.direction || "DBR"); set("form-priority", pre && pre.priority || 0);
+        set("form-direction", pre && pre.direction || "DBR"); set("form-priority", pre && pre.priority || 0); set("form-etype", pre && pre.entry_type || "korekta");
         set("form-start", pre && pre.start_zone); set("form-end", pre && pre.end_zone); set("form-tp", pre && pre.take_profit);
         set("form-entry", ""); for (let i = 1; i <= 5; i++) set("form-reason-" + i, "");
         $("#fz-formtitle").textContent = title;
@@ -6738,6 +6743,17 @@ window.FormZones = (function () {
         } catch (err) { msg.textContent = err.message; msg.style.color = "var(--danger)"; }
     });
     document.addEventListener("click", async ev => {
+        const b = ev.target.closest && ev.target.closest("[data-fz-etype]"); if (!b) return;
+        const msg = $("#fz-etype-msg"), val = $("#fz-etype").value;
+        try {
+            const r = await fetch(API_BASE_URL + "/api/form/entry-type", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entry_id: b.dataset.fzEtype, entry_type: val }) });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + r.status));
+            (formEntries || []).forEach(x => { if (x.entry_id === b.dataset.fzEtype) x.entry_type = val; });
+            msg.textContent = "Zapisano."; msg.style.color = "var(--success)";
+        } catch (err) { msg.textContent = err.message; msg.style.color = "var(--danger)"; }
+    });
+    document.addEventListener("click", async ev => {
         const b = ev.target.closest && ev.target.closest("[data-fz-score]"); if (!b) return;
         const msg = $("#fz-score-msg"), val = ($("#fz-score").value || "").trim(), note = ($("#fz-score-note").value || "").trim();
         try {
@@ -6766,6 +6782,7 @@ window.FormZones = (function () {
         h += ReasonChart.sectionHtml(e);
         const zoneIds = new Set(((cur.z && cur.z.all) || []).map(x => x.e.entry_id).concat([e.entry_id])), slc = ((formEntries || []).find(x => zoneIds.has(x.entry_id) && x.sl_candle) || {}).sl_candle || "";
         h += '<div class="plx-play" style="margin:8px 0"><label class="ev-muted">Świeca SL strefy (przebicie jej korpusu = SL): <input type="date" id="fz-slc" value="' + esc(String(slc).slice(0, 10)) + '" style="width:auto"></label> <button class="hp-btn" style="padding:3px 10px" data-fz-slc="' + esc(e.entry_id) + '" data-fz-tk="' + esc(e.ticker) + '">Zapisz</button> <span id="fz-slc-msg" class="ev-muted">' + (slc ? "" : "nie ustawiono – SL nie jest liczony przez strażnika planu") + "</span></div>";
+        h += '<div class="plx-play" style="margin:8px 0"><label class="ev-muted">Typ wejścia <button type="button" class="fz-q" data-help-toggle="fz-etype-help" title="Objaśnienie">?</button>: <select id="fz-etype" style="width:auto"><option value="korekta"' + (e.entry_type !== "wybicie" ? " selected" : "") + '>Korekta do strefy</option><option value="wybicie"' + (e.entry_type === "wybicie" ? " selected" : "") + '>Wybicie (zamknięcie nad oporem)</option></select></label> <button class="hp-btn" style="padding:3px 10px" data-fz-etype="' + esc(e.entry_id) + '">Zapisz</button> <span id="fz-etype-msg" class="ev-muted"></span><div class="fz-help" id="fz-etype-help" hidden></div></div>';
         h += '<div class="plx-play" style="margin:8px 0"><label class="ev-muted">Score ręcznie (0–5, puste = rekomendacja ' + fmtScore(scoreAuto(e)) + '): <input type="number" id="fz-score" min="0" max="5" step="0.1" value="' + (e.score_manual != null ? esc(e.score_manual) : "") + '" style="width:70px"></label> <input type="text" id="fz-score-note" placeholder="dlaczego zmieniasz" value="' + esc(e.score_note || "") + '" style="width:200px"> <button class="hp-btn" style="padding:3px 10px" data-fz-score="' + esc(e.entry_id) + '">Zapisz</button> <span id="fz-score-msg" class="ev-muted"></span></div>';
         h += '<div id="fz-zq" data-for="' + esc(e.entry_id) + '"><div class="ev-muted">Jakość strefy: liczę…</div></div>';
         h += '<div class="plx-h">Sąsiednie zagrania tej spółki</div><div class="fz-neigh">' + neighCard("◀ Niżej (w lewo)", cur, prev) + neighCard("Wyżej (w prawo) ▶", cur, next) + "</div>";
@@ -6831,6 +6848,8 @@ window.Measure = (function () {
         fvg: { label: "Luka (FVG)", slots: ["Świeca przed luką", "Świeca po luce"], need: 2, bar: true, help: "Kliknij dwie świece, między którymi powstała luka (sąsiednie = luka cenowa, co druga = FVG z trzech świec)." },
         swing: { label: "Potwierdzony dołek/szczyt", slots: ["Świeca dołka (dla short: szczytu)"], need: 1, bar: true, help: "Kliknij świecę dołka – liczy się dół korpusu (dla short: góra korpusu)." },
         correction: { label: "Powtórzenie korekty", slots: ["Koniec korekty 1 (opcjonalnie)", "Koniec korekty 2 (opcjonalnie)"], need: 0, bar: true, help: "Porównuje bieżącą korektę z poprzednimi korektami tej spółki w trendzie (mała = siła, typowa = norma, duża = nadal siła, przebita razem z dołkiem = słabość) i wylicza pasmo oczekiwanego powtórzenia korekty. Opcjonalnie kliknij końce korekt, które mają posłużyć za wzorzec." },
+        range: { label: "Konsolidacja / akumulacja", slots: ["Początek konsolidacji (opcjonalnie)", "Koniec konsolidacji (opcjonalnie)"], need: 0, bar: true, help: "Zakres boczny z wieloma testami krawędzi i jego wybicie ZAMKNIĘCIEM świecy. Bez wskazania aplikacja sama znajdzie zakres; możesz kliknąć początek (i koniec) konsolidacji." },
+        path: { label: "Droga otwarta (ZS i OPS)", slots: ["OPS – świeca szczytu (opcjonalnie)", "ZS – świeca bazy strefy (opcjonalnie)"], need: 0, bar: true, help: "Przeszkody między kursem a celem (TP z formularza): ZS – złota strefa i OPS – ostatni potwierdzony szczyt. Droga otwarta, gdy oba przebite zamknięciem." },
         trend: { label: "Zdrowy trend", slots: ["Ostatni dołek (dla short: szczyt) – opcjonalnie"], need: 0, bar: true, help: "Aplikacja sama znajduje szczyty i dołki (HH/HL). Możesz kliknąć świecę własnego ostatniego dołka (dla short: szczytu) – liczy się dół korpusu – i wtedy to on jest sprawdzany." },
         fibo: { label: "Poziomy FIBO", slots: ["Początek swingu", "Koniec swingu"], need: 2, log: true, suggest: "fibo_leg", help: "Kliknij początek i koniec swingu (wg knotów). „Podpowiedz” bierze ostatni ruch trendu." },
         one2one: { label: "Korekta 1:1", slots: ["A – start korekty", "B – koniec pierwszej fali", "C – koniec odbicia"], need: 3, help: "Pierwsza fala korekty A→B, odbicie do C; druga fala ma być równa pierwszej (standardowo i logarytmicznie)." },
@@ -6841,7 +6860,7 @@ window.Measure = (function () {
         vp: { label: "Volume Profile", slots: ["Początek profilu (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie od początku trendu albo od kontynuacji po wyraźnej korekcie; możesz wskazać własny początek." },
         external: { label: "Analiza zewnętrzna", slots: [], need: 0, external: true, help: "Linki do analiz; kilka analiz liczy się jako jeden punkt." }
     };
-    const ORDER = ["fvg", "swing", "trend", "correction", "fibo", "one2one", "xabcd", "rgr", "elliott", "vwap", "vp", "external"];
+    const ORDER = ["range", "path", "fvg", "swing", "trend", "correction", "fibo", "one2one", "xabcd", "rgr", "elliott", "vwap", "vp", "external"];
     const APPLY = { entry: ["form-entry", "Punkt wejścia"], start: ["form-start", "Początek strefy"], end: ["form-end", "Koniec strefy (SL)"], tp: ["form-tp", "Take Profit"] };
     const M = { magnet: true, ticker: "", tf: "1d", type: null, anchors: [], bars: [], auto: null, result: null, added: [], items: [{}], opts: {}, apply: "entry" };
     let chart = null, candle = null, vol = null, prim = null, priceLines = [], extraSeries = [], zoneCache = [];
@@ -6935,7 +6954,7 @@ window.Measure = (function () {
         if (f) out.push({ lo: f.lo, hi: f.hi, fill: "rgba(252,213,53,0.10)", stroke: "#fcd535", dash: true, label: "nowy wpis" });
         return out;
     }
-    function drawBase() { if (!prim) return; prim.set(zoneBands().concat(M.result ? ((M.result.overlay || {}).bands || []).map(b => ({ lo: b.lo, hi: b.hi, fill: "rgba(137,180,250,0.16)", stroke: "#89b4fa", label: b.label })) : []), M.result && M.result.overlay ? M.result.overlay.profile : null); }
+    function drawBase() { if (!prim) return; prim.set(zoneBands().concat(M.result ? ((M.result.overlay || {}).bands || []).map(b => ({ lo: b.lo, hi: b.hi, fill: b.color === "#fcd535" ? "rgba(252,213,53,0.20)" : "rgba(137,180,250,0.16)", stroke: b.color || "#89b4fa", label: b.label })) : []), M.result && M.result.overlay ? M.result.overlay.profile : null); }
     function clearOverlay() {
         priceLines.forEach(l => { try { candle.removePriceLine(l); } catch (e) {} }); priceLines = [];
         extraSeries.forEach(s => { try { chart.removeSeries(s); } catch (e) {} }); extraSeries = [];
@@ -6982,7 +7001,8 @@ window.Measure = (function () {
         const box = $("#fz-editor"); if (!box) return;
         const T = TYPES[M.type];
         if (!T) { box.innerHTML = '<div class="ev-muted">Wybierz typ powodu, aby go zmierzyć na wykresie.</div>'; return; }
-        let h = '<div class="ev-muted" style="margin-bottom:6px">' + esc(T.help) + "</div>";
+        let h = '<div class="ev-muted" style="margin-bottom:6px">' + esc(T.help) + (window.FORM_HELP && FORM_HELP[M.type] ? ' <button type="button" class="fz-q" data-ms-help title="Objaśnienie">?</button>' : "") + "</div>" +
+            (M.helpOpen && window.FORM_HELP && FORM_HELP[M.type] ? '<div class="fz-help">' + FORM_HELP[M.type] + "</div>" : "");
         if (T.external) {
             h += M.items.map((it, i) => '<div class="fz-ext"><input data-ms-ext="' + i + '|url" placeholder="Link do analizy (https://…)" value="' + esc(it.url || "") + '"><input data-ms-ext="' + i + '|source" placeholder="Źródło / autor" value="' + esc(it.source || "") + '">' +
                 '<input type="date" data-ms-ext="' + i + '|date" value="' + esc(it.date || "") + '"><select data-ms-ext="' + i + '|direction"><option value="">Kierunek…</option><option value="byczy"' + (it.direction === "byczy" ? " selected" : "") + '>Byczy</option><option value="niedźwiedzi"' + (it.direction === "niedźwiedzi" ? " selected" : "") + '>Niedźwiedzi</option><option value="neutralny"' + (it.direction === "neutralny" ? " selected" : "") + '>Neutralny</option></select>' +
@@ -7026,13 +7046,15 @@ window.Measure = (function () {
         M.type = M.type === k ? null : k; M.anchors = []; M.result = null; M.apply = "entry";
         if (M.type === "external") M.items = M.items.length ? M.items : [{}];
         clearOverlay(); drawTypes(); drawEditor(); drawResultCard();
-        if (M.type && ["trend", "correction", "vwap", "vp"].indexOf(M.type) >= 0) { /* działa bez kotwic */ verify(); }
+        if (M.type && ["trend", "correction", "vwap", "vp", "range", "path"].indexOf(M.type) >= 0) { /* działa bez kotwic */ verify(); }
     }
     async function verify() {
         const T = TYPES[M.type], z = formZone();
         if (!z) { toast("Najpierw wpisz strefę (początek i koniec) – weryfikacja sprawdza, czy strefa pasuje do powodu."); return; }
         if (!(parseFloat($("#form-entry").value) > 0) && M.type !== "external") { toast("Wpisz też konkretny punkt wejścia – weryfikacja sprawdza, jak daleko od niego leży poziom wskazany przez powód."); $("#form-entry").focus(); return; }
-        const body = { ticker: M.ticker, tf: M.tf, type: M.type, zone: z, entry: parseFloat($("#form-entry").value) || null, anchors: M.anchors, params: M.type === "fibo" ? { log: !!M.opts.log } : (T.external ? { items: M.items.filter(i => i.url) } : {}) };
+        const params = M.type === "fibo" ? { log: !!M.opts.log } : M.type === "path" ? { tp: parseFloat($("#form-tp").value) || null } : (T.external ? { items: M.items.filter(i => i.url) } : {});
+        M.lastParams = params;
+        const body = { ticker: M.ticker, tf: M.tf, type: M.type, zone: z, entry: parseFloat($("#form-entry").value) || null, anchors: M.anchors, params: params };
         const box = $("#fz-result"); box.innerHTML = '<div class="ev-empty">Weryfikuję…</div>';
         try {
             const res = await fetch(API_BASE_URL + "/api/form/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -7051,7 +7073,7 @@ window.Measure = (function () {
             free.value = r.label;
         }
         M.added = M.added.filter(d => d.type !== r.type);
-        const d = { type: r.type, label: r.label, tf: M.tf, anchors: M.anchors.slice(), params: r.type === "fibo" ? { log: !!M.opts.log } : {}, verdict: r.verdict, quality: r.quality, facts: r.facts.map(f => f.text), lifecycle: r.lifecycle, verified_at: new Date().toISOString() };
+        const d = { type: r.type, label: r.label, tf: M.tf, anchors: M.anchors.slice(), params: r.type === "external" ? {} : (M.lastParams || {}), verdict: r.verdict, quality: r.quality, facts: r.facts.map(f => f.text), lifecycle: r.lifecycle, verified_at: new Date().toISOString() };
         if (r.ref) d.ref = { value: r.ref.value, role: r.ref.role, label: r.ref.label, applies_to: M.apply };
         if (r.type === "external") d.items = r.items;
         M.added.push(d); drawAdded(); toast("Dodano powód „" + r.label + "”.");
@@ -7073,7 +7095,8 @@ window.Measure = (function () {
     document.addEventListener("click", e => {
         const t = e.target; if (!t.closest || !t.closest("#fz-measure")) return;
         let el;
-        if ((el = t.closest("[data-ms-type]"))) { selectType(el.dataset.msType); return; }
+        if ((el = t.closest("[data-ms-type]"))) { M.helpOpen = false; selectType(el.dataset.msType); return; }
+        if (t.closest("[data-ms-help]")) { M.helpOpen = !M.helpOpen; drawEditor(); return; }
         if (t.closest("[data-ms-verify]")) { verify(); return; }
         if (t.closest("[data-ms-undo]")) { M.anchors.pop(); M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
         if (t.closest("[data-ms-clear]")) { M.anchors = []; M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
@@ -7235,13 +7258,40 @@ window.FocusEod = (function () {
 <script>
 /* Form – szczegóły wpisu: wykres z zapisanymi powodami (formacje, FVG, Volume Profile z boku jak w TradingView) i wyraźna analiza zewnętrzna.
    Powody odtwarzane są z zapisanych kotwic przez /api/form/verify (te same obliczenia co przy dodawaniu, na bieżących świecach). */
+
+    // Objaśnienia „?” (dla początkujących) – nowe powody i typ wejścia (wzorzec analiz: docs/ANALIZY_WZORZEC.md w backendzie)
+    window.FORM_HELP = {
+        range: '<b>Co to jest?</b> Okres, w którym cena przez tygodnie lub miesiące chodzi w bok między dwoma poziomami: <b>górną krawędzią</b> (opór – tam sprzedający zatrzymują wzrosty) i <b>dolną krawędzią</b> (wsparcie – tam kupujący bronią spadków). Po spadku taki zakres często oznacza <b>akumulację</b>: duzi gracze spokojnie skupują akcje, zanim cena ruszy („akumulacja kiedyś się kończy”).' +
+            '<br><br><b>Jak to czytać?</b> Im dłużej trwa zakres i im więcej razy cena dotknęła obu krawędzi, tym silniejsza konsolidacja. Sygnałem jest <b>ZAMKNIĘCIE świecy</b> (4H lub dziennej) nad górną krawędzią – sam knot nad krawędzią się nie liczy, bo to może być pułapka. Jeśli po wybiciu kurs wraca do środka zakresu, to <b>fałszywe wybicie</b>.' +
+            '<br><br><b>Jak zmierzyć?</b> Kliknij na wykresie świecę, od której zaczyna się konsolidacja (opcjonalnie także ostatnią świecę zakresu). Bez wskazania aplikacja sama znajdzie zakres, w którym jest teraz kurs (min. 20 świec, co najmniej 2 testy każdej krawędzi).' +
+            '<br><br><b>Co policzy aplikacja?</b> Czas trwania, krawędzie (z korpusów świec), liczbę testów każdej krawędzi, czy i kiedy było wybicie zamknięciem oraz wolumen świecy wybicia.' +
+            '<br><br><b>Jak wykorzystać?</b> Wpis z typem wejścia <b>„wybicie”</b>: strefa w Form wokół górnej krawędzi (miejsce na retest), SL pod strefą. Wpis z typem <b>„korekta”</b>: kupno przy dolnej krawędzi (wsparciu). Radar pokazuje ⚡, gdy kurs jest nad poziomem wybicia.' +
+            '<br><br><b>Przykład (CPS):</b> konsolidacja 16,45–17,64 od maja do października 2026, dolna krawędź testowana 5–6 razy; zamknięcie świecy 4H nad 17,64 = wybicie.',
+        path: '<b>Co to jest?</b> Zanim kupisz na wybiciu, sprawdzasz, czy nad ceną nie ma przeszkód, które mogą zatrzymać wzrost przed Twoim celem (TP). Dwie najważniejsze przeszkody to OPS i ZS.' +
+            '<br><br><b>OPS – ostatni potwierdzony szczyt.</b> Ostatni wyraźny szczyt (korpus wyższy niż 3 świece z każdej strony), po którym cena spadła co najmniej o 2 ATR. To lustrzane odbicie Twojego OPD. Dopóki cena nie zamknie się nad jego knotem, rynek wciąż robi niższe szczyty – trend wzrostowy nie jest potwierdzony.' +
+            '<br><br><b>ZS – złota strefa.</b> Strefa o wybitnej sile: miejsce, z którego kiedyś cena gwałtownie spadła (baza przed silnym ruchem – metoda Seidena). Tam zostali sprzedający, więc cena często się od niej odbija. Siłę liczymy z: siły spadku z bazy (w ATR), krótkiej bazy (1–3 świece), świeżości (im rzadziej cena do niej wracała, tym silniejsza) i wielkości ruchu w %. Strefa z oceną ≥ 60% = złota. Bliższa krawędź = korpus, dalsza = knot.' +
+            '<br><br><b>Droga otwarta</b> = OPS i ZS przebite <b>ZAMKNIĘCIEM</b> świecy – wtedy między ceną a celem nie ma silnych przeszkód. Dopóki nie są przebite, cel jest „zablokowany”.' +
+            '<br><br><b>Jak zmierzyć?</b> Najpierw wpisz Take Profit w formularzu (to Twój cel). Aplikacja sama znajdzie OPS i ZS. Możesz je wskazać ręcznie na wykresie: 1. świeca szczytu OPS, 2. świeca bazy ZS.' +
+            '<br><br><b>Co policzy aplikacja?</b> Poziomy OPS i ZS, czy są przebite zamknięciem, inne strefy podaży na drodze i % od kursu do celu. Wartość odniesienia = poziom do przebicia.' +
+            '<br><br><b>Przykład (CPS):</b> ZS 17,99–18,515 i OPS nad kursem – „przebić ZS i OPS = droga otwarta na 20,56” (+16,5%).',
+        entry_type: '<b>Korekta</b> (dotychczasowy sposób): kupujesz, gdy cena cofa się do strefy (np. nieco nad OPD). Ocena wejścia sprawdza m.in. <b>głębokość wejścia w strefę</b> i reakcję świec 1H na strefę.' +
+            '<br><br><b>Wybicie</b>: kupujesz, gdy cena wychodzi z konsolidacji lub przebija opór. Strefa w Form = poziom oporu (np. górna krawędź konsolidacji): jej górna krawędź to <b>poziom wybicia</b>, SL ustaw pod strefą. Ocena wejścia zamiast głębokości sprawdza warunek <b>„Wybicie”</b>: czy świeca dzienna zamknęła się nad poziomem, jaki był wolumen świecy wybicia, czy był <b>retest</b> (powrót do poziomu i jego obrona zamknięciem) i czy kurs nie odjechał za daleko (pościg).' +
+            '<br><br>Najlepsze wejście na wybiciu: retest obroniony zamknięciem. Kurs z powrotem pod poziomem po wybiciu = <b>fałszywe wybicie</b> (ocena 0).'
+    };
+    document.addEventListener("click", ev => {
+        const q = ev.target.closest && ev.target.closest("[data-help-toggle]"); if (!q) return;
+        ev.preventDefault();
+        const box = document.getElementById(q.dataset.helpToggle); if (!box) return;
+        if (!box.innerHTML) box.innerHTML = window.FORM_HELP.entry_type;
+        box.hidden = !box.hidden;
+    });
 window.ReasonChart = (function () {
     "use strict";
     const $ = (s, r) => (r || document).querySelector(s);
     const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const num = (v, d) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
     const price = v => v == null ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
-    const COL = { fvg: "#89b4fa", swing: "#f9e2af", trend: "#94e2d5", correction: "#b4befe", fibo: "#fab387", one2one: "#f38ba8", xabcd: "#cba6f7", rgr: "#f9e2af", elliott: "#f2cdcd", vwap: "#74c7ec", vp: "#fcd535", external: "#a6e3a1" };
+    const COL = { range: "#f9e2af", path: "#fcd535", fvg: "#89b4fa", swing: "#f9e2af", trend: "#94e2d5", correction: "#b4befe", fibo: "#fab387", one2one: "#f38ba8", xabcd: "#cba6f7", rgr: "#f9e2af", elliott: "#f2cdcd", vwap: "#74c7ec", vp: "#fcd535", external: "#a6e3a1" };
     const FORMATION = { fibo: 1, one2one: 1, xabcd: 1, rgr: 1, elliott: 1 };
     const S = { id: null, entry: null, tf: "1d", bars: {}, res: {}, hidden: new Set(), seq: 0 };
     let chart = null, candle = null, vol = null, prim = null, lines = [], series = [];
@@ -7369,10 +7419,11 @@ window.ReasonChart = (function () {
             const ov = r.overlay || {};
             (ov.lines || []).forEach(l => PL(l.price, l.color || col, l.label || "", ST[l.style] != null ? ST[l.style] : 2));
             (ov.bands || []).forEach(b => {
-                const t0 = d.type === "fvg" && (d.anchors || [])[0] ? d.anchors[0].t : null;
-                bands.push({ lo: b.lo, hi: b.hi, t0: t0, fill: "rgba(137,180,250,0.20)", stroke: col, label: b.label + (r.lifecycle && r.lifecycle.status === "zakończony" ? " (pokryta)" : "") });
+                const t0 = b.t0 || (d.type === "fvg" && (d.anchors || [])[0] ? d.anchors[0].t : null);
+                const gold = b.color === "#fcd535";
+                bands.push({ lo: b.lo, hi: b.hi, t0: t0, fill: gold ? "rgba(252,213,53,0.22)" : d.type === "range" ? "rgba(249,226,175,0.12)" : "rgba(137,180,250,0.20)", stroke: b.color || col, bold: gold, label: b.label + (r.lifecycle && r.lifecycle.status === "zakończony" ? " (pokryta)" : "") });
                 const lo = Math.max(b.lo, z.lo), hi = Math.min(b.hi, z.hi);          // część luki pokrywająca się ze strefą – podświetlona
-                if (hi > lo) bands.push({ lo: lo, hi: hi, t0: t0, fill: "rgba(252,213,53,0.30)", stroke: "#fcd535", dash: true, label: "FVG ∩ strefa" });
+                if (d.type === "fvg" && hi > lo) bands.push({ lo: lo, hi: hi, t0: t0, fill: "rgba(252,213,53,0.30)", stroke: "#fcd535", dash: true, label: "FVG ∩ strefa" });
             });
             (ov.series || []).forEach(s => { const ls = chart.addLineSeries({ color: s.color || col, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: s.name }); ls.setData(s.points.map(p => ({ time: p.t, value: p.v }))); series.push(ls); });
             (ov.segments || []).forEach(sg => { const ls = chart.addLineSeries({ color: sg.color || col, lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: false }); ls.setData([{ time: sg.p1.t, value: sg.p1.v }, { time: sg.p2.t, value: sg.p2.v }]); series.push(ls); });
