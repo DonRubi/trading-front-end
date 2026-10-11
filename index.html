@@ -294,6 +294,18 @@
         .plx-fill.over { background: var(--danger); }
         .plx-neg { color: var(--danger); font-weight: 700; } .plx-pos { color: var(--success); font-weight: 700; }
         /* okna: szczegóły planu i nowy plan */
+        #inv-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 1250; background: var(--bg-card); border-bottom: 1px solid var(--accent); box-shadow: 0 6px 24px rgba(0,0,0,.5); display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; padding: 8px 16px; }
+        .inv-steps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .88rem; } .inv-step { color: var(--text-muted); padding: 3px 10px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+        .inv-step.cur { color: #111; background: var(--accent-hover); font-weight: 700; } .inv-step.done { color: var(--success); border-color: rgba(14,203,129,.4); } .inv-sep { color: var(--text-muted); }
+        .inv-hint { flex: 1; min-width: 220px; font-size: .85rem; color: var(--text-main); } .inv-btns { display: flex; gap: 6px; margin-left: auto; }
+        body.inv-on .plx-overlay, body.inv-on #sd-overlay { padding-top: 96px; } body.inv-on .app-module, body.inv-on main#dashboard { padding-top: 70px; }
+        @media (max-width: 760px) { .inv-hint { display: none; } #inv-bar { padding: 6px 10px; } .inv-step:not(.cur) { display: none; } .inv-sep { display: none; } body.inv-on .plx-overlay { padding-top: 52px; } }
+        .inv-list { display: flex; flex-direction: column; gap: 6px; } .inv-item, .inv-play { display: grid; grid-template-columns: 2fr 1fr 1.3fr auto; gap: 10px; align-items: center; width: 100%; text-align: left; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; color: var(--text-main); cursor: pointer; font: inherit; }
+        .inv-item:hover, .inv-play:hover { border-color: var(--accent); } .inv-go { color: var(--accent-hover); font-weight: 600; white-space: nowrap; } .inv-plays { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 6px 18px; }
+        .inv-play { grid-template-columns: 2fr 1fr .8fr .7fr auto; background: var(--bg-card); padding: 8px 12px; font-size: .92em; } .inv-co.open > .inv-item { border-color: var(--accent); }
+        @media (max-width: 760px) { .inv-item, .inv-play { grid-template-columns: 1fr auto; } .inv-item > span:nth-child(2), .inv-play > span:nth-child(3), .inv-play > span:nth-child(4) { display: none; } .inv-plays { margin-left: 6px; } }
+        .hp-invest { font-weight: 700; }
+        .plx-amt { color: var(--text-muted); font-weight: 500; font-size: .82em; white-space: nowrap; }
         .plx-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.82); z-index: 1100; display: none; overflow-y: auto; padding: 16px; }
         .plx-overlay.open { display: block; }
         .plx-panel { max-width: 1180px; margin: 0 auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; font-size: 15px; }
@@ -467,6 +479,7 @@
             <div class="hp-topbar">
                 <span class="hp-sub" id="hp-updated">Łączenie z serwerem… (przy uśpionym serwerze może potrwać do minuty)</span>
                 <div class="hp-tools">
+                    <button class="hp-btn hp-primary hp-invest" type="button" data-inv-start>＋ Dodaj inwestycję</button>
                     <button class="hp-btn" id="hp-toggle-all" type="button">Zwiń wszystko</button>
                     <button class="hp-btn" id="hp-refresh" type="button" aria-label="Odśwież dane">↻ Odśwież</button>
                 </div>
@@ -687,7 +700,7 @@
         <div class="hp-wrap tr-wrap">
             <div class="hp-topbar">
                 <div><div class="tr-title">Transakcje</div><span class="hp-sub">Inwestycje pogrupowane po spółkach – kliknij spółkę, aby zobaczyć jej transakcje</span></div>
-                <div class="hp-tools"><button class="hp-btn hp-primary" type="button" id="tr-new-btn">＋ Nowa transakcja</button><button class="hp-btn" type="button" id="tr-expand-all">Rozwiń wszystkie</button></div>
+                <div class="hp-tools"><button class="hp-btn hp-primary hp-invest" type="button" data-inv-start>＋ Dodaj inwestycję</button><button class="hp-btn" type="button" id="tr-new-btn">＋ Transakcja ręcznie</button><button class="hp-btn" type="button" id="tr-expand-all">Rozwiń wszystkie</button></div>
             </div>
             <section class="hp-panel hp-collapsed" id="tr-form-panel">
                 <button class="hp-head" type="button" aria-expanded="false"><h2><span class="hp-dot"></span>Nowa transakcja</h2><span class="hp-peek">wybierz spółkę i zagranie z Form albo przejdź z Oceny wejścia</span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>
@@ -759,8 +772,8 @@
 
     <section id="focus2-module" class="app-module">
         <div class="hp-wrap">
-            <div class="hp-topbar"><div><div class="tr-title">Focus</div><span class="hp-sub">Zapisane oceny momentu wejścia (Form ×2 + wejście + priorytet) – z nich wynikają transakcje. Nowy wpis dodasz w Radarze zagrań → Ocena wejścia → „Zapisz w Focus”.</span></div>
-                <div class="hp-tools"><button class="hp-btn" type="button" onclick="openModule('focuslist-module', 'Radar zagrań')">👁️ Radar zagrań</button></div></div>
+            <div class="hp-topbar"><div><div class="tr-title">Focus</div><span class="hp-sub">Zapisane oceny momentu wejścia (Form ×2 + wejście + priorytet) z rekomendowanym budżetem w % i w walucie spółki – z nich wynikają transakcje.</span></div>
+                <div class="hp-tools"><button class="hp-btn hp-primary hp-invest" type="button" data-inv-start>＋ Dodaj inwestycję</button><button class="hp-btn" type="button" onclick="openModule('focuslist-module', 'Radar zagrań')">👁️ Radar zagrań</button></div></div>
             <section class="hp-panel"><div class="hp-content" style="padding-top:16px">
                 <div class="tr-filters fe-filters fe-3">
                     <input type="search" id="fe-q" placeholder="Szukaj spółki…" oninput="FocusEod.renderFocus()">
@@ -1499,8 +1512,7 @@
     <section id="planner-module" class="app-module dbx">
         <div class="dbx-panel">
             <div class="dbx-panel-head">
-                <div><h3>Plany inwestycyjne</h3><div class="db-help">Budżet liczony w % kapitału w strefach z Form, według limitów rodzaju spółki (Baza danych → Serwis). Plan łączy strefy z transakcjami z zakładki Transakcje.</div></div>
-                <div class="dbx-tools"><button class="hp-btn hp-primary" type="button" onclick="Planer.openNew()">＋ Nowy plan</button></div>
+                <div><h3>Plany inwestycyjne</h3><div class="db-help">Plan tworzy się automatycznie przy pierwszej transakcji spółki i obejmuje wszystkie jej strefy z Form. Budżet w % kapitału i w walucie spółki, według limitów rodzaju spółki (Baza danych → Serwis).</div></div>
             </div>
             <div class="plx-bar">
                 <div class="plx-seg" id="plx-filter">
@@ -2851,6 +2863,7 @@
         function prefillTradeFromPlay(ticker, entryId, evalData, focusEvalId) {
             window.__pendingTradePlay = { ticker: ticker, entryId: entryId, evalData: evalData, focusEvalId: focusEvalId };
             openModule('tradeslist-module', 'Transakcje');
+            if (window.Invest) Invest.onPrefill(ticker, entryId);
         }
         function applyTradePlay(p) {
             const fp = document.getElementById('tr-form-panel'); if (fp) fp.classList.remove('hp-collapsed');
@@ -2875,6 +2888,7 @@
             box.style.display = 'block';
             const ee = e.entry_eval || {};
             box.innerHTML = `🎯 <b>${e.focusEvalId ? 'Focus #' + e.focusEvalId + ': ' : 'Ocena wejścia: '}${ee.points != null ? String(Math.round(ee.points * 10) / 10).replace('.', ',') + '/' + (ee.max_points || 15) + ' pkt · ' : ''}${s.score == null ? '–' : Math.round(s.score)}/100 · ${s.verdict}</b> · rekomendowany budżet: <b>${rec == null ? 'brak limitów' : rec.toFixed(1).replace('.', ',') + '% kapitału'}</b>`
+                + (s.recommended_ccy != null ? ` ≈ <b>${Math.round(s.recommended_ccy).toLocaleString('pl-PL')} ${s.currency}</b>${s.units ? ' (' + s.units + ' szt.)' : ''}` : '')
                 + (pln != null ? ` (≈ ${Math.round(pln).toLocaleString('pl-PL')} PLN własnych środków, bez dźwigni)` : '')
                 + ` <button type="button" class="dbx-icon" onclick="clearTradeEval()" title="Odłącz ocenę od transakcji">✕</button>`;
         }
@@ -2973,7 +2987,7 @@
             } catch (e) { if (my !== window.__feSeq) return; window.__focusEvals = []; sel.innerHTML = `<option value="">${(e.message || e)}</option><option value="__none">— bez wpisu Focus (np. transakcja historyczna)</option>`; return; }
             const f1 = v => v == null ? '–' : String(Math.round(v * 10) / 10).replace('.', ',');
             sel.innerHTML = (window.__focusEvals.length ? '<option value="">Wybierz wpis Focus…</option>' : '<option value="">Brak wpisów Focus z 30 dni – oceń wejście w Radarze zagrań</option>') +
-                window.__focusEvals.map(f => `<option value="${f.id}">${new Date(f.created_at).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · ${f.entry_id || '–'} · ${f1(f.points)}/${f1(f.max_points)} pkt · rek. ${f.recommended_pct == null ? '–' : f1(f.recommended_pct) + '%'} · ${f.verdict || ''}${(f.trade_ids || []).length ? ' · użyty (#' + f.trade_ids.join(', #') + ')' : ''}</option>`).join('') +
+                window.__focusEvals.map(f => `<option value="${f.id}">${new Date(f.created_at).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · ${f.entry_id || '–'} · ${f1(f.points)}/${f1(f.max_points)} pkt · rek. ${f.recommended_pct == null ? '–' : f1(f.recommended_pct) + '%'}${f.summary && f.summary.recommended_ccy != null ? ' ≈ ' + Math.round(f.summary.recommended_ccy).toLocaleString('pl-PL') + ' ' + f.summary.currency : ''} · ${f.verdict || ''}${(f.trade_ids || []).length ? ' · użyty (#' + f.trade_ids.join(', #') + ')' : ''}</option>`).join('') +
                 '<option value="__none">— bez wpisu Focus (np. transakcja historyczna)</option>';
             if (selectId) { sel.value = String(selectId); onTradeFocusEvalChange(); }
         }
@@ -3086,12 +3100,13 @@ async function submitTradeForm(e) {
         const result = await res.json(); // Pobieramy odpowiedź z serwera
         
         if(res.ok) { 
-            alert('Zapisano!'); 
+            if (!(window.Invest && Invest.active())) alert('Zapisano!'); 
             document.getElementById('trade-form').reset(); clearTradeEval(); 
             fetchTradesEntries(true); 
             
             // AUTOMATYZACJA: Wywołanie po sukcesie
             await handleTradeAutomation(result.trade_id, data);
+            if (window.Invest) Invest.onTradeAdded(result);
         } else { 
             alert('Błąd dodawania transakcji.'); 
         } 
@@ -5868,8 +5883,11 @@ window.Planer = (function () {
     const date = iso => iso ? new Date(iso).toLocaleDateString("pl-PL") : "—";
     const KIND_COLOR = { inv_prio: "#89b4fa", inv: "#89b4fa", spec_prio: "#fab387", spec: "#fab387" };
     const arrow = side => side === "LONG" ? "▲" : "▼";
+    const amt = (v, m) => (v == null || !isFinite(v) || !m || !m.capital_ccy) ? "" : Math.round(v / 100 * m.capital_ccy).toLocaleString("pl-PL") + " " + m.currency;   // % kapitału -> kwota w walucie spółki
+    const pctA = (v, m, d) => { const a = amt(v, m); return pct(v, d) + (a ? ' <small class="plx-amt">≈ ' + a + "</small>" : ""); };
+    const MD = () => (st.detail && st.detail.money) || null;
 
-    let st = { filter: "open", q: "", all: [], plans: [], seq: 0, detail: null, ctxNew: null, tickers: [], pick: {} };
+    let st = { filter: "open", q: "", all: [], plans: [], seq: 0, detail: null };
     const PHASE = { OPEN: ["plx-st-open", "OTWARTY"], PREPARED: ["plx-st-prep", "PRZYGOTOWANY"], CLOSED: ["plx-st-closed", "ZAMKNIĘTY"] };
     const phaseBadge = ph => { const x = PHASE[ph] || PHASE.OPEN; return '<span class="plx-status ' + x[0] + '">' + x[1] + "</span>"; };
     const FILTER_PHASE = { open: "OPEN", prepared: "PREPARED", closed: "CLOSED" };
@@ -5883,7 +5901,7 @@ window.Planer = (function () {
     const kindBadge = (k, label) => '<span class="plx-kind" style="color:' + (KIND_COLOR[k] || "#848e9c") + ';border-color:' + (KIND_COLOR[k] || "#848e9c") + '">' + esc(label) + "</span>";
 
     // ---------- lista planów ----------
-    function open() { st.filter = st.filter || "open"; syncBar(); load(); loadTickers(); }
+    function open() { st.filter = st.filter || "open"; syncBar(); load(); }
     function syncBar() {
         const cnt = { open: 0, prepared: 0, closed: 0, all: st.all.length };
         st.all.forEach(p => { if (p.phase === "OPEN") cnt.open++; else if (p.phase === "PREPARED") cnt.prepared++; else cnt.closed++; });
@@ -5904,23 +5922,23 @@ window.Planer = (function () {
         } catch (e) { if (my === st.seq) tb.innerHTML = '<tr><td colspan="9" class="hp-empty plx-err">' + esc(e.message) + "</td></tr>"; }
     }
     function budCell(p) {
-        const c = p.company, max = c.max_pct;
-        if (max == null) return '<div class="plx-bud">' + pct(c.used_pct) + ' <small>bez limitu</small></div>';
+        const c = p.company, max = c.max_pct, m = p.money;
+        if (max == null) return '<div class="plx-bud">' + pctA(c.used_pct, m) + ' <small>bez limitu</small></div>';
         const used = Math.min(100, Math.max(0, (c.used_pct || 0) / max * 100)), res = Math.min(100 - used, Math.max(0, (p.reserved_pct || 0) / max * 100));
-        return '<div class="plx-bud">' + pct(c.used_pct) + ' <small>z ' + pct(max) + '</small><div class="plx-track"><div class="plx-fill ' + ((c.used_pct || 0) > max ? "over" : "") + '" style="width:' + used + '%"></div><div class="plx-fill res" style="left:' + used + '%;width:' + res + '%"></div></div></div>';
+        return '<div class="plx-bud">' + pctA(c.used_pct, m) + ' <small>z ' + pct(max) + (amt(max, m) ? " (" + amt(max, m) + ")" : "") + '</small><div class="plx-track"><div class="plx-fill ' + ((c.used_pct || 0) > max ? "over" : "") + '" style="width:' + used + '%"></div><div class="plx-fill res" style="left:' + used + '%;width:' + res + '%"></div></div></div>';
     }
     function render() {
         const tb = $("#plx-tbody"), q = st.q, ph = FILTER_PHASE[st.filter];
         st.plans = st.all.filter(p => !ph || p.phase === ph);
         const list = st.plans.filter(p => !q || p.ticker.toLowerCase().includes(q) || String(p.name || "").toLowerCase().includes(q));
         if (!list.length) {
-            const empty = { open: "Brak otwartych planów (z wykonanym zagraniem).", prepared: "Brak przygotowanych planów. Utwórz plan przyciskiem „＋ Nowy plan”.", closed: "Brak zamkniętych planów.", all: "Brak planów. Utwórz pierwszy przyciskiem „＋ Nowy plan”." };
+            const empty = { open: "Brak otwartych planów. Plan powstaje automatycznie przy pierwszej transakcji spółki.", prepared: "Brak przygotowanych planów.", closed: "Brak zamkniętych planów.", all: "Brak planów. Plan powstaje automatycznie przy pierwszej transakcji spółki." };
             tb.innerHTML = '<tr><td colspan="9" class="hp-empty">' + (st.plans.length ? "Żaden plan nie pasuje do wyszukiwania." : empty[st.filter]) +
                 (st.filter === "open" && st.all.some(p => p.phase === "PREPARED") ? ' <a href="#" onclick="Planer.setFilter(\'prepared\'); return false;" class="dbx-link">Zobacz przygotowane (' + st.all.filter(p => p.phase === "PREPARED").length + ")</a>" : "") + "</td></tr>";
             return;
         }
         tb.innerHTML = list.map(p => {
-            const zones = p.legs.map(l => '<span class="plx-zchip ' + (l.side === "LONG" ? "long" : "short") + '" title="Budżet w strefie">' + arrow(l.side) + " " + num(l.start, 2) + "–" + num(l.end, 2) + " · " + pct(l.planned_pct) + "</span>").join("");
+            const zones = p.legs.map(l => '<span class="plx-zchip ' + (l.side === "LONG" ? "long" : "short") + '" title="Budżet w strefie">' + arrow(l.side) + " " + num(l.start, 2) + "–" + num(l.end, 2) + " · " + pct(l.planned_pct) + (amt(l.planned_pct, p.money) ? " ≈ " + amt(l.planned_pct, p.money) : "") + "</span>").join("");
             const after = p.remaining_after_pct;
             return '<tr class="plx-row" data-id="' + p.id + '"><td><span class="hp-tk sd-link" data-tk="' + esc(p.ticker) + '">' + esc(p.ticker) + '</span><div class="hp-name">' + esc(p.name) + "</div></td>" +
                 "<td>" + kindBadge(p.kind, p.kind_label) + "</td>" +
@@ -5928,7 +5946,7 @@ window.Planer = (function () {
                 '<td><div class="plx-zchips">' + (zones || '<span class="db-help">—</span>') + "</div></td>" +
                 "<td>" + p.open_trade_count + " otw. / " + p.trade_count + (p.company.max_trades != null ? ' <small class="db-help">(limit ' + p.company.max_trades + ")</small>" : "") + "</td>" +
                 "<td>" + budCell(p) + "</td>" +
-                '<td class="hp-r ' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '" title="Budżet spółki, który zostanie po zainwestowaniu pozostałej części budżetów stref">' + pct(after) + "</td>" +
+                '<td class="hp-r ' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '" title="Budżet spółki, który zostanie po zainwestowaniu pozostałej części budżetów stref">' + pctA(after, p.money) + "</td>" +
                 "<td>" + phaseBadge(p.phase) + "</td>" +
                 '<td class="hp-r"><button class="hp-btn" type="button">Szczegóły</button></td></tr>';
         }).join("");
@@ -5947,7 +5965,7 @@ window.Planer = (function () {
     }
     function showOverlay(id, html) { const o = overlay(id); o.firstChild.innerHTML = html; o.classList.add("open"); document.body.style.overflow = "hidden"; return o; }
     function closeOverlay(id) { const o = document.getElementById(id); if (o) o.classList.remove("open"); if (!document.querySelector(".plx-overlay.open")) document.body.style.overflow = ""; }
-    document.addEventListener("keydown", e => { if (e.key === "Escape") { closeOverlay("plx-new"); closeOverlay("plx-detail"); } });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeOverlay("plx-detail"); });
 
     // ---------- szczegóły planu ----------
     async function openPlan(id) {
@@ -5958,16 +5976,15 @@ window.Planer = (function () {
     function playRows(l, i, canAct) {
         return (l.plays || []).map(p => '<div class="plx-play"><b>' + arrow(p.side) + " wejście " + price(p.entry_point) + "</b><span>TP " + price(p.take_profit) + "</span><span>SL " + price(p.stop_loss) + "</span>" +
             (p.reasons && p.reasons.length ? "<span>" + esc(p.reasons.join(", ")) + "</span>" : "") +
-            "<span>transakcje: <b>" + p.trades + "</b>" + (p.open_trades ? " (otwarte: " + p.open_trades + ", " + pct(p.used_pct) + " kapitału)" : "") + "</span>" +
+            "<span>transakcje: <b>" + p.trades + "</b>" + (p.open_trades ? " (otwarte: " + p.open_trades + ", " + pctA(p.used_pct, MD()) + " kapitału)" : "") + "</span>" +
             (canAct ? '<button type="button" class="hp-btn hp-primary plx-do" data-do="' + esc(p.entry_id) + '" data-leg="' + i + '" title="Przejdź do analizy Focus lub do dodania transakcji dla tego zagrania">Zrób zagranie →</button>' : "") + "</div>").join("");
     }
     function legCard(l, i, editable) {
-        const over = l.zone_limit_pct != null && l.planned_pct > l.zone_limit_pct + 1e-9;
+        const over = !l.auto && l.zone_limit_pct != null && l.planned_pct > l.zone_limit_pct + 1e-9, m = MD();
         return '<div class="plx-zone"><div class="plx-zhead"><span class="plx-zside ' + (l.side === "LONG" ? "long" : "short") + '">' + arrow(l.side) + '</span><span class="plx-zrange">' + num(l.start, 2) + " – " + num(l.end, 2) + "</span>" +
             (l.missing ? '<span class="plx-warn">strefa nie istnieje już w Form</span>' : "") +
-            '<div class="plx-zbud"><span class="db-help">zainwestowano ' + pct(l.used_pct) + " · do dołożenia " + pct(l.left_pct) + (l.zone_limit_pct != null ? " · limit strefy " + pct(l.zone_limit_pct) : "") + "</span>" +
-            (editable && !l.auto ? '<label class="dbx-field" style="flex-direction:row;align-items:center;gap:6px;"><span>Budżet strefy</span><input class="dbx-in" type="number" step="0.1" min="0.1" max="100" data-leg="' + i + '" value="' + l.planned_pct + '"> %</label><button class="dbx-icon dbx-del" type="button" onclick="Planer.removeLeg(' + i + ')" title="Usuń strefę z planu">✕</button>'
-                : (l.auto ? "<b>limit strefy " + (l.planned_pct != null ? pct(l.planned_pct) : "—") + "</b>" : "<b>budżet " + pct(l.planned_pct) + "</b>")) + "</div></div>" + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l, i, editable && !l.missing) + "</div>";
+            '<div class="plx-zbud"><span class="db-help">zainwestowano ' + pctA(l.used_pct, m) + " · do dołożenia " + pctA(l.left_pct, m) + "</span>" +
+            "<b>" + (l.auto ? "limit strefy " : "budżet ") + (l.planned_pct != null ? pctA(l.planned_pct, m) : "—") + "</b></div></div>" + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l, i, editable && !l.missing) + "</div>";
     }
     function tpTable(d) {
         const st_ = c => '<span style="display:inline-block;height:6px;width:' + Math.round(c.strength * 60) + 'px;background:var(--accent-hover);border-radius:3px"></span> ' + num(c.strength, 2);
@@ -5996,7 +6013,7 @@ window.Planer = (function () {
     function maxBudgetHtml(p) {
         const m = p.max_budget || {}, c = p.company;
         return '<div class="plx-play" style="margin:8px 0"><label class="db-help">Maks. budżet spółki: <input type="number" id="plx-maxb" step="0.1" min="0.1" max="100" value="' + (m.override_pct != null ? m.override_pct : "") + '" placeholder="' + (m.serwis_pct != null ? m.serwis_pct : "bez limitu") + '" style="width:90px"> % kapitału</label> ' +
-            '<button class="hp-btn" style="padding:3px 10px" data-plx-maxb="' + esc(p.ticker) + '">Zapisz</button> <span class="db-help">' + (m.override_pct != null ? "ustawione ręcznie" : "z Serwisu" + (m.serwis_pct != null ? " (" + pct(m.serwis_pct) + ")" : " – brak limitu")) + ' · puste pole = limit z Serwisu · wykorzystano ' + pct(c.used_pct) + "</span></div>";
+            '<button class="hp-btn" style="padding:3px 10px" data-plx-maxb="' + esc(p.ticker) + '">Zapisz</button> <span class="db-help">' + (m.override_pct != null ? "ustawione ręcznie" : "z Serwisu" + (m.serwis_pct != null ? " (" + pct(m.serwis_pct) + ")" : " – brak limitu")) + ' · puste pole = limit z Serwisu · wykorzystano ' + pctA(c.used_pct, p.money) + (c.max_pct != null && amt(c.max_pct, p.money) ? " z " + amt(c.max_pct, p.money) : "") + "</span></div>";
     }
     document.addEventListener("click", async e => {
         const b = e.target.closest && e.target.closest("[data-plx-maxb]"); if (!b || !st.detail) return;
@@ -6007,15 +6024,15 @@ window.Planer = (function () {
         const p = st.detail, c = p.company, open_ = p.status === "OPEN";
         const kpi = (l, v, s) => '<div class="plx-kpi"><div class="l">' + l + '</div><div class="v">' + v + "</div>" + (s ? '<div class="s">' + s + "</div>" : "") + "</div>";
         const after = p.remaining_after_pct;
-        const trades = (p.trades || []).map(t => "<tr><td>" + esc(t.buy_date) + "</td><td>" + arrow(t.side) + " ×" + num(t.leverage, 2).replace(",00", "") + "</td><td>" + price(t.buy_price) + "</td><td>" + pct(t.invested_pct, 2) + '</td><td class="' + (t.return_pct == null ? "" : t.return_pct >= 0 ? "hp-up" : "hp-down") + '"><b>' + spct(t.return_pct) + "</b></td><td>" + (t.status === "OPEN" ? "otwarta" : "zamknięta " + esc(t.sell_date || "")) + "</td></tr>").join("");
+        const trades = (p.trades || []).map(t => "<tr><td>" + esc(t.buy_date) + "</td><td>" + arrow(t.side) + " ×" + num(t.leverage, 2).replace(",00", "") + "</td><td>" + price(t.buy_price) + "</td><td>" + pctA(t.invested_pct, p.money, 2) + '</td><td class="' + (t.return_pct == null ? "" : t.return_pct >= 0 ? "hp-up" : "hp-down") + '"><b>' + spct(t.return_pct) + "</b></td><td>" + (t.status === "OPEN" ? "otwarta" : "zamknięta " + esc(t.sell_date || "")) + "</td></tr>").join("");
         showOverlay("plx-detail",
             '<div class="plx-head"><div><div class="plx-title"><span class="sd-link" data-tk="' + esc(p.ticker) + '">' + esc(p.ticker) + "</span> " + kindBadge(p.kind, p.kind_label) + ' ' + phaseBadge(p.phase) + '</div><div class="plx-sub">' + esc(p.name) + " · plan od " + date(p.created_at) + (p.closed_at ? " do " + date(p.closed_at) : "") + "</div></div>" +
             '<div class="plx-actions"><button class="hp-btn" onclick="Planer.goTrades()">📊 Transakcje</button><button class="hp-btn" onclick="Planer.closeDetail()">✕ Zamknij</button></div></div>' +
             '<div class="plx-kpis">' +
-            kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : " <small class='db-help'>bez limitu</small>"), "wykorzystane w otwartych transakcjach (% kapitału)") +
-            kpi("Strefy spółki", (p.zones ? p.zones.total : p.legs.length) + ' <small class="db-help">z transakcjami: ' + (p.zones ? p.zones.with_trades : "—") + "</small>", p.zones && p.zones.limit_pct != null ? "limit na strefę: " + pct(p.zones.limit_pct) + " kapitału" : "bez limitu na strefę") +
-            (p.reserved_pct > 0 ? kpi("Zarezerwowane w planie", pct(p.reserved_pct), "do dołożenia w ręcznie wybranych strefach") : "") +
-            kpi("Zostaje po inwestycji", '<span class="' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '">' + pct(after) + "</span>", "budżet spółki po zainwestowaniu całego planu") +
+            kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : " <small class='db-help'>bez limitu</small>"), (amt(c.used_pct, p.money) ? "<b>" + amt(c.used_pct, p.money) + "</b>" + (c.max_pct != null ? " z " + amt(c.max_pct, p.money) : "") + " · " : "") + "wykorzystane w otwartych transakcjach") +
+            kpi("Strefy spółki", (p.zones ? p.zones.total : p.legs.length) + ' <small class="db-help">z transakcjami: ' + (p.zones ? p.zones.with_trades : "—") + "</small>", p.zones && p.zones.limit_pct != null ? "limit na strefę: " + pct(p.zones.limit_pct) + (amt(p.zones.limit_pct, p.money) ? " ≈ " + amt(p.zones.limit_pct, p.money) : "") : "bez limitu na strefę") +
+            (p.reserved_pct > 0 ? kpi("Zarezerwowane w planie", pctA(p.reserved_pct, p.money), "do dołożenia w strefach planu") : "") +
+            kpi("Zostaje po inwestycji", '<span class="' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '">' + pct(after) + "</span>", (amt(after, p.money) ? "<b>" + amt(after, p.money) + "</b> · " : "") + "budżet spółki po zainwestowaniu całego planu") +
             kpi("Inwestycje w spółce", c.open_trades + (c.max_trades != null ? " / " + c.max_trades : ""), c.trades_left != null ? (c.trades_left > 0 ? "wolnych miejsc: " + c.trades_left : '<span class="plx-neg">limit wyczerpany</span>') : "bez limitu liczby") + "</div>" +
             (p.capital_known ? "" : '<div class="plx-warn">Nie udało się wyliczyć kapitału - procenty budżetu są niedostępne.</div>') +
             maxBudgetHtml(p) +
@@ -6023,7 +6040,8 @@ window.Planer = (function () {
             (open_ ? '<div id="plx-watch" class="plx-watch"></div>' : "") +
             '<div class="plx-h">Strefy spółki z Form i dostępne zagrania</div>' +
             (p.legs.length ? p.legs.map((l, i) => legCard(l, i, open_)).join("") : '<div class="db-help">Plan nie ma stref.</div>') +
-            (open_ && p.legs.some(l => !l.auto) ? '<div class="plx-actions"><select id="plx-addleg" class="dbx-in" style="max-width:340px" onfocus="Planer.fillAddLeg()"><option value="">＋ Dodaj strefę z Form…</option></select><button class="hp-btn hp-primary" onclick="Planer.saveLegs()">Zapisz budżety stref</button><span id="plx-detail-msg" class="plx-err"></span></div>' : "") +
+            '<div id="plx-detail-msg" class="plx-err"></div>' +
+            (p.money && p.money.currency ? '<div class="db-help">Kwoty w ' + esc(p.money.currency) + (p.money.currency !== "PLN" && p.money.fx ? " po bieżącym kursie " + num(p.money.fx, 4) + " PLN" : "") + " z kapitału " + Math.round(p.money.capital_pln || 0).toLocaleString("pl-PL") + " PLN.</div>" : "") +
             '<div class="plx-h">Transakcje w planie (z zakładki Transakcje)</div>' +
             (trades ? '<div class="hp-table-wrap"><table class="hp-table"><thead><tr><th>Data</th><th>Kierunek</th><th>Cena zakupu</th><th>Zaangażowano</th><th>Wynik</th><th>Status</th></tr></thead><tbody>' + trades + "</tbody></table></div>"
                 : '<div class="db-help">Brak transakcji w tym planie. Nowa transakcja spółki dodana w Transakcjach trafi tu automatycznie, dopóki plan jest otwarty.</div>') +
@@ -6049,7 +6067,7 @@ window.Planer = (function () {
         return '<div class="plx-kpis" style="margin:8px 0">' +
             '<div class="plx-kpi"><div class="l">Średnia cena zakupu</div><div class="v">' + price(p.avg_price) + '</div><div class="s">' + p.n + " otw. transakcji · koszt pozycji / liczba jednostek (ważona)</div></div>" +
             '<div class="plx-kpi"><div class="l">Kurs vs średnia</div><div class="v" style="color:' + c(p.vs_avg_pct) + '">' + spct(p.vs_avg_pct) + '</div><div class="s">kurs ' + price(p.price) + " (zakupy " + price(p.lowest_buy) + "–" + price(p.highest_buy) + ")</div></div>" +
-            '<div class="plx-kpi"><div class="l">SL planu</div><div class="v">' + price(p.sl_plan) + '</div><div class="s">' + (p.sl_plan ? spct(p.to_sl_pct) + " od średniej · SL najniższej strefy" : "brak świec SL stref") + (p.risk_to_sl_pct != null ? "<br>ryzyko do SL: " + pct(p.risk_to_sl_pct) + " kapitału" : "") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">SL planu</div><div class="v">' + price(p.sl_plan) + '</div><div class="s">' + (p.sl_plan ? spct(p.to_sl_pct) + " od średniej · SL najniższej strefy" : "brak świec SL stref") + (p.risk_to_sl_pct != null ? "<br>ryzyko do SL: " + pct(p.risk_to_sl_pct) + " kapitału" + (amt(p.risk_to_sl_pct, MD()) ? " ≈ " + amt(p.risk_to_sl_pct, MD()) : "") : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP planu</div><div class="v">' + price(p.tp_plan) + '</div><div class="s">' + (p.tp_plan ? spct(p.to_tp_pct) + " od średniej" + (p.rr_from_avg != null ? " · R:R od średniej " + num(p.rr_from_avg, 1) : "") + (p.tp_reached ? " · <b>osiągnięty</b>" : "") : "brak TP nad średnią") + "</div></div></div>" +
             '<div class="db-help" style="margin-bottom:6px">Wspólny punkt odniesienia dla całej pozycji; sygnały i kartki nadal działają na poziomie stref (SL i TP każdej strefy zostają).</div>';
     }
@@ -6063,7 +6081,7 @@ window.Planer = (function () {
         if (inv) {
             h += '<div class="plx-play"><b>Badanie:</b> ' + esc(inv.text) + "</div>";
             h += '<div class="plx-play">Kolejne wejścia: ' + (inv.next_entries && inv.next_entries.length ? inv.next_entries.map(n => price(n.zone[0]) + "–" + price(n.zone[1]) + " (" + num(n.distance_pct, 1) + "% od kursu" + (n.within_gap ? "" : " – za daleko") + (n.in_plan ? ", w planie" : "") + ")").join(" · ") : "brak stref poniżej w Form") + "</div>";
-            h += '<div class="plx-play">Limity: wolnych wejść ' + (inv.trades_left == null ? "–" : inv.trades_left) + " · wolny budżet spółki " + (inv.remaining_pct == null ? "–" : pct(inv.remaining_pct)) + "</div>";
+            h += '<div class="plx-play">Limity: wolnych wejść ' + (inv.trades_left == null ? "–" : inv.trades_left) + " · wolny budżet spółki " + (inv.remaining_pct == null ? "–" : pctA(inv.remaining_pct, MD())) + "</div>";
             if (inv.market) h += '<div class="plx-play">' + inv.market.lines.map(esc).join("<br>") + (inv.market.verdict ? "<br><b>Rynek: " + esc(inv.market.verdict) + "</b>" : "") + "</div>";
         }
         return h;
@@ -6094,7 +6112,7 @@ window.Planer = (function () {
                 cardHtml(l) +
                 (l.signals.length ? l.signals.map(s => '<div class="plx-play" style="color:var(--text-main)">' + (WICON[s.kind] || "⚪") + " " + esc(s.text) + "</div>").join("") : '<div class="plx-play db-help">Brak sygnałów.</div>') +
                 '<div class="plx-play">' + l.proposals.map(p => p.available
-                    ? '<span class="ev-chip" title="' + esc(p.reason) + '">➕ ' + esc(p.label) + ": do " + pct(p.cap_pct) + " kapitału</span>"
+                    ? '<span class="ev-chip" title="' + esc(p.reason) + '">➕ ' + esc(p.label) + ": do " + pct(p.cap_pct) + " kapitału" + (amt(p.cap_pct, MD()) ? " ≈ " + amt(p.cap_pct, MD()) : "") + "</span>"
                     : '<span class="db-help" title="' + esc((p.blockers || []).join("; ") || p.reason) + '">' + esc(p.label) + ": niedostępna</span>").join(" ") +
                 (l.proposals.some(p => p.available) ? ' <button class="hp-btn" data-ev-eval="' + esc(d.ticker) + '" data-entry="' + esc(l.entry_id) + '">Oceń wejście i ustal kwotę →</button>' : "") + "</div></div>";
         });
@@ -6108,25 +6126,7 @@ window.Planer = (function () {
         catch (e) { if ($("#plx-watch")) $("#plx-watch").innerHTML = '<div class="plx-h">Strażnik planu</div><div class="plx-warn">' + esc(e.message) + "</div>"; }
     }
     document.addEventListener("click", e => { if (e.target.closest && e.target.closest("[data-plx-watch]")) loadWatch(); });
-    function readLegInputs() { document.querySelectorAll("#plx-detail input[data-leg]").forEach(inp => { st.detail.legs[+inp.dataset.leg].planned_pct = parseFloat(String(inp.value).replace(",", ".")); }); }
     function msg(t) { const m = $("#plx-detail-msg"); if (m) m.textContent = t || ""; }
-    async function saveLegs() {
-        readLegInputs(); msg("");
-        try { const d = await api("/api/planner/update", { id: st.detail.id, legs: st.detail.legs.map(l => ({ entry_id: l.entry_id, planned_pct: l.planned_pct })) });
-            st.detail = d.plan; drawDetail(); load(); if (d.warnings && d.warnings.length) msg(d.warnings.join(" ")); }
-        catch (e) { msg(e.message); }
-    }
-    function removeLeg(i) { readLegInputs(); st.detail.legs.splice(i, 1); drawDetail(); if (!st.detail.legs.length) msg("Plan musi mieć co najmniej jedną strefę - dodaj strefę przed zapisem."); }
-    async function fillAddLeg() {
-        const sel = $("#plx-addleg"); if (!sel || sel.dataset.loaded) return;
-        try {
-            const d = await api("/api/planner/new-context?ticker=" + encodeURIComponent(st.detail.ticker)); sel.dataset.loaded = "1"; st.detail.ctx = d.context;
-            const have = new Set(st.detail.legs.map(l => l.entry_id));
-            sel.innerHTML = '<option value="">＋ Dodaj strefę z Form…</option>' + d.context.zones.filter(z => !have.has(z.entry_id)).map(z => '<option value="' + esc(z.entry_id) + '">' + arrow(z.side) + " " + num(z.start, 2) + "–" + num(z.end, 2) + " · budżet do " + pct(z.budget_pct) + "</option>").join("");
-            sel.onchange = () => { const z = d.context.zones.find(x => x.entry_id === sel.value); if (!z) return; readLegInputs();
-                st.detail.legs.push({ entry_id: z.entry_id, start: z.start, end: z.end, side: z.side, planned_pct: z.budget_pct == null ? 1 : Math.round(z.budget_pct * 100) / 100, used_pct: z.used_pct, left_pct: 0, zone_limit_pct: z.zone_limit_pct, plays: z.plays }); drawDetail(); };
-        } catch (e) { msg(e.message); }
-    }
     async function saveNote() { try { const d = await api("/api/planner/update", { id: st.detail.id, note: $("#plx-note").value }); st.detail = d.plan; msg(""); load(); const m = $("#plx-detail-msg"); if (m) { m.className = "plx-warn"; m.textContent = "Zapisano."; } } catch (e) { msg(e.message); } }
     async function closePlan() {
         try { const d = await api("/api/planner/close", { id: st.detail.id }); st.detail = d.plan; drawDetail(); load(); }
@@ -6141,89 +6141,6 @@ window.Planer = (function () {
         try { await api("/api/planner/delete", { id: st.detail.id }); closeOverlay("plx-detail"); load(); } catch (e) { alert(e.message); }
     }
     function goTrades() { closeOverlay("plx-detail"); if (typeof openModule === "function") openModule("tradeslist-module", "Transakcje"); }
-
-    // ---------- nowy plan ----------
-    async function loadTickers() {
-        if (st.tickers.length) return;
-        try { const rows = await api("/api/database"); const base = x => (x.ticker.includes(":") ? x.ticker.split(":")[1] : x.ticker);
-            st.tickers = (Array.isArray(rows) ? rows : []).filter(x => x && x.ticker).sort((a, b) => base(a).localeCompare(base(b), "pl")); } catch (e) {}
-    }
-    async function openNew(ticker) {
-        await loadTickers();
-        st.ctxNew = null; st.pick = {};
-        showOverlay("plx-new", newHtml());
-        if (ticker) { const sel = $("#plx-new-ticker"); sel.value = ticker; onTicker(); }
-    }
-    function newHtml() {
-        return '<div class="plx-head"><div><div class="plx-title">Nowy plan</div><div class="plx-sub">Wybierz spółkę, strefy z Form i budżet w każdej strefie (% kapitału).</div></div><button class="hp-btn" onclick="Planer.closeNew()">✕ Zamknij</button></div>' +
-            '<select id="plx-new-ticker" class="dbx-in" onchange="Planer.onTicker()"><option value="">Wybierz ticker z Bazy danych…</option>' + st.tickers.map(x => '<option value="' + esc(x.ticker) + '">' + esc(x.ticker) + (x.stock_name ? " — " + esc(x.stock_name) : "") + "</option>").join("") + "</select>" +
-            '<div id="plx-new-body" class="db-help">Po wybraniu spółki zobaczysz jej rodzaj, limity i dostępne strefy.</div>';
-    }
-    async function onTicker() {
-        const tk = $("#plx-new-ticker").value, body = $("#plx-new-body");
-        st.pick = {}; st.ctxNew = null;
-        if (!tk) { body.innerHTML = "Po wybraniu spółki zobaczysz jej rodzaj, limity i dostępne strefy."; return; }
-        body.innerHTML = "Ładowanie…";
-        try {
-            const d = await api("/api/planner/new-context?ticker=" + encodeURIComponent(tk));
-            st.ctxNew = d.context;
-            if (d.open_plan_id) { body.innerHTML = '<div class="plx-warn">Ta spółka ma już otwarty plan. Zamknij go albo edytuj - nowy można utworzyć dopiero potem.</div><div class="plx-actions"><button class="hp-btn hp-primary" onclick="Planer.closeNew(); Planer.openPlan(' + d.open_plan_id + ')">Otwórz istniejący plan</button></div>'; return; }
-            drawNew();
-        } catch (e) { body.innerHTML = '<div class="plx-err">' + esc(e.message) + "</div>"; }
-    }
-    function newSummary() {
-        const c = st.ctxNew; let reserved = 0, any = false;
-        c.zones.forEach(z => { const p = st.pick[z.entry_id]; if (p != null && isFinite(p)) { any = true; reserved += Math.max(p - (z.used_pct || 0), 0); } });
-        const after = (c.max_pct != null && c.used_pct != null) ? c.max_pct - c.used_pct - reserved : null;
-        return { any: any, reserved: reserved, after: after };
-    }
-    function drawNew() {
-        const c = st.ctxNew, body = $("#plx-new-body"), L = c.limits;
-        const kpi = (l, v, s) => '<div class="plx-kpi"><div class="l">' + l + '</div><div class="v">' + v + "</div>" + (s ? '<div class="s">' + s + "</div>" : "") + "</div>";
-        const zones = c.zones.map(z => {
-            const on = st.pick[z.entry_id] != null, none = z.budget_pct != null && z.budget_pct <= 0;
-            return '<div class="plx-zone pick ' + (on ? "sel" : "") + (none ? " dis" : "") + '" data-z="' + esc(z.entry_id) + '"><div class="plx-zhead"><label class="db-check"><input type="checkbox" ' + (on ? "checked" : "") + (none ? " disabled" : "") + ' onchange="Planer.togglePick(\'' + esc(z.entry_id) + '\', this.checked)"></label>' +
-                '<span class="plx-zside ' + (z.side === "LONG" ? "long" : "short") + '">' + arrow(z.side) + '</span><span class="plx-zrange">' + num(z.start, 2) + " – " + num(z.end, 2) + "</span>" +
-                '<div class="plx-zbud"><span class="db-help">w strefie już ' + pct(z.used_pct) + " · budżet strefy do <b>" + (z.budget_pct == null ? "bez limitu" : pct(z.budget_pct)) + "</b></span>" +
-                (on ? '<label class="dbx-field" style="flex-direction:row;align-items:center;gap:6px;"><span>Zaplanuj</span><input class="dbx-in" type="number" step="0.1" min="0.1" max="100" value="' + st.pick[z.entry_id] + '" oninput="Planer.setPick(\'' + esc(z.entry_id) + '\', this.value)"> %</label>' : "") + "</div></div>" +
-                z.plays.map(p => '<div class="plx-play"><b>' + arrow(p.side) + " wejście " + price(p.entry_point) + "</b><span>TP " + price(p.take_profit) + "</span><span>SL " + price(p.stop_loss) + "</span>" + (p.reasons.length ? "<span>" + esc(p.reasons.join(", ")) + "</span>" : "") + "<span>transakcje: <b>" + p.trades + "</b></span></div>").join("") + "</div>";
-        }).join("");
-        body.innerHTML =
-            '<div class="plx-sub"><span class="sd-link" data-tk="' + esc(c.ticker) + '">' + esc(c.ticker) + "</span> — " + esc(c.name) + " " + kindBadge(c.kind, c.kind_label) + "</div>" +
-            '<div class="plx-kpis">' +
-            kpi("Budżet w strefie", L.zone_pct != null ? "do " + pct(L.zone_pct) : "bez limitu", "limit rodzaju spółki (% kapitału)") +
-            kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : ""), c.remaining_pct != null ? "zostaje " + pct(c.remaining_pct) : "bez limitu udziału") +
-            kpi("Inwestycje w spółce", c.open_trades + (c.max_trades != null ? " / " + c.max_trades : ""), c.trades_left != null ? (c.trades_left > 0 ? "wolnych miejsc: " + c.trades_left : '<span class="plx-neg">limit wyczerpany</span>') : "bez limitu liczby") +
-            '<div class="plx-kpi" id="plx-new-sum"></div></div>' +
-            (c.capital_known ? "" : '<div class="plx-warn">Nie udało się wyliczyć kapitału - procenty budżetu są niedostępne.</div>') +
-            (!(L.zone_pct != null || c.max_pct != null) ? '<div class="plx-warn">Dla tego rodzaju spółki nie ustawiono limitów (Baza danych → Serwis).</div>' : "") +
-            '<div class="plx-h">Strefy z Form (bez wyciszonych) — wybierz, w której planujesz zagranie</div>' +
-            (zones || '<div class="db-help">Ta spółka nie ma aktywnych stref w Form.</div>') +
-            '<textarea id="plx-new-note" class="dbx-in plx-note" maxlength="2000" placeholder="Notatka do planu (opcjonalnie)"></textarea>' +
-            '<div class="plx-actions"><button class="hp-btn hp-primary" onclick="Planer.create()">Utwórz plan</button><span id="plx-new-msg" class="plx-err"></span></div>';
-        refreshSum();
-    }
-    function refreshSum() {
-        const box = $("#plx-new-sum"); if (!box) return; const s = newSummary();
-        box.innerHTML = '<div class="l">Po inwestycji zostanie</div><div class="v ' + (s.after == null ? "" : s.after < -1e-9 ? "plx-neg" : "plx-pos") + '">' + (s.any ? pct(s.after) : "—") + '</div><div class="s">budżetu spółki' + (s.any ? " (zarezerwowane " + pct(s.reserved) + ")" : "") + "</div>";
-    }
-    function togglePick(id, on) {
-        const z = st.ctxNew.zones.find(x => x.entry_id === id);
-        if (on) st.pick[id] = z.budget_pct == null ? 1 : Math.round(Math.max(z.budget_pct, 0.1) * 100) / 100; else delete st.pick[id];
-        drawNew();
-    }
-    function setPick(id, v) { const n = parseFloat(String(v).replace(",", ".")); st.pick[id] = isFinite(n) ? n : null; refreshSum(); }
-    async function create() {
-        const m = $("#plx-new-msg"); m.textContent = "";
-        const legs = Object.keys(st.pick).map(id => ({ entry_id: id, planned_pct: st.pick[id] }));
-        if (!legs.length) { m.textContent = "Wybierz co najmniej jedną strefę."; return; }
-        try {
-            const d = await api("/api/planner/create", { ticker: st.ctxNew.ticker, legs: legs, note: $("#plx-new-note").value });
-            closeOverlay("plx-new"); st.filter = d.plan.phase === "PREPARED" ? "prepared" : "open"; await load();
-            st.detail = d.plan; drawDetail();
-            if (d.warnings && d.warnings.length) { const mm = $("#plx-detail-msg"); if (mm) { mm.className = "plx-warn"; mm.textContent = d.warnings.join(" "); } }
-        } catch (e) { m.textContent = e.message; }
-    }
 
     // ---------- „Zrób zagranie”: ocena momentu wejścia, a z niej dodanie transakcji ----------
     function toast(text, ms) {
@@ -6240,19 +6157,20 @@ window.Planer = (function () {
     document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".plx-do"); if (b) { e.preventDefault(); doPlay(b.dataset.do); } });
 
     // ---------- wejścia z innych miejsc aplikacji ----------
-    async function openFor(ticker) {         // np. przycisk „Planuj” w Transakcjach i w oknie spółki
+    async function openFor(ticker) {         // np. przycisk „Planuj” w Transakcjach i w oknie spółki: otwarty plan spółki albo lista planów tej spółki
         if (typeof openModule === "function") openModule("planner-module", "Planer");
         try {
             const d = await api("/api/planner/new-context?ticker=" + encodeURIComponent(ticker));
-            if (d.open_plan_id) openPlan(d.open_plan_id); else openNew(ticker);
-        } catch (e) { openNew(); }
+            if (d.open_plan_id) { openPlan(d.open_plan_id); return; }
+        } catch (e) {}
+        st.filter = "all"; st.q = String(ticker || "").toLowerCase(); const inp = $(".plx-search"); if (inp) inp.value = ticker || ""; syncBar(); render();
+        toast("Spółka " + ticker + " nie ma otwartego planu – powstanie automatycznie przy pierwszej transakcji.");
     }
     function onTradeAdded() { clearTradeBanner(); const m = document.getElementById("planner-module"); if (m && m.style.display === "block") load(); }
     document.addEventListener("click", e => { const t = e.target.closest && e.target.closest("[data-plan]"); if (t) { e.preventDefault(); if (typeof openModule === "function") openModule("planner-module", "Planer"); openPlan(t.dataset.plan); } });
 
-    return { open: open, setFilter: setFilter, setQuery: setQuery, openNew: openNew, closeNew: () => closeOverlay("plx-new"), closeDetail: () => closeOverlay("plx-detail"),
-             openPlan: openPlan, openFor: openFor, onTicker: onTicker, togglePick: togglePick, setPick: setPick, create: create, saveLegs: saveLegs, removeLeg: removeLeg,
-             fillAddLeg: fillAddLeg, saveNote: saveNote, closePlan: closePlan, reopenPlan: reopenPlan, deletePlan: deletePlan, goTrades: goTrades, onTradeAdded: onTradeAdded,
+    return { open: open, setFilter: setFilter, setQuery: setQuery, closeDetail: () => closeOverlay("plx-detail"),
+             openPlan: openPlan, openFor: openFor, saveNote: saveNote, closePlan: closePlan, reopenPlan: reopenPlan, deletePlan: deletePlan, goTrades: goTrades, onTradeAdded: onTradeAdded,
              clearTradeBanner: clearTradeBanner, toast: toast };
 })();
 </script>
@@ -6268,6 +6186,7 @@ window.Wejscie = (function () {
     const price = v => v == null ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
     const arrow = s => s === "LONG" ? '<span style="color:var(--success)">▲</span>' : '<span style="color:var(--danger)">▼</span>';
     const KIND_COLOR = { inv_prio: "#fcd535", inv: "#c99400", spec_prio: "#f6465d", spec: "#9a5160" };
+    const ccy = (v, c) => v == null ? "–" : Math.round(v).toLocaleString("pl-PL") + " " + (c || "");
     const VERDICT_COLOR = { "SPEŁNIA WYMOGI": "var(--success)", "OSTROŻNIE": "var(--accent-hover)", "NIE TERAZ": "var(--danger)" };
     const PHASE = { PREPARED: "Przygotowany", OPEN: "Otwarty", CLOSED: "Zamknięty" };
     const kindBadge = (k, l) => '<span class="ev-kind" style="color:' + (KIND_COLOR[k] || "#848e9c") + ';border-color:' + (KIND_COLOR[k] || "#848e9c") + '">' + esc(l) + "</span>";
@@ -6404,9 +6323,10 @@ window.Wejscie = (function () {
             budget = '<div class="ev-note">Nie ma jeszcze ustawionych limitów dla tego rodzaju spółki (Baza danych → Serwis)' + (b.capital_known ? "" : " ani kapitału") + ", więc rekomendacja budżetu jest niedostępna.</div>";
         } else {
             budget = '<div class="plx-kpis">' +
-                '<div class="plx-kpi"><div class="l">Dostępny budżet</div><div class="v">' + pct(b.base_pct) + '</div><div class="s">kapitału · ' + (b.source === "plan" ? "z planu (zostało do dołożenia w strefie)" : "z limitów rodzaju spółki (strefa minus już użyte)") + "</div></div>" +
+                '<div class="plx-kpi"><div class="l">Dostępny budżet</div><div class="v">' + pct(b.base_pct) + (b.base_ccy != null ? ' <small class="ev-muted">≈ ' + ccy(b.base_ccy, b.currency) + "</small>" : "") + '</div><div class="s">kapitału · ' + (b.source === "plan" ? "z planu (zostało do dołożenia w strefie)" : "z limitów rodzaju spółki (strefa minus już użyte)") + "</div></div>" +
                 '<div class="plx-kpi"><div class="l">Część budżetu wg punktów</div><div class="v">' + Math.round(b.factor * 100) + '%</div><div class="s">' + (d.scoring ? esc(d.scoring.tier) : "") + "</div></div>" +
-                '<div class="plx-kpi"><div class="l">Rekomendowany budżet</div><div class="v" style="color:' + (b.recommended_pct > 0 ? "var(--success)" : "var(--danger)") + '">' + pct(b.recommended_pct) + '</div><div class="s">kapitału na to wejście</div></div></div>';
+                '<div class="plx-kpi"><div class="l">Rekomendowany budżet</div><div class="v" style="color:' + (b.recommended_pct > 0 ? "var(--success)" : "var(--danger)") + '">' + pct(b.recommended_pct) + '</div><div class="s">kapitału na to wejście' +
+                    (b.recommended_ccy != null ? '<br><b style="color:var(--text-main);font-size:1.15em">≈ ' + ccy(b.recommended_ccy, b.currency) + "</b>" + (b.units ? " · " + b.units + " szt. po " + price(d.price) : "") + (b.currency !== "PLN" && b.recommended_pln != null ? " · " + ccy(b.recommended_pln, "PLN") : "") : "") + "</div></div></div>";
         }
         const co = b.company || {};
         const companyLine = '<div class="ev-muted" style="margin:6px 0">Maks. budżet spółki: <input id="ev-maxb" type="number" step="0.1" min="0.1" max="100" value="' + (co.max_pct != null ? co.max_pct : "") + '" style="width:80px"> % kapitału <button class="hp-btn" style="padding:2px 8px" data-ev-maxb>Zapisz</button> <span>(ustal przed wejściem; puste = limit z Serwisu)</span></div>' +
@@ -6476,7 +6396,8 @@ window.Wejscie = (function () {
         return { entry_score: d.score, entry_eval: { verdict: d.verdict, score: d.score, factor: d.factor, price: d.price, evaluated_at: new Date().toISOString(),
             recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source, options: d.options, tp: d.play.take_profit, sl: d.play.stop_loss, direction: d.play.direction, zone: d.play.zone, points: d.scoring && d.scoring.points, entry_points: d.scoring && d.scoring.entry_points, entry_points_auto: d.scoring && d.scoring.entry_points_auto, entry_manual: d.scoring && d.scoring.entry_manual, entry_note: d.scoring && d.scoring.entry_note, form_score: d.scoring && d.scoring.form_score, form_score_auto: d.scoring && d.scoring.form_score_auto, priority_bonus: d.scoring && d.scoring.priority_bonus, max_points: d.scoring && d.scoring.max_points, form_score: d.scoring && d.scoring.form_score, entry_points: d.scoring && d.scoring.entry_points,
             score_auto: d.score_auto != null ? d.score_auto : d.score, conditions: d.conditions.map(c => ({ id: c.id, score: c.score, status: c.status, manual: !!c.manual, auto: c.auto })) }, summary: {
-            verdict: d.verdict, score: d.score, recommended_pct: d.budget.recommended_pct, source: d.budget.source, capital_pln: d.budget.capital_pln, price: d.price } };
+            verdict: d.verdict, score: d.score, recommended_pct: d.budget.recommended_pct, source: d.budget.source, capital_pln: d.budget.capital_pln, price: d.price,
+            currency: d.budget.currency, fx: d.budget.fx, recommended_ccy: d.budget.recommended_ccy, recommended_pln: d.budget.recommended_pln, units: d.budget.units } };
     }
     async function saveFocus(d) {
         if (d.__focusEval) return d.__focusEval;              // ta sama ocena zapisana już wcześniej - bez duplikatu
@@ -7153,7 +7074,9 @@ window.FocusEod = (function () {
                 '<td><span class="hp-tk sd-link" data-tk="' + esc(f.ticker) + '" style="color:var(--accent)">' + esc(f.ticker) + '</span><div class="tr-cnt">' + esc(f.entry_id || "–") + "</div></td>" +
                 "<td><b>" + f1(f.points) + "</b>/" + f1(f.max_points || 15) + '<div class="tr-cnt">Form ' + f1(ev.form_score) + " ×2 · wejście " + f1(ev.entry_points) + (ev.entry_manual != null ? "✎" : "") + (ev.priority_bonus ? " · priorytet +" + f1(ev.priority_bonus) : "") + "</div></td>" +
                 '<td><b style="color:' + (VC[f.verdict] || "inherit") + '">' + esc(f.verdict || "–") + "</b><div class=\"tr-cnt\">" + f1(f.score) + "/100</div></td>" +
-                "<td><b>" + (f.recommended_pct == null ? "–" : f1(f.recommended_pct) + "%") + "</b>" + (pln != null ? '<div class="tr-cnt">≈ ' + Math.round(pln).toLocaleString("pl-PL") + " PLN</div>" : "") + "</td>" +
+                "<td><b>" + (f.recommended_pct == null ? "–" : f1(f.recommended_pct) + "%") + "</b>" +
+                (sm.recommended_ccy != null ? '<div><b>≈ ' + Math.round(sm.recommended_ccy).toLocaleString("pl-PL") + " " + esc(sm.currency || "") + "</b>" + (sm.units ? ' <span class="tr-cnt">' + sm.units + " szt.</span>" : "") + "</div>" : "") +
+                (pln != null && sm.currency !== "PLN" ? '<div class="tr-cnt">≈ ' + Math.round(pln).toLocaleString("pl-PL") + " PLN</div>" : "") + "</td>" +
                 "<td>" + (f.price != null ? Number(f.price).toLocaleString("pl-PL", { maximumFractionDigits: 4 }) : "–") + "</td>" +
                 "<td>" + ((f.trade_ids || []).length ? f.trade_ids.map(i => "#" + i).join(", ") : '<span class="tr-cnt">–</span>') + "</td>" +
                 '<td style="white-space:nowrap"><button class="hp-btn" style="padding:4px 10px" data-fe-trade="' + f.id + '">＋ Transakcja</button> <button class="hp-btn" style="padding:4px 10px" data-fe-eval="' + f.id + '" title="Oceń wejście ponownie (teraz)">↻</button> <button class="hp-btn" style="padding:4px 10px" data-fe-del="' + f.id + '" title="Usuń wpis">✕</button></td></tr>';
@@ -7419,6 +7342,126 @@ window.ReasonChart = (function () {
         const it = []; details(e).filter(d => d.type === "external").forEach(d => (d.items || []).forEach(i => it.push(i)));
         return it.length ? '<a class="rc-badge" href="' + esc(it[0].url) + '" target="_blank" rel="noopener" title="' + esc((it[0].source || "") + (it[0].note ? " – " + it[0].note : "")) + '">📄 Analiza' + (it.length > 1 ? " ×" + it.length : "") + "</a>" + (it[0].note ? '<div class="rc-badge-note">„' + esc(it[0].note.length > 90 ? it[0].note.slice(0, 90) + "…" : it[0].note) + "”</div>" : "") : "";
     } };
+})();
+</script>
+<script>
+/* „Dodaj inwestycję”: kreator krok po kroku – 1 spółka i zagranie (albo zapisany wpis Focus) → 2 Focus: ocena wejścia → 3 transakcja → 4 plan i EOD.
+   Kroki 2 i 3 korzystają z istniejących okien (Ocena wejścia, formularz Transakcji); pasek kroków u góry prowadzi przez całość. */
+window.Invest = (function () {
+    "use strict";
+    const $ = (s, r) => (r || document).querySelector(s);
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const num = (v, d) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const price = v => v == null ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
+    const STEPS = ["Spółka i zagranie", "Focus – ocena wejścia", "Transakcja", "Plan i EOD"];
+    const S = { active: false, step: 0, ticker: null, entryId: null, rows: [], focus: [], q: "", open: null, result: null };
+
+    async function api(path) {
+        const r = await fetch(API_BASE_URL + path); const d = await r.json().catch(() => ({}));
+        if (!r.ok || d.status === "error") throw new Error(d.message || ("HTTP " + r.status)); return d;
+    }
+    // ---------- pasek kroków ----------
+    function bar() {
+        let b = $("#inv-bar");
+        if (!S.active) { if (b) b.remove(); document.body.classList.remove("inv-on"); return; }
+        if (!b) { b = document.createElement("div"); b.id = "inv-bar"; document.body.appendChild(b); }
+        document.body.classList.add("inv-on");
+        const hint = ["Wybierz spółkę i zagranie z Form albo kontynuuj zapisany wpis Focus.",
+            "Sprawdź ocenę wejścia (możesz poprawić warunki ✎) i kliknij „Zapisz w Focus i dodaj transakcję →”.",
+            "Uzupełnij datę, cenę zakupu i kwotę, potem kliknij „Zarejestruj transakcję”.", "Gotowe – plan spółki uzupełnił się automatycznie."][S.step];
+        b.innerHTML = '<div class="inv-steps">' + STEPS.map((t, i) => '<span class="inv-step' + (i === S.step ? " cur" : i < S.step ? " done" : "") + '">' + (i < S.step ? "✓ " : "") + esc(t) + "</span>" + (i < STEPS.length - 1 ? '<span class="inv-sep">›</span>' : "")).join("") + "</div>" +
+            '<div class="inv-hint">' + esc(hint) + (S.ticker ? ' <b>' + esc(S.ticker) + (S.entryId ? " · " + esc(S.entryId) : "") + "</b>" : "") + "</div>" +
+            '<div class="inv-btns">' + (S.step > 0 && S.step < 3 ? '<button class="hp-btn" data-inv-back>◀ Wstecz</button>' : "") + '<button class="hp-btn" data-inv-stop>✕ ' + (S.step === 3 ? "Zamknij" : "Przerwij") + "</button></div>";
+    }
+    function overlay(html) {
+        let o = $("#inv-ov");
+        if (!o) { o = document.createElement("div"); o.id = "inv-ov"; o.className = "plx-overlay inv-ov"; o.innerHTML = '<div class="plx-panel"></div>'; document.body.appendChild(o); }
+        o.firstChild.innerHTML = html; o.classList.add("open"); document.body.style.overflow = "hidden";
+    }
+    function hideOverlay() { const o = $("#inv-ov"); if (o) o.classList.remove("open"); if (!document.querySelector(".plx-overlay.open")) document.body.style.overflow = ""; }
+
+    // ---------- krok 1: spółka i zagranie ----------
+    async function start() {
+        S.active = true; S.step = 0; S.ticker = S.entryId = null; S.q = ""; S.open = null; S.result = null; bar();
+        overlay('<div class="ev-empty">Ładowanie spółek z Form i wpisów Focus…</div>');
+        const [radar, focus] = await Promise.allSettled([api("/api/entry/radar"), api("/api/focus/evals?days=30")]);
+        S.rows = radar.status === "fulfilled" ? (radar.value.rows || []) : [];
+        S.focus = focus.status === "fulfilled" ? (focus.value.evals || []).filter(f => !(f.trade_ids || []).length) : [];
+        S.err = radar.status === "rejected" ? radar.reason.message : null;
+        step1();
+    }
+    function step1() {
+        if (!S.active || S.step !== 0) return;
+        const q = S.q.trim().toUpperCase();
+        const rows = S.rows.filter(r => !q || r.ticker.toUpperCase().includes(q) || String(r.name || "").toUpperCase().includes(q));
+        const dist = p => p.distance_pct == null ? "–" : (p.in_zone ? '<b style="color:var(--success)">w strefie</b>' : (p.distance_pct > 0 ? "+" : "") + num(p.distance_pct, 1) + "%");
+        let h = '<div class="plx-head"><div><div class="plx-title">＋ Dodaj inwestycję</div><div class="plx-sub">Krok 1 z 4 · wybierz spółkę i zagranie z Form – następnie ocena wejścia (Focus), transakcja i plan.</div></div><button class="hp-btn" data-inv-stop>✕</button></div>';
+        if (S.focus.length) {
+            h += '<div class="plx-h">Kontynuuj zapisany wpis Focus (bez transakcji)</div><div class="inv-list">' + S.focus.slice(0, 6).map(f => {
+                const sm = f.summary || {};
+                return '<button class="inv-item" data-inv-fe="' + f.id + '"><span><b>' + esc(f.ticker) + '</b> <span class="ev-muted">' + esc(f.entry_id || "") + " · " + new Date(f.created_at).toLocaleDateString("pl-PL") + "</span></span>" +
+                    '<span class="ev-muted">' + (f.points != null ? num(f.points, 1) + "/" + num(f.max_points || 15, 0) + " pkt · " : "") + esc(f.verdict || "") + "</span>" +
+                    "<span><b>" + (f.recommended_pct == null ? "–" : num(f.recommended_pct, 1) + "%") + "</b>" + (sm.recommended_ccy != null ? " ≈ " + Math.round(sm.recommended_ccy).toLocaleString("pl-PL") + " " + esc(sm.currency || "") : "") + "</span><span class=\"inv-go\">Transakcja →</span></button>";
+            }).join("") + "</div>";
+        }
+        h += '<div class="plx-h">Nowe wejście – spółki z aktywnymi zagraniami w Form</div><input type="search" id="inv-q" class="dbx-in" placeholder="Szukaj spółki…" value="' + esc(S.q) + '" style="width:100%;margin-bottom:8px">';
+        if (S.err) h += '<div class="plx-err">' + esc(S.err) + "</div>";
+        h += '<div class="inv-list">' + (rows.length ? rows.map(r => {
+            const open = S.open === r.ticker;
+            return '<div class="inv-co' + (open ? " open" : "") + '"><button class="inv-item" data-inv-co="' + esc(r.ticker) + '"><span><b>' + esc(r.ticker) + '</b> <span class="ev-muted">' + esc(r.name || "") + "</span></span>" +
+                '<span class="ev-muted">' + esc(r.kind_label || "") + "</span><span>" + r.plays.length + " zagr. · najbliższe " + dist(r.nearest) + "</span><span class=\"inv-go\">" + (open ? "▲" : "▼") + "</span></button>" +
+                (open ? '<div class="inv-plays">' + r.plays.map(p => '<button class="inv-play" data-inv-play="' + esc(p.entry_id) + '" data-inv-tk="' + esc(r.ticker) + '"><span><b>' + esc(p.entry_id) + "</b> " + (p.side === "LONG" ? "▲" : "▼") + " strefa " + price(p.zone[0]) + "–" + price(p.zone[1]) + "</span><span>wejście <b>" + price(p.entry) + "</b></span><span>" + dist(p) + "</span><span>R:R " + (p.rr ? num(p.rr, 1) : "–") + '</span><span class="inv-go">Oceń wejście →</span></button>').join("") + "</div>" : "") + "</div>";
+        }).join("") : '<div class="ev-muted">Brak spółek z aktywnymi zagraniami' + (q ? " dla „" + esc(S.q) + "”" : "") + '. Najpierw dodaj strefę w Form.</div>') + "</div>";
+        overlay(h);
+        const inp = $("#inv-q"); if (inp && S.q) { inp.focus(); inp.setSelectionRange(S.q.length, S.q.length); }
+    }
+    // ---------- krok 2: Focus (okno Oceny wejścia) ----------
+    function step2(ticker, entryId) {
+        S.step = 1; S.ticker = ticker; S.entryId = entryId; hideOverlay(); bar();
+        if (window.Wejscie) Wejscie.evaluate(ticker, entryId);
+    }
+    // ---------- krok 3: formularz transakcji ----------
+    function onPrefill(ticker, entryId) {             // wywoływane przez prefillTradeFromPlay (z Oceny wejścia albo z wpisu Focus)
+        if (!S.active) return;
+        S.step = 2; S.ticker = ticker; S.entryId = entryId || S.entryId; hideOverlay(); bar();
+    }
+    function fromFocus(id) {
+        const f = S.focus.find(x => String(x.id) === String(id)); if (!f) return;
+        S.ticker = f.ticker; S.entryId = f.entry_id; hideOverlay();
+        prefillTradeFromPlay(f.ticker, f.entry_id, { entry_score: f.score, entry_eval: f.entry_eval, summary: f.summary }, f.id);
+    }
+    // ---------- krok 4: plan i EOD ----------
+    function onTradeAdded(result) {
+        if (!S.active) return false;
+        S.step = 3; S.result = result || {}; bar();
+        const r = S.result;
+        overlay('<div class="plx-head"><div><div class="plx-title">✅ Inwestycja dodana</div><div class="plx-sub">Krok 4 z 4 · ' + esc(S.ticker || "") + (S.entryId ? " · " + esc(S.entryId) : "") + "</div></div><button class=\"hp-btn\" data-inv-stop>✕</button></div>" +
+            '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Transakcja</div><div class="v">#' + esc(r.trade_id || "–") + '</div><div class="s">zapisana z wpisem Focus (ocena wejścia)</div></div>' +
+            '<div class="plx-kpi"><div class="l">Plan spółki</div><div class="v">' + (r.plan_id ? "#" + esc(r.plan_id) : "–") + '</div><div class="s">' + (r.plan_id ? "utworzony lub uzupełniony automatycznie – obejmuje wszystkie strefy z Form" : "brak tabeli plans – uruchom sql/plans.sql") + "</div></div>" +
+            '<div class="plx-kpi"><div class="l">Koniec dnia (EOD)</div><div class="v">po sesji</div><div class="s">punkty 0–5 i powtórzona ocena wejścia policzą się po zamknięciu (zakładka EOD)</div></div></div>' +
+            '<div class="plx-actions">' + (r.plan_id ? '<button class="hp-btn hp-primary" data-inv-plan="' + esc(r.plan_id) + '">🧭 Otwórz plan</button>' : "") + '<button class="hp-btn" data-inv-eod>🌙 EOD</button><button class="hp-btn" data-inv-again>＋ Dodaj kolejną inwestycję</button><button class="hp-btn" data-inv-stop>Zakończ</button></div>');
+        return true;
+    }
+    function stop() { S.active = false; hideOverlay(); bar(); }
+    function back() {
+        if (S.step === 1) { if (window.Wejscie) Wejscie.close(); S.step = 0; bar(); step1(); }
+        else if (S.step === 2) { if (S.entryId && S.ticker) step2(S.ticker, S.entryId); else { S.step = 0; bar(); step1(); } }
+    }
+    document.addEventListener("click", e => {
+        const t = e.target; if (!t.closest) return;
+        if (t.closest("[data-inv-start]")) { e.preventDefault(); start(); return; }
+        if (!S.active) return;
+        if (t.closest("[data-inv-stop]")) { stop(); return; }
+        if (t.closest("[data-inv-back]")) { back(); return; }
+        const co = t.closest("[data-inv-co]"); if (co) { S.open = S.open === co.dataset.invCo ? null : co.dataset.invCo; step1(); return; }
+        const pl = t.closest("[data-inv-play]"); if (pl) { e.stopPropagation(); step2(pl.dataset.invTk, pl.dataset.invPlay); return; }
+        const fe = t.closest("[data-inv-fe]"); if (fe) { fromFocus(fe.dataset.invFe); return; }
+        const pn = t.closest("[data-inv-plan]"); if (pn) { const id = pn.dataset.invPlan; stop(); openModule("planner-module", "Planer"); if (window.Planer) Planer.openPlan(id); return; }
+        if (t.closest("[data-inv-eod]")) { stop(); openModule("eod-module", "Koniec dnia (EOD)"); return; }
+        if (t.closest("[data-inv-again]")) { start(); return; }
+    }, true);
+    document.addEventListener("input", e => { if (e.target.id === "inv-q") { S.q = e.target.value; step1(); } });
+    return { start: start, stop: stop, onPrefill: onPrefill, onTradeAdded: onTradeAdded, active: () => S.active };
 })();
 </script>
 </body>
