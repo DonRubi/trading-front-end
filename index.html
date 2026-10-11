@@ -294,6 +294,28 @@
         .plx-fill.over { background: var(--danger); }
         .plx-neg { color: var(--danger); font-weight: 700; } .plx-pos { color: var(--success); font-weight: 700; }
         /* okna: szczegóły planu i nowy plan */
+        /* ---------- panel boczny z modułami (komputer, ≥1200 px) ---------- */
+        #side-nav { display: none; }
+        @media (min-width: 1200px) {
+            #side-nav { display: flex; flex-direction: column; gap: 2px; position: fixed; top: 0; left: 0; bottom: 0; width: 232px; background: var(--bg-card); border-right: 1px solid var(--border-color); padding: 16px 12px; z-index: 150; overflow-y: auto; box-sizing: border-box; }
+            body { padding-left: 232px; padding-bottom: 24px; }
+            .bottom-nav { display: none !important; }
+            [data-hp-panel="modules"] { display: none !important; }
+            #back-btn { display: none !important; }
+            header #app-title span { color: var(--accent); }
+            .app-module { max-width: 1960px; padding: 20px 28px; }
+            .hp-wrap { max-width: 1960px; padding: 20px 28px; }
+            #database-module.dbx, #planner-module.dbx { max-width: 1960px; }
+            #inv-bar { left: 232px; }
+            #dashboard .hp-invest { display: none; }
+        }
+        @media (min-width: 2400px) { #side-nav { width: 280px; font-size: 1.1rem; } body { padding-left: 280px; } #inv-bar { left: 280px; } .app-module, .hp-wrap, #database-module.dbx, #planner-module.dbx { max-width: 2600px; } }
+        .sn-logo { font-size: 1.35rem; font-weight: 800; padding: 4px 10px 14px; cursor: pointer; } .sn-logo span { color: var(--accent); }
+        .sn-invest { margin: 0 4px 10px; justify-content: center; font-weight: 700; }
+        .sn-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); padding: 12px 10px 6px; }
+        .sn-item { display: flex; align-items: center; gap: 10px; width: 100%; background: transparent; border: 0; border-radius: 9px; color: var(--text-main); padding: 9px 10px; font: inherit; font-size: .92rem; text-align: left; cursor: pointer; }
+        .sn-item:hover { background: var(--bg-input); } .sn-item.on { background: rgba(252,213,53,.12); color: var(--accent-hover); font-weight: 600; box-shadow: inset 3px 0 0 var(--accent-hover); }
+        .sn-ic { width: 22px; text-align: center; } .sn-privacy { margin-top: auto; color: var(--text-muted); }
         #inv-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 1250; background: var(--bg-card); border-bottom: 1px solid var(--accent); box-shadow: 0 6px 24px rgba(0,0,0,.5); display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; padding: 8px 16px; }
         .inv-steps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .88rem; } .inv-step { color: var(--text-muted); padding: 3px 10px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
         .inv-step.cur { color: #111; background: var(--accent-hover); font-weight: 700; } .inv-step.done { color: var(--success); border-color: rgba(14,203,129,.4); } .inv-sep { color: var(--text-muted); }
@@ -466,6 +488,25 @@
     </style>
 </head>
 <body>
+    <nav id="side-nav" aria-label="Moduły">
+        <div class="sn-logo" onclick="openDashboard()">Quant<span>Desk</span></div>
+        <button type="button" class="hp-btn hp-primary sn-invest" data-inv-start>＋ Dodaj inwestycję</button>
+        <div class="sn-label">Ścieżka inwestycji</div>
+        <button type="button" class="sn-item" data-sn="home" onclick="openDashboard()"><span class="sn-ic">🏠</span>Start</button>
+        <button type="button" class="sn-item" data-sn="form-module" onclick="openModule('form-module', 'Form')"><span class="sn-ic">📝</span>Form</button>
+        <button type="button" class="sn-item" data-sn="focuslist-module" onclick="openModule('focuslist-module', 'Radar zagrań')"><span class="sn-ic">👁️</span>Radar zagrań</button>
+        <button type="button" class="sn-item" data-sn="focus2-module" onclick="openModule('focus2-module', 'Focus')"><span class="sn-ic">🎯</span>Focus</button>
+        <button type="button" class="sn-item" data-sn="tradeslist-module" onclick="openModule('tradeslist-module', 'Transakcje')"><span class="sn-ic">📊</span>Transakcje</button>
+        <button type="button" class="sn-item" data-sn="eod-module" onclick="openModule('eod-module', 'Koniec dnia (EOD)')"><span class="sn-ic">🌙</span>EOD</button>
+        <button type="button" class="sn-item" data-sn="planner-module" onclick="openModule('planner-module', 'Planer')"><span class="sn-ic">🧭</span>Planer</button>
+        <div class="sn-label">Narzędzia i analiza</div>
+        <button type="button" class="sn-item" data-sn="dailybrief-module" onclick="openModule('dailybrief-module', 'Przegląd dnia')"><span class="sn-ic">📰</span>Przegląd dnia</button>
+        <button type="button" class="sn-item" data-sn="technicalanalysis-module" onclick="openModule('technicalanalysis-module', 'Analiza techniczna')"><span class="sn-ic">📐</span>Analiza techniczna</button>
+        <button type="button" class="sn-item" data-sn="alerthistory-module" onclick="openModule('alerthistory-module', 'Historia alertów')"><span class="sn-ic">🔔</span>Historia alertów</button>
+        <button type="button" class="sn-item" data-sn="summary-module" onclick="openModule('summary-module', 'Podsumowanie')"><span class="sn-ic">📈</span>Podsumowanie</button>
+        <button type="button" class="sn-item" data-sn="database-module" onclick="openModule('database-module', 'Baza danych')"><span class="sn-ic">🗄️</span>Baza danych</button>
+        <button type="button" class="sn-item sn-privacy" onclick="togglePrivacy()"><span class="sn-ic">🙈</span>Tryb ukrycia danych</button>
+    </nav>
     <header>
         <div class="header-actions">
             <button class="back-btn" id="back-btn" onclick="openDashboard()">← Powrót</button>
@@ -740,7 +781,7 @@
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
                 <div class="tr-filters">
                     <input type="search" id="trade-search" placeholder="Szukaj spółki…" oninput="handleTradesFilter()">
-                    <select id="trade-status-filter" onchange="handleTradesFilter()"><option value="ALL">Wszystkie</option><option value="OPEN" selected>Otwarte</option><option value="CLOSED">Zamknięte</option></select>
+                    <select id="trade-status-filter" onchange="handleTradesFilter()"><option value="ALL">Wszystkie</option><option value="OPEN" selected>Otwarte</option><option value="CLOSED">Zamknięte</option><option value="ARCHIVE">Archiwum</option></select>
                     <select id="trade-cur-filter" onchange="handleTradesFilter()"><option value="ALL">Każda waluta</option><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
                     <select id="trade-buy-date-filter" onchange="handleTradesFilter()"><option value="ALL">Każda data otwarcia</option></select>
                     <select id="trade-sell-date-filter" onchange="handleTradesFilter()"><option value="ALL">Każda data zamknięcia</option></select>
@@ -1620,6 +1661,7 @@
             document.getElementById(moduleId).style.display = 'block';
             document.getElementById('app-title').innerText = moduleTitle;
             document.getElementById('back-btn').style.display = 'flex';
+            document.querySelectorAll('#side-nav .sn-item').forEach(b => b.classList.toggle('on', b.dataset.sn === moduleId));
 
             if (moduleId === 'database-module') { loadDatabase(); loadMacroData(); switchDbTab(dbTabPending || dbTab); dbTabPending = null; }
             if (moduleId === 'alerthistory-module') loadAlertHistory();
@@ -1639,6 +1681,7 @@
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('app-title').innerHTML = 'Quant<span>Desk</span>';
             document.getElementById('back-btn').style.display = 'none';
+            document.querySelectorAll('#side-nav .sn-item').forEach(b => b.classList.toggle('on', b.dataset.sn === 'home'));
             if (window.HomePage) HomePage.refresh();
         }
 
@@ -3210,7 +3253,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     sName = tData && tData.stock_name ? tData.stock_name : '';
                 }
                 const textMatch = ((t.ticker || '').toLowerCase().includes(s)) || (sName.toLowerCase().includes(s));
-                const statMatch = (stat === 'ALL') || (t.status === stat);
+                const statMatch = stat === 'ARCHIVE' ? !!t.archived : (!t.archived && ((stat === 'ALL') || (t.status === stat)));   // archiwum (zamknięte sprzed resetu) tylko na życzenie
                 const curMatch = (cur === 'ALL') || (t.currency === cur);
                 
                 // Niezależne sprawdzanie dla obu pól dat
@@ -7089,7 +7132,7 @@ window.FocusEod = (function () {
     function renderEod() {
         const q = (document.getElementById("eod-q").value || "").trim().toUpperCase(), sc = document.getElementById("eod-scope").value, tb = document.getElementById("eod-body");
         const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
-        const rows = TR.filter(t => (!q || String(t.ticker).includes(q)) && (sc === "all" || (sc === "open" ? t.status === "OPEN" : String(t.buy_date || "") >= since)))
+        const rows = TR.filter(t => !t.archived && (!q || String(t.ticker).includes(q)) && (sc === "all" || (sc === "open" ? t.status === "OPEN" : String(t.buy_date || "") >= since)))
             .sort((a, b) => String(b.buy_date || "").localeCompare(String(a.buy_date || "")));
         if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="hp-empty">Brak transakcji w tym zakresie.</td></tr>'; return; }
         tb.innerHTML = rows.map(t => {
