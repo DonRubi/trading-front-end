@@ -294,6 +294,12 @@
         .plx-fill.over { background: var(--danger); }
         .plx-neg { color: var(--danger); font-weight: 700; } .plx-pos { color: var(--success); font-weight: 700; }
         /* okna: szczegóły planu i nowy plan */
+        .hp-cols { display: flex; flex-direction: column; gap: 14px; } .hp-main, .hp-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+        @media (min-width: 1700px) { .hp-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(440px, 32%); align-items: start; } .hp-side { position: sticky; top: 72px; } }
+        .td-list { display: flex; flex-direction: column; gap: 12px; } .td-group h4 { margin: 0 0 6px; font-size: .74rem; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); font-weight: 600; }
+        .td-item { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; background: var(--bg-main); border: 1px solid var(--border-color); border-left: 3px solid var(--td, var(--border-color)); border-radius: 10px; padding: 8px 12px; color: var(--text-main); font: inherit; font-size: .88rem; cursor: pointer; margin-bottom: 5px; }
+        .td-item:hover { border-color: var(--accent); } .td-ic { font-size: 1.05rem; line-height: 1.3; } .td-t { flex: 1; min-width: 0; } .td-t b { margin-right: 4px; } .td-t small { display: block; color: var(--text-muted); font-size: .82em; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .td-go { color: var(--accent-hover); white-space: nowrap; font-size: .82em; font-weight: 600; align-self: center; } .td-ok { color: var(--success); padding: 6px 2px; font-size: .9rem; }
         /* ---------- panel boczny z modułami (komputer, ≥1200 px) ---------- */
         #side-nav { display: none; }
         @media (min-width: 1200px) {
@@ -526,6 +532,7 @@
                 </div>
             </div>
 
+            <div class="hp-cols"><div class="hp-main">
             <section class="hp-panel" data-hp-panel="summary">
                 <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Podsumowanie</h2><span class="hp-peek" id="hp-peek-summary"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
@@ -565,6 +572,14 @@
                 </div></div></div>
             </section>
 
+            </div><aside class="hp-side">
+            <section class="hp-panel" data-hp-panel="todo">
+                <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Do zrobienia dziś</h2><span class="hp-peek" id="hp-peek-todo"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="hp-body"><div class="hp-inner"><div class="hp-content">
+                    <div id="hp-todo" class="td-list"><div class="hp-empty">Ładowanie…</div></div>
+                    <div class="hp-err" id="hp-err-todo" hidden></div>
+                </div></div></div>
+            </section>
             <section class="hp-panel" data-hp-panel="notes">
                 <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Notatnik</h2><span class="hp-peek" id="hp-peek-notes"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
@@ -586,6 +601,7 @@
                 </div></div></div>
             </section>
 
+            </aside></div>
             <section class="hp-panel" data-hp-panel="modules">
                 <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Moduły</h2><span class="hp-peek"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
@@ -1683,6 +1699,7 @@
             document.getElementById('back-btn').style.display = 'none';
             document.querySelectorAll('#side-nav .sn-item').forEach(b => b.classList.toggle('on', b.dataset.sn === 'home'));
             if (window.HomePage) HomePage.refresh();
+            if (window.HomeTodo) HomeTodo.load();
         }
 
         function togglePrivacy() {
@@ -7504,6 +7521,65 @@ window.Invest = (function () {
     }, true);
     document.addEventListener("input", e => { if (e.target.id === "inv-q") { S.q = e.target.value; step1(); } });
     return { start: start, stop: stop, onPrefill: onPrefill, onTradeAdded: onTradeAdded, active: () => S.active };
+})();
+</script>
+<script>
+/* Strona główna – „Do zrobienia dziś”: kartki planów i przeglądy TP (zapisane sygnały strażnika), spółki przy strefach z Form (radar),
+   wpisy Focus bez transakcji, otwarte transakcje bez punktów EOD. Każda pozycja prowadzi do miejsca, w którym się działa. */
+window.HomeTodo = (function () {
+    "use strict";
+    const $ = s => document.querySelector(s);
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const num = (v, d) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const price = v => v == null ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
+    const COL = { red: "var(--danger)", orange: "#f0883e", yellow: "#fcd535", tp: "var(--success)" };
+    const NEAR = 2.0;              // „przy strefie”: w strefie albo do 2% od punktu wejścia
+    let seq = 0, data = {};
+    async function get(path) { const r = await fetch(API_BASE_URL + path); const d = await r.json().catch(() => ({})); if (!r.ok || (d && d.status === "error")) throw new Error((d && d.message) || "HTTP " + r.status); return d; }
+    async function load() {
+        const my = ++seq, box = $("#hp-todo"); if (!box) return;
+        const [cards, radar, focus, trades] = await Promise.allSettled([get("/api/planner/cards"), get("/api/entry/radar"), get("/api/focus/evals?days=14"), get("/api/trades/entries")]);
+        if (my !== seq) return;
+        const today = new Date().toISOString().slice(0, 10);
+        data = {
+            cards: cards.status === "fulfilled" ? cards.value.items || [] : [],
+            near: radar.status === "fulfilled" ? (radar.value.rows || []).map(r => ({ r: r, p: (r.plays || []).find(p => p.in_zone) || (r.plays || []).find(p => p.distance_pct != null && Math.abs(p.distance_pct) <= NEAR) })).filter(x => x.p) : [],
+            focus: focus.status === "fulfilled" ? (focus.value.evals || []).filter(f => !(f.trade_ids || []).length) : [],
+            eod: trades.status === "fulfilled" && Array.isArray(trades.value) ? trades.value.filter(t => t.status === "OPEN" && !t.archived && t.eod_score == null && String(t.buy_date || "") < today) : []
+        };
+        const errs = [cards, radar, focus, trades].filter(x => x.status === "rejected").map(x => x.reason.message);
+        const err = $("#hp-err-todo"); if (err) { err.hidden = !errs.length || errs.length < 4; err.textContent = errs.length ? "Część danych niedostępna: " + errs.join("; ") : ""; }
+        render();
+    }
+    function item(attrs, color, icon, title, sub, go) {
+        return '<button type="button" class="td-item" ' + attrs + ' style="--td:' + color + '"><span class="td-ic">' + icon + '</span><span class="td-t">' + title + (sub ? "<small>" + sub + "</small>" : "") + '</span><span class="td-go">' + go + "</span></button>";
+    }
+    function render() {
+        const box = $("#hp-todo"); if (!box) return;
+        const g = [], d = data;
+        const cards = d.cards.filter(c => c.kind === "card"), tps = d.cards.filter(c => c.kind === "tp_review");
+        if (cards.length) g.push('<div class="td-group"><h4>Kartki planów</h4>' + cards.map(c => item('data-td-plan="' + c.plan_id + '"', COL[c.level], c.icon, "<b>" + esc(c.ticker) + "</b>" + esc(c.label) + (c.entry_id ? " · " + esc(c.entry_id) : ""), esc(String(c.text || "").replace(c.icon + " " + c.label + ": ", "")) + (c.bar_date ? " · sesja " + esc(c.bar_date) : ""), "Plan →")).join("") + "</div>");
+        if (tps.length) g.push('<div class="td-group"><h4>Take profit osiągnięty – przegląd</h4>' + tps.map(c => item('data-td-plan="' + c.plan_id + '"', COL.tp, "🎯", "<b>" + esc(c.ticker) + "</b>" + esc(c.entry_id || ""), esc(c.text || ""), "Plan →")).join("") + "</div>");
+        if (d.near.length) g.push('<div class="td-group"><h4>Przy strefach z Form</h4>' + d.near.map(x => item('data-td-eval="' + esc(x.r.ticker) + '" data-entry="' + esc(x.p.entry_id) + '"', "var(--accent-hover)", "📍",
+            "<b>" + esc(x.r.ticker) + "</b>" + (x.p.in_zone ? "w strefie" : (x.p.distance_pct > 0 ? "+" : "") + num(x.p.distance_pct, 1) + "% od wejścia"),
+            esc(x.p.entry_id) + " · strefa " + price(x.p.zone[0]) + "–" + price(x.p.zone[1]) + " · wejście " + price(x.p.entry) + (x.p.rr ? " · R:R " + num(x.p.rr, 1) : ""), "Oceń →")).join("") + "</div>");
+        if (d.focus.length) g.push('<div class="td-group"><h4>Focus bez transakcji</h4>' + d.focus.slice(0, 6).map(f => { const sm = f.summary || {};
+            return item('data-td-fe="' + f.id + '"', "#89b4fa", "💾", "<b>" + esc(f.ticker) + "</b>" + esc(f.verdict || ""), esc(f.entry_id || "") + " · " + (f.points != null ? num(f.points, 1) + "/" + num(f.max_points || 15, 0) + " pkt · " : "") + "rek. " + (f.recommended_pct == null ? "–" : num(f.recommended_pct, 1) + "%") + (sm.recommended_ccy != null ? " ≈ " + Math.round(sm.recommended_ccy).toLocaleString("pl-PL") + " " + esc(sm.currency || "") : "") + " · " + new Date(f.created_at).toLocaleDateString("pl-PL"), "Transakcja →"); }).join("") + "</div>");
+        if (d.eod.length) g.push('<div class="td-group"><h4>Brak oceny końca dnia (EOD)</h4>' + d.eod.slice(0, 8).map(t => item('data-td-eod="' + t.id + '"', "#cba6f7", "🌙", "<b>" + esc(t.ticker) + "</b>#" + t.id, "zakup " + esc(t.buy_date || "") + " – policz punkty 0–5 po sesji", "EOD →")).join("") + "</div>");
+        const n = cards.length + tps.length + d.near.length + d.focus.length + d.eod.length;
+        box.innerHTML = g.join("") || '<div class="td-ok">✓ Nic pilnego – brak kartek, spółek przy strefach i zaległych ocen.</div>';
+        const pk = $("#hp-peek-todo"); if (pk) pk.textContent = n ? n + (n === 1 ? " sprawa" : n < 5 ? " sprawy" : " spraw") + (cards.some(c => c.level === "red") ? " · 🟥" : "") : "nic pilnego";
+    }
+    document.addEventListener("click", e => {
+        const t = e.target; if (!t.closest) return;
+        const pl = t.closest("[data-td-plan]"); if (pl) { openModule("planner-module", "Planer"); if (window.Planer) Planer.openPlan(pl.dataset.tdPlan); return; }
+        const ev = t.closest("[data-td-eval]"); if (ev) { if (window.Wejscie) Wejscie.evaluate(ev.dataset.tdEval, ev.dataset.entry); return; }
+        const fe = t.closest("[data-td-fe]"); if (fe) { const f = data.focus.find(x => String(x.id) === fe.dataset.tdFe); if (f) prefillTradeFromPlay(f.ticker, f.entry_id, { entry_score: f.score, entry_eval: f.entry_eval, summary: f.summary }, f.id); return; }
+        if (t.closest("[data-td-eod]")) { openModule("eod-module", "Koniec dnia (EOD)"); return; }
+        if (t.closest("#hp-refresh")) load();
+    });
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", load); else load();
+    return { load: load };
 })();
 </script>
 </body>
