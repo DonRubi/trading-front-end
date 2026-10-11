@@ -46,6 +46,9 @@
         .tr-actions { display: flex; justify-content: flex-end; }
         .tr-filters { display: grid; grid-template-columns: 2fr repeat(5, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
         @media (max-width: 1100px) { .tr-filters { grid-template-columns: 1fr 1fr; } }
+        .fe-filters.fe-3 { grid-template-columns: 2fr 1fr 1fr; } .fe-filters.fe-2 { grid-template-columns: 2fr 1fr; }
+        @media (max-width: 700px) { .fe-filters.fe-3, .fe-filters.fe-2 { grid-template-columns: 1fr; } }
+        #eod-body td:first-child, #fe-body td:first-child { white-space: nowrap; }
         .tr-table td { font-size: 0.86rem; }
         .tr-table tr.tr-grp td { background: rgba(255,255,255,.025); cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .tr-table tr.tr-grp:hover td { background: rgba(201,148,0,.08); }
@@ -511,7 +514,8 @@
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
                     <div class="dashboard-grid">
                         <div class="menu-card" onclick="openModule('form-module', 'Form')"><span class="icon">📝</span><h3>Form</h3></div>
-                        <!-- Focus wygaszony (ujednolicenie: Form + ocena wejścia + koniec dnia; maks. budżet spółki w Ocenie wejścia i Planerze) -->
+                        <div class="menu-card" onclick="openModule('focus2-module', 'Focus')"><span class="icon">🎯</span><h3>Focus</h3></div>
+                        <div class="menu-card" onclick="openModule('eod-module', 'Koniec dnia (EOD)')"><span class="icon">🌙</span><h3>EOD</h3></div>
                         <div class="menu-card" onclick="openModule('tradeslist-module', 'Transakcje')"><span class="icon">📊</span><h3>Transakcje</h3></div>
                         <div class="menu-card" onclick="openModule('summary-module', 'Podsumowanie')"><span class="icon">📈</span><h3>Podsumowanie</h3></div>
                         <div class="menu-card" onclick="openModule('database-module', 'Baza danych')"><span class="icon">🗄️</span><h3>Baza danych</h3></div>
@@ -726,6 +730,33 @@
         </div>
     </section>
 
+    <section id="focus2-module" class="app-module">
+        <div class="hp-wrap">
+            <div class="hp-topbar"><div><div class="tr-title">Focus</div><span class="hp-sub">Zapisane oceny momentu wejścia (Form ×2 + wejście + priorytet) – z nich wynikają transakcje. Nowy wpis dodasz w Radarze zagrań → Ocena wejścia → „Zapisz w Focus”.</span></div>
+                <div class="hp-tools"><button class="hp-btn" type="button" onclick="openModule('focuslist-module', 'Radar zagrań')">👁️ Radar zagrań</button></div></div>
+            <section class="hp-panel"><div class="hp-content" style="padding-top:16px">
+                <div class="tr-filters fe-filters fe-3">
+                    <input type="search" id="fe-q" placeholder="Szukaj spółki…" oninput="FocusEod.renderFocus()">
+                    <select id="fe-days" onchange="FocusEod.loadFocus()"><option value="7">Ostatnie 7 dni</option><option value="30" selected>Ostatnie 30 dni</option><option value="90">Ostatnie 90 dni</option><option value="3650">Wszystkie</option></select>
+                    <select id="fe-used" onchange="FocusEod.renderFocus()"><option value="all">Wszystkie wpisy</option><option value="free">Bez transakcji</option><option value="used">Z transakcją</option></select>
+                </div>
+                <div class="hp-table-wrap"><table class="hp-table tr-table"><thead><tr><th>Data</th><th>Spółka / zagranie</th><th>Punkty</th><th>Ocena wejścia</th><th>Rekom. budżet</th><th>Cena</th><th>Transakcja</th><th>Akcje</th></tr></thead><tbody id="fe-body"><tr><td colspan="8" class="hp-empty">Ładowanie…</td></tr></tbody></table></div>
+            </div></section>
+        </div>
+    </section>
+    <section id="eod-module" class="app-module">
+        <div class="hp-wrap">
+            <div class="hp-topbar"><div><div class="tr-title">Koniec dnia (EOD)</div><span class="hp-sub">Punkty 0–5 po zamknięciu sesji: świeca, indeks, VIX, wolumen, HTF oraz powtórzona ocena wejścia (świeca, wolumen, CVD, reakcja w strefie) – razem z Focus daje 20 pkt.</span></div>
+                <div class="hp-tools"><button class="hp-btn" type="button" onclick="FocusEod.loadEod()">↻ Odśwież</button></div></div>
+            <section class="hp-panel"><div class="hp-content" style="padding-top:16px">
+                <div class="tr-filters fe-filters fe-2">
+                    <input type="search" id="eod-q" placeholder="Szukaj spółki…" oninput="FocusEod.renderEod()">
+                    <select id="eod-scope" onchange="FocusEod.renderEod()"><option value="open" selected>Otwarte transakcje</option><option value="30">Zakupy z 30 dni</option><option value="all">Wszystkie</option></select>
+                </div>
+                <div class="hp-table-wrap"><table class="hp-table tr-table"><thead><tr><th>Zakup</th><th>Spółka</th><th>Focus (wejście)</th><th>EOD</th><th>Ocena wejścia: wejście → zamknięcie</th><th>Składniki EOD</th><th>Razem</th><th>Akcje</th></tr></thead><tbody id="eod-body"><tr><td colspan="8" class="hp-empty">Ładowanie…</td></tr></tbody></table></div>
+            </div></section>
+        </div>
+    </section>
     <section id="summary-module" class="app-module"> 
         <div class="macro-header-container"><h3>Podsumowanie Portfela</h3></div> 
         <div class="tabs"> 
@@ -1556,6 +1587,8 @@
             if (moduleId === 'dailybrief-module') loadDailyBriefs();
             if (moduleId === 'form-module') initFormModule();
             if (moduleId === 'focus-module') initFocusModule();
+            if (moduleId === 'focus2-module') FocusEod.loadFocus();
+            if (moduleId === 'eod-module') FocusEod.loadEod();
             if (moduleId === 'tradeslist-module') initTradesModule();
             if (moduleId === 'summary-module') initSummaryModule();
             if (moduleId === 'focuslist-module') initFocusListModule();
@@ -7048,6 +7081,80 @@ window.Measure = (function () {
     }
     function reset() { M.ticker = ""; M.added = []; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; }
     return { open: open, reset: reset, collect: collect, labels: () => ORDER.map(k => ({ type: k, label: TYPES[k].label })) };
+})();
+</script>
+<script>
+// ---------- Focus (zapisane oceny wejścia) i EOD (punkty końca dnia) ----------
+window.FocusEod = (function () {
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const f1 = v => v == null || isNaN(v) ? "–" : String(Math.round(v * 10) / 10).replace(".", ",");
+    const VC = { "WCHODZĘ": "var(--success)", "OSTROŻNIE": "#fcd535", "NIE TERAZ": "var(--danger)" };
+    let FE = [], TR = [];
+    async function j(url, opts) { const r = await fetch(API_BASE_URL + url, opts); const d = await r.json().catch(() => ({})); if (!r.ok || d.status === "error") throw new Error(d.message || ("HTTP " + r.status)); return d; }
+    async function loadFocus() {
+        const tb = document.getElementById("fe-body"); tb.innerHTML = '<tr><td colspan="8" class="hp-empty">Ładowanie…</td></tr>';
+        try { FE = (await j("/api/focus/evals?days=" + document.getElementById("fe-days").value)).evals || []; renderFocus(); }
+        catch (e) { tb.innerHTML = '<tr><td colspan="8" class="hp-empty hp-err">' + esc(e.message) + "</td></tr>"; }
+    }
+    function renderFocus() {
+        const q = (document.getElementById("fe-q").value || "").trim().toUpperCase(), used = document.getElementById("fe-used").value, tb = document.getElementById("fe-body");
+        const rows = FE.filter(f => (!q || f.ticker.includes(q)) && (used === "all" || (used === "used") === !!(f.trade_ids || []).length));
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="hp-empty">Brak wpisów Focus. Oceń wejście w Radarze zagrań i kliknij „Zapisz w Focus”.</td></tr>'; return; }
+        tb.innerHTML = rows.map(f => {
+            const ev = f.entry_eval || {}, sm = f.summary || {}, pln = (f.recommended_pct != null && f.capital_pln) ? f.recommended_pct / 100 * f.capital_pln : null;
+            return '<tr><td>' + new Date(f.created_at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) + '<div class="tr-cnt">#' + f.id + "</div></td>" +
+                '<td><span class="hp-tk sd-link" data-tk="' + esc(f.ticker) + '" style="color:var(--accent)">' + esc(f.ticker) + '</span><div class="tr-cnt">' + esc(f.entry_id || "–") + "</div></td>" +
+                "<td><b>" + f1(f.points) + "</b>/" + f1(f.max_points || 15) + '<div class="tr-cnt">Form ' + f1(ev.form_score) + " ×2 · wejście " + f1(ev.entry_points) + (ev.entry_manual != null ? "✎" : "") + (ev.priority_bonus ? " · priorytet +" + f1(ev.priority_bonus) : "") + "</div></td>" +
+                '<td><b style="color:' + (VC[f.verdict] || "inherit") + '">' + esc(f.verdict || "–") + "</b><div class=\"tr-cnt\">" + f1(f.score) + "/100</div></td>" +
+                "<td><b>" + (f.recommended_pct == null ? "–" : f1(f.recommended_pct) + "%") + "</b>" + (pln != null ? '<div class="tr-cnt">≈ ' + Math.round(pln).toLocaleString("pl-PL") + " PLN</div>" : "") + "</td>" +
+                "<td>" + (f.price != null ? Number(f.price).toLocaleString("pl-PL", { maximumFractionDigits: 4 }) : "–") + "</td>" +
+                "<td>" + ((f.trade_ids || []).length ? f.trade_ids.map(i => "#" + i).join(", ") : '<span class="tr-cnt">–</span>') + "</td>" +
+                '<td style="white-space:nowrap"><button class="hp-btn" style="padding:4px 10px" data-fe-trade="' + f.id + '">＋ Transakcja</button> <button class="hp-btn" style="padding:4px 10px" data-fe-eval="' + f.id + '" title="Oceń wejście ponownie (teraz)">↻</button> <button class="hp-btn" style="padding:4px 10px" data-fe-del="' + f.id + '" title="Usuń wpis">✕</button></td></tr>';
+        }).join("");
+    }
+    async function loadEod() {
+        const tb = document.getElementById("eod-body"); tb.innerHTML = '<tr><td colspan="8" class="hp-empty">Ładowanie…</td></tr>';
+        try { const r = await fetch(API_BASE_URL + "/api/trades/entries"); TR = await r.json(); if (!Array.isArray(TR)) throw new Error(TR.error || "błąd"); renderEod(); }
+        catch (e) { tb.innerHTML = '<tr><td colspan="8" class="hp-empty hp-err">' + esc(e.message) + "</td></tr>"; }
+    }
+    function renderEod() {
+        const q = (document.getElementById("eod-q").value || "").trim().toUpperCase(), sc = document.getElementById("eod-scope").value, tb = document.getElementById("eod-body");
+        const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+        const rows = TR.filter(t => (!q || String(t.ticker).includes(q)) && (sc === "all" || (sc === "open" ? t.status === "OPEN" : String(t.buy_date || "") >= since)))
+            .sort((a, b) => String(b.buy_date || "").localeCompare(String(a.buy_date || "")));
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="hp-empty">Brak transakcji w tym zakresie.</td></tr>'; return; }
+        tb.innerHTML = rows.map(t => {
+            const ev = t.entry_eval || {}, eod = t.eod_eval || {}, man = eod.manual, rc = eod.entry_recheck;
+            const focusPts = ev.points != null ? ev.points : null, eodPts = t.eod_score != null ? parseFloat(t.eod_score) : null;
+            const total = (focusPts != null || eodPts != null) ? (focusPts || 0) + (eodPts || 0) : null;
+            const comps = (eod.components || []).filter(c => c.weight > 0).map(c => '<span class="ev-chip" title="waga ' + c.weight + '">' + esc(c.label) + " " + Math.round(c.norm * 100) + "%</span>").join(" ");
+            const delta = rc && rc.delta != null ? ' <b style="color:' + (rc.delta >= 0 ? "var(--success)" : "var(--danger)") + '">' + (rc.delta > 0 ? "+" : "") + f1(rc.delta) + "</b>" : "";
+            return '<tr><td>' + esc(t.buy_date || "–") + '<div class="tr-cnt">#' + t.id + (t.status === "CLOSED" ? " · zamknięta" : "") + "</div></td>" +
+                '<td><span class="hp-tk sd-link" data-tk="' + esc(t.ticker) + '" style="color:var(--accent)">' + esc(t.ticker) + '</span><div class="tr-cnt">' + esc(t.form_id || "") + "</div></td>" +
+                "<td>" + (focusPts != null ? "<b>" + f1(focusPts) + "</b>/" + f1(ev.max_points || 15) : "–") + (t.focus_eval_id ? '<div class="tr-cnt">Focus #' + t.focus_eval_id + "</div>" : "") + "</td>" +
+                "<td>" + (eodPts != null ? "<b>" + f1(eodPts) + "</b>/" + f1(eod.max_points || 5) + (man ? ' <span class="tr-cnt" title="' + esc(man.note || "") + '">✎ ręcznie' + (man.auto != null ? " (rekom. " + f1(man.auto) + ")" : "") + "</span>" : "") + (eod.bar_date ? '<div class="tr-cnt">sesja ' + esc(eod.bar_date) + "</div>" : "") : '<span class="tr-cnt">jeszcze nie policzone</span>') + "</td>" +
+                "<td>" + (t.entry_score != null ? f1(t.entry_score) : "–") + " → " + (rc ? "<b>" + f1(rc.score) + "</b>" + delta : "–") + "</td>" +
+                "<td>" + (comps || '<span class="tr-cnt">–</span>') + "</td>" +
+                "<td><b>" + (total != null ? f1(total) + "/20" : "–") + "</b></td>" +
+                '<td style="white-space:nowrap"><button class="hp-btn" style="padding:4px 10px" data-eod-calc="' + t.id + '">' + (eodPts != null ? "↻ Policz" : "Policz") + '</button> <button class="hp-btn" style="padding:4px 10px" data-eod-fix="' + t.id + '" data-val="' + (man ? man.score : "") + '">✎ Popraw</button></td></tr>';
+        }).join("");
+    }
+    document.addEventListener("click", async e => {
+        const t = e.target; if (!t.closest) return;
+        const tr = t.closest("[data-fe-trade]"), ev = t.closest("[data-fe-eval]"), del = t.closest("[data-fe-del]"), calc = t.closest("[data-eod-calc]"), fix = t.closest("[data-eod-fix]");
+        try {
+            if (tr) { const f = FE.find(x => String(x.id) === tr.dataset.feTrade); if (f) prefillTradeFromPlay(f.ticker, f.entry_id, { entry_score: f.score, entry_eval: f.entry_eval, summary: f.summary }, f.id); }
+            else if (ev) { const f = FE.find(x => String(x.id) === ev.dataset.feEval); if (f && window.Wejscie) Wejscie.evaluate(f.ticker, f.entry_id); }
+            else if (del) { if (!confirm("Usunąć wpis Focus #" + del.dataset.feDel + "?")) return; await j("/api/focus/evals/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: +del.dataset.feDel }) }); loadFocus(); }
+            else if (calc) { calc.textContent = "…"; await j("/api/trades/eod-score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trade_id: +calc.dataset.eodCalc }) }); loadEod(); }
+            else if (fix) {
+                const v = prompt("Punkty końca dnia 0–5 (puste = wróć do rekomendacji automatycznej):", fix.dataset.val || ""); if (v === null) return;
+                const note = v.trim() === "" ? "" : (prompt("Krótko: dlaczego zmieniasz ocenę?", "") || "");
+                await j("/api/trades/eod-manual", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trade_id: +fix.dataset.eodFix, score: v.trim(), note: note }) }); loadEod();
+            }
+        } catch (err) { alert(err.message || err); if (calc) calc.textContent = "Policz"; }
+    });
+    return { loadFocus: loadFocus, renderFocus: renderFocus, loadEod: loadEod, renderEod: renderEod };
 })();
 </script>
 </body>
