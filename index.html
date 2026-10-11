@@ -35,6 +35,29 @@
         #edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; padding: 15px; }
         .modal-box { background:var(--bg-card); padding:20px; border-radius:12px; width:100%; max-width:400px; border:1px solid var(--border-color); max-height: 90vh; overflow-y: auto; }
         /* ===== Nowa strona główna (HomePage) ===== */
+        .tr-title { font-size: 1.15rem; font-weight: 700; }
+        #tradeslist-module .hp-content form { display: flex; flex-direction: column; gap: 12px; }
+        .tr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+        .tr-info { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 12px; }
+        .tr-f { display: flex; flex-direction: column; gap: 5px; font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+        .tr-f input, .tr-f select, .tr-filters input, .tr-filters select { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 10px; padding: 9px 11px; font-size: 0.9rem; text-transform: none; letter-spacing: 0; width: 100%; box-sizing: border-box; }
+        .tr-f input[readonly] { opacity: .75; }
+        .tr-wide { grid-column: span 2; } @media (max-width: 640px) { .tr-wide { grid-column: span 1; } }
+        .tr-actions { display: flex; justify-content: flex-end; }
+        .tr-filters { display: grid; grid-template-columns: 2fr repeat(5, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
+        @media (max-width: 1100px) { .tr-filters { grid-template-columns: 1fr 1fr; } }
+        .tr-table td { font-size: 0.86rem; }
+        .tr-table tr.tr-grp td { background: rgba(255,255,255,.025); cursor: pointer; border-bottom: 1px solid var(--border-color); }
+        .tr-table tr.tr-grp:hover td { background: rgba(201,148,0,.08); }
+        .tr-table tr.tr-grp .tr-chev { display: inline-block; transition: transform .3s; color: var(--text-muted); margin-right: 6px; }
+        .tr-table tr.tr-grp.tr-open .tr-chev { transform: rotate(90deg); }
+        .tr-table tr.tr-child td:first-child { padding-left: 30px; }
+        .tr-table tr.tr-child td { background: rgba(0,0,0,.12); }
+        .tr-table tr.tr-hidden { display: none; }
+        .tr-pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+        .tr-cnt { font-size: 0.72rem; color: var(--text-muted); }
+        .tr-table .btn-edit, .tr-table .btn-delete { padding: 3px 9px !important; border-radius: 8px; font-size: 0.75rem; margin: 2px; flex: none !important; }
+        .tr-table td:last-child { min-width: 150px; }
         .hp-wrap { max-width: 1500px; margin: 0 auto; padding: 15px; display: flex; flex-direction: column; gap: 14px; }
         .hp-topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
         .hp-sub { color: var(--text-muted); font-size: 0.85rem; }
@@ -630,97 +653,75 @@
     </section>
 
     <section id="tradeslist-module" class="app-module">
-        <div class="macro-header-container"><h3>Dziennik otwartych pozycji (Transakcje)</h3></div>
-        <div class="journal-container">
-            <div class="journal-sidebar">
-                <form id="trade-form" onsubmit="submitTradeForm(event)">
-                    <div class="form-row" style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 5px;">
-                        <div class="form-group">
-                            <label style="color:var(--accent);">Typ Raty (Plan)</label>
-                            <select id="trade-tranche">
-                                <option value="Zwiad">Zwiad (Scout Entry)</option>
-                                    <option value="Core" selected>Główne wejście (Core)</option>
-                                       <option value="Uśrednienie (Technika)">Uśrednienie w dół (Technika)</option>
-                                       <option value="Uśrednienie (Fundamenty)">Uśrednienie w dół (Fundamenty)</option>
-                                       <option value="Piramidowanie">Piramidowanie (Dokładka na plusie)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Ruch wywołany Newsem?</label>
-                            <select id="trade-news">
-                                <option value="0" selected>Nie / Normalny rynek</option>
-                                <option value="1">Tak (Raport / Wydarzenie)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>CVD / Order Flow przy wejściu</label>
-                        <select id="trade-cvd-delta">
-                                <option value="Pozytywna">Silnie Pozytywna (Absorpcja w knocie)</option>
-                                <option value="Neutralna" selected>Neutralna / Typowa</option>
-                                <option value="Negatywna">Silnie Negatywna (Agresywna dystrybucja)</option>
-                        </select>
-                    </div>
-                    <div id="trade-eval-box" class="ev-evalbox" style="display:none"></div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Wybierz Ticker</label><select id="trade-ticker-select" onchange="onTradeTickerChange()"><option value="">Ładowanie...</option></select></div>
-                        <div class="form-group"><label>Zagranie z Form</label><select id="trade-play-id" onchange="onTradePlayChange()"><option value="">Najpierw wybierz ticker...</option></select></div>
-                        <div class="form-group"><label>Analiza Focus (opcjonalnie)</label><select id="trade-focus-id" onchange="onTradeFocusChange()"><option value="">Najpierw wybierz ticker...</option></select></div>
-                    </div>
-                    <div class="form-row" style="background: rgba(14, 203, 129, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(14, 203, 129, 0.15);"><div class="form-group"><label>Ticker</label><input type="text" id="trade-ticker" readonly></div><div class="form-group"><label>Kierunek</label><input type="text" id="trade-direction" readonly></div><div class="form-group"><label>ID Form</label><input type="text" id="trade-form-id" readonly></div><div class="form-group"><label>Waluta</label><input type="text" id="trade-currency" readonly></div><div class="form-group"><label>Max Wyd.</label><input type="text" id="trade-max-spend" readonly style="color:var(--accent); font-weight:bold;"></div></div>
-                    <div class="form-group"><label>Pełna nazwa spółki (Auto)</label><input type="text" id="trade-name" placeholder="Pobieranie..."></div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Komentarz</label><input type="text" id="trade-comment" placeholder="Napisz coś o tym wejściu..." required></div>
-                        <div class="form-group"><label>Kwadrans przed zamknięciem?</label><select id="trade-last15"><option value="0" selected>Nie (0 pkt)</option><option value="1">Tak (+1 Pkt do Score)</option></select></div>
-                    </div>
-                    <div class="form-row"><div class="form-group"><label>Data zakupu</label><input type="date" id="trade-buy-date" required></div><div class="form-group"><label>Cena zakupu</label><input type="number" step="0.0001" id="trade-buy-price" required></div></div>
-                    <div class="form-row"><div class="form-group"><label>Wydano gotówki</label><input type="number" step="0.01" id="trade-spent" required></div><div class="form-group"><label>Dźwignia (1=Akcje)</label><input type="number" step="0.01" min="1" id="trade-leverage" value="1" required></div></div>
-                    <input type="hidden" id="trade-tp"><input type="hidden" id="trade-sl"><input type="hidden" id="trade-score">
-                    <button type="submit" class="btn-submit" style="margin-top: 10px; background-color: var(--success); color:#fff;">🛒 Zarejestruj Transakcję</button>
-                </form>
+        <div class="hp-wrap tr-wrap">
+            <div class="hp-topbar">
+                <div><div class="tr-title">Transakcje</div><span class="hp-sub">Inwestycje pogrupowane po spółkach – kliknij spółkę, aby zobaczyć jej transakcje</span></div>
+                <div class="hp-tools"><button class="hp-btn hp-primary" type="button" id="tr-new-btn">＋ Nowa transakcja</button><button class="hp-btn" type="button" id="tr-expand-all">Rozwiń wszystkie</button></div>
             </div>
-            <div class="journal-main">
-                <div class="table-controls">
-                    <input type="text" id="trade-search" placeholder="🔍 Filtruj po tickerze lub nazwie..." oninput="handleTradesFilter()">
-                    <select id="trade-status-filter" onchange="handleTradesFilter()"><option value="ALL">Wszystkie Statusy</option><option value="OPEN" selected>Otwarte</option><option value="CLOSED">Zamknięte</option></select>
-                    <select id="trade-cur-filter" onchange="handleTradesFilter()">
-                        <option value="ALL">Wszystkie Waluty</option>
-                        <option value="PLN">PLN</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                    </select>
-                    <select id="trade-buy-date-filter" onchange="handleTradesFilter()">
-                        <option value="ALL">Wszystkie Daty Otwarcia</option>
-                    </select>
-                    <select id="trade-sell-date-filter" onchange="handleTradesFilter()">
-                        <option value="ALL">Wszystkie Daty Zamknięcia</option>
-                    </select>
-                    <select id="trade-last15-filter" onchange="handleTradesFilter()">
-                        <option value="ALL">Wszystkie (Kwadrans)</option>
-                        <option value="1">Tylko zagrania w ost. kwadransie</option>
-                        <option value="0">Poza ostatnim kwadransem</option>
-                    </select>
+            <section class="hp-panel hp-collapsed" id="tr-form-panel">
+                <button class="hp-head" type="button" aria-expanded="false"><h2><span class="hp-dot"></span>Nowa transakcja</h2><span class="hp-peek">wybierz spółkę i zagranie z Form albo przejdź z Oceny wejścia</span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="hp-body"><div class="hp-inner"><div class="hp-content">
+                <form id="trade-form" onsubmit="submitTradeForm(event)">
+                    <div id="trade-eval-box" class="ev-evalbox" style="display:none"></div>
+                    <div class="tr-grid">
+                        <label class="tr-f"><span>Spółka</span><select id="trade-ticker-select" onchange="onTradeTickerChange()"><option value="">Ładowanie...</option></select></label>
+                        <label class="tr-f"><span>Zagranie z Form</span><select id="trade-play-id" onchange="onTradePlayChange()"><option value="">Najpierw wybierz spółkę...</option></select></label>
+                        <label class="tr-f"><span>Pełna nazwa spółki</span><input type="text" id="trade-name" placeholder="uzupełnia się sama"></label>
+                    </div>
+                    <div class="tr-grid tr-info">
+                        <label class="tr-f"><span>Ticker</span><input type="text" id="trade-ticker" readonly></label>
+                        <label class="tr-f"><span>Kierunek</span><input type="text" id="trade-direction" readonly></label>
+                        <label class="tr-f"><span>ID Form</span><input type="text" id="trade-form-id" readonly></label>
+                        <label class="tr-f"><span>Waluta</span><input type="text" id="trade-currency" readonly></label>
+                    </div>
+                    <div class="tr-grid">
+                        <label class="tr-f"><span>Data zakupu</span><input type="date" id="trade-buy-date" required></label>
+                        <label class="tr-f"><span>Cena zakupu</span><input type="number" step="0.0001" id="trade-buy-price" required></label>
+                        <label class="tr-f"><span>Wydano gotówki</span><input type="number" step="0.01" id="trade-spent" required></label>
+                        <label class="tr-f"><span>Dźwignia (1 = akcje)</span><input type="number" step="0.01" min="1" id="trade-leverage" value="1" required></label>
+                    </div>
+                    <div class="tr-grid">
+                        <label class="tr-f tr-wide"><span>Notatka uzasadniająca inwestycję</span><input type="text" id="trade-comment" placeholder="Dlaczego wchodzę…" required></label>
+                        <label class="tr-f"><span>Wejście w ostatnim kwadransie sesji?</span><select id="trade-last15"><option value="0" selected>Nie</option><option value="1">Tak (+1 pkt do oceny wejścia)</option></select></label>
+                    </div>
+                    <select id="trade-focus-id" hidden onchange="onTradeFocusChange()"><option value="">–</option></select>
+                    <input type="hidden" id="trade-max-spend"><input type="hidden" id="trade-tp"><input type="hidden" id="trade-sl"><input type="hidden" id="trade-score">
+                    <div class="tr-actions"><button type="submit" class="hp-btn hp-primary">🛒 Zarejestruj transakcję</button></div>
+                </form>
+                </div></div></div>
+            </section>
+            <section class="hp-panel" id="tr-list-panel">
+                <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Inwestycje</h2><span class="hp-peek" id="tr-peek"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="hp-body"><div class="hp-inner"><div class="hp-content">
+                <div class="tr-filters">
+                    <input type="search" id="trade-search" placeholder="Szukaj spółki…" oninput="handleTradesFilter()">
+                    <select id="trade-status-filter" onchange="handleTradesFilter()"><option value="ALL">Wszystkie</option><option value="OPEN" selected>Otwarte</option><option value="CLOSED">Zamknięte</option></select>
+                    <select id="trade-cur-filter" onchange="handleTradesFilter()"><option value="ALL">Każda waluta</option><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
+                    <select id="trade-buy-date-filter" onchange="handleTradesFilter()"><option value="ALL">Każda data otwarcia</option></select>
+                    <select id="trade-sell-date-filter" onchange="handleTradesFilter()"><option value="ALL">Każda data zamknięcia</option></select>
+                    <select id="trade-last15-filter" onchange="handleTradesFilter()"><option value="ALL">Kwadrans: wszystkie</option><option value="1">Tylko w ostatnim kwadransie</option><option value="0">Poza ostatnim kwadransem</option></select>
                 </div>
-                <div class="table-responsive">
-                    <table id="journal-table">
+                <div class="hp-table-wrap">
+                    <table id="trades-table" class="hp-table tr-table">
                         <thead><tr>
-                            <th onclick="handleTradeSort('buy_date')">Data/ID ↕</th>
+                            <th onclick="handleTradeSort('buy_date')">Data / ID ↕</th>
                             <th onclick="handleTradeSort('ticker')">Spółka ↕</th>
                             <th>Komentarz</th>
-                            <th onclick="handleTradeSort('focus_score')">Wynik / Kwadrans ↕</th>
+                            <th onclick="handleTradeSort('focus_score')">Punkty ↕</th>
                             <th onclick="handleTradeSort('spent')">Zainwestowano ↕</th>
-                            <th onclick="handleTradeSort('buy_price')">Ceny (Wejście/Obecnie) ↕</th>
-                            <th onclick="handleTradeSort('rr')">R:R | SL / TP ↕</th>
-                            <th onclick="handleTradeSort('prof')">Zysk (Waluta) ↕</th>
+                            <th onclick="handleTradeSort('buy_price')">Ceny (wejście / obecnie) ↕</th>
+                            <th onclick="handleTradeSort('rr')">R:R · SL / TP ↕</th>
+                            <th onclick="handleTradeSort('prof')">Zysk (waluta) ↕</th>
                             <th onclick="handleTradeSort('profPln')">Zysk PLN ↕</th>
-                            <th onclick="handleTradeSort('prog')" style="min-width: 150px;">Progres TP ↕</th>
+                            <th onclick="handleTradeSort('prog')" style="min-width: 130px;">Progres TP ↕</th>
                             <th>Akcje</th>
                         </tr></thead>
                         <tbody id="trades-table-body"></tbody>
                     </table>
                 </div>
-                <div class="pagination-container"><button onclick="changeTradePage(-1)" id="trade-prev-page" class="btn-pag">◀ Poprzednia</button><div style="display:flex; align-items:center; gap:10px;"><span id="trade-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('trades', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div><button onclick="changeTradePage(1)" id="trade-next-page" class="btn-pag">Następna ▶</button></div>
-            </div>
+                <div class="tr-pager"><button onclick="changeTradePage(-1)" id="trade-prev-page" class="hp-btn">◀</button><span id="trade-page-info" class="hp-sub">Strona 1 z 1</span><button onclick="changeTradePage(1)" id="trade-next-page" class="hp-btn">▶</button><button onclick="toggleAllRows('trades', this)" class="hp-btn">Pokaż wszystkie</button></div>
+                </div></div></div>
+            </section>
         </div>
     </section>
 
@@ -1492,6 +1493,7 @@
         let formEntries = [], filteredFormEntries = [], formCurrentPage = 1, formRowsPerPage = 30, formFilterText = '';
         let focusDataArray = [], currentFocusPage = 1, focusPageSize = 20, formEntriesGlobal = [];
         let allTradesData = [], filteredTradesData = [], currentTradePage = 1, tradePageSize = 20;
+        window.__trOpen = new Set();         // rozwinięte spółki w Transakcjach
         let allAlertsData = [], filteredAlertsData = [], currentAlertPage = 1, alertPageSize = 20;
 
         let macroDataArray = [], currentMacroPage = 1, macroPageSize = 20, depositsDataArray = [];
@@ -2790,6 +2792,7 @@
             openModule('tradeslist-module', 'Transakcje');
         }
         function applyTradePlay(p) {
+            const fp = document.getElementById('tr-form-panel'); if (fp) fp.classList.remove('hp-collapsed');
             const ts = document.getElementById('trade-ticker-select');
             if (!Array.prototype.some.call(ts.options, o => o.value === p.ticker)) ts.innerHTML += `<option value="${p.ticker}">${p.ticker}</option>`;
             ts.value = p.ticker; onTradeTickerChange();
@@ -2938,7 +2941,7 @@ async function submitTradeForm(e) {
     const maxSpendStr = document.getElementById('trade-max-spend').value; 
     const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); 
     
-    if (spent * lev > maxSpend) { 
+    if (!isNaN(maxSpend) && spent * lev > maxSpend) { 
         alert(`⚠️ OSTRZEŻENIE! Twój wydatek * dźwignia przekracza zalecenie!`); 
     } 
     
@@ -2960,12 +2963,13 @@ async function submitTradeForm(e) {
         tp: document.getElementById('trade-tp').value, 
         sl: document.getElementById('trade-sl').value,
         comment: document.getElementById('trade-comment').value,
-        last_15_min: last15,
-        tranche_type: document.getElementById('trade-tranche').value,
-        news_event: parseInt(document.getElementById('trade-news').value),
-        cvd_delta: document.getElementById('trade-cvd-delta').value
+        last_15_min: last15
     }; 
     if (window.__tradeEval && window.__tradeEval.entry_eval && document.getElementById('trade-play-id').value === window.__tradeEval.entryId) { data.entry_score = window.__tradeEval.entry_score; data.entry_eval = window.__tradeEval.entry_eval; }
+    if (last15 && data.entry_eval) {               // wejście w ostatnim kwadransie sesji: +1 pkt do oceny wejścia (bez przekraczania maksimum)
+        data.entry_eval = { ...data.entry_eval, last15_bonus: 1 };
+        if (data.entry_eval.points != null) data.entry_eval.points = Math.min((data.entry_eval.points || 0) + 1, data.entry_eval.max_points || 1e9);
+    }
 
     try { 
         const res = await fetch(`${API_BASE_URL}/api/trades/add`, { 
@@ -3152,11 +3156,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 }
             });
 
-            const start = (currentTradePage-1)*tradePageSize;
-            const maxPage = Math.ceil(sortedTrades.length / tradePageSize) || 1;
-            const pageData = sortedTrades.slice(start, start + tradePageSize);
-
-            pageData.forEach(item => {
+            const rowHtml = (item, grp, hidden) => {
                 const s = item.stats || {};
                 const spent = item.spent || 0;
                 const spentPln = s.spentPln || 0;
@@ -3208,7 +3208,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 const focusScoreStr = (item.focus_score !== null && item.focus_score !== undefined) ? `<span style="color:${scoreColor}; font-weight:bold; font-size:1.1em;">⭐ ${fScore.toFixed(1)}</span>` : '-';
                 const last15Str = (item.last_15_min == 1) ? '<span style="color:#0ecb81; font-weight:bold;">TAK</span>' : '<span style="color:var(--text-muted);">NIE</span>';
 
-                tb.innerHTML += `<tr>
+                return `<tr class="tr-child${hidden ? ' tr-hidden' : ''}" data-grp="${grp}">
                     <td>${item.buy_date || '-'}<br><small>#${item.id}</small></td>
                     <td><span class="sd-link" data-tk="${item.ticker}"><strong style="color:var(--accent);">${item.ticker || '-'}</strong>${nameHtml}</span>${item.plan_id ? `<br><a href="#" class="plx-tag" data-plan="${item.plan_id}" title="Otwórz plan w Planerze">🧭 plan #${item.plan_id}</a>` : ''}</td>
                     <td style="max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.85em; color:var(--text-main); cursor:pointer; transition:0.2s;" 
@@ -3228,7 +3228,56 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     <td><div style="background:var(--bg-input); height:8px; border-radius:4px;"><div style="width:${pd}%; background:${pc}; height:100%;"></div></div></td>
                     <td><button class="btn-edit" onclick="openEditModal('trade', ${item.id})">✎</button> ${actionHtml} <button class="btn-delete" onclick="deleteTrade(${item.id})" style="padding: 3px 8px; margin-left:5px;">Usuń</button></td>
                 </tr>`;
+            };
+
+            // grupowanie po spółkach (rozwijane); sortowanie i stronicowanie po grupach
+            const groupsMap = {};
+            sortedTrades.forEach(t => { (groupsMap[t.ticker] = groupsMap[t.ticker] || []).push(t); });
+            const grpKey = g => {
+                const sum = f => g.reduce((x, t) => x + (f(t) || 0), 0);
+                switch (tradeSortKey) {
+                    case 'ticker': return g[0].ticker || '';
+                    case 'buy_date': return Math.max(...g.map(t => new Date(t.buy_date || 0).getTime()));
+                    case 'spent': return sum(t => t.stats.spentPln);
+                    case 'prof': case 'profPln': return sum(t => t.stats.profPln);
+                    case 'prog': { const o = g.filter(t => t.status === 'OPEN' && isFinite(t.stats.prog)); return o.length ? o.reduce((x, t) => x + t.stats.prog, 0) / o.length : -1e9; }
+                    default: return sum(t => t.stats.profPln);
+                }
+            };
+            const groups = Object.values(groupsMap).map(g => ({ key: grpKey(g), trades: g }));
+            groups.sort((x, y) => typeof x.key === 'string' ? (tradeSortDir === 'asc' ? x.key.localeCompare(y.key) : y.key.localeCompare(x.key)) : (tradeSortDir === 'asc' ? x.key - y.key : y.key - x.key));
+            const start = (currentTradePage-1)*tradePageSize;
+            const maxPage = Math.ceil(groups.length / tradePageSize) || 1;
+            const pageGroups = groups.slice(start, start + tradePageSize);
+            const autoOpen = groups.length === 1;
+            let html = '';
+            pageGroups.forEach(G => {
+                const g = G.trades, tk = g[0].ticker || '-', open = autoOpen || window.__trOpen.has(tk);
+                const nOpen = g.filter(t => t.status === 'OPEN').length, nClosed = g.length - nOpen;
+                const sumPln = g.reduce((x, t) => x + (t.stats.spentPln || 0), 0), profPln = g.reduce((x, t) => x + (t.stats.profPln || 0), 0);
+                const byCur = {}; g.forEach(t => { const c = t.currency || 'USD'; byCur[c] = byCur[c] || { spent: 0, prof: 0 }; byCur[c].spent += (t.spent || 0); byCur[c].prof += (t.stats.prof || 0); });
+                const openT = g.filter(t => t.status === 'OPEN' && parseFloat(t.buy_price) > 0);
+                const notional = openT.reduce((x, t) => x + (t.spent || 0) * (t.leverage || 1), 0), units = openT.reduce((x, t) => x + (t.spent || 0) * (t.leverage || 1) / parseFloat(t.buy_price), 0);
+                const avg = units > 0 ? notional / units : null, cp = openT.length ? openT[0].stats.cp : null;
+                const progs = openT.map(t => t.stats.prog).filter(v => isFinite(v)), prog = progs.length ? progs.reduce((x, v) => x + v, 0) / progs.length : null;
+                let sName = g[0].stock_name || ''; if (!sName) { const td = tickerDataArray.find(t => t.ticker === tk); sName = td && td.stock_name ? td.stock_name : ''; }
+                const planId = (g.find(t => t.plan_id) || {}).plan_id;
+                const curLines = Object.keys(byCur).map(c => `${byCur[c].spent.toFixed(2)} ${c}`).join('<br>'), profLines = Object.keys(byCur).map(c => `<span style="color:${byCur[c].prof >= 0 ? 'var(--success)' : 'var(--danger)'}">${byCur[c].prof.toFixed(2)} ${c}</span>`).join('<br>');
+                html += `<tr class="tr-grp${open ? ' tr-open' : ''}" data-grp-head="${tk}">
+                    <td style="white-space:nowrap"><span class="tr-chev">▶</span><span class="tr-cnt">ost. ${g.map(t => t.buy_date || '').sort().pop() || '–'}</span></td>
+                    <td><span class="hp-tk sd-link" data-tk="${tk}" style="color:var(--accent)">${tk}</span>${sName ? `<div class="hp-name">${sName}</div>` : ''}<div class="tr-cnt">${g.length} ${g.length === 1 ? 'transakcja' : (g.length % 10 >= 2 && g.length % 10 <= 4 && (g.length < 10 || g.length > 20) ? 'transakcje' : 'transakcji')} · ${nOpen} otw. · ${nClosed} zamkn.</div>${planId ? `<a href="#" class="plx-tag" data-plan="${planId}" title="Otwórz plan w Planerze">🧭 plan #${planId}</a>` : ''}</td>
+                    <td></td><td></td>
+                    <td class="sensitive">${curLines}<br><b>${sumPln.toFixed(2)} PLN</b></td>
+                    <td class="sensitive">${avg ? 'śr. ' + avg.toFixed(avg < 10 ? 4 : 2) : '–'}<br>${cp ? 'teraz <b>' + cp + '</b>' : ''}</td>
+                    <td></td>
+                    <td class="sensitive"><b>${profLines}</b></td>
+                    <td class="sensitive" style="color:${profPln >= 0 ? 'var(--success)' : 'var(--danger)'}"><b>${profPln.toFixed(2)} PLN</b></td>
+                    <td>${prog != null ? `<div style="background:var(--bg-input); height:8px; border-radius:4px;"><div style="width:${Math.max(0, Math.min(100, prog * 100))}%; background:var(--accent); height:100%; border-radius:4px;"></div></div><small class="hp-sub">${(prog * 100).toFixed(0)}%</small>` : ''}</td>
+                    <td><button class="hp-btn" style="padding:4px 10px" onclick="event.stopPropagation(); Planer.openFor('${tk}')">🧭 Planuj</button></td></tr>`;
+                g.slice().sort((x, y) => new Date(y.buy_date || 0) - new Date(x.buy_date || 0)).forEach(item => { html += rowHtml(item, tk, !open); });
             });
+            tb.innerHTML = html;
+            const peek = document.getElementById('tr-peek'); if (peek) peek.textContent = groups.length + ' spółek · ' + sortedTrades.length + ' transakcji';
 
             if(sortedTrades.length > 0) {
                 let profWalutaStr = Object.keys(totalProfWaluta).map(cur => {
@@ -3244,7 +3293,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
 
                 let avgProgStr = totalValidProgCount > 0 ? ((totalProg / totalValidProgCount) * 100).toFixed(1) + '%' : '-';
 
-                tb.innerHTML += `<tr style="background-color: rgba(255,255,255,0.05); border-top: 2px solid #555;">
+                tb.innerHTML += `<tr class="hp-total">
                     <td colspan="4" style="text-align:right; font-weight:bold; color:var(--text-main);">Suma dla wybranego filtru:</td>
                     <td class="sensitive" style="font-weight:bold; line-height: 1.4;">${spentWalutaStr || '-'}<br><span style="color:#cdd6f4;">${totalSpentPln.toFixed(2)} PLN</span></td>
                     <td colspan="2"></td>
@@ -3257,7 +3306,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 tb.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:20px; color:var(--text-muted);">Brak danych.</td></tr>`;
             }
 
-            updatePageInfo('trade-page-info', currentTradePage, maxPage, sortedTrades.length, tradePageSize);
+            updatePageInfo('trade-page-info', currentTradePage, maxPage, groups.length, tradePageSize);
         }
 
         async function deleteTrade(id) {
@@ -3328,8 +3377,26 @@ async function handleTradeAutomation(tradeId, tradeData) {
             }
         }
 
+        document.addEventListener('click', e => {
+            const t = e.target; if (!t.closest) return;
+            const head = t.closest('#tradeslist-module .hp-head');
+            if (head) { const p = head.closest('.hp-panel'); p.classList.toggle('hp-collapsed'); head.setAttribute('aria-expanded', !p.classList.contains('hp-collapsed')); return; }
+            if (t.closest('#tr-new-btn')) { const p = document.getElementById('tr-form-panel'); p.classList.remove('hp-collapsed'); p.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+            if (t.closest('#tr-expand-all')) {
+                const all = [...new Set(filteredTradesData.map(x => x.ticker))], btn = t.closest('#tr-expand-all');
+                if (window.__trOpen.size >= all.length) { window.__trOpen.clear(); btn.textContent = 'Rozwiń wszystkie'; } else { all.forEach(x => window.__trOpen.add(x)); btn.textContent = 'Zwiń wszystkie'; }
+                renderTradesTable(); return;
+            }
+            const g = t.closest('#trades-table tr.tr-grp');
+            if (g && !t.closest('a, button, .sd-link')) {
+                const tk = g.dataset.grpHead, open = !g.classList.contains('tr-open');
+                g.classList.toggle('tr-open', open);
+                if (open) window.__trOpen.add(tk); else window.__trOpen.delete(tk);
+                document.querySelectorAll('#trades-table tr.tr-child').forEach(r => { if (r.dataset.grp === tk) r.classList.toggle('tr-hidden', !open); });
+            }
+        });
         function changeTradePage(d) { 
-            const maxPage = Math.ceil(filteredTradesData.length / tradePageSize) || 1;
+            const maxPage = Math.ceil(new Set(filteredTradesData.map(t => t.ticker)).size / tradePageSize) || 1;     // stronicowanie po spółkach
             currentTradePage += d; 
             if(currentTradePage < 1) currentTradePage = 1;
             if(currentTradePage > maxPage) currentTradePage = maxPage;
