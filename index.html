@@ -7122,14 +7122,14 @@ window.Measure = (function () {
         const T = TYPES[M.type], z = formZone();
         if (!z) { toast("Najpierw wpisz strefę (początek i koniec) – weryfikacja sprawdza, czy strefa pasuje do powodu."); return; }
         if (!(parseFloat($("#form-entry").value) > 0) && M.type !== "external") { toast("Wpisz też konkretny punkt wejścia – weryfikacja sprawdza, jak daleko od niego leży poziom wskazany przez powód."); $("#form-entry").focus(); return; }
-        const params = M.type === "fibo" ? { log: !!M.opts.log } : M.type === "path" ? { tp: parseFloat($("#form-tp").value) || null } : (T.external ? { items: M.items.filter(i => i.url) } : {});
+        const params = M.type === "fibo" ? { log: !!M.opts.log } : (M.type === "path" || M.type === "xabcd") ? { tp: parseFloat($("#form-tp").value) || null } : (T.external ? { items: M.items.filter(i => i.url) } : {});
         M.lastParams = params;
         const body = { ticker: M.ticker, tf: M.tf, type: M.type, zone: z, entry: parseFloat($("#form-entry").value) || null, anchors: M.anchors, params: params };
         const box = $("#fz-result"); box.innerHTML = '<div class="ev-empty">Weryfikuję…</div>';
         try {
             const res = await fetch(API_BASE_URL + "/api/form/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
             const d = await res.json(); if (!res.ok || d.status === "error") throw new Error(d.message || "HTTP " + res.status);
-            M.result = d; M.apply = d.ref && d.ref.role === "wejście" ? "entry" : (d.ref ? "start" : "entry"); drawResult(d); drawResultCard();
+            M.result = d; M.apply = d.ref && d.ref.role === "wejście" ? "entry" : d.ref && d.ref.role === "take profit" ? "tp" : (d.ref ? "start" : "entry"); drawResult(d); drawResultCard();
         } catch (e) { M.result = null; box.innerHTML = '<div class="plx-err">' + esc(e.message) + "</div>"; }
     }
     function toast(t) { if (window.Planer) Planer.toast(t); else alert(t); }
@@ -7350,7 +7350,7 @@ window.FocusEod = (function () {
             '<br><br><b>Jak zaznaczyć?</b> Kliknij kolejno 4 świece: <b>X</b> (początek), <b>A</b> (pierwszy szczyt/dołek), <b>B</b> (cofnięcie), <b>C</b> (odbicie). Punktu D nie zaznaczasz – aplikacja wyliczy go z proporcji X-A-B-C. W formacji byczej X i B to dołki, A i C to szczyty (D będzie dołkiem do kupna); w niedźwiedziej odwrotnie.' +
             '<br><br><b>Góra czy dół świecy?</b> Automatycznie: punkt wyżej od sąsiednich punktów = góra świecy, niżej = dół. Możesz to zmienić przyciskiem przy punkcie (auto → góra → dół). Magnes przyciąga do knota albo do korpusu – tego, który jest bliżej kliknięcia; podgląd pokazuje żółta linia „🧲”.' +
             '<br><br><b>Co policzy aplikacja?</b> Proporcje B (cofnięcie XA) i C (cofnięcie AB), najbliższy wzorzec (Gartley, Bat, Butterfly, Crab, Deep Crab, Cypher), punkt D (np. Gartley: 0,786 XA, Bat: 0,886, Butterfly: 1,27, Crab: 1,618) i strefę PRZ – część wspólną D liczonego od XA i rozszerzenia BC. Jeśli te same punkty pasują do kilku wzorców, pokaże też alternatywne D.' +
-            '<br><br><b>Jak wykorzystać?</b> Punkt D (wartość odniesienia) wpisz jako punkt wejścia, a strefę w Form ustaw wokół PRZ.',
+            '<br><br><b>Jak wykorzystać?</b> Gdy formacja jest zgodna z pozycją (bycza przy LONG), D to miejsce wejścia – wpisz je jako punkt wejścia, a strefę ustaw wokół PRZ. Gdy formacja jest przeciwna do pozycji (niedźwiedzia przy LONG, np. kupno przy dołku A/C), <b>D to cel (take profit)</b> – aplikacja nie porównuje go wtedy ze strefą (cel ma leżeć daleko, poza strefą), tylko sprawdza, czy leży po stronie zysku i czy zgadza się z TP z formularza.',
         entry_type: '<b>Korekta</b> (dotychczasowy sposób): kupujesz, gdy cena cofa się do strefy (np. nieco nad OPD). Ocena wejścia sprawdza m.in. <b>głębokość wejścia w strefę</b> i reakcję świec 1H na strefę.' +
             '<br><br><b>Wybicie</b>: kupujesz, gdy cena wychodzi z konsolidacji lub przebija opór. Strefa w Form = poziom oporu (np. górna krawędź konsolidacji): jej górna krawędź to <b>poziom wybicia</b>, SL ustaw pod strefą. Ocena wejścia zamiast głębokości sprawdza warunek <b>„Wybicie”</b>: czy świeca dzienna zamknęła się nad poziomem, jaki był wolumen świecy wybicia, czy był <b>retest</b> (powrót do poziomu i jego obrona zamknięciem) i czy kurs nie odjechał za daleko (pościg).' +
             '<br><br>Najlepsze wejście na wybiciu: retest obroniony zamknięciem. Kurs z powrotem pod poziomem po wybiciu = <b>fałszywe wybicie</b> (ocena 0).'
