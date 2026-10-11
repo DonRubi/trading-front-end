@@ -146,6 +146,11 @@
         .hp-x { background: none; border: 0; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 2px 6px; border-radius: 6px; }
         .hp-x:hover { color: var(--danger); background: rgba(246,70,93,.1); }
         .hp-panel .dashboard-grid { padding: 0; }
+        .mn-label { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin: 4px 0 10px; } .mn-label:not(:first-child) { margin-top: 18px; }
+        .menu-card.mn-step { position: relative; gap: 6px; } .mn-num { position: absolute; top: 8px; left: 10px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #111; font-weight: 800; font-size: .78rem; display: flex; align-items: center; justify-content: center; }
+        .mn-sub { margin: 0; font-size: .78rem; color: var(--text-muted); }
+        @media (min-width: 1200px) { .dashboard-grid.mn-flow { grid-template-columns: repeat(6, 1fr); } .mn-flow .mn-step:not(:last-child)::after { content: "→"; position: absolute; right: -11px; top: 50%; transform: translateY(-50%); color: var(--accent); font-weight: 800; z-index: 1; } }
+
         @media (max-width: 640px) {
             .hp-note-form { grid-template-columns: 1fr 1fr; } .hp-note-form input:nth-child(3), .hp-note-form button { grid-column: 1 / -1; }
             .hp-big { font-size: 1.6rem; } .hp-wbar .hp-wtrack { display: none; } .hp-wrap { padding: 10px; }
@@ -325,6 +330,19 @@
         .fz-zblock { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; } .fz-zhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; flex-wrap: wrap; } .fz-zbody { padding: 0 14px 10px; display: none; } .fz-zblock.open .fz-zbody { display: block; } .fz-zblock.open .fz-chev { transform: rotate(90deg); }
         #fz-modal .form-group input, #fz-modal .form-group select { width: 100%; }
         @media (max-width: 760px) { .fz-sub { display: block; overflow-x: auto; } }
+        .rc-ana { border: 1px solid rgba(166,227,161,.45); background: rgba(166,227,161,.06); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+        .rc-ana-h { font-weight: 700; font-size: 1.05em; color: #a6e3a1; } .rc-ana-item + .rc-ana-item { border-top: 1px solid var(--border-color); padding-top: 10px; }
+        .rc-ana-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .rc-ana-link { margin-left: auto; text-decoration: none; border-color: #a6e3a1 !important; color: #a6e3a1 !important; font-weight: 600; }
+        .rc-ana-dir { border: 1px solid; border-radius: 999px; padding: 1px 8px; font-size: .85em; } .rc-ana-note { font-size: 1.12em; line-height: 1.45; margin: 6px 0 2px; color: var(--text-main); font-style: italic; }
+        .rc-ana-url { font-size: .82em; word-break: break-all; } .rc-ana-url a { color: var(--text-muted); }
+        .rc-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; } .rc-chips { display: flex; gap: 6px; flex-wrap: wrap; } .rc-tf { display: flex; gap: 6px; }
+        .rc-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 999px; padding: 4px 11px; font-size: .85em; cursor: pointer; }
+        .rc-chip i, .rc-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; } .rc-chip.off { opacity: .45; } .rc-chip.off i { filter: grayscale(1); }
+        .rc-box { position: relative; } #rc-chart { height: 480px; width: 100%; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-main); }
+        @media (min-width: 2400px) { #rc-chart { height: 620px; } } @media (max-width: 760px) { #rc-chart { height: 320px; } }
+        .rc-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .82em; color: var(--text-muted); } .rc-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .rc-badge { display: inline-block; margin: 4px 4px 0 0; padding: 2px 9px; border-radius: 999px; border: 1px solid #a6e3a1; color: #a6e3a1; font-weight: 600; font-size: .85em; text-decoration: none; }
+        .rc-badge-note { font-size: .82em; color: var(--text-main); font-style: italic; margin-top: 3px; max-width: 360px; }
         #fz-chart { height: 430px; width: 100%; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-main); } @media (max-width: 760px) { #fz-chart { height: 330px; } }
         .fz-slots { display: flex; flex-wrap: wrap; gap: 6px; } .fz-slot { border: 1px dashed var(--border-color); border-radius: 8px; padding: 4px 10px; font-size: 0.84rem; color: var(--text-muted); } .fz-slot.cur { border-color: var(--accent); color: var(--text-main); } .fz-slot.done { border-style: solid; border-color: var(--success); color: var(--text-main); }
         .fz-facts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; line-height: 1.45; } .fz-ext { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-bottom: 8px; }
@@ -512,18 +530,22 @@
             <section class="hp-panel" data-hp-panel="modules">
                 <button class="hp-head" type="button" aria-expanded="true"><h2><span class="hp-dot"></span>Moduły</h2><span class="hp-peek"></span><svg class="hp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
                 <div class="hp-body"><div class="hp-inner"><div class="hp-content">
+                    <div class="mn-label">Ścieżka inwestycji – w kolejności wypełniania</div>
+                    <div class="dashboard-grid mn-flow">
+                        <div class="menu-card mn-step" onclick="openModule('form-module', 'Form')"><span class="mn-num">1</span><span class="icon">📝</span><h3>Form</h3><p class="mn-sub">strefy, SL, TP i powody</p></div>
+                        <div class="menu-card mn-step" onclick="openModule('focuslist-module', 'Radar zagrań')"><span class="mn-num">2</span><span class="icon">👁️</span><h3>Radar zagrań</h3><p class="mn-sub">ocena momentu wejścia</p></div>
+                        <div class="menu-card mn-step" onclick="openModule('focus2-module', 'Focus')"><span class="mn-num">3</span><span class="icon">🎯</span><h3>Focus</h3><p class="mn-sub">zapisane oceny wejścia</p></div>
+                        <div class="menu-card mn-step" onclick="openModule('tradeslist-module', 'Transakcje')"><span class="mn-num">4</span><span class="icon">📊</span><h3>Transakcje</h3><p class="mn-sub">zakup z wpisu Focus</p></div>
+                        <div class="menu-card mn-step" onclick="openModule('eod-module', 'Koniec dnia (EOD)')"><span class="mn-num">5</span><span class="icon">🌙</span><h3>EOD</h3><p class="mn-sub">ocena po zamknięciu sesji</p></div>
+                        <div class="menu-card mn-step" onclick="openModule('planner-module', 'Planer')"><span class="mn-num">6</span><span class="icon">🧭</span><h3>Planer</h3><p class="mn-sub">prowadzenie pozycji, kartki, TP</p></div>
+                    </div>
+                    <div class="mn-label">Narzędzia i analiza</div>
                     <div class="dashboard-grid">
-                        <div class="menu-card" onclick="openModule('form-module', 'Form')"><span class="icon">📝</span><h3>Form</h3></div>
-                        <div class="menu-card" onclick="openModule('focus2-module', 'Focus')"><span class="icon">🎯</span><h3>Focus</h3></div>
-                        <div class="menu-card" onclick="openModule('eod-module', 'Koniec dnia (EOD)')"><span class="icon">🌙</span><h3>EOD</h3></div>
-                        <div class="menu-card" onclick="openModule('tradeslist-module', 'Transakcje')"><span class="icon">📊</span><h3>Transakcje</h3></div>
+                        <div class="menu-card" onclick="openModule('dailybrief-module', 'Przegląd dnia')"><span class="icon">📰</span><h3>Przegląd dnia</h3></div>
+                        <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Analiza techniczna')"><span class="icon">📐</span><h3>Analiza techniczna</h3></div>
+                        <div class="menu-card" onclick="openModule('alerthistory-module', 'Historia alertów')"><span class="icon">🔔</span><h3>Historia alertów</h3></div>
                         <div class="menu-card" onclick="openModule('summary-module', 'Podsumowanie')"><span class="icon">📈</span><h3>Podsumowanie</h3></div>
                         <div class="menu-card" onclick="openModule('database-module', 'Baza danych')"><span class="icon">🗄️</span><h3>Baza danych</h3></div>
-                        <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Analiza techniczna')"><span class="icon">📐</span><h3>Analiza techniczna</h3></div>
-                        <div class="menu-card" onclick="openModule('focuslist-module', 'Radar zagrań')"><span class="icon">👁️</span><h3>Radar zagrań</h3></div>
-                        <div class="menu-card" onclick="openModule('alerthistory-module', 'Historia alertów')"><span class="icon">🔔</span><h3>Historia alertów</h3></div>
-                        <div class="menu-card" onclick="openModule('dailybrief-module', 'Przegląd dnia')"><span class="icon">📰</span><h3>Przegląd dnia</h3></div>
-                        <div class="menu-card" onclick="openModule('planner-module', 'Planer')"><span class="icon">🧭</span><h3>Planer</h3></div>
                     </div>
                 </div></div></div>
             </section>
@@ -6571,7 +6593,7 @@ window.FormZones = (function () {
                 const e = p.e, id = esc(e.entry_id), d = e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–";
                 const prio = e.priority === 1 ? '<span style="color:#fcd535;font-weight:700;cursor:pointer;border-bottom:1px dashed #fcd535" onclick="updateFormEntryField(\'' + id + '\',\'priority\',0)">⚡ Wysoki</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'priority\',1)">Normalny</span>';
                 const mute = p.muted ? '<span style="color:var(--danger);font-weight:700;cursor:pointer;border-bottom:1px dashed var(--danger)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',0)">🔕 Wyciszone</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',1)">🔔 Aktywne</span>';
-                const reasons = (Array.isArray(e.reasons) ? e.reasons : []).map(r => chip(r, e)).join("") || '<span class="ev-muted">brak</span>';
+                const reasons = ((Array.isArray(e.reasons) ? e.reasons : []).map(r => chip(r, e)).join("") || '<span class="ev-muted">brak</span>') + ReasonChart.analysisBadge(e);
                 return '<tr class="' + (p.muted ? "fz-muted-row" : "") + '"><td><a href="#" data-fz-detail="' + id + '" title="Szczegóły zagrania"><b>' + id + "</b></a></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
                     '</td><td style="color:#a6e3a1;font-weight:700" title="Suma jakości powodów (np. powód wypełniony w 60% = 0,6)">' + fmtScore(p.score) + "/5</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
                     '<td style="white-space:nowrap"><button class="btn-edit" data-fz-detail="' + id + '" title="Szczegóły zagrania">🔍</button> <button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="openEditModal(\'form\', \'' + id + '\')" title="Edytuj">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
@@ -6733,10 +6755,12 @@ window.FormZones = (function () {
         let h = '<div class="plx-head"><div><div class="plx-title">' + esc(e.ticker) + ' <a class="sd-link" data-tk="' + esc(e.ticker) + '" style="font-size:.6em">wykres</a> <a class="sd-link" href="' + esc(getTradingViewLink(e.ticker)) + '" target="_blank" rel="noopener" style="font-size:.6em">TradingView</a></div>' +
             '<div class="plx-sub">' + esc((tm && tm.stock_name) || "") + " · zagranie " + esc(e.entry_id) + " · " + arrow(p.long) + " strefa " + price(cur.z.lo) + "–" + price(cur.z.hi) + (p.muted ? " · 🔕 wyciszone" : "") + "</div></div>" +
             '<div class="fz-nav"><button class="hp-btn" data-fz-nav="prev"' + (prev ? "" : " disabled") + ' title="Niżej (←)">◀ Niżej</button><span class="ev-muted">' + (i + 1) + " z " + items.length + '</span><button class="hp-btn" data-fz-nav="next"' + (next ? "" : " disabled") + ' title="Wyżej (→)">Wyżej ▶</button><button class="hp-btn" data-fz-dclose>✕</button></div></div>';
+        h += ReasonChart.analysisHtml(e);
         h += '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Wejście</div><div class="v">' + price(p.entry) + '</div><div class="s">kurs ' + price(cp) + (dist != null ? " (" + (dist > 0 ? "+" : "") + num(dist, 1) + "% od wejścia)" : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">TP / SL</div><div class="v">' + price(p.tp) + " / " + price(p.sl) + '</div><div class="s">R:R ' + num(p.rr, 2) + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Score</div><div class="v">' + fmtScore(p.score) + '/5</div><div class="s">' + (e.score_manual != null && e.score_manual !== "" ? "ręcznie; rekomendacja " + fmtScore(scoreAuto(e)) : "rekomendacja: suma jakości powodów") + (e.priority === 1 ? " · ⚡ priorytet" : "") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Status</div><div class="v" style="color:' + STCOL[p.status] + '">' + esc(p.status) + '</div><div class="s">dodano ' + (e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–") + "</div></div></div>";
+        h += ReasonChart.sectionHtml(e);
         const zoneIds = new Set(((cur.z && cur.z.all) || []).map(x => x.e.entry_id).concat([e.entry_id])), slc = ((formEntries || []).find(x => zoneIds.has(x.entry_id) && x.sl_candle) || {}).sl_candle || "";
         h += '<div class="plx-play" style="margin:8px 0"><label class="ev-muted">Świeca SL strefy (przebicie jej korpusu = SL): <input type="date" id="fz-slc" value="' + esc(String(slc).slice(0, 10)) + '" style="width:auto"></label> <button class="hp-btn" style="padding:3px 10px" data-fz-slc="' + esc(e.entry_id) + '" data-fz-tk="' + esc(e.ticker) + '">Zapisz</button> <span id="fz-slc-msg" class="ev-muted">' + (slc ? "" : "nie ustawiono – SL nie jest liczony przez strażnika planu") + "</span></div>";
         h += '<div class="plx-play" style="margin:8px 0"><label class="ev-muted">Score ręcznie (0–5, puste = rekomendacja ' + fmtScore(scoreAuto(e)) + '): <input type="number" id="fz-score" min="0" max="5" step="0.1" value="' + (e.score_manual != null ? esc(e.score_manual) : "") + '" style="width:70px"></label> <input type="text" id="fz-score-note" placeholder="dlaczego zmieniasz" value="' + esc(e.score_note || "") + '" style="width:200px"> <button class="hp-btn" style="padding:3px 10px" data-fz-score="' + esc(e.entry_id) + '">Zapisz</button> <span id="fz-score-msg" class="ev-muted"></span></div>';
@@ -6748,6 +6772,7 @@ window.FormZones = (function () {
         h += '<div class="plx-actions"><button class="hp-btn" onclick="FormZones.closeDetail(); copyFormEntry(\'' + esc(e.entry_id) + '\')">📋 Klonuj</button><button class="hp-btn" onclick="openEditModal(\'form\', \'' + esc(e.entry_id) + '\')">✎ Edytuj</button>' +
             '<button class="hp-btn" onclick="updateFormEntryField(\'' + esc(e.entry_id) + "', 'mute', " + (p.muted ? 0 : 1) + ')">' + (p.muted ? "🔔 Włącz" : "🔕 Wycisz") + "</button></div>";
         o.firstChild.innerHTML = h;
+        ReasonChart.mount(e);
         const forId = e.entry_id;
         zoneQualityBlock(e.ticker, forId).then(html => { const el = $("#fz-zq"); if (el && el.dataset.for === forId) el.innerHTML = html; });
     }
@@ -6756,7 +6781,7 @@ window.FormZones = (function () {
         if (!o) { o = document.createElement("div"); o.id = "fz-detail"; o.className = "plx-overlay fz-detail"; o.innerHTML = '<div class="plx-panel"></div>'; document.body.appendChild(o); o.addEventListener("mousedown", e => { if (e.target === o) closeDetail(); }); }
         D.id = id; renderDetail(); o.classList.add("open"); lock(true);
     }
-    function closeDetail() { const o = $("#fz-detail"); if (o) o.classList.remove("open"); D.id = null; lock(false); }
+    function closeDetail() { const o = $("#fz-detail"); if (o) o.classList.remove("open"); D.id = null; lock(false); ReasonChart.destroy(); }
     function navDetail(dir) {
         const e = (formEntries || []).find(x => x.entry_id === D.id); if (!e) return;
         const items = ladder(e.ticker, D.id), i = items.findIndex(x => x.p.e.entry_id === D.id), t = items[i + (dir === "next" ? 1 : -1)];
@@ -7155,6 +7180,219 @@ window.FocusEod = (function () {
         } catch (err) { alert(err.message || err); if (calc) calc.textContent = "Policz"; }
     });
     return { loadFocus: loadFocus, renderFocus: renderFocus, loadEod: loadEod, renderEod: renderEod };
+})();
+</script>
+<script>
+/* Form – szczegóły wpisu: wykres z zapisanymi powodami (formacje, FVG, Volume Profile z boku jak w TradingView) i wyraźna analiza zewnętrzna.
+   Powody odtwarzane są z zapisanych kotwic przez /api/form/verify (te same obliczenia co przy dodawaniu, na bieżących świecach). */
+window.ReasonChart = (function () {
+    "use strict";
+    const $ = (s, r) => (r || document).querySelector(s);
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const num = (v, d) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const price = v => v == null ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
+    const COL = { fvg: "#89b4fa", swing: "#f9e2af", trend: "#94e2d5", correction: "#b4befe", fibo: "#fab387", one2one: "#f38ba8", xabcd: "#cba6f7", rgr: "#f9e2af", elliott: "#f2cdcd", vwap: "#74c7ec", vp: "#fcd535", external: "#a6e3a1" };
+    const FORMATION = { fibo: 1, one2one: 1, xabcd: 1, rgr: 1, elliott: 1 };
+    const S = { id: null, entry: null, tf: "1d", bars: {}, res: {}, hidden: new Set(), seq: 0 };
+    let chart = null, candle = null, vol = null, prim = null, lines = [], series = [];
+
+    const zoneOf = e => { const a = parseFloat(e.start_zone), b = parseFloat(e.end_zone); return { lo: Math.min(a, b), hi: Math.max(a, b), side: ["DBR", "RBR"].indexOf(e.direction) >= 0 ? "LONG" : "SHORT" }; };
+    const details = e => (Array.isArray(e.reasons_detail) ? e.reasons_detail : []);
+    const key = (e, d, tf) => e.entry_id + "|" + d.type + "|" + tf;
+
+    // ---------- analiza zewnętrzna (wyraźnie, na górze szczegółów) ----------
+    function analysisHtml(e) {
+        const items = [];
+        details(e).filter(d => d.type === "external").forEach(d => (d.items || []).forEach(i => items.push(i)));
+        if (!items.length) return "";
+        const DIR = { byczy: ["▲ byczy", "var(--success)"], "niedźwiedzi": ["▼ niedźwiedzi", "var(--danger)"], neutralny: ["◆ neutralny", "var(--text-muted)"] };
+        return '<div class="rc-ana"><div class="rc-ana-h">📄 Analiza i komentarz</div>' + items.map(i => {
+            const dir = DIR[i.direction];
+            let host = ""; try { host = new URL(i.url).hostname.replace(/^www\./, ""); } catch (x) { host = i.url || ""; }
+            return '<div class="rc-ana-item"><div class="rc-ana-top"><b>' + esc(i.source || host) + "</b>" + (i.date ? ' <span class="ev-muted">' + esc(i.date) + "</span>" : "") +
+                (dir ? ' <span class="rc-ana-dir" style="color:' + dir[1] + ';border-color:' + dir[1] + '">' + dir[0] + "</span>" : "") +
+                (i.url ? '<a class="hp-btn rc-ana-link" href="' + esc(i.url) + '" target="_blank" rel="noopener">Otwórz analizę ↗</a>' : "") + "</div>" +
+                (i.note ? '<div class="rc-ana-note">„' + esc(i.note) + "”</div>" : '<div class="ev-muted">Brak komentarza do tej analizy.</div>') +
+                ((i.levels || []).length ? '<div class="ev-muted">Poziomy z analizy: <b>' + i.levels.map(price).join(" · ") + "</b> (na wykresie zielone kropkowane linie)</div>" : "") +
+                (i.url ? '<div class="rc-ana-url"><a href="' + esc(i.url) + '" target="_blank" rel="noopener">' + esc(i.url) + "</a></div>" : "") + "</div>";
+        }).join("") + "</div>";
+    }
+
+    // ---------- szkielet sekcji wykresu ----------
+    function sectionHtml(e) {
+        return '<div class="plx-h">Wykres i powody</div><div class="rc-bar"><div id="rc-chips" class="rc-chips"></div><div class="rc-tf"><button class="hp-btn" data-rc-tf="1d">1D</button><button class="hp-btn" data-rc-tf="1w">1W</button></div></div>' +
+            '<div class="rc-box"><div id="rc-chart"></div></div><div id="rc-legend" class="rc-legend"></div>';
+    }
+
+    // ---------- wykres ----------
+    function makePrim() {
+        const p = {
+            bands: [], profile: null, zone: null, series: null, chart: null, request: null,
+            attached(a) { this.series = a.series; this.chart = a.chart; this.request = a.requestUpdate; }, detached() { this.series = null; this.request = null; }, updateAllViews() {},
+            set(b, pr, z) { this.bands = b; this.profile = pr; this.zone = z; if (this.request) this.request(); }, paneViews() { return [view]; }
+        };
+        const view = { zOrder: () => "bottom", renderer: () => ({ draw() {}, drawBackground(target) {
+            if (!p.series) return;
+            target.useBitmapCoordinateSpace(({ context: ctx, bitmapSize, verticalPixelRatio: vr, horizontalPixelRatio: hr }) => {
+                const Y = v => p.series.priceToCoordinate(v);
+                p.bands.forEach(z => {
+                    const y1 = Y(z.hi), y2 = Y(z.lo); if (y1 == null || y2 == null) return;
+                    let x0 = 0;
+                    if (z.t0 && p.chart) { const x = p.chart.timeScale().timeToCoordinate(z.t0); x0 = x == null ? 0 : Math.max(0, x * hr); }
+                    const top = Math.min(y1, y2) * vr, h = Math.max(Math.abs(y2 - y1) * vr, 1), w = bitmapSize.width - x0;
+                    ctx.fillStyle = z.fill; ctx.fillRect(x0, top, w, h);
+                    ctx.strokeStyle = z.stroke; ctx.lineWidth = Math.max(vr, 1) * (z.bold ? 2 : 1); ctx.setLineDash(z.dash ? [6 * vr, 4 * vr] : []);
+                    ctx.strokeRect(x0, top, w, h); ctx.setLineDash([]);
+                    if (z.label) { ctx.fillStyle = z.stroke; ctx.font = "600 " + (11 * vr) + "px sans-serif"; ctx.fillText(z.label, x0 + 6 * hr, top + 13 * vr); }
+                });
+                const pr = p.profile, zn = p.zone;
+                if (pr) {          // Volume Profile jak w TradingView: słupki od prawej krawędzi, wiersze w strefie podświetlone
+                    const mx = Math.max.apply(null, pr.bins) || 1, W = bitmapSize.width * 0.3, right = bitmapSize.width;
+                    pr.bins.forEach((v, i) => {
+                        const lo = pr.lo + i * pr.step, hi = lo + pr.step, y1 = Y(hi), y2 = Y(lo); if (y1 == null || y2 == null) return;
+                        const inZone = zn && hi > zn.lo && lo < zn.hi, inVA = lo >= pr.val - 1e-9 && hi <= pr.vah + 1e-9, isPoc = pr.poc >= lo && pr.poc < hi;
+                        ctx.fillStyle = inZone ? "rgba(252,213,53,0.62)" : inVA ? "rgba(137,180,250,0.32)" : "rgba(137,180,250,0.16)";
+                        const w = v / mx * W, top = Math.min(y1, y2) * vr, h = Math.max(Math.abs(y2 - y1) * vr - 1, 1);
+                        ctx.fillRect(right - w, top, w, h);
+                        if (isPoc) { ctx.strokeStyle = "#f38ba8"; ctx.lineWidth = Math.max(vr, 1) * 1.5; ctx.strokeRect(right - w, top, w, h); }
+                    });
+                }
+            });
+        } }) };
+        return p;
+    }
+    function destroy() {
+        if (chart) { try { chart.remove(); } catch (x) {} }
+        chart = candle = vol = prim = null; lines = []; series = [];
+    }
+    function ensureChart() {
+        const box = $("#rc-chart"); if (!box) return false;
+        if (typeof LightweightCharts === "undefined") { box.innerHTML = '<div class="ev-empty ev-bad">Biblioteka wykresów nie została wczytana.</div>'; return false; }
+        if (chart && box.firstChild) return true;
+        destroy();
+        chart = LightweightCharts.createChart(box, { autoSize: true, layout: { background: { type: "solid", color: "transparent" }, textColor: "#848e9c", fontSize: 12 },
+            grid: { vertLines: { color: "rgba(132,142,156,0.08)" }, horzLines: { color: "rgba(132,142,156,0.08)" } }, rightPriceScale: { borderColor: "rgba(132,142,156,0.25)" },
+            timeScale: { borderColor: "rgba(132,142,156,0.25)", rightOffset: 8 }, crosshair: { mode: 0 } });
+        candle = chart.addCandlestickSeries({ upColor: "#0ecb81", downColor: "#f6465d", borderUpColor: "#0ecb81", borderDownColor: "#f6465d", wickUpColor: "#0ecb81", wickDownColor: "#f6465d" });
+        vol = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", color: "rgba(132,142,156,0.35)" });
+        chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+        prim = makePrim(); candle.attachPrimitive(prim);
+        return true;
+    }
+    async function bars(tk, tf) {
+        const k = tk + "|" + tf; if (S.bars[k]) return S.bars[k];
+        const res = await fetch(API_BASE_URL + "/api/candles?ticker=" + encodeURIComponent(tk) + "&tf=" + tf + "&limit=" + (tf === "1d" ? 1500 : 520));
+        const d = await res.json(); if (!res.ok || d.status === "error") throw new Error(d.message || "HTTP " + res.status);
+        return (S.bars[k] = d.bars || []);
+    }
+    async function verifyOne(e, d, tf) {
+        const k = key(e, d, tf); if (S.res[k]) return S.res[k];
+        const z = zoneOf(e), entry = parseFloat(e.entry_point) || (z.lo + z.hi) / 2;
+        const res = await fetch(API_BASE_URL + "/api/form/verify", { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticker: e.ticker, tf: tf, type: d.type, zone: z, entry: entry, anchors: d.anchors || [], params: d.params || {} }) });
+        const r = await res.json().catch(() => ({})); if (!res.ok || r.status === "error") throw new Error(r.message || "HTTP " + res.status);
+        return (S.res[k] = r);
+    }
+    const tfOf = d => d.tf || "1d";
+
+    // ---------- rysowanie ----------
+    function draw() {
+        const e = S.entry; if (!e || !candle) return;
+        lines.forEach(l => { try { candle.removePriceLine(l); } catch (x) {} }); lines = [];
+        series.forEach(s => { try { chart.removeSeries(s); } catch (x) {} }); series = [];
+        const z = zoneOf(e), long = z.side === "LONG", bands = [], marks = [];
+        bands.push({ lo: z.lo, hi: z.hi, fill: long ? "rgba(14,203,129,0.16)" : "rgba(246,70,93,0.16)", stroke: long ? "#0ecb81" : "#f6465d", bold: true, label: "STREFA " + price(z.lo) + "–" + price(z.hi) });
+        const PL = (p, c, t, st) => { if (p != null && !isNaN(p)) lines.push(candle.createPriceLine({ price: +p, color: c, lineWidth: 1, lineStyle: st, axisLabelVisible: true, title: t })); };
+        PL(parseFloat(e.entry_point), "#fcd535", "wejście", 0); PL(parseFloat(e.take_profit), "#0ecb81", "TP", 2); PL(parseFloat(e.stop_loss), "#f6465d", "SL", 2);
+        let profile = null;
+        const ST = { dashed: 2, dotted: 1, solid: 0 };
+        details(e).forEach(d => {
+            if (S.hidden.has(d.type)) return;
+            const col = COL[d.type] || "#cdd6f4";
+            if (d.type === "external") {
+                (d.items || []).forEach(i => (i.levels || []).forEach(v => PL(parseFloat(v), "#a6e3a1", (i.source || "analiza").slice(0, 14), 1)));
+                return;
+            }
+            if (tfOf(d) !== S.tf) return;
+            const r = S.res[key(e, d, S.tf)]; if (!r) return;
+            const ov = r.overlay || {};
+            (ov.lines || []).forEach(l => PL(l.price, l.color || col, l.label || "", ST[l.style] != null ? ST[l.style] : 2));
+            (ov.bands || []).forEach(b => {
+                const t0 = d.type === "fvg" && (d.anchors || [])[0] ? d.anchors[0].t : null;
+                bands.push({ lo: b.lo, hi: b.hi, t0: t0, fill: "rgba(137,180,250,0.20)", stroke: col, label: b.label + (r.lifecycle && r.lifecycle.status === "zakończony" ? " (pokryta)" : "") });
+                const lo = Math.max(b.lo, z.lo), hi = Math.min(b.hi, z.hi);          // część luki pokrywająca się ze strefą – podświetlona
+                if (hi > lo) bands.push({ lo: lo, hi: hi, t0: t0, fill: "rgba(252,213,53,0.30)", stroke: "#fcd535", dash: true, label: "FVG ∩ strefa" });
+            });
+            (ov.series || []).forEach(s => { const ls = chart.addLineSeries({ color: s.color || col, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: s.name }); ls.setData(s.points.map(p => ({ time: p.t, value: p.v }))); series.push(ls); });
+            (ov.segments || []).forEach(sg => { const ls = chart.addLineSeries({ color: sg.color || col, lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: false }); ls.setData([{ time: sg.p1.t, value: sg.p1.v }, { time: sg.p2.t, value: sg.p2.v }]); series.push(ls); });
+            if (FORMATION[d.type]) {     // formacja narysowana jak w TradingView: łamana przez wskazane punkty
+                let pts = (d.anchors || []).filter(a => a.p != null).map(a => ({ time: a.t, value: +a.p }));
+                if (d.type === "rgr") pts = pts.slice(0, 3);
+                pts = pts.filter((p, i, arr) => !i || p.time > arr[i - 1].time);
+                if (pts.length >= 2) { const ls = chart.addLineSeries({ color: col, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }); ls.setData(pts); series.push(ls); }
+                if (d.type === "xabcd" && pts.length >= 3) {
+                    const ls = chart.addLineSeries({ color: col, lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+                    ls.setData([pts[0], pts[2]].concat(pts.length >= 5 ? [pts[4]] : [])); series.push(ls);
+                }
+            }
+            (ov.markers || []).forEach(m => marks.push({ time: m.t, position: m.pos === "inBar" ? "aboveBar" : m.pos, color: m.color || col, shape: m.pos === "inBar" ? "circle" : (m.pos === "aboveBar" ? "arrowDown" : "arrowUp"), text: m.text || "" }));
+            if (ov.profile) profile = ov.profile;
+        });
+        candle.setMarkers(marks.sort((a, b) => a.time - b.time));
+        prim.set(bands, profile, z);
+        legend(profile, z);
+    }
+    function legend(pr, z) {
+        const el = $("#rc-legend"); if (!el) return;
+        let h = '<span><i style="background:rgba(14,203,129,.5)"></i>strefa zagrania</span><span><i style="background:#fcd535"></i>wejście</span><span><i style="background:#0ecb81"></i>TP</span><span><i style="background:#f6465d"></i>SL</span>';
+        if (pr) {
+            const tot = pr.bins.reduce((s, v) => s + v, 0) || 1;
+            const inZ = pr.bins.reduce((s, v, i) => { const lo = pr.lo + i * pr.step, hi = lo + pr.step; return s + (hi > z.lo && lo < z.hi ? v : 0); }, 0);
+            h += '<span><i style="background:rgba(252,213,53,.62)"></i><b>Volume Profile: ' + num(inZ / tot * 100, 1) + "% wolumenu profilu w strefie</b></span>" +
+                '<span><i style="background:rgba(137,180,250,.32)"></i>obszar wartości ' + price(pr.val) + "–" + price(pr.vah) + '</span><span><i style="background:#f38ba8"></i>POC ' + price(pr.poc) + (pr.poc >= z.lo && pr.poc <= z.hi ? " (w strefie)" : "") + "</span>";
+        }
+        el.innerHTML = h;
+    }
+    function chips() {
+        const e = S.entry, box = $("#rc-chips"); if (!box || !e) return;
+        const ds = details(e), names = (e.reasons || []).filter(n => !ds.some(d => String(d.label).toLowerCase() === String(n).toLowerCase()));
+        box.innerHTML = ds.map(d => {
+            const r = S.res[key(e, d, S.tf)], other = d.type !== "external" && tfOf(d) !== S.tf, err = S.res["err|" + key(e, d, S.tf)];
+            const off = S.hidden.has(d.type), col = COL[d.type] || "#cdd6f4";
+            const q = r && r.quality != null ? r.quality : d.quality;
+            const ttl = other ? "Zmierzone na " + (tfOf(d) === "1w" ? "1W" : "1D") + " – przełącz interwał" : err ? "Nie udało się odtworzyć: " + err : (d.facts || []).join("\n");
+            return '<button type="button" class="rc-chip' + (off || other ? " off" : "") + '" data-rc-tg="' + esc(d.type) + '" title="' + esc(ttl) + '"><i style="background:' + col + '"></i>' + esc(d.label) + " " + Math.round((q || 0) * 100) + "%" + (err ? " ⚠" : "") + (other ? " · " + (tfOf(d) === "1w" ? "1W" : "1D") : "") + "</button>";
+        }).join("") + names.map(n => '<span class="rc-chip off" title="Powód bez pomiaru na wykresie">' + esc(n) + "</span>").join("") || '<span class="ev-muted">Brak powodów z pomiarem.</span>';
+        document.querySelectorAll("[data-rc-tf]").forEach(b => b.classList.toggle("ev-go", b.dataset.rcTf === S.tf));
+    }
+    async function load() {
+        const e = S.entry, seq = ++S.seq; if (!e || !ensureChart()) return;
+        chips();
+        try {
+            const bs = await bars(e.ticker, S.tf); if (seq !== S.seq || !candle) return;
+            candle.setData(bs.map(b => ({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c })));
+            vol.setData(bs.map(b => ({ time: b.t, value: b.v, color: b.c >= b.o ? "rgba(14,203,129,0.25)" : "rgba(246,70,93,0.25)" })));
+            const n = bs.length; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (S.tf === "1d" ? 180 : 110)), to: n + 8 });
+        } catch (x) { const el = $("#rc-legend"); if (el) el.innerHTML = '<span class="plx-err">Nie udało się wczytać wykresu: ' + esc(x.message) + "</span>"; return; }
+        draw();
+        const todo = details(e).filter(d => d.type !== "external" && tfOf(d) === S.tf);
+        await Promise.all(todo.map(d => verifyOne(e, d, S.tf).then(() => { delete S.res["err|" + key(e, d, S.tf)]; }).catch(x => { S.res["err|" + key(e, d, S.tf)] = x.message; })));
+        if (seq !== S.seq) return;
+        chips(); draw();
+    }
+    function mount(e) {
+        if (S.id !== e.entry_id) { S.hidden = new Set(); const t = details(e).find(d => d.type !== "external"); S.tf = t ? tfOf(t) : "1d"; }
+        S.id = e.entry_id; S.entry = e; destroy(); load();
+    }
+    document.addEventListener("click", ev => {
+        const t = ev.target; if (!t.closest) return;
+        const tg = t.closest("[data-rc-tg]"); if (tg) { const k = tg.dataset.rcTg; S.hidden.has(k) ? S.hidden.delete(k) : S.hidden.add(k); chips(); draw(); return; }
+        const tf = t.closest("[data-rc-tf]"); if (tf && tf.dataset.rcTf !== S.tf) { S.tf = tf.dataset.rcTf; load(); }
+    });
+    return { analysisHtml: analysisHtml, sectionHtml: sectionHtml, mount: mount, destroy: destroy, analysisBadge: e => {
+        const it = []; details(e).filter(d => d.type === "external").forEach(d => (d.items || []).forEach(i => it.push(i)));
+        return it.length ? '<a class="rc-badge" href="' + esc(it[0].url) + '" target="_blank" rel="noopener" title="' + esc((it[0].source || "") + (it[0].note ? " – " + it[0].note : "")) + '">📄 Analiza' + (it.length > 1 ? " ×" + it.length : "") + "</a>" + (it[0].note ? '<div class="rc-badge-note">„' + esc(it[0].note.length > 90 ? it[0].note.slice(0, 90) + "…" : it[0].note) + "”</div>" : "") : "";
+    } };
 })();
 </script>
 </body>
