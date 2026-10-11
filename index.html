@@ -1201,6 +1201,7 @@
                         <button class="hp-btn dbx-green" onclick="fixTickerNames()">🏢 Pobierz nazwy spółek z Yahoo</button>
                         <button class="hp-btn" onclick="fixHistoricalFxRates()">🛠️ Nadpisz kursy „4.0” w Supabase</button>
                         <button class="hp-btn" onclick="forceCurrencyUpdate()">🔄 Przelicz i napraw waluty wg giełd</button>
+                        <button class="hp-btn" onclick="rebuildRoiHistory()" title="Przelicza zapisane dni wykresu Portfel vs S&amp;P 500 z cen zamknięcia i kursów z tych dni (najpierw podgląd)">📉 Przelicz historię portfela (dni)</button>
                     </div>
                     <div id="service-output" style="margin-top: 16px; padding: 12px; background: var(--bg-input); border-radius: 10px; font-family: monospace; display: none;"></div>
                 </div>
@@ -4516,6 +4517,29 @@ async function handleTradeAutomation(tradeId, tradeData) {
         async function deleteDeposit(id) { if(!confirm("Na pewno usunąć?")) return; try { await fetch(`${API_BASE_URL}/api/portfolio/deposits/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); initSummaryModule(); } catch(e) {} }
         async function addDividend(e) { e.preventDefault(); const tid = document.getElementById('div-trade-id').value; const date = document.getElementById('div-date').value; const amt = document.getElementById('div-amount').value; try { await fetch(`${API_BASE_URL}/api/trades/dividend/add`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({trade_id: parseInt(tid), dividend_date: date, amount: parseFloat(amt)}) }); document.getElementById('div-amount').value = ''; fetchTradesEntries(true); alert("Dywidenda dodana!"); } catch(err) {} }
         async function forceAlertsCheck() { const out = document.getElementById('service-output'); out.style.display = 'block'; out.innerHTML = '⏳ Uruchamianie silnika alertów...'; try { const res = await fetch(`${API_BASE_URL}/api/cron/check-alerts`); const result = await res.json(); out.innerHTML = `✅ <strong>Gotowe.</strong> Aktywowane: ${result.alerts_triggered || 0}`; } catch(e) { out.innerHTML = `❌ Błąd.`; } }
+
+        // przeliczenie zapisanych dni historii ROI (np. skok wykresu przez transakcję zapisaną bez kursu waluty): podgląd -> zapis
+        async function rebuildRoiHistory() {
+            const out = document.getElementById('service-output');
+            const def = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+            const from = prompt("Od dnia (RRRR-MM-DD):", def); if (!from) return;
+            const to = prompt("Do dnia (RRRR-MM-DD):", from); if (!to) return;
+            const q = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+            const pct = v => (v >= 0 ? "+" : "") + Number(v).toFixed(2).replace(".", ",") + "%";
+            out.style.display = 'block'; out.innerHTML = '⏳ Liczę podgląd (ceny zamknięcia i kursy z tych dni)…';
+            try {
+                const r = await fetch(`${API_BASE_URL}/api/service/rebuild-roi-history?${q}`); const d = await r.json();
+                if (!r.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + r.status));
+                if (!d.days.length) { out.innerHTML = 'Brak zapisanych dni w tym zakresie (dzisiejszy dzień liczy się na żywo).'; return; }
+                const fx = (d.fx_repaired || []).map(x => `${x.ticker} (${x.field}: ${x.old ?? 'brak'} → ${Number(x.new).toFixed(4)})`).join(', ');
+                out.innerHTML = '<b>Podgląd – ROI portfela zapisane → przeliczone</b><br>' + d.days.map(x => `${x.date}: ${pct(x.old_roi_pct)} → <b>${pct(x.new_roi_pct)}</b> (${x.diff_pp >= 0 ? '+' : ''}${Number(x.diff_pp).toFixed(2).replace('.', ',')} p.p.)` + (x.missing_prices.length ? ' · brak cen: ' + x.missing_prices.join(', ') : '')).join('<br>') +
+                    (fx ? '<br>Kursy zakupu uzupełnione: ' + fx : '');
+                if (!confirm('Zapisać przeliczone wartości dla ' + d.days.length + ' dni? (podgląd jest w panelu Serwis)')) return;
+                const w = await fetch(`${API_BASE_URL}/api/service/rebuild-roi-history?${q}&dry_run=false`, { method: 'POST' }); const wd = await w.json();
+                if (!w.ok || wd.status !== 'success') throw new Error(wd.message || ('HTTP ' + w.status));
+                out.innerHTML += '<br>✅ Zapisano. Wykres na stronie głównej odświeży się przy następnym wczytaniu.';
+            } catch (e) { out.innerHTML = '❌ ' + e.message; }
+        }
 
         async function fixHistoricalFxRates() {
             console.log("[1] Kliknięto przycisk naprawy bazy.");
