@@ -369,12 +369,12 @@
         .ev-verdict { display: flex; justify-content: space-between; align-items: center; gap: 16px; border: 1px solid; border-radius: 14px; padding: 14px 18px; background: var(--bg-main); } .ev-vtext { font-size: 1.5em; font-weight: 800; letter-spacing: .02em; } .ev-big { font-size: 2.6em; font-weight: 800; line-height: 1; } .ev-big small { font-size: .4em; color: var(--text-muted); font-weight: 500; }
         .ev-conds { display: flex; flex-direction: column; gap: 6px; } .ev-cond { display: grid; grid-template-columns: 14px 1fr auto auto; gap: 12px; align-items: start; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; }
         .ev-dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; background: #848e9c; } .ev-cond.ok .ev-dot { background: var(--success); } .ev-cond.warn .ev-dot { background: var(--accent-hover); } .ev-cond.fail .ev-dot { background: var(--danger); }
-        .ev-w { color: var(--text-muted); font-size: 0.75em; margin-left: 6px; } .ev-score { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; } .ev-info { background: none; border: 0; color: var(--accent); cursor: pointer; font-size: 1.1em; padding: 0 4px; }
+        .ev-w { color: var(--text-muted); font-size: 0.75em; margin-left: 6px; } .ev-score { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; } .ev-cman { color: var(--accent-hover); } .ev-cond.manual { border-color: rgba(252,213,53,.45); } .ev-cbtns { display: flex; gap: 2px; } .ev-cedit { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; } .ev-info { background: none; border: 0; color: var(--accent); cursor: pointer; font-size: 1.1em; padding: 0 4px; }
         .ev-desc { margin-top: 8px; padding: 8px 10px; border-left: 2px solid var(--accent); font-size: 0.86em; line-height: 1.5; background: rgba(201,148,0,.06); } .ev-scale { color: var(--text-muted); margin-top: 4px; font-size: .92em; }
         .ev-note { background: rgba(201,148,0,.10); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 0.88rem; } .ev-go { background: var(--success); color: #fff; border-color: var(--success); }
 .ev-opts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; background: var(--bg-main); border: 1px dashed var(--border-color); border-radius: 12px; padding: 8px 12px; font-size: 0.88rem; } .ev-opts label { display: inline-flex; gap: 6px; align-items: center; color: var(--text-muted); } .ev-opts input, .ev-opts select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 8px; }
         .ev-evalbox { background: rgba(14,203,129,.07); border: 1px solid rgba(14,203,129,.35); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.88rem; line-height: 1.55; }
-        @media (max-width: 760px) { .ev-table thead { display: none; } .ev-table, .ev-table tbody, .ev-table tr, .ev-table td { display: block; width: 100%; } .ev-table tr { border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 10px; padding: 6px 4px; } .ev-table td { border: 0; padding: 4px 10px; } .ev-act { text-align: left; } .ev-verdict { flex-direction: column; align-items: flex-start; } .ev-cond { grid-template-columns: 14px 1fr auto; } .ev-info { grid-column: 3; } }
+        @media (max-width: 760px) { .ev-table thead { display: none; } .ev-table, .ev-table tbody, .ev-table tr, .ev-table td { display: block; width: 100%; } .ev-table tr { border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 10px; padding: 6px 4px; } .ev-table td { border: 0; padding: 4px 10px; } .ev-act { text-align: left; } .ev-verdict { flex-direction: column; align-items: flex-start; } .ev-cond { grid-template-columns: 14px 1fr auto; } .ev-cbtns { grid-column: 3; justify-content: flex-end; } }
         .plx-tag { font-size: 0.72rem; color: var(--accent); text-decoration: none; } .plx-tag:hover { text-decoration: underline; }
         /* ===== Okno szczegółów spółki (StockDetail) ===== */
         .sd-link { cursor: pointer; }
@@ -6353,10 +6353,11 @@ window.Wejscie = (function () {
         return r ? r.plays : [];
     }
     async function evaluate(ticker, entryId, newOpts) {
-        const my = ++ov.req;
+        const my = ++ov.req; ov.editCond = null;
         if (newOpts) ov.opts[optKey(ticker, entryId)] = newOpts;
         const o = ov.opts[optKey(ticker, entryId)] || {};
-        const qs = (o.entry_manual !== undefined && o.entry_manual !== "" ? "&entry_manual=" + encodeURIComponent(o.entry_manual) + "&entry_note=" + encodeURIComponent(o.entry_note || "") : "") + (o.gap_dates && o.gap_dates.length ? "&gap_dates=" + encodeURIComponent(o.gap_dates.join(",")) : "") + (o.calendar !== undefined && o.calendar !== "" ? "&calendar=" + encodeURIComponent(o.calendar) : "");
+        const qs = (o.entry_manual !== undefined && o.entry_manual !== "" ? "&entry_manual=" + encodeURIComponent(o.entry_manual) + "&entry_note=" + encodeURIComponent(o.entry_note || "") : "") + (o.gap_dates && o.gap_dates.length ? "&gap_dates=" + encodeURIComponent(o.gap_dates.join(",")) : "") + (o.calendar !== undefined && o.calendar !== "" ? "&calendar=" + encodeURIComponent(o.calendar) : "") +
+            (o.cond_manual && Object.keys(o.cond_manual).length ? "&cond_manual=" + encodeURIComponent(Object.keys(o.cond_manual).map(k => k + ":" + o.cond_manual[k]).join(",")) : "");
         show('<div class="ev-empty">Ocena wejścia ' + esc(ticker) + ' – pobieram świece, CVD i budżet…</div>');
         try {
             const [d, plays] = await Promise.all([api("/api/entry/evaluate?ticker=" + encodeURIComponent(ticker) + "&entry_id=" + encodeURIComponent(entryId) + qs), playsOf(ticker)]);
@@ -6376,10 +6377,21 @@ window.Wejscie = (function () {
     }
     function condRow(c, i) {
         const sc = c.score == null ? "brak danych" : Math.round(c.score * 100) + "%";
-        return '<div class="ev-cond ' + c.status + '"><span class="ev-dot"></span><div class="ev-ctext"><b>' + esc(c.label) + '</b> <span class="ev-w">waga ' + c.weight + "</span>" +
+        const editing = ov.editCond === c.id;
+        const score = editing
+            ? '<span class="ev-score ev-cedit"><input type="number" id="ev-cv" min="0" max="100" step="5" value="' + (c.score == null ? "" : Math.round(c.score * 100)) + '" style="width:64px"> % <button class="hp-btn" style="padding:2px 8px" data-ev-cok="' + esc(c.id) + '">OK</button>' +
+              (c.manual ? '<button class="hp-btn" style="padding:2px 8px" data-ev-cauto="' + esc(c.id) + '" title="Wróć do oceny automatycznej">auto</button>' : "") + "</span>"
+            : '<span class="ev-score">' + (c.manual ? '<span class="ev-cman" title="Ocena ręczna; automat: ' + (c.auto == null ? "brak danych" : Math.round(c.auto * 100) + "%") + '">✎</span> ' : "") + sc + '</span>';
+        return '<div class="ev-cond ' + c.status + (c.manual ? " manual" : "") + '"><span class="ev-dot"></span><div class="ev-ctext"><b>' + esc(c.label) + '</b> <span class="ev-w">waga ' + c.weight + "</span>" +
             '<div class="ev-muted">' + esc(c.detail) + "</div>" +
             '<div class="ev-desc" id="ev-d' + i + '" hidden>' + esc(c.desc) + '<div class="ev-scale">Skala: ' + esc(c.scale) + "</div></div></div>" +
-            '<span class="ev-score">' + sc + '</span><button class="ev-info" data-ev-info="' + i + '" title="Co to znaczy?">ⓘ</button></div>';
+            score + '<span class="ev-cbtns">' + (editing ? "" : '<button class="ev-info" data-ev-cedit="' + esc(c.id) + '" title="Popraw ocenę tego warunku ręcznie">✎</button>') + '<button class="ev-info" data-ev-info="' + i + '" title="Co to znaczy?">ⓘ</button></span></div>';
+    }
+    function setCond(id, val) {
+        const prev = ov.opts[optKey(ov.data.ticker, ov.data.play.entry_id)] || {}, cm = Object.assign({}, prev.cond_manual || {});
+        if (val === null) delete cm[id]; else cm[id] = Math.max(0, Math.min(100, val));
+        ov.editCond = null;
+        evaluate(ov.data.ticker, ov.data.play.entry_id, { ...prev, cond_manual: cm });
     }
     function render() {
         const d = ov.data, p = d.play, b = d.budget, vc = VERDICT_COLOR[d.verdict] || "var(--text-main)";
@@ -6406,6 +6418,7 @@ window.Wejscie = (function () {
             '<div class="plx-actions">' + (ov.plays.length > 1 ? '<select id="ev-play-sel">' + opts + "</select>" : "") + '<button class="hp-btn" data-ev-refresh>↻ Odśwież</button><button class="hp-btn" data-ev-close>✕</button></div></div>' +
             '<div class="ev-verdict" style="border-color:' + vc + '"><div><div class="ev-vtext" style="color:' + vc + '">' + esc(d.verdict) + '</div><div class="ev-muted">' +
             (d.blocked ? "Kurs przebił stop loss – zagranie unieważnione." : "Średnia ważona " + d.conditions.filter(c => c.score != null).length + " z " + d.conditions.length + " warunków (brak danych nie zawyża wyniku).") +
+            (d.score_auto != null ? '<div class="ev-muted">✎ ' + d.conditions.filter(c => c.manual).length + ' warunk. poprawione ręcznie · automat: <b>' + Math.round(d.score_auto) + '/100</b> <a href="#" data-ev-call style="color:var(--accent-hover)">przywróć automat</a></div>' : "") +
             '</div></div><div class="ev-big">' + (d.score == null ? "–" : Math.round(d.score)) + '<small>/100</small></div></div>' +
             optionsHtml(d) +
             '<div class="plx-kpis"><div class="plx-kpi"><div class="l">Zagranie</div><div class="v">' + arrow(p.side) + " " + price(p.zone[0]) + "–" + price(p.zone[1]) + '</div><div class="s">' + (inZone ? "kurs w strefie" : "kurs poza strefą") + "</div></div>" +
@@ -6446,18 +6459,23 @@ window.Wejscie = (function () {
             const prev = ov.opts[optKey(ov.data.ticker, ov.data.play.entry_id)] || {};
             evaluate(ov.data.ticker, ov.data.play.entry_id, { ...prev, gap_dates: g, calendar: $("#ev-cal").value }); return;
         }
+        const ce = t.closest("[data-ev-cedit]"); if (ce && ov.data) { ov.editCond = ce.dataset.evCedit; render(); const inp = $("#ev-cv"); if (inp) { inp.focus(); inp.select(); } return; }
+        const cok = t.closest("[data-ev-cok]"); if (cok && ov.data) { const v = ($("#ev-cv").value || "").trim().replace(",", "."); if (v === "" || isNaN(+v)) { alert("Podaj ocenę 0–100%."); return; } setCond(cok.dataset.evCok, +v); return; }
+        const ca = t.closest("[data-ev-cauto]"); if (ca && ov.data) { setCond(ca.dataset.evCauto, null); return; }
+        if (t.closest("[data-ev-call]") && ov.data) { e.preventDefault(); const prev = ov.opts[optKey(ov.data.ticker, ov.data.play.entry_id)] || {}; ov.editCond = null; evaluate(ov.data.ticker, ov.data.play.entry_id, { ...prev, cond_manual: {} }); return; }
         const i = t.closest("[data-ev-info]"); if (i) { const el = document.getElementById("ev-d" + i.dataset.evInfo); if (el) el.hidden = !el.hidden; return; }
         if (t.closest("[data-ev-trade]")) { toTrade(); return; }
         if (t.closest("[data-ev-focus]")) { toFocus(); return; }
         if (t.closest("#ev-overlay [data-ev-plan]") || t.closest("#ev-overlay [data-plan]")) close();
     });
     document.addEventListener("change", e => { if (e.target.id === "ev-play-sel" && ov.data) evaluate(ov.data.ticker, e.target.value); });
+    document.addEventListener("keydown", e => { if (e.target.id === "ev-cv" && ov.data) { if (e.key === "Enter") { e.preventDefault(); const b = document.querySelector("[data-ev-cok]"); if (b) b.click(); } else if (e.key === "Escape") { e.stopPropagation(); ov.editCond = null; render(); } } }, true);
     document.addEventListener("click", e => { const x = e.target.closest && e.target.closest("#ev-overlay [data-tk]"); if (x) close(); });
 
     function compact(d) {      // to, co zapisujemy przy transakcji (ocena w chwili wejścia)
         return { entry_score: d.score, entry_eval: { verdict: d.verdict, score: d.score, factor: d.factor, price: d.price, evaluated_at: new Date().toISOString(),
             recommended_pct: d.budget.recommended_pct, base_pct: d.budget.base_pct, source: d.budget.source, options: d.options, tp: d.play.take_profit, sl: d.play.stop_loss, direction: d.play.direction, zone: d.play.zone, points: d.scoring && d.scoring.points, entry_points: d.scoring && d.scoring.entry_points, entry_points_auto: d.scoring && d.scoring.entry_points_auto, entry_manual: d.scoring && d.scoring.entry_manual, entry_note: d.scoring && d.scoring.entry_note, form_score: d.scoring && d.scoring.form_score, form_score_auto: d.scoring && d.scoring.form_score_auto, priority_bonus: d.scoring && d.scoring.priority_bonus, max_points: d.scoring && d.scoring.max_points, form_score: d.scoring && d.scoring.form_score, entry_points: d.scoring && d.scoring.entry_points,
-            conditions: d.conditions.map(c => ({ id: c.id, score: c.score, status: c.status })) }, summary: {
+            score_auto: d.score_auto != null ? d.score_auto : d.score, conditions: d.conditions.map(c => ({ id: c.id, score: c.score, status: c.status, manual: !!c.manual, auto: c.auto })) }, summary: {
             verdict: d.verdict, score: d.score, recommended_pct: d.budget.recommended_pct, source: d.budget.source, capital_pln: d.budget.capital_pln, price: d.price } };
     }
     async function saveFocus(d) {
