@@ -1195,6 +1195,7 @@
                         <div class="dbx-log" id="auto-price-update-log"><strong style="color:#89b4fa;">Automatyczna aktualizacja (zadanie cykliczne):</strong><br>Ładowanie danych z serwera…</div>
                         <div class="dbx-log" id="system-health-log"><strong style="color:#fcd535;">Monitor aplikacji (health check):</strong><br>Skanowanie systemów…</div>
                         <div class="dbx-log" id="server-memory-log"><strong style="color:#a6e3a1;">Pamięć serwera:</strong><br>Sprawdzanie…</div>
+                        <div class="dbx-log" id="server-scheduler-log"><strong style="color:#cba6f7;">Harmonogram na serwerze i kopie zapasowe:</strong><br>Sprawdzanie…</div>
                     </div>
                     <div class="dbx-actions">
                         <button class="hp-btn dbx-danger" onclick="forceAlertsCheck()">🔔 Wymuś sprawdzenie alertów</button>
@@ -1608,12 +1609,12 @@
     </div>
     
 <script>
-        // Adres backendu. Do testów można go nadpisać parametrem ?api=... (tylko localhost i *.onrender.com).
+        // Adres backendu. Do testów można go nadpisać parametrem ?api=... (localhost, *.onrender.com i serwer IONOS).
         const API_BASE_URL = (() => {
             const DEFAULT = 'https://quant-desk-backend-dr8n.onrender.com';
             try {
                 const u = new URL(new URLSearchParams(location.search).get('api') || DEFAULT);
-                const allowed = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname.endsWith('.onrender.com');
+                const allowed = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname.endsWith('.onrender.com') || u.hostname === 'quant.31-70-115-174.sslip.io';
                 return allowed ? u.origin : DEFAULT;
             } catch (e) { return DEFAULT; }
         })();
@@ -4404,6 +4405,23 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     el.innerHTML = `<strong style="color:#a6e3a1;">Pamięć serwera:</strong><br>Zajęte: <strong style="color:${col}">${m.rss_mb != null ? n(m.rss_mb) + ' MB z ' + m.limit_mb + ' MB (' + pct + '%)' : 'brak odczytu'}</strong>` +
                         `<br>Świece w pamięci: ${n(c.mb)} MB z limitu ${c.limit_mb} MB · ${c.symbols} spółek · ${c.entries} zestawów` +
                         `<br><span style="color:var(--text-muted)">Trafienia ${c.hits} · pobrania ${c.misses} · usunięte (limit) ${c.evicted} · przeterminowane ${c.expired}</span>`;
+                }
+            } catch(e) {}
+            // Harmonogram na własnym serwerze (scheduler.py) i kopie zapasowe Supabase
+            try {
+                const [sr, br] = await Promise.all([fetch(`${API_BASE_URL}/api/service/scheduler`), fetch(`${API_BASE_URL}/api/service/backups`)]);
+                const sj = sr.ok ? await sr.json() : null, bj = br.ok ? await br.json() : null;
+                const el = document.getElementById('server-scheduler-log');
+                if (el) {
+                    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                    let h = '<strong style="color:#cba6f7;">Harmonogram na serwerze i kopie zapasowe:</strong><br>';
+                    const jobs = sj && sj.jobs;
+                    if (!jobs) h += '<span style="color:var(--text-muted)">Harmonogram nie działa na tym serwerze (zadania uruchamia zewnętrzny cron).</span>';
+                    else h += Object.keys(jobs).map(n => { const j = jobs[n], bad = j.failures > 0;
+                        return `<span style="color:${bad ? 'var(--danger)' : 'var(--success)'}">${bad ? '✗' : '✓'}</span> ${esc(n)}: ostatnio OK ${esc(j.last_ok || '—')}` + (bad ? ` · <span style="color:var(--danger)">błąd: ${esc(j.last_error)}</span>` : ''); }).join('<br>');
+                    const files = (bj && bj.files) || [];
+                    h += '<br>Kopie zapasowe: ' + (files.length ? `${files.length}, najnowsza <strong>${esc(files[0].name.replace('quant-desk-', '').replace('.json.gz', ''))}</strong> (${String(files[0].mb).replace('.', ',')} MB)` : '<span style="color:var(--text-muted)">brak</span>');
+                    el.innerHTML = h;
                 }
             } catch(e) {}
             // Pobieranie statusu HEALTH CHECK
