@@ -406,6 +406,7 @@
         .fz-slots { display: flex; flex-wrap: wrap; gap: 6px; } .fz-slot { border: 1px dashed var(--border-color); border-radius: 8px; padding: 4px 10px; font-size: 0.84rem; color: var(--text-muted); } .fz-slot.cur { border-color: var(--accent); color: var(--text-main); } .fz-slot.done { border-style: solid; border-color: var(--success); color: var(--text-main); }
         .fz-facts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; line-height: 1.45; } .fz-ext { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-bottom: 8px; }
         .fz-v-OK { border-color: rgba(14,203,129,.6); background: rgba(14,203,129,.12); } .fz-v-PARTIAL { border-color: rgba(252,213,53,.6); background: rgba(252,213,53,.1); } .fz-v-FAIL { border-color: rgba(246,70,93,.6); background: rgba(246,70,93,.1); } .fz-ended { opacity: .6; text-decoration: line-through; text-decoration-color: rgba(132,142,156,.8); } .fz-reason a { color: var(--accent-hover); text-decoration: none; } .fz-reason a + a { margin-left: 6px; } .fz-reason.fz-editing { outline: 2px solid var(--accent); }
+        .fz-opdbtn { padding: 3px 10px; font-size: .82rem; margin-left: 6px; }
         .fz-vwopts { display: inline-flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: .84rem; color: var(--text-muted); } .fz-vwopts input { width: 64px; } .fz-vwopts input, .fz-vwopts select { margin-left: 4px; padding: 3px 6px; }
         .fz-repick { border: 1px solid var(--border-color); background: transparent; color: var(--text-muted); border-radius: 999px; padding: 0 7px; font-size: .78rem; cursor: pointer; margin-left: 4px; } .fz-repick:hover, .fz-slot.repick .fz-repick { border-color: var(--accent); color: var(--accent-hover); }
         .fz-slot.repick { border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(252,213,53,.25); } .fz-editbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--accent); border-radius: 8px; background: rgba(252,213,53,.08); font-size: .86rem; }
@@ -672,7 +673,7 @@
                     <input type="hidden" id="form-ticker">
                                         <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div><div class="form-group"><label>Typ wejścia <button type="button" class="fz-q" data-help-toggle="form-etype-help" title="Objaśnienie">?</button></label><select id="form-etype"><option value="korekta">Korekta do strefy</option><option value="wybicie">Wybicie (zamknięcie nad oporem)</option></select></div></div><div class="fz-help" id="form-etype-help" hidden></div>
                     <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="any" required></div><div class="form-group"><label>Koniec strefy</label><input type="number" id="form-end" step="any" required></div></div>
-                    <div class="fz-pickrow"><button type="button" class="hp-btn" data-pick="zone">🎯 Strefa z wykresu (2 punkty)</button><span id="fz-opd-check" class="ev-muted"></span></div>
+                    <div class="fz-pickrow"><button type="button" class="hp-btn" data-pick="zone">🎯 Strefa z wykresu (2 punkty)</button><span id="fz-opd-check" class="ev-muted"></span><span id="fz-opd-btns"></span></div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="any" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="any" required></div>
                     <div class="form-row"><div class="form-group"><label>Stop loss (korpus świecy SL)</label><input type="number" id="form-sl" step="any" placeholder="domyślnie koniec strefy"></div><div class="form-group"><label>Świeca SL – jej przebicie korpusem (zamknięciem) = SL</label><input type="date" id="form-slc"></div></div>
                     <div class="fz-pickrow"><button type="button" class="hp-btn" data-pick="sl">🎯 Świeca SL z wykresu</button><span id="fz-sl-check" class="ev-muted">LONG: SL = dół korpusu wskazanej świecy, SHORT: góra korpusu.</span></div>
@@ -2301,6 +2302,7 @@
                 sl_candle: document.getElementById('form-slc').value,
                 reasons: formReasons
             }; 
+            if (window.Measure) Object.assign(data, Measure.opdValue());        // ręcznie wskazany OPD (null = automatyczny)
             const editId = window.FormZones && FormZones.editingId();
             if (editId) {                                   // edycja w oknie Form: wszystkie pola, SL (puste = koniec strefy) i powody ze szczegółami
                 data.old_entry_id = editId; data.stop_loss = data.stop_loss || data.end_zone;
@@ -6672,6 +6674,7 @@ window.FormZones = (function () {
         (Array.isArray(e.reasons) ? e.reasons : []).slice(0, 5).forEach((r, i) => set("form-reason-" + (i + 1), r));
         $("#fz-formtitle").textContent = "Wpis " + id + " · strefa " + price(Math.min(+e.start_zone, +e.end_zone)) + "–" + price(Math.max(+e.start_zone, +e.end_zone));
         if (window.Measure) Measure.setAdded(Array.isArray(e.reasons_detail) ? e.reasons_detail : [], Array.isArray(e.reasons) ? e.reasons : []);
+        if (window.Measure) setTimeout(() => Measure.setOpd(e.opd_level, e.opd_date), 60);      // po wczytaniu wykresu spółki
     }
     const editingId = () => editId;
     function openAdd(ticker, pre, keepMode) {
@@ -7031,7 +7034,8 @@ window.Measure = (function () {
         if (!chart || !M.bars.length) { toast("Najpierw wybierz spółkę – wykres pojawi się poniżej formularza."); return; }
         if (pickLine) { try { candle.removePriceLine(pickLine); } catch (e) {} pickLine = null; }
         M.pick = M.pick === mode ? null : mode; M.pickT = [];
-        setStatus(M.pick === "zone" ? "🎯 Kliknij dwa punkty strefy (na tej samej albo dwóch różnych świecach) – kolejność dowolna, magnes przyciąga do knota lub korpusu." : M.pick === "sl" ? "🎯 Kliknij świecę SL – stop loss = " + (isLong() ? "dół" : "góra") + " jej korpusu." : "");
+        setStatus(M.pick === "zone" ? "🎯 Kliknij dwa punkty strefy (na tej samej albo dwóch różnych świecach) – kolejność dowolna, magnes przyciąga do knota lub korpusu." : M.pick === "sl" ? "🎯 Kliknij świecę SL – stop loss = " + (isLong() ? "dół" : "góra") + " jej korpusu." :
+            M.pick === "opd" ? "🎯 Kliknij świecę " + (isLong() ? "OPD (dołka) – poziom = dół" : "OPS (szczytu) – poziom = góra") + " jej korpusu. Esc = anuluj." : "");
         drawPickButtons();
         if (M.pick) $("#fz-chart").scrollIntoView({ behavior: "smooth", block: "center" });
     }
@@ -7039,13 +7043,16 @@ window.Measure = (function () {
         document.querySelectorAll("[data-pick]").forEach(b => {
             const on = M.pick === b.dataset.pick;
             b.classList.toggle("ev-go", on);
-            b.textContent = b.dataset.pick === "zone" ? (on ? "✕ Anuluj wskazywanie" : "🎯 Strefa z wykresu (2 punkty)") : (on ? "✕ Anuluj wskazywanie" : "🎯 Świeca SL z wykresu");
+            b.textContent = on ? "✕ Anuluj wskazywanie" : b.dataset.pick === "zone" ? "🎯 Strefa z wykresu (2 punkty)" : b.dataset.pick === "opd" ? "✎ Zmień " + (isLong() ? "OPD" : "OPS") + " (kliknij świecę)" : "🎯 Świeca SL z wykresu";
         });
     }
     function handlePick(param) {
         const bar = M.bars.find(b => b.t === param.time); if (!bar) return;
         const long = isLong();
-        if (M.pick === "sl") {
+        if (M.pick === "opd") {                              // ręczny OPD/OPS: dół (SHORT: góra) korpusu wskazanej świecy
+            M.opdManual = { level: r4(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)), t: bar.t };
+            M.pick = null; setStatus((long ? "OPD" : "OPS") + " wskazany ręcznie: " + price(M.opdManual.level) + " (" + (long ? "dół" : "góra") + " korpusu świecy z " + dateOf(bar.t) + ").");
+        } else if (M.pick === "sl") {
             setVal("form-sl", r4(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)));
             setVal("form-slc", dateOf(bar.t));
             M.pick = null; setStatus("SL: " + (long ? "dół" : "góra") + " korpusu świecy z " + dateOf(bar.t) + " = " + price(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)));
@@ -7087,17 +7094,40 @@ window.Measure = (function () {
         return null;
     }
     let opdLine = null, slLine = null, pickLine = null;
+    function drawOpdButtons() {                          // ✎ zmiana OPD wskazanego automatycznie; ↺ powrót do automatu
+        const el = $("#fz-opd-btns"); if (!el) return;
+        const nm = isLong() ? "OPD" : "OPS";
+        el.innerHTML = ' <button type="button" class="hp-btn fz-opdbtn' + (M.pick === "opd" ? " ev-go" : "") + '" data-pick="opd">' + (M.pick === "opd" ? "✕ Anuluj wskazywanie" : "✎ Zmień " + nm + " (kliknij świecę)") + "</button>" +
+            (M.opdManual ? ' <button type="button" class="hp-btn fz-opdbtn" data-opd-auto>↺ ' + nm + " automatyczny</button>" : "");
+    }
+    document.addEventListener("click", e => { if (e.target.closest && e.target.closest("[data-opd-auto]")) { e.preventDefault(); M.opdManual = null; setStatus(""); opdCheck(); } });
+    function setOpd(level, date) {                       // edycja wpisu: zapisany ręczny OPD
+        const lv = parseFloat(level);
+        M.opdManual = isNaN(lv) ? null : { level: lv, d: date ? String(date).slice(0, 10) : null, t: date ? Math.floor(Date.parse(String(date).slice(0, 10) + "T00:00:00Z") / 1000) : 0 };
+        opdCheck(); drawOpdButtons();
+    }
+    const opdValue = () => M.opdManual ? { opd_level: M.opdManual.level, opd_date: M.opdManual.t ? dateOf(M.opdManual.t) : null } : { opd_level: null };
     function opdCheck() {
         const box = $("#fz-opd-check"), slb = $("#fz-sl-check");
         if (!candle || !M.bars.length) return null;
-        const long = isLong(), o = opdOf(M.bars, long), name = long ? "OPD" : "OPS", z = formZone();
+        const long = isLong(), z = formZone(), mo = M.opdManual;
+        if (mo && mo.d) { const b = M.bars.find(x => dateOf(x.t) === mo.d); if (b) mo.t = b.t; }        // zapisany OPD: świeca z tej daty
+        const name = (long ? "OPD" : "OPS") + (mo ? " (ręcznie)" : "");
+        let o = opdOf(M.bars, long);
+        if (mo) {                                           // OPD wskazany ręcznie ma pierwszeństwo; sprawdzamy, czy nie został przebity zamknięciem
+            const br = M.bars.find(b => b.t > mo.t && (long ? b.c < mo.level : b.c > mo.level));
+            o = { level: mo.level, t: mo.t, broken: [], manual: true, brokenAt: br ? br.t : null, auto: o };
+        }
+        drawOpdButtons();
         if (opdLine) { try { candle.removePriceLine(opdLine); } catch (e) {} opdLine = null; }
-        if (!o) { if (box) box.textContent = "Brak potwierdzonego " + (long ? "dołka" : "szczytu") + " na wykresie."; return null; }
-        opdLine = candle.createPriceLine({ price: o.level, color: "#f38ba8", lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: name + " " + price(o.level) });
+        if (!o) { if (box) box.textContent = "Brak potwierdzonego " + (long ? "dołka" : "szczytu") + " na wykresie – możesz wskazać go ręcznie."; return null; }
+        opdLine = candle.createPriceLine({ price: o.level, color: "#f38ba8", lineWidth: 2, lineStyle: mo ? 2 : 0, axisLabelVisible: true, title: name + " " + price(o.level) });
         if (slLine) { try { candle.removePriceLine(slLine); } catch (e) {} slLine = null; }
         const slv = parseFloat($("#form-sl").value);
         if (!isNaN(slv)) slLine = candle.createPriceLine({ price: slv, color: "#f6465d", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "SL " + price(slv) });
-        const prev = o.broken.length ? " Przebite zamknięciem: " + o.broken.map(b => price(b.level) + " (" + dateOf(b.at) + ")").join(", ") + " → obowiązuje kolejny " + (long ? "niższy" : "wyższy") + " " + name + "." : "";
+        const prev = (o.broken.length ? " Przebite zamknięciem: " + o.broken.map(b => price(b.level) + " (" + dateOf(b.at) + ")").join(", ") + " → obowiązuje kolejny " + (long ? "niższy" : "wyższy") + " " + name + "." : "") +
+            (o.manual && o.brokenAt ? " ⚠ Wskazany " + name + " został przebity zamknięciem " + dateOf(o.brokenAt) + "." : "") +
+            (o.manual && o.auto ? " Automatycznie: " + price(o.auto.level) + " (" + dateOf(o.auto.t) + ")." : "");
         let res = { ok: null, text: name + " " + price(o.level) + " (" + dateOf(o.t) + ")." + prev };
         if (z) {
             const ok = long ? z.lo > o.level : z.hi < o.level;
@@ -7380,17 +7410,17 @@ window.Measure = (function () {
 
     function open(ticker) {
         const changed = ticker !== M.ticker; M.ticker = ticker;
-        if (changed) { M.added = []; M.anchors = []; M.result = null; M.type = null; M.editing = M.editApply = M.repick = null; }
+        if (changed) { M.added = []; M.anchors = []; M.result = null; M.type = null; M.editing = M.editApply = M.repick = null; M.opdManual = null; }
         $("#fz-measure").style.display = "block"; drawTypes(); drawEditor(); drawResultCard(); drawAdded(); $$tf();
         setTimeout(() => { if (changed || !M.bars.length) loadBars(); else { ensureChart(); drawBase(); } }, 30);
     }
-    function reset() { M.pick = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.saved = []; M.editing = M.editApply = M.repick = null; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
+    function reset() { M.pick = null; M.opdManual = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.saved = []; M.editing = M.editApply = M.repick = null; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
     function setAdded(details, savedNames) {                         // edycja wpisu: zapisane zmierzone powody wracają do listy (można je usuwać i dodawać nowe)
         M.added = (details || []).map(d => JSON.parse(JSON.stringify(d)));
         M.saved = (savedNames || []).map(r => String(r).trim().toLowerCase());
         drawAdded();
     }
-    return { open: open, reset: reset, collect: collect, opdCheck: opdCheck, setAdded: setAdded, labels: () => ORDER.map(k => ({ type: k, label: TYPES[k].label })) };
+    return { open: open, reset: reset, collect: collect, opdCheck: opdCheck, setAdded: setAdded, setOpd: setOpd, opdValue: opdValue, labels: () => ORDER.map(k => ({ type: k, label: TYPES[k].label })) };
 })();
 </script>
 <script>
