@@ -406,6 +406,7 @@
         .fz-slots { display: flex; flex-wrap: wrap; gap: 6px; } .fz-slot { border: 1px dashed var(--border-color); border-radius: 8px; padding: 4px 10px; font-size: 0.84rem; color: var(--text-muted); } .fz-slot.cur { border-color: var(--accent); color: var(--text-main); } .fz-slot.done { border-style: solid; border-color: var(--success); color: var(--text-main); }
         .fz-facts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; line-height: 1.45; } .fz-ext { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-bottom: 8px; }
         .fz-v-OK { border-color: rgba(14,203,129,.6); background: rgba(14,203,129,.12); } .fz-v-PARTIAL { border-color: rgba(252,213,53,.6); background: rgba(252,213,53,.1); } .fz-v-FAIL { border-color: rgba(246,70,93,.6); background: rgba(246,70,93,.1); } .fz-ended { opacity: .6; text-decoration: line-through; text-decoration-color: rgba(132,142,156,.8); } .fz-reason a { color: var(--accent-hover); text-decoration: none; } .fz-reason a + a { margin-left: 6px; } .fz-reason.fz-editing { outline: 2px solid var(--accent); }
+        .fz-vwopts { display: inline-flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: .84rem; color: var(--text-muted); } .fz-vwopts input { width: 64px; } .fz-vwopts input, .fz-vwopts select { margin-left: 4px; padding: 3px 6px; }
         .fz-repick { border: 1px solid var(--border-color); background: transparent; color: var(--text-muted); border-radius: 999px; padding: 0 7px; font-size: .78rem; cursor: pointer; margin-left: 4px; } .fz-repick:hover, .fz-slot.repick .fz-repick { border-color: var(--accent); color: var(--accent-hover); }
         .fz-slot.repick { border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(252,213,53,.25); } .fz-editbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--accent); border-radius: 8px; background: rgba(252,213,53,.08); font-size: .86rem; }
         .fz-detail .plx-kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } .fz-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -6898,13 +6899,15 @@ window.Measure = (function () {
         xabcd: { label: "XABCD", slots: ["X", "A", "B", "C"], need: 4, help: "Cztery punkty formacji harmonicznej (X, A, B, C) – punkt D i strefę odwrócenia (PRZ) aplikacja wyliczy z proporcji. Góra/dół świecy dobiera się automatycznie (punkt wyżej od sąsiadów = góra), możesz to zmienić przy punkcie." },
         rgr: { label: "RGR", slots: ["Lewe ramię", "Głowa", "Prawe ramię", "Szyja – punkt 1 (opcj.)", "Szyja – punkt 2 (opcj.)"], need: 3, help: "Lewe ramię, głowa, prawe ramię; linię szyi wyznaczę sam, albo wskaż jej dwa punkty." },
         elliott: { label: "Fale Elliotta", slots: ["0", "1", "2", "3", "4", "5", "A", "B", "C"], need: 3, help: "Punkty 0–5 impulsu (min. 3) i opcjonalnie korekta A, B, C wg knotów. Ostatni punkt wyznacza prognozę kolejnej fali." },
-        vwap: { label: "VWAP", slots: ["Kotwica (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie VWAP kotwiczony od ostatniego dołka i od ostatniego szczytu; możesz wskazać własną świecę." },
+        vwap: { label: "VWAP", slots: ["Kotwica (opcjonalnie)"], need: 0, bar: true, help: "VWAP z pasmami jak w TradingView (hlc3, odchylenie standardowe ważone wolumenem, Bands Multiplier #1 i #2). Domyślnie kotwiczony od ostatniego dołka i szczytu; możesz wskazać świecę albo wybrać kotwicę okresową (tydzień, miesiąc, kwartał, rok)." },
         vp: { label: "Volume Profile", slots: ["Początek profilu (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie od początku trendu albo od kontynuacji po wyraźnej korekcie; możesz wskazać własny początek." },
         external: { label: "Analiza zewnętrzna", slots: [], need: 0, external: true, help: "Linki do analiz; kilka analiz liczy się jako jeden punkt." }
     };
     const ORDER = ["range", "path", "fvg", "swing", "trend", "correction", "fibo", "one2one", "xabcd", "rgr", "elliott", "vwap", "vp", "external"];
     const APPLY = { entry: ["form-entry", "Punkt wejścia"], start: ["form-start", "Początek strefy"], end: ["form-end", "Koniec strefy (SL)"], tp: ["form-tp", "Take Profit"] };
     const M = { magnet: true, ticker: "", tf: "1d", type: null, anchors: [], bars: [], auto: null, result: null, added: [], items: [{}], opts: {}, apply: "entry" };
+    const VWAP_DEF = { mult1: 1, mult2: 2, bands: "stdev", period: "" };                  // jak w TradingView: Bands Multiplier #1 = 1, #2 = 2
+    M.opts.vwap = (() => { try { return Object.assign({}, VWAP_DEF, JSON.parse(localStorage.getItem("qd-vwap-opts") || "{}")); } catch (e) { return Object.assign({}, VWAP_DEF); } })();
     let chart = null, candle = null, vol = null, prim = null, priceLines = [], extraSeries = [], zoneCache = [];
 
     // ---------- wykres ----------
@@ -7011,7 +7014,7 @@ window.Measure = (function () {
         clearOverlay(); if (!r) { candle && candle.setMarkers(pickMarkers().sort((a, b) => a.time - b.time)); return; }
         const ov = r.overlay || {}, ST = { dashed: 2, dotted: 1, solid: 0 };
         (ov.lines || []).forEach(l => priceLines.push(candle.createPriceLine({ price: l.price, color: l.color || "#f9e2af", lineWidth: 1, lineStyle: ST[l.style] != null ? ST[l.style] : 2, axisLabelVisible: true, title: l.label || "" })));
-        (ov.series || []).forEach(s => { const ls = chart.addLineSeries({ color: s.color, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: s.name }); ls.setData(s.points.map(p => ({ time: p.t, value: p.v }))); extraSeries.push(ls); });
+        (ov.series || []).forEach(s => { const ls = chart.addLineSeries({ color: s.color, lineWidth: s.width || 2, lineStyle: ST[s.style] != null ? ST[s.style] : 0, priceLineVisible: false, lastValueVisible: true, title: s.name }); ls.setData(s.points.map(p => ({ time: p.t, value: p.v }))); extraSeries.push(ls); });
         (ov.segments || []).forEach(sg => { const ls = chart.addLineSeries({ color: sg.color, lineWidth: 2, priceLineVisible: false, lastValueVisible: false }); ls.setData([{ time: sg.p1.t, value: sg.p1.v }, { time: sg.p2.t, value: sg.p2.v }]); extraSeries.push(ls); });
         let mk = (ov.markers || []).map(m => ({ time: m.t, position: m.pos === "inBar" ? "aboveBar" : m.pos, color: m.color || "#fcd535", shape: m.pos === "inBar" ? "circle" : (m.pos === "aboveBar" ? "arrowDown" : "arrowUp"), text: m.text || "" }));
         if (!mk.length) mk = pickMarkers();                                   // wynik bez znaczników (np. niepotwierdzony) – zostają wskazane punkty
@@ -7205,6 +7208,14 @@ window.Measure = (function () {
         if (T.slots.length && !T.external) h += '<button type="button" class="hp-btn" data-ms-undo>↶ Cofnij punkt</button><button type="button" class="hp-btn" data-ms-clear>Wyczyść punkty</button>';
         if (T.suggest) h += '<button type="button" class="hp-btn" data-ms-suggest>✨ Podpowiedz z trendu</button>';
         if (T.log) h += '<label class="ev-muted"><input type="checkbox" data-ms-log' + (M.opts.log ? " checked" : "") + '> skala logarytmiczna</label>';
+        if (M.type === "vwap") {
+            const o = M.opts.vwap, opt = (v, l, cur) => '<option value="' + v + '"' + (String(cur) === v ? " selected" : "") + ">" + l + "</option>";
+            h += '<span class="fz-vwopts"><label>Pasmo #1 × <input type="number" step="0.1" min="0.1" data-ms-vw="mult1" value="' + esc(o.mult1) + '"></label>' +
+                '<label>Pasmo #2 × <input type="number" step="0.1" min="0.1" data-ms-vw="mult2" value="' + esc(o.mult2) + '"></label>' +
+                '<label>Pasma <select data-ms-vw="bands">' + opt("stdev", "odchylenie standardowe", o.bands) + opt("percent", "procent", o.bands) + "</select></label>" +
+                '<label>Kotwica <select data-ms-vw="period">' + opt("", "dołek/szczyt lub wskazana świeca", o.period) + opt("week", "tydzień", o.period) + opt("month", "miesiąc", o.period) +
+                opt("quarter", "kwartał", o.period) + opt("year", "rok", o.period) + "</select></label></span>";
+        }
         const ready = T.external ? M.items.some(i => i.url) : M.anchors.length >= T.need && !(M.type === "rgr" && M.anchors.length === 4);
         h += '<button type="button" class="hp-btn ev-go" data-ms-verify' + (ready ? "" : " disabled") + '>Zweryfikuj</button></div>';
         box.innerHTML = h;
@@ -7261,7 +7272,8 @@ window.Measure = (function () {
         const T = TYPES[M.type], z = formZone();
         if (!z) { toast("Najpierw wpisz strefę (początek i koniec) – weryfikacja sprawdza, czy strefa pasuje do powodu."); return; }
         if (!(parseFloat($("#form-entry").value) > 0) && M.type !== "external") { toast("Wpisz też konkretny punkt wejścia – weryfikacja sprawdza, jak daleko od niego leży poziom wskazany przez powód."); $("#form-entry").focus(); return; }
-        const params = M.type === "fibo" ? { log: !!M.opts.log } : (M.type === "path" || M.type === "xabcd") ? { tp: parseFloat($("#form-tp").value) || null } : (T.external ? { items: M.items.filter(i => i.url) } : {});
+        const params = M.type === "fibo" ? { log: !!M.opts.log } : (M.type === "path" || M.type === "xabcd") ? { tp: parseFloat($("#form-tp").value) || null } :
+            M.type === "vwap" ? Object.assign({}, M.opts.vwap) : (T.external ? { items: M.items.filter(i => i.url) } : {});
         M.lastParams = params;
         const body = { ticker: M.ticker, tf: M.tf, type: M.type, zone: z, entry: parseFloat($("#form-entry").value) || null, anchors: M.anchors, params: params };
         const box = $("#fz-result"); box.innerHTML = '<div class="ev-empty">Weryfikuję…</div>';
@@ -7297,6 +7309,7 @@ window.Measure = (function () {
         M.anchors = JSON.parse(JSON.stringify(d.anchors || []));
         M.editApply = d.ref && APPLY[d.ref.applies_to] ? d.ref.applies_to : null; M.apply = M.editApply || "entry";
         if (d.type === "fibo") M.opts.log = !!(d.params || {}).log;
+        if (d.type === "vwap") M.opts.vwap = Object.assign({}, VWAP_DEF, d.params || {});
         if (d.type === "external") M.items = JSON.parse(JSON.stringify(d.items && d.items.length ? d.items : [{}]));
         drawTypes(); drawEditor(); drawResultCard(); drawAdded();
         const ed = $("#fz-editor"); if (ed && ed.scrollIntoView) ed.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -7351,6 +7364,12 @@ window.Measure = (function () {
         if (t.id === "fz-magnet") { M.magnet = t.checked; resnap(); M.result = null; drawResult(null); drawEditor(); return; }
         if (t.matches && t.matches("[data-ms-apply]")) M.apply = t.value;
         if (t.matches && t.matches("[data-ms-log]")) { M.opts.log = t.checked; M.result = null; drawResultCard(); }
+        if (t.matches && t.matches("[data-ms-vw]")) {                                        // ustawienia VWAP: zapamiętane i od razu ponowna weryfikacja
+            const k = t.dataset.msVw, o = M.opts.vwap;
+            o[k] = (k === "mult1" || k === "mult2") ? (parseFloat(t.value) > 0 ? parseFloat(t.value) : VWAP_DEF[k]) : t.value;
+            try { localStorage.setItem("qd-vwap-opts", JSON.stringify(o)); } catch (e) {}
+            M.result = null; drawResultCard(); verify();
+        }
     });
     document.addEventListener("input", e => {
         const t = e.target; if (!t.dataset) return;
@@ -7523,7 +7542,11 @@ window.FocusEod = (function () {
             '<br><br><b>Jak wykorzystać?</b> Gdy formacja jest zgodna z pozycją (bycza przy LONG), D to miejsce wejścia – wpisz je jako punkt wejścia, a strefę ustaw wokół PRZ. Gdy formacja jest przeciwna do pozycji (niedźwiedzia przy LONG, np. kupno przy dołku A/C), <b>D to cel (take profit)</b> – aplikacja nie porównuje go wtedy ze strefą (cel ma leżeć daleko, poza strefą), tylko sprawdza, czy leży po stronie zysku i czy zgadza się z TP z formularza.',
         entry_type: '<b>Korekta</b> (dotychczasowy sposób): kupujesz, gdy cena cofa się do strefy (np. nieco nad OPD). Ocena wejścia sprawdza m.in. <b>głębokość wejścia w strefę</b> i reakcję świec 1H na strefę.' +
             '<br><br><b>Wybicie</b>: kupujesz, gdy cena wychodzi z konsolidacji lub przebija opór. Strefa w Form = poziom oporu (np. górna krawędź konsolidacji): jej górna krawędź to <b>poziom wybicia</b>, SL ustaw pod strefą. Ocena wejścia zamiast głębokości sprawdza warunek <b>„Wybicie”</b>: czy świeca dzienna zamknęła się nad poziomem, jaki był wolumen świecy wybicia, czy był <b>retest</b> (powrót do poziomu i jego obrona zamknięciem) i czy kurs nie odjechał za daleko (pościg).' +
-            '<br><br>Najlepsze wejście na wybiciu: retest obroniony zamknięciem. Kurs z powrotem pod poziomem po wybiciu = <b>fałszywe wybicie</b> (ocena 0).'
+            '<br><br>Najlepsze wejście na wybiciu: retest obroniony zamknięciem. Kurs z powrotem pod poziomem po wybiciu = <b>fałszywe wybicie</b> (ocena 0).',
+        vwap: '<b>Co to jest?</b> VWAP to średnia cena ważona wolumenem – „uczciwa” cena, po której handlowano od wybranego momentu (kotwicy). Duzi gracze często kupują poniżej VWAP i sprzedają powyżej.' +
+            '<br><br><b>Pasma (jak w TradingView).</b> Wokół VWAP rysowane są pasma odchylenia: VWAP ± σ × mnożnik. σ to odchylenie standardowe cen (hlc3) <b>ważone wolumenem</b> – tak samo liczy wskaźnik VWAP i narzędzie Anchored VWAP w TradingView. Pasmo #1 (domyślnie ×1) i #2 (domyślnie ×2) ustawiasz pod wykresem; tryb „procent” zamiast σ bierze VWAP ± 1% × mnożnik.' +
+            '<br><br><b>Kotwica.</b> Domyślnie ostatni dołek i ostatni szczyt (dwa VWAP), albo świeca wskazana kliknięciem. Kotwica okresowa (tydzień, miesiąc, kwartał, rok) zeruje VWAP na początku każdego okresu – jak ustawienie „Anchor Period” w TradingView. Wynik możesz porównać z TradingView przy tych samych ustawieniach.' +
+            '<br><br><b>Co policzy aplikacja?</b> Wartości VWAP i pasm na ostatniej świecy, położenie kursu względem nich i który poziom leży najbliżej Twojej strefy. Dla LONG liczą się VWAP i pasma dolne (−#1, −#2: kupno taniej niż średnia), dla SHORT – VWAP i pasma górne. Pasma dla najlepszej kotwicy są rysowane na wykresie (#1 kreskowane, #2 kropkowane).'
     };
     document.addEventListener("click", ev => {
         const q = ev.target.closest && ev.target.closest("[data-help-toggle]"); if (!q) return;
@@ -7672,7 +7695,7 @@ window.ReasonChart = (function () {
                 const lo = Math.max(b.lo, z.lo), hi = Math.min(b.hi, z.hi);          // część luki pokrywająca się ze strefą – podświetlona
                 if (d.type === "fvg" && hi > lo) bands.push({ lo: lo, hi: hi, t0: t0, fill: "rgba(252,213,53,0.30)", stroke: "#fcd535", dash: true, label: "FVG ∩ strefa" });
             });
-            (ov.series || []).forEach(s => { const ls = chart.addLineSeries({ color: s.color || col, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: s.name }); ls.setData(s.points.map(p => ({ time: p.t, value: p.v }))); series.push(ls); });
+            (ov.series || []).forEach(s => { const ls = chart.addLineSeries({ color: s.color || col, lineWidth: s.width || 2, lineStyle: s.style === "dashed" ? 2 : s.style === "dotted" ? 1 : 0, priceLineVisible: false, lastValueVisible: true, title: s.name }); ls.setData(s.points.map(p => ({ time: p.t, value: p.v }))); series.push(ls); });
             (ov.segments || []).forEach(sg => { const ls = chart.addLineSeries({ color: sg.color || col, lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: false }); ls.setData([{ time: sg.p1.t, value: sg.p1.v }, { time: sg.p2.t, value: sg.p2.v }]); series.push(ls); });
             if (FORMATION[d.type]) {     // formacja narysowana jak w TradingView: łamana przez wskazane punkty
                 let pts = (d.anchors || []).filter(a => a.p != null).map(a => ({ time: a.t, value: +a.p }));
