@@ -7280,10 +7280,15 @@ window.Measure = (function () {
     }
     // ---------- aktualny Score wpisu (wyraźnie, przyklejony u góry okna) ----------
     const ended = d => d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły");
+    // „Zdrowy trend” i „Potwierdzony dołek/szczyt” mierzą ten sam ostatni dołek (OPD) – razem: większy w całości + połowa mniejszego (jak w backendzie)
+    function overlapCut(list, pts) {
+        const by = {}; list.forEach(d => { if (d.type === "trend" || d.type === "swing") by[d.type] = Math.max(by[d.type] || 0, pts(d)); });
+        return by.trend != null && by.swing != null ? 0.5 * Math.min(by.trend, by.swing) : 0;
+    }
     function drawScore() {
         const box = $("#fz-scorebar"); if (!box) return;
         const pts = d => ended(d) ? 0 : Math.max(0, Math.min(1, +d.quality || 0));
-        const raw = M.added.reduce((s, d) => s + pts(d), 0), sc = Math.min(5, raw);
+        const raw = M.added.reduce((s, d) => s + pts(d), 0) - overlapCut(M.added, pts), sc = Math.min(5, raw);
         const r = M.result, pending = r && !M.added.some(d => d.type === r.type && d.quality === r.quality) && r.type;
         const same = pending ? M.added.find(d => d.type === r.type) : null;          // ponowne dodanie tego samego typu zastępuje poprzedni pomiar
         const after = pending ? Math.min(5, raw - (same ? pts(same) : 0) + (r.quality || 0)) : null;
@@ -7299,7 +7304,8 @@ window.Measure = (function () {
     function drawAdded() {
         drawScore();
         const box = $("#fz-added"); if (!box) return;
-        const sc = M.added.reduce((s, d) => s + ((d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) ? 0 : d.quality), 0);
+        const q01 = d => (d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) ? 0 : d.quality;
+        const sc = M.added.reduce((s, d) => s + q01(d), 0) - overlapCut(M.added, q01);
         box.innerHTML = M.added.length ? '<div class="ev-muted" style="margin:8px 0 4px">Powody mierzone w tym wpisie – <b>Score ' + num(Math.min(5, sc), 1) + '/5</b> (każdy powód daje tyle punktów, ile wynosi jego wypełnienie; kilka analiz zewnętrznych = jeden punkt):</div>' + M.added.map((d, i) => '<span class="fz-reason fz-v-' + d.verdict + (M.editing === d.type ? " fz-editing" : "") + '">' + esc(d.label) + " · " + Math.round(d.quality * 100) + "%" + (d.ref ? " → " + price(d.ref.value) + " (" + esc(APPLY[d.ref.applies_to] ? APPLY[d.ref.applies_to][1] : d.ref.role) + ")" : "") + ' <a href="#" data-ms-edit="' + i + '" title="Edytuj pomiar (punkty, interwał, ustawienia)">✎</a><a href="#" data-ms-rm="' + i + '" title="Usuń">✕</a></span>').join("") : "";
     }
     function selectType(k) {
@@ -7576,6 +7582,7 @@ window.FocusEod = (function () {
             '<br><br><b>Droga otwarta</b> = OPS i ZS przebite <b>ZAMKNIĘCIEM</b> świecy – wtedy między ceną a celem nie ma silnych przeszkód. Dopóki nie są przebite, cel jest „zablokowany”.' +
             '<br><br><b>Jak zmierzyć?</b> Najpierw wpisz Take Profit w formularzu (to Twój cel). Aplikacja sama znajdzie OPS i ZS. Możesz je wskazać ręcznie na wykresie: 1. świeca szczytu OPS, 2. świeca bazy ZS.' +
             '<br><br><b>Co policzy aplikacja?</b> Poziomy OPS i ZS, czy są przebite zamknięciem, inne strefy podaży na drodze i % od kursu do celu. Wartość odniesienia = poziom do przebicia.' +
+            '<br><br><b>Profit margin i krzywa (Seiden).</b> Aplikacja liczy, ile razy odległość od wejścia do najbliższej przeciwnej strefy przekracza ryzyko (wejście → dalsza krawędź Twojej strefy): ≥ 3× = dobrze, < 2× = za blisko. Sprawdza też położenie wejścia na „krzywej” ostatnich ok. 2 lat: LONG najlepiej w dolnej ⅓, SHORT w górnej ⅓.' +
             '<br><br><b>Historia strefy.</b> Dodatkowo aplikacja sprawdza, czy <b>Twoja strefa wpisu</b> pokrywa się z dawną złotą strefą po drugiej stronie – dla LONG strefą popytu (baza, z której cena kiedyś gwałtownie wzrosła), nigdy później nieprzebitą zamknięciem. To poziom, którego duzi gracze bronią: złota strefa (górne 20% stref tej spółki) daje +0,2 do wyniku, słabsza strefa +0,1. Testy obronione od jej powstania są pokazane w opisie.' +
             '<br><br><b>Przykład (CPS):</b> ZS 17,99–18,515 i OPS nad kursem – „przebić ZS i OPS = droga otwarta na 20,56” (+16,5%).',
         xabcd: '<b>Co to jest?</b> Formacja harmoniczna: cena porusza się w 4 falach (X→A, A→B, B→C, C→D), a ich długości mają określone proporcje Fibonacciego. W punkcie <b>D</b> (strefa odwrócenia, PRZ) cena często zawraca – tam planuje się wejście.' +
