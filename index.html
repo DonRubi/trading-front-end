@@ -4404,7 +4404,8 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     const n = v => String(v).replace('.', ',');
                     el.innerHTML = `<strong style="color:#a6e3a1;">Pamięć serwera:</strong><br>Zajęte: <strong style="color:${col}">${m.rss_mb != null ? n(m.rss_mb) + ' MB z ' + m.limit_mb + ' MB (' + pct + '%)' : 'brak odczytu'}</strong>` +
                         `<br>Świece w pamięci: ${n(c.mb)} MB z limitu ${c.limit_mb} MB · ${c.symbols} spółek · ${c.entries} zestawów` +
-                        `<br><span style="color:var(--text-muted)">Trafienia ${c.hits} · pobrania ${c.misses} · usunięte (limit) ${c.evicted} · przeterminowane ${c.expired}</span>`;
+                        `<br><span style="color:var(--text-muted)">Trafienia ${c.hits} · pobrania ${c.misses} · usunięte (limit) ${c.evicted} · przeterminowane ${c.expired}</span>` +
+                        (m.version && m.version.commit ? `<br>Wersja na serwerze: <strong>${String(m.version.commit).replace(/[^0-9a-f]/gi, '')}</strong>` + (m.version.date ? ' z ' + new Date(m.version.date).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' }) : '') : '');
                 }
             } catch(e) {}
             // Harmonogram na własnym serwerze (scheduler.py) i kopie zapasowe Supabase
