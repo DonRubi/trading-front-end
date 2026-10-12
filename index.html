@@ -3133,10 +3133,11 @@ async function submitTradeForm(e) {
             body: JSON.stringify(data) 
         }); 
         
-        const result = await res.json(); // Pobieramy odpowiedź z serwera
+        const result = await res.json().catch(() => ({})); // Pobieramy odpowiedź z serwera
         
         if(res.ok) { 
-            if (!(window.Invest && Invest.active())) alert('Zapisano!'); 
+            const warn = (result.warnings || []).length ? '\n\n⚠ ' + result.warnings.join('\n⚠ ') : '';
+            if (!(window.Invest && Invest.active())) alert('Zapisano!' + warn); else if (warn) alert('Transakcja zapisana.' + warn); 
             document.getElementById('trade-form').reset(); clearTradeEval(); 
             fetchTradesEntries(true); 
             
@@ -3144,10 +3145,11 @@ async function submitTradeForm(e) {
             await handleTradeAutomation(result.trade_id, data);
             if (window.Invest) Invest.onTradeAdded(result);
         } else { 
-            alert('Błąd dodawania transakcji.'); 
+            alert('Błąd dodawania transakcji: ' + (result.message || ('HTTP ' + res.status)));      // przyczyna z serwera (np. brak kolumny w Supabase)
         } 
     } catch(e) { 
         console.error("Błąd w submitTradeForm:", e); 
+        alert('Błąd dodawania transakcji: ' + (e.message || e) + ' – sprawdź połączenie z serwerem.');
     } 
 }
 
