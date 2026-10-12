@@ -1611,7 +1611,7 @@
 <script>
         // Adres backendu. Do testów można go nadpisać parametrem ?api=... (localhost, *.onrender.com i serwer IONOS).
         const API_BASE_URL = (() => {
-            const DEFAULT = 'https://quant-desk-backend-dr8n.onrender.com';
+            const DEFAULT = 'https://quant.31-70-115-174.sslip.io';      // serwer IONOS (Render wstrzymany - zostaje dostępny przez ?api= na wypadek wycofania)
             try {
                 const u = new URL(new URLSearchParams(location.search).get('api') || DEFAULT);
                 const allowed = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname.endsWith('.onrender.com') || u.hostname === 'quant.31-70-115-174.sslip.io';

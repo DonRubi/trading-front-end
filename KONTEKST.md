@@ -9,7 +9,7 @@ Pełny kontekst projektu (decyzje, definicje rachunków, następne kroki, instru
 - `docs/FORM_POWODY.md` (powody w Form jako mierzalne detektory – wdrożone)
 
 Gałąź robocza w obu repozytoriach: `claude/eager-maxwell-iu3x1v` (nic nie jest scalone do `main`).
-Plik `index.html` ma końce linii CRLF. Parametr testowy `?api=` podmienia adres backendu (tylko `localhost` i `*.onrender.com`).
+Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https://quant.31-70-115-174.sslip.io`** (od 2026-10-12; Render wstrzymany). Parametr testowy `?api=` podmienia adres backendu (`localhost`, `*.onrender.com` – wycofanie, serwer IONOS).
 
 ## Moduły frontendu (skrypty na końcu `index.html`, globalne na `window`)
 - `StockDetail` – okno spółki z wykresem, strefami, CVD (`.sd-*`).
