@@ -813,7 +813,7 @@
                             <th onclick="handleTradeSort('ticker')">Spółka ↕</th>
                             <th>Komentarz</th>
                             <th onclick="handleTradeSort('focus_score')">Punkty ↕</th>
-                            <th onclick="handleTradeSort('spent')">Zainwestowano ↕</th>
+                            <th onclick="handleTradeSort('spent')" title="Kapitał własny (bez dźwigni) w walucie spółki i w PLN po kursie z dnia zakupu">Zainwestowano ↕</th>
                             <th onclick="handleTradeSort('buy_price')">Ceny (wejście / obecnie) ↕</th>
                             <th onclick="handleTradeSort('rr')">R:R · SL / TP ↕</th>
                             <th onclick="handleTradeSort('prof')">Zysk (waluta) ↕</th>
@@ -3420,12 +3420,14 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 const progs = openT.map(t => t.stats.prog).filter(v => isFinite(v)), prog = progs.length ? progs.reduce((x, v) => x + v, 0) / progs.length : null;
                 let sName = g[0].stock_name || ''; if (!sName) { const td = tickerDataArray.find(t => t.ticker === tk); sName = td && td.stock_name ? td.stock_name : ''; }
                 const planId = (g.find(t => t.plan_id) || {}).plan_id;
-                const curLines = Object.keys(byCur).map(c => `${byCur[c].spent.toFixed(2)} ${c}`).join('<br>'), profLines = Object.keys(byCur).map(c => `<span style="color:${byCur[c].prof >= 0 ? 'var(--success)' : 'var(--danger)'}">${byCur[c].prof.toFixed(2)} ${c}</span>`).join('<br>');
+                const curKeys = Object.keys(byCur);
+                const curLines = curKeys.length === 1 ? `${byCur[curKeys[0]].spent.toFixed(2)} ${curKeys[0]}` :            // kilka walut w jednej spółce (np. błędnie zapisana transakcja) - każda opisana
+                    curKeys.map(c => `<span title="kapitał transakcji zapisanych w ${c}">w ${c}: ${byCur[c].spent.toFixed(2)} ${c}</span>`).join('<br>') + ' <span title="Transakcje tej spółki mają różne waluty – sprawdź walutę (Serwis → Przelicz i napraw waluty wg giełd)">⚠</span>', profLines = Object.keys(byCur).map(c => `<span style="color:${byCur[c].prof >= 0 ? 'var(--success)' : 'var(--danger)'}">${byCur[c].prof.toFixed(2)} ${c}</span>`).join('<br>');
                 html += `<tr class="tr-grp${open ? ' tr-open' : ''}" data-grp-head="${tk}">
                     <td style="white-space:nowrap"><span class="tr-chev">▶</span><span class="tr-cnt">ost. ${g.map(t => t.buy_date || '').sort().pop() || '–'}</span></td>
                     <td><span class="hp-tk sd-link" data-tk="${tk}" style="color:var(--accent)">${tk}</span>${sName ? `<div class="hp-name">${sName}</div>` : ''}<div class="tr-cnt">${g.length} ${g.length === 1 ? 'transakcja' : (g.length % 10 >= 2 && g.length % 10 <= 4 && (g.length < 10 || g.length > 20) ? 'transakcje' : 'transakcji')} · ${nOpen} otw. · ${nClosed} zamkn.</div>${planId ? `<a href="#" class="plx-tag" data-plan="${planId}" title="Otwórz plan w Planerze">🧭 plan #${planId}</a>` : ''}</td>
                     <td></td><td></td>
-                    <td class="sensitive">${curLines}<br><b>${sumPln.toFixed(2)} PLN</b></td>
+                    <td class="sensitive" title="Kapitał własny (bez dźwigni) w walucie spółki; w PLN po kursach z dni zakupu">${curLines}<br><b>${sumPln.toFixed(2)} PLN</b> <small class="hp-sub">razem</small></td>
                     <td class="sensitive">${avg ? 'śr. ' + avg.toFixed(avg < 10 ? 4 : 2) : '–'}<br>${cp ? 'teraz <b>' + cp + '</b>' : ''}</td>
                     <td></td>
                     <td class="sensitive"><b>${profLines}</b></td>
@@ -4188,7 +4190,14 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 return `${baseUrl}?symbol=${encodeURIComponent(desktopQuery)}`; 
             }
         }
-        function getCurrencyForFrontend(ticker) { if (!ticker) return 'USD'; const t = String(ticker).toUpperCase(); if (t.includes('GPW:') || t.endsWith('.WA')) return 'PLN'; if (t.includes('XETR:') || t.endsWith('.DE')) return 'EUR'; return 'USD'; }
+        // waluta wg giełdy - ta sama tabela co w backendzie (get_currency_by_ticker); serwer i tak ustala walutę przy zapisie
+        function getCurrencyForFrontend(ticker) {
+            if (!ticker) return 'USD';
+            const t = String(ticker).toUpperCase(), has = a => a.some(x => x.endsWith(':') ? t.includes(x) : t.endsWith(x));
+            if (has(['GPW:', '.WA', 'LSE:', '.L', 'OMXSTO:', 'ST:', '.ST', 'OMXCOP:', 'CO:', '.CO'])) return 'PLN';      // Londyn, Sztokholm, Kopenhaga celowo jak w backendzie
+            if (has(['XETR:', '.DE', 'PA:', 'EPA:', 'EURONEXT:', '.PA', 'AMS:', '.AS', 'HE:', 'OMXHEL:', '.HE', 'GETTEX:', 'MUN:', '.MU', 'FRA:', 'FWB:', '.F'])) return 'EUR';
+            return 'USD';
+        }
         // punkty za moment wejścia (z oceny wejścia, 0-5) i koniec dnia (automatycznie po sesji, 0-5)
         function tradePointsHtml(item) {
             const f1 = v => String(Math.round(v * 10) / 10).replace('.', ',');
