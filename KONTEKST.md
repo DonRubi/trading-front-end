@@ -54,4 +54,5 @@ Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https
 - **Serwis – „Pamięć serwera”** (`#server-memory-log`, w `loadServiceModule`): `GET /api/service/memory` – zajęta pamięć procesu vs limit Rendera (kolor: ≥70% żółty, ≥85% czerwony) i pamięć świec (MB z limitu, spółki, trafienia, usunięte).
 - **Serwer IONOS**: `?api=https://quant.31-70-115-174.sslip.io` dozwolone (test przed przełączeniem); Serwis – kafelek „Harmonogram na serwerze i kopie zapasowe” (`#server-scheduler-log`: `/api/service/scheduler`, `/api/service/backups`). Po przełączeniu zmienić `DEFAULT` w `API_BASE_URL`.
 - **Wersja backendu w Serwisie**: kafelek „Pamięć serwera” pokazuje `version.commit` i datę z `/api/service/memory` (autodeploy na IONOS / commit Rendera).
+- **Historia strefy (Form)**: opisy „?” i podpowiedzi typów `range`/`path` opisują sprawdzanie historii strefy (dawna akumulacja wybita w kierunku zagrania, dawna złota strefa popytu); pasmo „Akumulacja (historia)” / „ZS (historia strefy)” na wykresie z backendu.
 - Podgląd konkretnej wersji bez cache: `https://raw.githack.com/DonRubi/trading-front-end/<hash commita>/index.html`.
