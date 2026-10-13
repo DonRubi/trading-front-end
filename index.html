@@ -1168,6 +1168,7 @@
                     <label title="Gdy ocena momentu wejścia (0–100) jest niższa, dostępny budżet = 0 niezależnie od punktów Form. 0 = bramka wyłączona. Zalecane ok. 50.">Bramka: min. ocena wejścia (0–100)<input type="number" id="sc-gate" min="0" max="100" step="5"></label>
                     <label title="Strata przy SL jednej transakcji nie większa niż ten % kapitału bieżącego – przy dalekim SL pozycja jest mniejsza. 0 = bez limitu.">Ryzyko na transakcję (% kapitału)<input type="number" id="sc-risk" min="0" max="10" step="0.25"></label>
                     <label title="Suma strat wszystkich otwartych pozycji, gdyby doszły do SL. Nowe wejście dostaje najwyżej wolną część. 0 = bez limitu.">Maks. ryzyko portfela do SL (%)<input type="number" id="sc-heat" min="0" max="100" step="0.5"></label>
+                    <label title="Łączna ekspozycja otwartych pozycji (wydano × dźwignia, po bieżącej cenie) jako % kapitału bieżącego – Twój lewar portfela. Nowe wejście dostaje najwyżej wolne miejsce do tego limitu. 0 = bez limitu.">Maks. ekspozycja portfela – lewar (% kapitału)<input type="number" id="sc-exp" min="0" max="500" step="5"></label>
                     <label title="Obsunięcie portfela (TWR od szczytu), od którego ryzyko na transakcję spada o połowę.">Obsunięcie: zmniejsz ryzyko od (%)<input type="number" id="sc-ddr" min="0" max="100" step="1"></label>
                     <label title="Obsunięcie portfela, od którego nowe wejścia i dokładki są wstrzymane (Twoja tolerancja ok. 20%).">Obsunięcie: wstrzymaj wejścia od (%)<input type="number" id="sc-dds" min="0" max="100" step="1"></label>
                     <label title="Ciągłe: między widełkami część budżetu rośnie liniowo (bez skoku o 50% za 0,01 pkt). Schodkowe: jak dawniej.">Widełki<select id="sc-cont"><option value="true">ciągłe (zalecane)</option><option value="false">schodkowe</option></select></label>
@@ -2162,7 +2163,7 @@
             document.getElementById('sc-wentry').innerHTML = Object.keys(r.entry_weights || {}).map(k => scWRow('entry', k, scLabels.entry[k] || k, r.entry_weights[k])).join('');
             document.getElementById('sc-weod').innerHTML = Object.keys(r.eod_weights || {}).map(k => scWRow('eod', k, scLabels.eod[k] || k, r.eod_weights[k])).join('');
             document.getElementById('sc-mult').value = r.form_mult; document.getElementById('sc-entry').value = r.entry_max; document.getElementById('sc-eod').value = r.eod_max; document.getElementById('sc-gate').value = r.entry_gate_score || 0; document.getElementById('sc-prio').value = r.priority_bonus != null ? r.priority_bonus : 1;
-            document.getElementById('sc-risk').value = r.risk_pct != null ? r.risk_pct : 1; document.getElementById('sc-heat').value = r.heat_max_pct != null ? r.heat_max_pct : 8;
+            document.getElementById('sc-risk').value = r.risk_pct != null ? r.risk_pct : 1; document.getElementById('sc-heat').value = r.heat_max_pct != null ? r.heat_max_pct : 8; document.getElementById('sc-exp').value = r.max_exposure_pct != null ? r.max_exposure_pct : 150;
             document.getElementById('sc-ddr').value = r.dd_reduce_pct != null ? r.dd_reduce_pct : 10; document.getElementById('sc-dds').value = r.dd_stop_pct != null ? r.dd_stop_pct : 20; document.getElementById('sc-cont').value = r.tiers_continuous === false ? 'false' : 'true';
             document.getElementById('sc-tiers').innerHTML = r.tiers.map(scTierRow).join('');
             updateScoringSummary();
@@ -2204,7 +2205,7 @@
                 fetch(`${API_BASE_URL}/api/portfolio/risk`).then(r => r.json()).then(x => {
                     const k = x && x.risk, el = document.getElementById('sc-risk-now'); if (!k || !el) return;
                     const f = v => v == null ? '–' : String(Math.round(v * 10) / 10).replace('.', ',');
-                    el.innerHTML = `Teraz: kapitał bieżący <b>${Math.round(k.equity || 0).toLocaleString('pl-PL')} PLN</b> (niezrealizowane ${Math.round(k.unrealized_pln || 0).toLocaleString('pl-PL')} PLN) · ryzyko otwartych pozycji do SL <b>${f(k.heat_pct)}%</b> · obsunięcie od szczytu <b>${f(k.drawdown_pct)}%</b> (maks. ${f(k.max_drawdown_pct)}%)` +
+                    el.innerHTML = `Teraz: kapitał bieżący <b>${Math.round(k.equity || 0).toLocaleString('pl-PL')} PLN</b> (niezrealizowane ${Math.round(k.unrealized_pln || 0).toLocaleString('pl-PL')} PLN) · ekspozycja (lewar) <b>${f(k.exposure_pct)}%</b> · ryzyko otwartych pozycji do SL <b>${f(k.heat_pct)}%</b> · obsunięcie od szczytu <b>${f(k.drawdown_pct)}%</b> (maks. ${f(k.max_drawdown_pct)}%)` +
                         ((k.no_sl || []).length ? ` · <span style="color:var(--accent-hover)">bez SL: ${k.no_sl.join(', ')}</span>` : '');
                 }).catch(() => {});
             } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Nie udało się wczytać zasad punktacji: ' + (e.message || e); }
@@ -2214,7 +2215,7 @@
         async function saveScoring() {
             const msg = document.getElementById('sc-msg');
             const rules = { form_mult: document.getElementById('sc-mult').value, entry_max: document.getElementById('sc-entry').value, eod_max: document.getElementById('sc-eod').value, entry_gate_score: document.getElementById('sc-gate').value, priority_bonus: document.getElementById('sc-prio').value,
-                risk_pct: document.getElementById('sc-risk').value, heat_max_pct: document.getElementById('sc-heat').value, dd_reduce_pct: document.getElementById('sc-ddr').value, dd_stop_pct: document.getElementById('sc-dds').value, tiers_continuous: document.getElementById('sc-cont').value === 'true',
+                risk_pct: document.getElementById('sc-risk').value, heat_max_pct: document.getElementById('sc-heat').value, max_exposure_pct: document.getElementById('sc-exp').value, dd_reduce_pct: document.getElementById('sc-ddr').value, dd_stop_pct: document.getElementById('sc-dds').value, tiers_continuous: document.getElementById('sc-cont').value === 'true',
                 tiers: [...document.querySelectorAll('#sc-tiers tr')].map(tr => ({ min_pct: tr.querySelector('[data-k=min_pct]').value, budget_pct: tr.querySelector('[data-k=budget_pct]').value })), entry_weights: {}, eod_weights: {} };
             document.querySelectorAll('#scoring-panel [data-w]').forEach(i => { rules[i.dataset.w === 'entry' ? 'entry_weights' : 'eod_weights'][i.dataset.k] = i.value; });
             msg.style.color = ''; msg.textContent = 'Zapisywanie…';
@@ -6522,7 +6523,7 @@ window.Wejscie = (function () {
             if (rk.steps && rk.steps.length) budget += '<div class="ev-note"><b>Limit ryzyka</b>' + (rk.stop_pct != null ? " · SL " + num(rk.stop_pct, 1) + "% od wejścia" : "") + (rk.loss_at_sl_pln != null ? " · strata przy SL ≈ " + ccy(rk.loss_at_sl_pln, "PLN") : "") +
                 (rk.budget_pct != null && rk.final_pct != null && rk.final_pct < rk.budget_pct - 0.005 ? ' · <b style="color:var(--accent-hover)">budżet z punktów ' + pct(rk.budget_pct) + " → " + pct(rk.final_pct) + "</b>" : "") +
                 "<br>" + rk.steps.map(esc).join("<br>") +
-                '<br><span class="ev-muted">Portfel: kapitał bieżący ' + (pf.equity != null ? ccy(pf.equity, "PLN") : "–") + " · ryzyko otwartych pozycji do SL " + (pf.heat_pct != null ? num(pf.heat_pct, 1) + "%" : "–") +
+                '<br><span class="ev-muted">Portfel: kapitał bieżący ' + (pf.equity != null ? ccy(pf.equity, "PLN") : "–") + " · ekspozycja " + (pf.exposure_pct != null ? num(pf.exposure_pct, 0) + "%" : "–") + " · ryzyko otwartych pozycji do SL " + (pf.heat_pct != null ? num(pf.heat_pct, 1) + "%" : "–") +
                 " · obsunięcie od szczytu " + (pf.drawdown_pct != null ? num(pf.drawdown_pct, 1) + "%" : "–") + ((pf.no_sl || []).length ? " · bez SL: " + esc(pf.no_sl.join(", ")) : "") +
                 ". Przy dźwigni kwotę „wydano” podziel przez dźwignię – limit dotyczy ekspozycji.</span></div>";
         }
@@ -7418,7 +7419,9 @@ window.Measure = (function () {
         const box = $("#fz-added"); if (!box) return;
         const q01 = d => (d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) ? 0 : d.quality;
         const sc = M.added.reduce((s, d) => s + q01(d), 0) - overlapCut(M.added, q01);
-        box.innerHTML = M.added.length ? '<div class="ev-muted" style="margin:8px 0 4px">Powody mierzone w tym wpisie – <b>Score ' + num(Math.min(5, sc), 1) + '/5</b> (każdy powód daje tyle punktów, ile wynosi jego wypełnienie; kilka analiz zewnętrznych = jeden punkt):</div>' + M.added.map((d, i) => '<span class="fz-reason fz-v-' + d.verdict + (M.editing === d.type ? " fz-editing" : "") + '">' + esc(d.label) + " · " + Math.round(d.quality * 100) + "%" + (d.ref ? " → " + price(d.ref.value) + " (" + esc(APPLY[d.ref.applies_to] ? APPLY[d.ref.applies_to][1] : d.ref.role) + ")" : "") + ' <a href="#" data-ms-edit="' + i + '" title="Edytuj pomiar (punkty, interwał, ustawienia)">✎</a><a href="#" data-ms-rm="' + i + '" title="Usuń">✕</a></span>').join("") : "";
+        box.innerHTML = M.added.length ? '<div class="ev-muted" style="margin:8px 0 4px">Powody mierzone w tym wpisie – <b>Score ' + num(Math.min(5, sc), 1) + '/5</b> (każdy powód daje tyle punktów, ile wynosi jego wypełnienie; kilka analiz zewnętrznych = jeden punkt) ' +
+            '<button type="button" class="hp-btn" style="padding:2px 10px" data-ms-reverify title="Mierzy ponownie wszystkie powody na zapisanych punktach i ustawieniach – z aktualnymi świecami, bieżącą strefą, wejściem, TP i SL oraz najnowszą logiką aplikacji">↻ Przelicz ponownie</button>:</div>' +
+            (M.reverifyNote ? '<div class="ev-note" style="margin:4px 0">' + M.reverifyNote + "</div>" : "") + M.added.map((d, i) => '<span class="fz-reason fz-v-' + d.verdict + (M.editing === d.type ? " fz-editing" : "") + '">' + esc(d.label) + " · " + Math.round(d.quality * 100) + "%" + (d.ref ? " → " + price(d.ref.value) + " (" + esc(APPLY[d.ref.applies_to] ? APPLY[d.ref.applies_to][1] : d.ref.role) + ")" : "") + ' <a href="#" data-ms-edit="' + i + '" title="Edytuj pomiar (punkty, interwał, ustawienia)">✎</a><a href="#" data-ms-rm="' + i + '" title="Usuń">✕</a></span>').join("") : "";
     }
     function selectType(k) {
         M.type = M.type === k ? null : k; M.anchors = []; M.result = null; M.apply = "entry"; M.editing = null; M.editApply = null; M.repick = null; drawAdded();
@@ -7460,6 +7463,39 @@ window.Measure = (function () {
         if (r.type === "external") d.items = r.items;
         if (was) M.added.splice(pos, 0, d); else M.added.push(d); M.editing = null; M.editApply = null; M.repick = null;
         drawAdded(); drawEditor(); drawResultCard(); toast((was ? "Zapisano zmiany powodu „" : "Dodano powód „") + r.label + "”.");
+    }
+    // ↻ Przelicz ponownie: każdy dodany powód mierzony od nowa na swoich punktach i ustawieniach (bieżąca strefa, wejście, TP, SL)
+    async function reverifyAll() {
+        const z = formZone(), entry = parseFloat($("#form-entry").value) || null;
+        if (!z) { toast("Najpierw wpisz strefę (początek i koniec)."); return; }
+        if (!M.added.length) return;
+        const btn = $("[data-ms-reverify]"); if (btn) { btn.disabled = true; btn.textContent = "Przeliczam…"; }
+        const q01 = d => (d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) ? 0 : (d.quality || 0);
+        const score = list => Math.min(5, list.reduce((s, d) => s + q01(d), 0) - overlapCut(list, q01));
+        const before = score(M.added), changes = [], errors = [];
+        const tp = parseFloat($("#form-tp").value) || null, sl = parseFloat($("#form-sl").value) || null;
+        await Promise.all(M.added.map(async (d, i) => {
+            const params = Object.assign({}, d.params || {});
+            if (d.type === "path" || d.type === "xabcd") { params.tp = tp; params.sl = sl; }          // TP/SL z formularza mogły się zmienić
+            if (d.type === "external") params.items = d.items || params.items || [];
+            try {
+                const res = await fetch(API_BASE_URL + "/api/form/verify", { method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticker: M.ticker, tf: d.tf || "1d", type: d.type, zone: z, entry: entry, anchors: d.anchors || [], params: params }) });
+                const r = await res.json(); if (!res.ok || r.status === "error") throw new Error(r.message || "HTTP " + res.status);
+                const old = q01(d);
+                const nd = Object.assign({}, d, { verdict: r.verdict, quality: r.quality, facts: (r.facts || []).map(f => f.text), lifecycle: r.lifecycle || d.lifecycle, verified_at: new Date().toISOString(),
+                    params: d.type === "external" ? {} : params });
+                if (r.ref && d.ref) nd.ref = Object.assign({}, d.ref, { value: r.ref.value, label: r.ref.label });
+                M.added[i] = nd;
+                const nw = q01(nd);
+                if (Math.abs(nw - old) >= 0.005 || (nd.lifecycle || {}).status !== (d.lifecycle || {}).status) changes.push(esc(d.label) + ": " + Math.round(old * 100) + "% → <b>" + Math.round(nw * 100) + "%</b>" + ((nd.lifecycle || {}).status && nd.lifecycle.status !== "aktywny" ? " (" + esc(nd.lifecycle.status) + ")" : ""));
+            } catch (e) { errors.push(esc(d.label) + ": " + esc(e.message || e)); }
+        }));
+        const after = score(M.added);
+        M.reverifyNote = "↻ Przeliczono " + M.added.length + (M.added.length === 1 ? " powód" : M.added.length < 5 ? " powody" : " powodów") + " – Score <b>" + num(before, 2) + " → " + num(after, 2) + "</b>" +
+            (changes.length ? "<br>Zmiany: " + changes.join(" · ") : "<br>Bez zmian w ocenie powodów.") + (errors.length ? '<br><span style="color:var(--danger)">Nie udało się: ' + errors.join(" · ") + "</span>" : "") +
+            "<br><span class=\"ev-muted\">Zapisz wpis, żeby zachować nowe pomiary.</span>";
+        drawAdded(); drawResultCard();
     }
     async function editReason(i) {                       // ✎: zapisany pomiar wraca do edytora (typ, interwał, punkty, ustawienia)
         const d = M.added[i]; if (!d || !TYPES[d.type]) return;
@@ -7511,6 +7547,7 @@ window.Measure = (function () {
         }
         if (t.closest("[data-ms-fill]") && M.result && M.result.ref) { const f = $("#" + APPLY[M.apply][0]); if (f) { f.value = Number(M.result.ref.value.toFixed(4)); f.dispatchEvent(new Event("input", { bubbles: true })); toast("Wpisano " + price(M.result.ref.value) + " w pole „" + APPLY[M.apply][1] + "”."); } return; }
         if (t.closest("[data-ms-add]")) { addReason(); return; }
+        if (t.closest("[data-ms-reverify]")) { reverifyAll(); return; }
         if ((el = t.closest("[data-ms-rm]"))) { e.preventDefault(); removeReason(+el.dataset.msRm); return; }
         if ((el = t.closest("[data-ms-edit]"))) { e.preventDefault(); editReason(+el.dataset.msEdit); return; }
         if ((el = t.closest("[data-ms-repick]"))) { const i = +el.dataset.msRepick; M.repick = M.repick === i ? null : i; setStatus(M.repick != null ? "Kliknij świecę dla punktu " + (i + 1) + " – zastąpi poprzedni (Esc = anuluj)." : ""); drawEditor(); return; }
@@ -7546,9 +7583,9 @@ window.Measure = (function () {
         $("#fz-measure").style.display = "block"; drawTypes(); drawEditor(); drawResultCard(); drawAdded(); $$tf();
         setTimeout(() => { if (changed || !M.bars.length) loadBars(); else { ensureChart(); drawBase(); } }, 30);
     }
-    function reset() { M.pick = null; M.opdManual = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.saved = []; M.editing = M.editApply = M.repick = null; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
+    function reset() { M.pick = null; M.opdManual = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.saved = []; M.reverifyNote = null; M.editing = M.editApply = M.repick = null; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
     function setAdded(details, savedNames) {                         // edycja wpisu: zapisane zmierzone powody wracają do listy (można je usuwać i dodawać nowe)
-        M.added = (details || []).map(d => JSON.parse(JSON.stringify(d)));
+        M.added = (details || []).map(d => JSON.parse(JSON.stringify(d))); M.reverifyNote = null;
         M.saved = (savedNames || []).map(r => String(r).trim().toLowerCase());
         drawAdded();
     }
