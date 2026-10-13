@@ -7428,7 +7428,7 @@ window.Measure = (function () {
         const T = TYPES[M.type], z = formZone();
         if (!z) { toast("Najpierw wpisz strefę (początek i koniec) – weryfikacja sprawdza, czy strefa pasuje do powodu."); return; }
         if (!(parseFloat($("#form-entry").value) > 0) && M.type !== "external") { toast("Wpisz też konkretny punkt wejścia – weryfikacja sprawdza, jak daleko od niego leży poziom wskazany przez powód."); $("#form-entry").focus(); return; }
-        const params = M.type === "fibo" ? { log: !!M.opts.log } : (M.type === "path" || M.type === "xabcd") ? { tp: parseFloat($("#form-tp").value) || null } :
+        const params = M.type === "fibo" ? { log: !!M.opts.log } : (M.type === "path" || M.type === "xabcd") ? { tp: parseFloat($("#form-tp").value) || null, sl: parseFloat($("#form-sl").value) || null } :
             M.type === "vwap" ? Object.assign({}, M.opts.vwap) : (T.external ? { items: M.items.filter(i => i.url) } : {});
         M.lastParams = params;
         const body = { ticker: M.ticker, tf: M.tf, type: M.type, zone: z, entry: parseFloat($("#form-entry").value) || null, anchors: M.anchors, params: params };
