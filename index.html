@@ -350,6 +350,12 @@
         .plx-sum { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
         @media (max-width: 640px) { .plx-sum { grid-template-columns: 1fr 1fr; gap: 8px; } .plx-sum .plx-kpi { padding: 9px 10px; } .plx-sum .v { font-size: 1.05em; } .plx-sum .s { font-size: .74em; } }
         .plx-axis-list { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; font-size: .85em; } .plx-axis-list span { color: var(--text-muted); }
+        .plx-sec { border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 12px; background: var(--bg-main); }
+        .plx-sec > summary { cursor: pointer; font-weight: 650; } .plx-sec > summary .db-help { font-weight: 400; margin-left: 6px; }
+        .plx-sec[open] > summary { margin-bottom: 10px; } .plx-sec .plx-watch > .plx-h:first-child .db-help { display: none; }
+        .plx-hist { display: flex; flex-direction: column; } .plx-hrow { display: grid; grid-template-columns: 92px 170px 1fr; gap: 8px; font-size: .9em; padding: 5px 0; border-bottom: 1px solid var(--border-color); }
+        .plx-hrow .d, .plx-hrow .z { color: var(--text-muted); }
+        @media (max-width: 640px) { .plx-hrow { grid-template-columns: auto 1fr; gap: 2px 8px; } .plx-hrow > span:last-child { grid-column: 1 / -1; } .plx-hrow .d, .plx-hrow .z { font-size: .85em; } }
         .plx-candle { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border-color); font-size: .9em; }
         .plx-candle-sig { margin-top: 4px; color: var(--text-muted); font-size: .92em; }
         .plx-map-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: .8em; color: var(--text-muted); }
@@ -6105,7 +6111,8 @@ window.Planer = (function () {
     const pctA = (v, m, d) => { const a = amt(v, m); return pct(v, d) + (a ? ' <small class="plx-amt">≈ ' + a + "</small>" : ""); };
     const MD = () => (st.detail && st.detail.money) || null;
 
-    let st = { filter: "open", q: "", all: [], plans: [], seq: 0, detail: null };
+    let st = { filter: "open", q: "", all: [], plans: [], seq: 0, detail: null, secOpen: { watch: false, zones: false } };
+    document.addEventListener("toggle", e => { const d = e.target; if (d && d.classList && d.classList.contains("plx-sec")) st.secOpen[d.dataset.sec] = d.open; }, true);
     const PHASE = { OPEN: ["plx-st-open", "OTWARTY"], PREPARED: ["plx-st-prep", "PRZYGOTOWANY"], CLOSED: ["plx-st-closed", "ZAMKNIĘTY"] };
     const phaseBadge = ph => { const x = PHASE[ph] || PHASE.OPEN; return '<span class="plx-status ' + x[0] + '">' + x[1] + "</span>"; };
     const FILTER_PHASE = { open: "OPEN", prepared: "PREPARED", closed: "CLOSED" };
@@ -6258,19 +6265,20 @@ window.Planer = (function () {
             '<div class="plx-actions"><button class="hp-btn" onclick="Planer.goTrades()">📊 Transakcje</button><button class="hp-btn" onclick="Planer.closeDetail()">✕ Zamknij</button></div></div>' +
             '<div id="plx-sum">' + summaryHtml(p) + "</div>" +
             (p.capital_known ? "" : '<div class="plx-warn">Nie udało się wyliczyć kapitału - procenty budżetu są niedostępne.</div>') +
-            '<div class="plx-h">Oś planu</div><div id="plx-map" class="plx-map"></div>' +
+            '<div class="plx-h">Oś planu <span class="db-help">· skala logarytmiczna</span></div><div id="plx-map" class="plx-map"></div>' +
             (p.unassigned_pct > 0 ? '<div class="plx-warn">Transakcje poza strefami: ' + pct(p.unassigned_pct) + " kapitału (cena zakupu daleko od stref z Form i brak powiązanego zagrania).</div>" : "") +
-            (open_ ? '<div id="plx-watch" class="plx-watch"></div>' : "") +
-            '<div class="plx-h">Strefy spółki z Form i dostępne zagrania</div>' + maxBudgetHtml(p) +
-            (p.legs.length ? p.legs.map((l, i) => legCard(l, i, open_)).join("") : '<div class="db-help">Plan nie ma stref.</div>') +
-            '<div id="plx-detail-msg" class="plx-err"></div>' +
-            (p.money && p.money.currency ? '<div class="db-help">Kwoty w ' + esc(p.money.currency) + (p.money.currency !== "PLN" && p.money.fx ? " po bieżącym kursie " + num(p.money.fx, 4) + " PLN" : "") + " z kapitału " + Math.round(p.money.capital_pln || 0).toLocaleString("pl-PL") + " PLN.</div>" : "") +
             '<div class="plx-h">Transakcje w planie (z zakładki Transakcje)</div>' +
             (trades ? '<div class="hp-table-wrap"><table class="hp-table"><thead><tr><th>Data</th><th>Kierunek</th><th>Cena zakupu</th><th>Zaangażowano</th><th>Wynik</th><th>Status</th></tr></thead><tbody>' + trades + "</tbody></table></div>"
                 : '<div class="db-help">Brak transakcji w tym planie. Nowa transakcja spółki dodana w Transakcjach trafi tu automatycznie, dopóki plan jest otwarty.</div>') +
+            (open_ ? '<div class="plx-h">Historia sygnałów strażnika</div><div id="plx-hist" class="plx-hist"><div class="db-help">Wczytuję…</div></div>' : "") +
             '<div class="plx-h">Notatka</div><textarea id="plx-note" class="dbx-in plx-note" maxlength="2000" ' + (open_ ? "" : "readonly") + ">" + esc(p.note) + "</textarea>" +
-            '<div class="plx-actions">' + (open_ ? '<button class="hp-btn" onclick="Planer.saveNote()">Zapisz notatkę</button><button class="hp-btn dbx-danger" onclick="Planer.closePlan()">Zamknij plan</button>' : '<button class="hp-btn" onclick="Planer.reopenPlan()">Otwórz ponownie</button>') +
-            '<button class="hp-btn" style="margin-left:auto" onclick="Planer.deletePlan()">Usuń plan</button></div>');
+            '<div id="plx-detail-msg" class="plx-err"></div><div class="plx-actions">' + (open_ ? '<button class="hp-btn" onclick="Planer.saveNote()">Zapisz notatkę</button><button class="hp-btn dbx-danger" onclick="Planer.closePlan()">Zamknij plan</button>' : '<button class="hp-btn" onclick="Planer.reopenPlan()">Otwórz ponownie</button>') +
+            '<button class="hp-btn" style="margin-left:auto" onclick="Planer.deletePlan()">Usuń plan</button></div>' +
+            (open_ ? '<details class="plx-sec" data-sec="watch"' + (st.secOpen.watch ? " open" : "") + '><summary>Strażnik stref <span class="db-help" id="plx-watch-sum">analiza…</span></summary><div id="plx-watch" class="plx-watch"></div></details>' : "") +
+            '<details class="plx-sec" data-sec="zones"' + (st.secOpen.zones ? " open" : "") + '><summary>Strefy z Form – budżety i zagrania <span class="db-help">' + p.legs.length + (p.legs.length === 1 ? " strefa" : p.legs.length < 5 ? " strefy" : " stref") + "</span></summary>" + maxBudgetHtml(p) +
+            (p.legs.length ? p.legs.map((l, i) => legCard(l, i, open_)).join("") : '<div class="db-help">Plan nie ma stref.</div>') +
+            (p.money && p.money.currency ? '<div class="db-help">Kwoty w ' + esc(p.money.currency) + (p.money.currency !== "PLN" && p.money.fx ? " po bieżącym kursie " + num(p.money.fx, 4) + " PLN" : "") + " z kapitału " + Math.round(p.money.capital_pln || 0).toLocaleString("pl-PL") + " PLN.</div>" : "") +
+            "</details>");
         drawMap();
         loadWatch();
     }
@@ -6316,15 +6324,17 @@ window.Planer = (function () {
         const H = mob ? 430 : big ? 580 : 500, top = 16, bot = H - 16, fz = mob ? 10.5 : big ? 14 : 12.5, lh = fz * 1.35;
         const ax = Math.round(W * (mob ? 0.62 : 0.40)), zw = mob ? 22 : 56, cx = ax - zw - (mob ? 14 : 26);
         const vals = [px, s.avg_price, s.sl, s.tp].concat(...zones.map(z => [z.lo, z.hi]), (s.buys || []).map(b => b.price), lb ? [lb.h, lb.l] : []).filter(v => v > 0 && isFinite(v));
-        let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.06 || hi * 0.03; lo -= pad; hi += pad;
-        const Y = v => top + (hi - v) / (hi - lo) * (bot - top);
+        let lo = Math.min(...vals), hi = Math.max(...vals); const lpad = (Math.log(hi) - Math.log(lo)) * 0.06 || 0.03; lo = lo * Math.exp(-lpad); hi = hi * Math.exp(lpad);
+        const Y = v => top + (Math.log(hi) - Math.log(v)) / (Math.log(hi) - Math.log(lo)) * (bot - top);        // skala logarytmiczna: równe % = równe odległości
         const T = (x, y, t, fill, o) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" style="fill:' + fill + ";font-size:" + ((o && o.fs) || fz) + "px" + (o && o.w ? ";font-weight:" + o.w : "") + '"' + (o && o.a ? ' text-anchor="' + o.a + '"' : "") + ">" + esc(t) + "</text>";
         const L = (x1, y1, x2, y2, col, wd, dash, op) => '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" style="stroke:' + col + ";stroke-width:" + wd + (dash ? ";stroke-dasharray:" + dash : "") + (op ? ";opacity:" + op : "") + '"/>';
         const C = { long: "#0ecb81", short: "#f6465d", price: "#fcd535", avg: "#89b4fa", sl: "#f6465d", tp: "#0ecb81", buy: "#fab387", mut: "var(--text-muted)", axis: "var(--border-color)" };
         let g = L(ax, top - 6, ax, bot + 6, C.axis, 2);
         // podziałka osi (co „ładny” krok)
         const r = (hi - lo) / (mob ? 5 : 7), mg = Math.pow(10, Math.floor(Math.log10(r))), stp = [1, 2, 2.5, 5, 10].map(k => k * mg).find(k => k >= r) || r, dg = stp >= 1 ? 0 : stp >= 0.1 ? 1 : 2;
-        for (let v = Math.ceil(lo / stp) * stp; v <= hi; v += stp) g += L(ax - 4, Y(v), ax + 4, Y(v), C.mut, 1, "", .6) + (zones.some(z => v >= z.lo - stp * .15 && v <= z.hi + stp * .15) ? "" : T(ax + 7, Y(v) + 3.5, num(v, dg), C.mut, { fs: fz - 2.5 }));
+        let lastY = 1e9;
+        for (let v = Math.ceil(lo / stp) * stp; v <= hi; v += stp) { const y = Y(v); if (lastY - y < 18) continue; lastY = y;
+            g += L(ax - 4, y, ax + 4, y, C.mut, 1, "", .6) + (zones.some(z => v >= z.lo - stp * .15 && v <= z.hi + stp * .15) ? "" : T(ax + 7, y + 3.5, num(v, dg), C.mut, { fs: fz - 2.5 })); }
         // strefy na osi + opisy po prawej
         const right = [];
         zones.forEach(z => {
@@ -6333,7 +6343,7 @@ window.Planer = (function () {
                 (hasPos ? '<rect x="' + (ax - zw) + '" y="' + y1.toFixed(1) + '" width="4" height="' + Math.max(3, y2 - y1).toFixed(1) + '" style="fill:' + col + '"/>' : "") + T(ax - zw + 7, (y1 + y2) / 2 + fz * .35, "S" + z.n, col, { w: 700, fs: fz - 1 });
             const dist = px ? (z.hi < px ? (z.hi / px - 1) * 100 : z.lo > px ? (z.lo / px - 1) * 100 : 0) : null;
             const left = a && a.pct != null ? (a.pct > 0.05 ? "zostało " + pct(a.pct, 1) + (amt(a.pct, m) ? " ≈ " + amt(a.pct, m) : "") : "zostało 0% (" + (AV_NAME[a.binding] || a.binding) + ")") : "bez limitu";
-            right.push({ d: dist == null ? "" : dist === 0 ? "w strefie" : spct(dist, 1), y: (y1 + y2) / 2, col, t: "S" + z.n + " · " + price(z.lo) + "–" + price(z.hi) + (z.l.side === "SHORT" ? " (podaż)" : "") + (hasPos ? " · pozycja " + pct(z.l.used_pct, 1) : ""),
+            right.push({ d: (dist == null ? "" : dist === 0 ? "w strefie" : spct(dist, 1)) + (a && a.pct != null ? " · " + pct(a.pct, 0) : ""), y: (y1 + y2) / 2, col, t: "S" + z.n + " · " + price(z.lo) + "–" + price(z.hi) + (z.l.side === "SHORT" ? " (podaż)" : "") + (hasPos ? " · pozycja " + pct(z.l.used_pct, 1) : ""),
                 sub: (dist == null ? "" : dist === 0 ? "kurs w strefie · " : spct(dist, 1) + " od kursu · ") + left });
         });
         // poziomy i zakupy po lewej
@@ -6367,7 +6377,7 @@ window.Planer = (function () {
             g += L(ax + zw + 2, it.y, rx - 3, it.ly, it.col, 1, "", .45) + (mob ? T(rx, it.ly + fz * .35, it.t.split(" · ")[0] + " " + it.d, it.col, { w: 650 })
                 : T(rx, it.ly - 1, it.t, it.col, { w: 650 }) + T(rx, it.ly + fz * .95, it.sub, C.mut, { fs: fz - 2 }));
         });
-        const zlist = mob && right.length ? '<div class="plx-axis-list">' + right.slice().sort((a, b) => a.y - b.y).map(it => '<div><b style="color:' + it.col + '">' + esc(it.t) + "</b> <span>" + esc(it.sub) + "</span></div>").join("") + "</div>" : "";
+        const zlist = mob ? '<div class="db-help">S# · % od kursu · zostało na strefę (% kapitału)</div>' : "";
         el.innerHTML = '<svg class="plx-map-svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Oś cen planu">' + g + "</svg>" + zlist + candleNote +
             (w ? "" : p.status === "OPEN" ? '<div class="db-help">Ostatnia świeca i zmiana dzienna pojawią się po analizie strażnika…</div>' : "");
     }
@@ -6435,14 +6445,27 @@ window.Planer = (function () {
                     : '<span class="db-help" title="' + esc((p.blockers || []).join("; ") || p.reason) + '">' + esc(p.label) + ": niedostępna</span>").join(" ") +
                 (l.proposals.some(p => p.available) ? ' <button class="hp-btn" data-ev-eval="' + esc(d.ticker) + '" data-entry="' + esc(l.entry_id) + '">Oceń wejście i ustal kwotę →</button>' : "") + "</div></div>";
         });
-        if (d.history && d.history.length) h += '<details><summary class="db-help" style="cursor:pointer">Historia sygnałów (' + d.history.length + ')</summary>' + d.history.filter(r => !String(r.code).startsWith("state_")).map(r => '<div class="plx-play"><b>' + esc(r.bar_date) + "</b> " + (WICON[r.kind] || "⚪") + " " + esc(r.text) + "</div>").join("") + "</details>";
         return h;
+    }
+    function zoneNo(entryId) {                            // numer strefy jak na osi (S1 = najwyższa)
+        const z = (st.detail ? st.detail.legs : []).filter(l => !l.missing && l.start != null).map(l => ({ id: l.entry_id, lo: Math.min(l.start, l.end), hi: Math.max(l.start, l.end) })).sort((a, b) => b.hi - a.hi);
+        const k = z.findIndex(x => x.id === entryId); return k < 0 ? "" : "S" + (k + 1) + " " + price(z[k].lo) + "–" + price(z[k].hi);
+    }
+    function histHtml(d) {
+        const rows = (d.history || []).filter(r => !String(r.code).startsWith("state_")).sort((a, b) => String(b.bar_date).localeCompare(String(a.bar_date)) || (b.id || 0) - (a.id || 0));
+        if (!rows.length) return '<div class="db-help">Brak zapisanych sygnałów – strażnik zapisuje je po każdej sesji (kartki, sygnały siły/słabości, przeglądy TP i SL).</div>';
+        const row = r => '<div class="plx-hrow"><span class="d">' + esc(r.bar_date) + '</span><span class="z">' + esc(zoneNo(r.entry_id)) + "</span><span>" + (WICON[r.kind] || "⚪") + " " + esc(r.text) + "</span></div>";
+        return rows.slice(0, 8).map(row).join("") + (rows.length > 8 ? '<details><summary class="db-help" style="cursor:pointer">Starsze (' + (rows.length - 8) + ")</summary>" + rows.slice(8).map(row).join("") + "</details>" : "");
     }
     async function loadWatch() {
         const box = $("#plx-watch"); if (!box || !st.detail || st.detail.status !== "OPEN") return;
         box.innerHTML = '<div class="plx-h">Strażnik planu</div><div class="db-help">Analizuję zamknięte świece dzienne…</div>';
-        try { const d = await api("/api/planner/watch?plan_id=" + st.detail.id); st.watch = d; if ($("#plx-watch")) $("#plx-watch").innerHTML = watchHtml(d); drawMap(); if ($("#plx-sum") && st.detail) $("#plx-sum").innerHTML = summaryHtml(st.detail); }
-        catch (e) { if ($("#plx-watch")) $("#plx-watch").innerHTML = '<div class="plx-h">Strażnik planu</div><div class="plx-warn">' + esc(e.message) + "</div>"; }
+        try { const d = await api("/api/planner/watch?plan_id=" + st.detail.id); st.watch = d; if ($("#plx-watch")) $("#plx-watch").innerHTML = watchHtml(d); drawMap(); if ($("#plx-sum") && st.detail) $("#plx-sum").innerHTML = summaryHtml(st.detail);
+            if ($("#plx-hist")) $("#plx-hist").innerHTML = histHtml(d);
+            const ws = $("#plx-watch-sum"), np = d.legs.filter(l => l.proposals.some(x => x.available)).length;
+            if (ws) ws.innerHTML = (d.card ? '<span style="color:' + (CARD_COL[d.card.level] || "#848e9c") + '">' + d.card.icon + " " + esc(d.card.label) + "</span>" : "bez kartek") + " · sesja " + esc(d.bar_date) + (np ? " · dokładka możliwa: " + np : ""); }
+        catch (e) { if ($("#plx-watch")) $("#plx-watch").innerHTML = '<div class="plx-h">Strażnik planu</div><div class="plx-warn">' + esc(e.message) + "</div>";
+            if ($("#plx-hist")) $("#plx-hist").innerHTML = '<div class="plx-warn">' + esc(e.message) + "</div>"; const ws = $("#plx-watch-sum"); if (ws) ws.textContent = "błąd analizy"; }
     }
     document.addEventListener("click", e => { if (e.target.closest && e.target.closest("[data-plx-watch]")) loadWatch(); });
     function msg(t) { const m = $("#plx-detail-msg"); if (m) m.textContent = t || ""; }
