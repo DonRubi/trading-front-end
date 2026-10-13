@@ -80,5 +80,7 @@ Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https
 
 - **Oś planu – skracanie pustych odcinków (2026-10-13)**: skala log z węzłami w poziomach (strefy, kurs, średnia, SL, TP, zakupy, świeca); odstęp między kolejnymi poziomami ≤ 6% w pełnej proporcji, dłuższy rysowany jako przerwa (zygzak na osi, „≈ +x% (skrócone)”) o wysokości ok. ¼ zakresu reszty osi – daleki TP nie ściska stref.
 
+- **EOD v3 (2026-10-13)**: szczegóły EOD pokazują strefę z Form i OPD użyte do oceny wolumenu (`eod_eval.zone`), albo informację, że transakcja nie ma zagrania.
+
 ## Do zrobienia (zapisane na prośbę użytkownika)
 - **Transakcje: kroczący take profit i stop loss** – dopracować w zakładce Transakcje. Planer (podsumowanie i oś) bierze SL/TP z ostatniej inwestycji – po wprowadzeniu kroczących poziomów ma pokazywać ich bieżącą wartość.

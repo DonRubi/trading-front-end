@@ -7791,6 +7791,7 @@ window.Measure = (function () {
 window.FocusEod = (function () {
     const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const f1 = v => v == null || isNaN(v) ? "–" : String(Math.round(v * 10) / 10).replace(".", ",");
+    const p2 = v => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
     const VC = { "SPEŁNIA WYMOGI": "var(--success)", "OSTROŻNIE": "var(--accent-hover)", "NIE TERAZ": "var(--danger)" };
     let FE = [], TR = [];
     async function j(url, opts) { const r = await fetch(API_BASE_URL + url, opts); const d = await r.json().catch(() => ({})); if (!r.ok || d.status === "error") throw new Error(d.message || ("HTTP " + r.status)); return d; }
@@ -7859,6 +7860,7 @@ window.FocusEod = (function () {
         let h = '<div class="plx-head"><div><div class="plx-title">Szczegóły EOD · <span class="sd-link" data-tk="' + esc(t.ticker) + '">' + esc(t.ticker) + "</span> #" + t.id + '</div><div class="plx-sub">' +
             "zakup " + esc(t.buy_date || "–") + (eod.bar_date ? " · sesja oceniona: <b>" + esc(eod.bar_date) + "</b>" : "") + (eod.direction ? " · " + esc(eod.direction) : "") + (eod.benchmark ? " · indeks odniesienia " + esc(eod.benchmark) : "") +
             (eod.buy_moment ? " · godzina zakupu <b>" + esc(String(eod.buy_moment.at).slice(11, 16)) + "</b> (" + esc(eod.buy_moment.source || "") + ")" : t.buy_time ? " · godzina zakupu " + esc(t.buy_time) : "") +
+            (eod.zone ? " · strefa z Form <b>" + esc(eod.zone.entry_id || "") + " " + p2(eod.zone.lo) + "–" + p2(eod.zone.hi) + "</b>" + (eod.zone.opd != null ? ", " + (eod.direction === "SHORT" ? "OPS " : "OPD ") + p2(eod.zone.opd) + " (" + esc(eod.zone.opd_source || "") + ")" : "") : (comps.length && (eod.version || 0) >= 3 ? " · bez zagrania z Form (wolumen bez kontekstu strefy)" : "")) +
             (eod.computed_at ? " · policzono " + esc(eod.computed_at) : "") + '</div></div><div class="plx-actions"><button class="hp-btn" data-eod-calc="' + t.id + '">↻ Przelicz</button><button class="hp-btn" data-eod-close>✕</button></div></div>';
         if (!comps.length) return h + '<div class="ev-empty">Punkty końca dnia nie zostały jeszcze policzone. Kliknij „↻ Przelicz” po zamknięciu sesji.</div>';
         const focusPts = ev.points != null ? ev.points : null, eodPts = t.eod_score != null ? parseFloat(t.eod_score) : null;
