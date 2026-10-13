@@ -351,6 +351,11 @@
         .plx-map-key i, .plx-map-list i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
         .plx-map-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: .85em; }
         .plx-map-list span { color: var(--text-muted); }
+        .plx-avail { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 8px 0 4px; padding: 8px 10px; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border-color); }
+        .plx-avail .l { font-size: .85em; color: var(--text-muted); } .plx-avail b { font-size: 1.15em; }
+        .plx-av-lims { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
+        .plx-av-lim { font-size: .78em; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border-color); color: var(--text-muted); }
+        .plx-av-lim.on { border-color: var(--accent-hover); color: var(--accent-hover); }
         .plx-zone { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; }
         .plx-zone.pick { cursor: pointer; } .plx-zone.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; } .plx-zone.dis { opacity: .5; cursor: not-allowed; }
         .plx-zhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -6187,12 +6192,22 @@ window.Planer = (function () {
             "<span>transakcje: <b>" + p.trades + "</b>" + (p.open_trades ? " (otwarte: " + p.open_trades + ", " + pctA(p.used_pct, MD()) + " kapitału)" : "") + "</span>" +
             (canAct ? '<button type="button" class="hp-btn hp-primary plx-do" data-do="' + esc(p.entry_id) + '" data-leg="' + i + '" title="Przejdź do analizy Focus lub do dodania transakcji dla tego zagrania">Zrób zagranie →</button>' : "") + "</div>").join("");
     }
+    // dostępny budżet strefy teraz: najciaśniejszy z limitów (strefa, plan, spółka, lewar portfela) i limit wejść
+    const AV_NAME = { strefa: "strefa", plan: "plan", "spółka": "spółka", lewar: "lewar portfela", "wejścia": "limit wejść" };
+    function availHtml(l, m) {
+        const a = l.available; if (!a) return "";
+        const col = a.pct == null ? "var(--text-muted)" : a.pct > 0.05 ? "var(--success)" : "var(--danger)";
+        const lims = (a.limits || []).map(r => '<span class="plx-av-lim' + (r.key === a.binding ? " on" : "") + '" title="' + esc(r.text) + '">' + esc(AV_NAME[r.key] || r.key) + " " + (r.room_pct < 0 ? "−" + num(-r.room_pct, 1) : num(r.room_pct, 1)) + "%</span>").join("") +
+            (a.trades_left != null || a.binding === "wejścia" ? '<span class="plx-av-lim' + (a.binding === "wejścia" ? " on" : "") + '">wolnych wejść ' + (a.binding === "wejścia" ? 0 : a.trades_left) + "</span>" : "");
+        return '<div class="plx-avail"><span class="l">Dostępne teraz w strefie</span><b style="color:' + col + '">' + (a.pct == null ? "bez limitu" : pctA(a.pct, m)) + "</b>" +
+            '<span class="db-help">' + (a.pct != null && a.pct <= 0.05 ? "blokuje: " : "ogranicza: ") + esc(a.text) + "</span>" + (lims ? '<span class="plx-av-lims">' + lims + "</span>" : "") + "</div>";
+    }
     function legCard(l, i, editable) {
         const over = !l.auto && l.zone_limit_pct != null && l.planned_pct > l.zone_limit_pct + 1e-9, m = MD();
         return '<div class="plx-zone"><div class="plx-zhead"><span class="plx-zside ' + (l.side === "LONG" ? "long" : "short") + '">' + arrow(l.side) + '</span><span class="plx-zrange">' + num(l.start, 2) + " – " + num(l.end, 2) + "</span>" +
             (l.missing ? '<span class="plx-warn">strefa nie istnieje już w Form</span>' : "") +
             '<div class="plx-zbud"><span class="db-help">zainwestowano ' + pctA(l.used_pct, m) + " · do dołożenia " + pctA(l.left_pct, m) + "</span>" +
-            "<b>" + (l.auto ? "limit strefy " : "budżet ") + (l.planned_pct != null ? pctA(l.planned_pct, m) : "—") + "</b></div></div>" + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l, i, editable && !l.missing) + "</div>";
+            "<b>" + (l.auto ? "limit strefy " : "budżet ") + (l.planned_pct != null ? pctA(l.planned_pct, m) : "—") + "</b></div></div>" + availHtml(l, m) + (over ? '<div class="plx-err">Budżet strefy przekracza limit rodzaju spółki.</div>' : "") + playRows(l, i, editable && !l.missing) + "</div>";
     }
     function tpTable(d) {
         const st_ = c => '<span style="display:inline-block;height:6px;width:' + Math.round(c.strength * 60) + 'px;background:var(--accent-hover);border-radius:3px"></span> ' + num(c.strength, 2);
@@ -6281,7 +6296,7 @@ window.Planer = (function () {
         const wl = {}; (w ? w.legs : []).forEach(l => { wl[l.entry_id] = l; });
         const zones = p.legs.filter(l => !l.missing && l.start != null && l.end != null).map(l => {
             const x = wl[l.entry_id] || {}, pl = (l.plays || [])[0] || {};
-            return { id: l.entry_id, lo: Math.min(l.start, l.end), hi: Math.max(l.start, l.end), side: l.side, used: l.used_pct || 0, planned: l.planned_pct, left: l.left_pct,
+            return { av: l.available, id: l.entry_id, lo: Math.min(l.start, l.end), hi: Math.max(l.start, l.end), side: l.side, used: l.used_pct || 0, planned: l.planned_pct, left: l.left_pct,
                 entry: pl.entry_point, sl: x.sl ? x.sl.level : pl.stop_loss, slBroken: !!(x.sl && x.sl.broken), tp: x.tp1 && x.tp1.price ? x.tp1.price : pl.take_profit, card: x.card };
         }).sort((a, b) => b.hi - a.hi);
         zones.forEach((z, i) => { z.n = i + 1; });
@@ -6377,7 +6392,7 @@ window.Planer = (function () {
         // etykiety (desktop: kolumna po prawej z rozsuwaniem; telefon: lista pod wykresem)
         const zl = m.zones.map(z => ({ y: (Y(z.hi) + Y(z.lo)) / 2, col: z.side === "LONG" ? (z.out ? C.mut : C.long) : C.short,
             t: "S" + z.n + " · " + price(z.lo) + "–" + price(z.hi) + (z.side === "SHORT" ? " (podaż)" : ""),
-            sub: [z.dist == null ? "" : z.dist === 0 ? "kurs w strefie" : spct(z.dist, 1) + " od kursu", z.side === "LONG" ? (z.hasPos ? "pozycja " + pct(z.used, 1) + (z.planned != null ? " z " + pct(z.planned, 1) : "") : z.out ? z.out : z.reach ? z.reach + ". dokładka · " + (z.left == null ? "bez limitu strefy" : z.left > 1e-9 ? "budżet " + pct(z.left, 1) : "budżet spółki wyczerpany") : "") : "", z.avgAfter ? "śr. po ≈ " + price(z.avgAfter) : ""].filter(Boolean).join(" · ") }));
+            sub: [z.dist == null ? "" : z.dist === 0 ? "kurs w strefie" : spct(z.dist, 1) + " od kursu", z.side === "LONG" ? (z.hasPos ? "pozycja " + pct(z.used, 1) + (z.planned != null ? " z " + pct(z.planned, 1) : "") : z.out ? z.out : z.reach ? z.reach + ". dokładka" : "") : "", z.side === "LONG" && z.av ? (z.av.pct == null ? "dostępne: bez limitu" : "dostępne teraz " + pct(z.av.pct, 1)) : "", z.avgAfter ? "śr. po ≈ " + price(z.avgAfter) : ""].filter(Boolean).join(" · ") }));
         const all = lines.concat(zl).sort((a, b) => a.y - b.y);
         let leg = "";
         if (!mob) {
