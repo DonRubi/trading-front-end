@@ -7012,15 +7012,15 @@ window.Measure = (function () {
     const TYPES = {
         fvg: { label: "Luka (FVG)", slots: ["Świeca przed luką", "Świeca po luce"], need: 2, bar: true, help: "Kliknij dwie świece, między którymi powstała luka (sąsiednie = luka cenowa, co druga = FVG z trzech świec). Wg SMC: luka kończy się dopiero ZAMKNIĘCIEM za jej dalszą krawędzią (inwersja iFVG), powrót do środka (CE) to wejście; premia za lukę przy przełamaniu struktury (BOS/CHoCH) i w dyskoncie (LONG) / premii (SHORT)." },
         swing: { label: "Potwierdzony dołek/szczyt", slots: ["Świeca dołka (dla short: szczytu)"], need: 1, bar: true, help: "Kliknij świecę dołka – liczy się dół korpusu (dla short: góra korpusu). Ocena: świeżość poziomu (Seiden – każdy test go zużywa), wolumen testów (Wyckoff), spring/sweep jako premia i ostrzeżenie przy równych dołkach (SMC – płynność pod spodem)." },
-        correction: { label: "Powtórzenie korekty", slots: ["Koniec korekty 1 (opcjonalnie)", "Koniec korekty 2 (opcjonalnie)"], need: 0, bar: true, help: "Porównuje bieżącą korektę z poprzednimi korektami tej spółki w trendzie (mała = siła, typowa = norma, duża = nadal siła, przebita razem z dołkiem = słabość) i wylicza pasmo oczekiwanego powtórzenia korekty. Opcjonalnie kliknij końce korekt, które mają posłużyć za wzorzec." },
+        correction: { label: "Powtórzenie korekty", slots: ["Koniec korekty 1 (opcjonalnie)", "Koniec korekty 2 (opcjonalnie)"], need: 0, bar: true, help: "Spółka w trendzie zwykle cofa się o podobny procent. Aplikacja mierzy poprzednie korekty TEJ spółki w bieżącym trendzie (np. −8%, −11%, −9% od szczytów) i: 1) ocenia obecną korektę względem typowej – mała = siła trendu, typowa = norma, duża = ostrzeżenie (ale struktura cała), z przebiciem ostatniego dołka = słabość; 2) wylicza, gdzie skończyłaby się obecna korekta, gdyby powtórzyła dwie ostatnie (pasmo od mniejszej do większej). Przykład: szczyt 100, ostatnie korekty −8% i −11% → pasmo 89–92; strefa w tym paśmie = wysoka ocena. Bez klikania liczy wszystko samo; możesz wskazać końce dwóch korekt, które mają być wzorcem." },
         range: { label: "Konsolidacja / akumulacja", slots: ["Początek konsolidacji (opcjonalnie)", "Koniec konsolidacji (opcjonalnie)"], need: 0, bar: true, help: "Zakres boczny z wieloma testami krawędzi i jego wybicie ZAMKNIĘCIEM świecy. Bez wskazania aplikacja sama znajdzie zakres; możesz kliknąć początek (i koniec) konsolidacji. Sprawdza też historię: czy Twoja strefa leżała kiedyś w akumulacji wybitej w górę." },
         path: { label: "Droga otwarta (ZS i OPS)", slots: ["OPS – świeca szczytu (opcjonalnie)", "ZS – świeca bazy strefy (opcjonalnie)"], need: 0, bar: true, help: "Przeszkody między kursem a celem (TP z formularza): ZS – złota strefa i OPS – ostatni potwierdzony szczyt. Droga otwarta, gdy oba przebite zamknięciem. Sprawdza też historię: czy Twoja strefa to dawna złota strefa popytu." },
         trend: { label: "Zdrowy trend", slots: ["Ostatni dołek (dla short: szczyt) – opcjonalnie"], need: 0, bar: true, help: "Aplikacja sama znajduje szczyty i dołki (HH/HL). Możesz kliknąć świecę własnego ostatniego dołka (dla short: szczytu) – liczy się dół korpusu – i wtedy to on jest sprawdzany." },
         fibo: { label: "Poziomy FIBO", slots: ["Początek swingu", "Koniec swingu"], need: 2, log: true, suggest: "fibo_leg", help: "Kliknij początek i koniec swingu (wg knotów). „Podpowiedz” bierze ostatni ruch trendu." },
-        one2one: { label: "Korekta 1:1", slots: ["A – start korekty", "B – koniec pierwszej fali", "C – koniec odbicia"], need: 3, help: "Pierwsza fala korekty A→B, odbicie do C; druga fala ma być równa pierwszej (standardowo i logarytmicznie)." },
+        one2one: { label: "Korekta 1:1", slots: ["A – początek wzorcowej korekty", "B – koniec wzorcowej korekty", "C – świeca, od której przykładasz drugą korektę"], need: 3, log1: true, help: "Wyznacz jedną korektę (A→B), a potem kliknij świecę C, od której ma się zacząć druga, taka sama korekta. Aplikacja przyłoży ją do C – w wersji „taka sama” (ta sama odległość w cenie) albo logarytmicznej (ten sam %) – narysuje odcinek C→D i sprawdzi, czy jej koniec D wypada w strefie wejścia (najlepiej w „pustym miejscu”, do którego cena jeszcze nie doszła)." },
         xabcd: { label: "XABCD", slots: ["X", "A", "B", "C"], need: 4, help: "Cztery punkty formacji harmonicznej (X, A, B, C) – punkt D i strefę odwrócenia (PRZ) aplikacja wyliczy z proporcji. Góra/dół świecy dobiera się automatycznie (punkt wyżej od sąsiadów = góra), możesz to zmienić przy punkcie." },
         rgr: { label: "RGR", slots: ["Lewe ramię", "Głowa", "Prawe ramię", "Szyja – punkt 1 (opcj.)", "Szyja – punkt 2 (opcj.)"], need: 3, help: "Lewe ramię, głowa, prawe ramię; linię szyi wyznaczę sam, albo wskaż jej dwa punkty." },
-        elliott: { label: "Fale Elliotta", slots: ["0", "1", "2", "3", "4", "5", "A", "B", "C"], need: 3, help: "Punkty 0–5 impulsu (min. 3) i opcjonalnie korekta A, B, C wg knotów. Ostatni punkt wyznacza prognozę kolejnej fali." },
+        elliott: { label: "Fale Elliotta", slots: ["0", "1", "2", "3", "4 (opcjonalnie – wyliczę)", "5 (opcjonalnie – wyliczę)", "A", "B", "C"], need: 3, help: "Wystarczą pierwsze punkty: 0, 1, 2 i 3 (wg knotów). Kolejne aplikacja wyliczy z proporcji Elliotta: fala 4 = 23,6 / 38,2 / 50% fali 3 (bez wejścia w obszar fali 1), fala 5 = fala 1 albo 0,618 × (0→3), potem korekta A. Wybierz, którym punktem fali jest Twoja strefa – albo zostaw „sprawdź sam”, a aplikacja znajdzie wyliczony punkt, który wypada w strefie." },
         vwap: { label: "VWAP", slots: ["Kotwica (opcjonalnie)"], need: 0, bar: true, help: "VWAP z pasmami jak w TradingView (hlc3, odchylenie standardowe ważone wolumenem, Bands Multiplier #1 i #2). Domyślnie kotwiczony od ostatniego dołka i szczytu; możesz wskazać świecę albo wybrać kotwicę okresową (tydzień, miesiąc, kwartał, rok)." },
         vp: { label: "Volume Profile", slots: ["Początek profilu (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie od początku trendu albo od kontynuacji po wyraźnej korekcie; możesz wskazać własny początek." },
         external: { label: "Analiza zewnętrzna", slots: [], need: 0, external: true, help: "Linki do analiz; kilka analiz liczy się jako jeden punkt." }
@@ -7357,6 +7357,8 @@ window.Measure = (function () {
         if (T.slots.length && !T.external) h += '<button type="button" class="hp-btn" data-ms-undo>↶ Cofnij punkt</button><button type="button" class="hp-btn" data-ms-clear>Wyczyść punkty</button>';
         if (T.suggest) h += '<button type="button" class="hp-btn" data-ms-suggest>✨ Podpowiedz z trendu</button>';
         if (T.log) h += '<label class="ev-muted"><input type="checkbox" data-ms-log' + (M.opts.log ? " checked" : "") + '> skala logarytmiczna</label>';
+        if (T.log1) h += '<label class="ev-muted">druga korekta: <select data-ms-log1><option value="0"' + (M.opts.log1 ? "" : " selected") + '>taka sama (w cenie)</option><option value="1"' + (M.opts.log1 ? " selected" : "") + ">logarytmiczna (w %)</option></select></label>";
+        if (M.type === "elliott") h += '<label class="ev-muted">strefa to punkt fali: <select data-ms-wave>' + [["auto", "sprawdź sam"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"], ["A", "A"], ["B", "B"], ["C", "C"]].map(([v, l]) => '<option value="' + v + '"' + ((M.opts.wave || "auto") === v ? " selected" : "") + ">" + l + "</option>").join("") + "</select></label>";
         if (M.type === "vwap") {
             const o = M.opts.vwap, opt = (v, l, cur) => '<option value="' + v + '"' + (String(cur) === v ? " selected" : "") + ">" + l + "</option>";
             h += '<span class="fz-vwopts"><label>Pasmo #1 × <input type="number" step="0.1" min="0.1" data-ms-vw="mult1" value="' + esc(o.mult1) + '"></label>' +
@@ -7428,7 +7430,7 @@ window.Measure = (function () {
         const T = TYPES[M.type], z = formZone();
         if (!z) { toast("Najpierw wpisz strefę (początek i koniec) – weryfikacja sprawdza, czy strefa pasuje do powodu."); return; }
         if (!(parseFloat($("#form-entry").value) > 0) && M.type !== "external") { toast("Wpisz też konkretny punkt wejścia – weryfikacja sprawdza, jak daleko od niego leży poziom wskazany przez powód."); $("#form-entry").focus(); return; }
-        const params = M.type === "fibo" ? { log: !!M.opts.log } : (M.type === "path" || M.type === "xabcd") ? { tp: parseFloat($("#form-tp").value) || null, sl: parseFloat($("#form-sl").value) || null } :
+        const params = M.type === "fibo" ? { log: !!M.opts.log } : M.type === "one2one" ? { log: !!M.opts.log1 } : M.type === "elliott" ? { wave: M.opts.wave || "auto" } : (M.type === "path" || M.type === "xabcd") ? { tp: parseFloat($("#form-tp").value) || null, sl: parseFloat($("#form-sl").value) || null } :
             M.type === "vwap" ? Object.assign({}, M.opts.vwap) : (T.external ? { items: M.items.filter(i => i.url) } : {});
         M.lastParams = params;
         const body = { ticker: M.ticker, tf: M.tf, type: M.type, zone: z, entry: parseFloat($("#form-entry").value) || null, anchors: M.anchors, params: params };
@@ -7465,6 +7467,8 @@ window.Measure = (function () {
         M.anchors = JSON.parse(JSON.stringify(d.anchors || []));
         M.editApply = d.ref && APPLY[d.ref.applies_to] ? d.ref.applies_to : null; M.apply = M.editApply || "entry";
         if (d.type === "fibo") M.opts.log = !!(d.params || {}).log;
+        if (d.type === "one2one") M.opts.log1 = !!(d.params || {}).log;
+        if (d.type === "elliott") M.opts.wave = (d.params || {}).wave || "auto";
         if (d.type === "vwap") M.opts.vwap = Object.assign({}, VWAP_DEF, d.params || {});
         if (d.type === "external") M.items = JSON.parse(JSON.stringify(d.items && d.items.length ? d.items : [{}]));
         drawTypes(); drawEditor(); drawResultCard(); drawAdded();
@@ -7520,6 +7524,8 @@ window.Measure = (function () {
         if (t.id === "fz-magnet") { M.magnet = t.checked; resnap(); M.result = null; drawResult(null); drawEditor(); return; }
         if (t.matches && t.matches("[data-ms-apply]")) M.apply = t.value;
         if (t.matches && t.matches("[data-ms-log]")) { M.opts.log = t.checked; M.result = null; drawResultCard(); }
+        if (t.matches && t.matches("[data-ms-log1]")) { M.opts.log1 = t.value === "1"; M.result = null; drawResultCard(); if (M.anchors.length >= TYPES.one2one.need) verify(); }
+        if (t.matches && t.matches("[data-ms-wave]")) { M.opts.wave = t.value; M.result = null; drawResultCard(); if (M.anchors.length >= TYPES.elliott.need) verify(); }
         if (t.matches && t.matches("[data-ms-vw]")) {                                        // ustawienia VWAP: zapamiętane i od razu ponowna weryfikacja
             const k = t.dataset.msVw, o = M.opts.vwap;
             o[k] = (k === "mult1" || k === "mult2") ? (parseFloat(t.value) > 0 ? parseFloat(t.value) : VWAP_DEF[k]) : t.value;
