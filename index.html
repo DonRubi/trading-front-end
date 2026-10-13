@@ -1159,18 +1159,18 @@
             </div>
             <div class="dbx-panel lim-panel" id="scoring-panel">
                 <h4>🎯 Punktacja inwestycji i cięcie budżetu</h4>
-                <p class="db-help">Punkty budżetowe = <b>Score z Form × mnożnik</b> + <b>punkty za moment wejścia</b>. Od ich procentu (względem maksimum) zależy, jaka część dostępnego budżetu (limity powyżej / plan) przysługuje na wejście, a kwotę dodatkowo ogranicza ryzyko: strata przy SL jako % kapitału bieżącego, łączne ryzyko portfela i obsunięcie. Punkty za koniec dnia (po zamknięciu sesji) dochodzą do łącznego wyniku, ale nie wpływają na budżet.</p>
+                <p class="db-help">Punkty budżetowe = <b>Score z Form × mnożnik</b> + <b>punkty za moment wejścia</b>. Od ich procentu (względem maksimum) zależy, jaka część dostępnego budżetu (limity powyżej / plan) przysługuje na wejście, a kwotę ogranicza lewar portfela (maks. ekspozycja). Ile stref niżej możesz uśredniać, decyduje Planer (typ spółki: limit wejść i odstęp stref), a złamanie SL ocenia przegląd SL (trzymaj i uśredniaj / czekaj / zmniejsz). Limity od SL i obsunięcia są domyślnie wyłączone (0) – włącz je tylko, jeśli chcesz dodatkowego hamulca. Punkty za koniec dnia (po zamknięciu sesji) dochodzą do łącznego wyniku, ale nie wpływają na budżet.</p>
                 <div class="sc-grid">
                     <label>Mnożnik Score z Form<input type="number" id="sc-mult" min="0.5" max="10" step="0.5"></label>
                     <label>Maks. punktów za moment wejścia<input type="number" id="sc-entry" min="0" max="20" step="0.5"></label>
                     <label>Maks. punktów za koniec dnia<input type="number" id="sc-eod" min="0" max="20" step="0.5"></label>
                     <label title="Spółki oznaczone jako priorytet (Inwestycja/Spekulacja · priorytet) dostają tyle punktów gratis do punktów budżetowych (bez przekraczania maksimum).">Bonus za spółkę z priorytetem (pkt)<input type="number" id="sc-prio" min="0" max="5" step="0.5"></label>
                     <label title="Gdy ocena momentu wejścia (0–100) jest niższa, dostępny budżet = 0 niezależnie od punktów Form. 0 = bramka wyłączona. Zalecane ok. 50.">Bramka: min. ocena wejścia (0–100)<input type="number" id="sc-gate" min="0" max="100" step="5"></label>
-                    <label title="Strata przy SL jednej transakcji nie większa niż ten % kapitału bieżącego – przy dalekim SL pozycja jest mniejsza. 0 = bez limitu.">Ryzyko na transakcję (% kapitału)<input type="number" id="sc-risk" min="0" max="10" step="0.25"></label>
-                    <label title="Suma strat wszystkich otwartych pozycji, gdyby doszły do SL. Nowe wejście dostaje najwyżej wolną część. 0 = bez limitu.">Maks. ryzyko portfela do SL (%)<input type="number" id="sc-heat" min="0" max="100" step="0.5"></label>
+                    <label title="Opcjonalnie: strata przy SL jednej transakcji nie większa niż ten % kapitału bieżącego – przy dalekim SL pozycja jest mniejsza. Domyślnie 0 = wyłączone (wielkość z Planera).">Ryzyko na transakcję (% kapitału)<input type="number" id="sc-risk" min="0" max="10" step="0.25"></label>
+                    <label title="Opcjonalnie: suma strat wszystkich otwartych pozycji, gdyby doszły do SL. Nowe wejście dostaje najwyżej wolną część. Domyślnie 0 = wyłączone.">Maks. ryzyko portfela do SL (%)<input type="number" id="sc-heat" min="0" max="100" step="0.5"></label>
                     <label title="Łączna ekspozycja otwartych pozycji (wydano × dźwignia, po bieżącej cenie) jako % kapitału bieżącego – Twój lewar portfela. Nowe wejście dostaje najwyżej wolne miejsce do tego limitu. 0 = bez limitu.">Maks. ekspozycja portfela – lewar (% kapitału)<input type="number" id="sc-exp" min="0" max="500" step="5"></label>
-                    <label title="Obsunięcie portfela (TWR od szczytu), od którego ryzyko na transakcję spada o połowę.">Obsunięcie: zmniejsz ryzyko od (%)<input type="number" id="sc-ddr" min="0" max="100" step="1"></label>
-                    <label title="Obsunięcie portfela, od którego nowe wejścia i dokładki są wstrzymane (Twoja tolerancja ok. 20%).">Obsunięcie: wstrzymaj wejścia od (%)<input type="number" id="sc-dds" min="0" max="100" step="1"></label>
+                    <label title="Opcjonalnie: obsunięcie portfela (TWR od szczytu), od którego ryzyko na transakcję spada o połowę. Domyślnie 0 = wyłączone.">Obsunięcie: zmniejsz ryzyko od (%)<input type="number" id="sc-ddr" min="0" max="100" step="1"></label>
+                    <label title="Opcjonalnie: obsunięcie portfela, od którego nowe wejścia i dokładki są wstrzymane. Domyślnie 0 = wyłączone.">Obsunięcie: wstrzymaj wejścia od (%)<input type="number" id="sc-dds" min="0" max="100" step="1"></label>
                     <label title="Ciągłe: między widełkami część budżetu rośnie liniowo (bez skoku o 50% za 0,01 pkt). Schodkowe: jak dawniej.">Widełki<select id="sc-cont"><option value="true">ciągłe (zalecane)</option><option value="false">schodkowe</option></select></label>
                 </div>
                 <div class="db-help" id="sc-summary"></div>
@@ -6248,6 +6248,13 @@ window.Planer = (function () {
         return '<div class="plx-play" style="border-left:3px solid ' + col + ';padding-left:8px;margin:6px 0"><b style="color:' + col + '">TP ' + price(r.tp) + " osiągnięty – " + esc(r.verdict) + "</b> (świeca z " + esc(r.bar_date) + ", wynik " + r.score + ")<br>" + esc(r.action) +
             '<div class="db-help">' + r.evidence.map(esc).join("<br>") + "</div></div>";
     }
+    const SLREV = { TRZYMAJ_USREDNIAJ: ["#0ecb81", "trzymaj i uśredniaj w kolejnej strefie"], CZEKAJ: ["#fcd535", "trzymaj bez dokładki – czekaj"], ZMNIEJSZ: ["#f6465d", "zmniejsz albo wyjdź"] };
+    function slReviewHtml(l) {
+        const r = l.sl_review; if (!r) return "";
+        const v = SLREV[r.verdict] || ["#848e9c", r.verdict];
+        return '<div class="plx-play" style="border-left:3px solid ' + v[0] + ';padding-left:8px;margin:6px 0"><b style="color:' + v[0] + '">🛡 Przegląd SL ' + price(r.level) + " – " + esc(v[1]) + "</b> (złamanie " + esc(r.bar_date) + ", wynik " + r.score + (r.sessions_below ? ", " + r.sessions_below + " sesji pod poziomem" : ", kurs wrócił nad poziom") + ")<br>" + esc(r.action) +
+            '<div class="db-help">' + (r.evidence || []).map(esc).join("<br>") + "</div></div>";
+    }
     function positionHtml(d) {
         const p = d.position; if (!p) return "";
         const c = (v) => v == null ? "" : (v >= 0 ? "var(--success)" : "var(--danger)");
@@ -6271,6 +6278,7 @@ window.Planer = (function () {
             h += '<div class="plx-play">Limity: wolnych wejść ' + (inv.trades_left == null ? "–" : inv.trades_left) + " · wolny budżet spółki " + (inv.remaining_pct == null ? "–" : pctA(inv.remaining_pct, MD())) + "</div>";
             if (inv.market) h += '<div class="plx-play">' + inv.market.lines.map(esc).join("<br>") + (inv.market.verdict ? "<br><b>Rynek: " + esc(inv.market.verdict) + "</b>" : "") + "</div>";
         }
+        h += slReviewHtml(l);
         return h;
     }
     function watchControlsHtml(d) {
@@ -8133,8 +8141,9 @@ window.HomeTodo = (function () {
     function render() {
         const box = $("#hp-todo"); if (!box) return;
         const g = [], d = data;
-        const cards = d.cards.filter(c => c.kind === "card"), tps = d.cards.filter(c => c.kind === "tp_review");
+        const cards = d.cards.filter(c => c.kind === "card"), tps = d.cards.filter(c => c.kind === "tp_review"), sls = d.cards.filter(c => c.kind === "sl_review");
         if (cards.length) g.push('<div class="td-group"><h4>Kartki planów</h4>' + cards.map(c => item('data-td-plan="' + c.plan_id + '"', COL[c.level], c.icon, "<b>" + esc(c.ticker) + "</b>" + esc(c.label) + (c.entry_id ? " · " + esc(c.entry_id) : ""), esc(String(c.text || "").replace(c.icon + " " + c.label + ": ", "")) + (c.bar_date ? " · sesja " + esc(c.bar_date) : ""), "Plan →")).join("") + "</div>");
+        if (sls.length) g.push('<div class="td-group"><h4>SL złamany – przegląd (decyzja z kontekstu)</h4>' + sls.map(c => item('data-td-plan="' + c.plan_id + '"', c.label.indexOf("zmniejsz") >= 0 ? "#f6465d" : c.label.indexOf("czekaj") >= 0 ? "#fcd535" : "#0ecb81", "🛡", "<b>" + esc(c.ticker) + "</b>" + esc(c.label.replace("Przegląd SL: ", "")) + (c.entry_id ? " · " + esc(c.entry_id) : ""), esc(c.text || "") + (c.bar_date ? " · sesja " + esc(c.bar_date) : ""), "Plan →")).join("") + "</div>");
         if (tps.length) g.push('<div class="td-group"><h4>Take profit osiągnięty – przegląd</h4>' + tps.map(c => item('data-td-plan="' + c.plan_id + '"', COL.tp, "🎯", "<b>" + esc(c.ticker) + "</b>" + esc(c.entry_id || ""), esc(c.text || ""), "Plan →")).join("") + "</div>");
         if (d.near.length) g.push('<div class="td-group"><h4>Przy strefach z Form</h4>' + d.near.map(x => item('data-td-eval="' + esc(x.r.ticker) + '" data-entry="' + esc(x.p.entry_id) + '"', "var(--accent-hover)", "📍",
             "<b>" + esc(x.r.ticker) + "</b>" + (x.p.in_zone ? "w strefie" : (x.p.distance_pct > 0 ? "+" : "") + num(x.p.distance_pct, 1) + "% od wejścia"),
@@ -8142,7 +8151,7 @@ window.HomeTodo = (function () {
         if (d.focus.length) g.push('<div class="td-group"><h4>Focus bez transakcji</h4>' + d.focus.slice(0, 6).map(f => { const sm = f.summary || {};
             return item('data-td-fe="' + f.id + '"', "#89b4fa", "💾", "<b>" + esc(f.ticker) + "</b>" + esc(f.verdict || ""), esc(f.entry_id || "") + " · " + (f.points != null ? num(f.points, 1) + "/" + num(f.max_points || 15, 0) + " pkt · " : "") + "rek. " + (f.recommended_pct == null ? "–" : num(f.recommended_pct, 1) + "%") + (sm.recommended_ccy != null ? " ≈ " + Math.round(sm.recommended_ccy).toLocaleString("pl-PL") + " " + esc(sm.currency || "") : "") + " · " + new Date(f.created_at).toLocaleDateString("pl-PL"), "Transakcja →"); }).join("") + "</div>");
         if (d.eod.length) g.push('<div class="td-group"><h4>Brak oceny końca dnia (EOD)</h4>' + d.eod.slice(0, 8).map(t => item('data-td-eod="' + t.id + '"', "#cba6f7", "🌙", "<b>" + esc(t.ticker) + "</b>#" + t.id, "zakup " + esc(t.buy_date || "") + " – policz punkty 0–5 po sesji", "EOD →")).join("") + "</div>");
-        const n = cards.length + tps.length + d.near.length + d.focus.length + d.eod.length;
+        const n = cards.length + tps.length + sls.length + d.near.length + d.focus.length + d.eod.length;
         box.innerHTML = g.join("") || '<div class="td-ok">✓ Nic pilnego – brak kartek, spółek przy strefach i zaległych ocen.</div>';
         const pk = $("#hp-peek-todo"); if (pk) pk.textContent = n ? n + (n === 1 ? " sprawa" : n < 5 ? " sprawy" : " spraw") + (cards.some(c => c.level === "red") ? " · 🟥" : "") : "nic pilnego";
     }
