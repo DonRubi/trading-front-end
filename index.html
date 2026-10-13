@@ -788,7 +788,7 @@
                     </div>
                     <div class="tr-grid">
                         <label class="tr-f tr-wide"><span>Notatka uzasadniająca inwestycję</span><input type="text" id="trade-comment" placeholder="Dlaczego wchodzę…" required></label>
-                        <label class="tr-f"><span>Wejście w ostatnim kwadransie sesji?</span><select id="trade-last15"><option value="0" selected>Nie</option><option value="1">Tak (+1 pkt do oceny wejścia)</option></select></label>
+                        <label class="tr-f"><span>Wejście w ostatnim kwadransie sesji? <small id="trade-last15-hint" class="tr-cnt"></small></span><select id="trade-last15"><option value="0" selected>Nie</option><option value="1">Tak (+1 pkt do oceny wejścia)</option></select></label>
                     </div>
                     <select id="trade-focus-id" hidden onchange="onTradeFocusChange()"><option value="">–</option></select>
                     <input type="hidden" id="trade-max-spend"><input type="hidden" id="trade-tp"><input type="hidden" id="trade-sl"><input type="hidden" id="trade-score">
@@ -1778,7 +1778,7 @@
                     <div class="form-row">
                         <div class="form-group"><label>Komentarz</label><input type="text" id="edit-tr-comment" value="${item.comment || ''}" required></div>
                         <div class="form-group"><label>Godzina zakupu (czas PL)</label><input type="time" id="edit-tr-btime" value="${item.buy_time || ''}" title="Do punktów końca dnia: świeca 1H, w której kupiono"></div>
-                        <div class="form-group"><label>Ostatni Kwadrans?</label><select id="edit-tr-last15"><option value="0" ${item.last_15_min==0?'selected':''}>Nie</option><option value="1" ${item.last_15_min==1?'selected':''}>Tak (+1 pkt)</option></select></div>
+                        <div class="form-group"><label>Ostatni Kwadrans? <small id="edit-tr-last15-hint" class="tr-cnt"></small></label><select id="edit-tr-last15"><option value="0" ${item.last_15_min==0?'selected':''}>Nie</option><option value="1" ${item.last_15_min==1?'selected':''}>Tak (+1 pkt)</option></select></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Cena Zakupu</label><input type="number" step="0.0001" id="edit-tr-buy" value="${item.buy_price}"></div>
@@ -1808,6 +1808,8 @@
                 }
 
                 content.innerHTML = html;
+                window.__editTrade = { ticker: item.ticker, buy_date: String(item.buy_date || '').slice(0, 10) };
+                if (item.buy_time) syncLast15('edit-tr-last15', item.ticker, window.__editTrade.buy_date, item.buy_time, 'edit-tr-last15-hint');
             }
             document.getElementById('edit-modal').style.display = 'flex';
         }
@@ -1852,7 +1854,8 @@
                 // Automatyczne korygowanie Score jeśli zmieniłeś opcję kwadransa na włączoną lub wyłączoną!
                 const item = allTradesData.find(x => x.id === currentEditId);
                 const oldLast15 = item.last_15_min || 0;
-                const newLast15 = parseInt(document.getElementById('edit-tr-last15').value) || 0;
+                const auto15 = syncLast15('edit-tr-last15', item.ticker, String(item.buy_date || '').slice(0, 10), document.getElementById('edit-tr-btime').value, 'edit-tr-last15-hint');
+                const newLast15 = auto15 != null ? auto15 : (parseInt(document.getElementById('edit-tr-last15').value) || 0);
                 const newScore = (parseFloat(item.focus_score) || 0) - oldLast15 + newLast15;
 
                 payload = { 
@@ -2893,6 +2896,7 @@
             document.getElementById('trade-play-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
             document.getElementById('trade-buy-date').valueAsDate = new Date(); 
             document.getElementById('trade-buy-time').value = new Date().toTimeString().slice(0, 5);
+            syncTradeLast15();
             fetchTradesEntries(); 
             if (window.__pendingTradePlay) { const p = window.__pendingTradePlay; window.__pendingTradePlay = null; applyTradePlay(p); }
         }
@@ -2917,6 +2921,7 @@
             if (p.evalData && p.evalData.summary && p.evalData.summary.price) document.getElementById('trade-buy-price').value = Number(p.evalData.summary.price).toFixed(4);
             const asOf = p.evalData && ((p.evalData.summary || {}).as_of || (p.evalData.entry_eval || {}).as_of);
             if (asOf) { document.getElementById('trade-buy-date').value = String(asOf).slice(0, 10); document.getElementById('trade-buy-time').value = String(asOf).slice(11, 16); }      // ocena z wybranej chwili -> data i godzina zakupu z tej chwili
+            syncTradeLast15();
             const form = document.getElementById('trade-form'); if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
             const sp = document.getElementById('trade-spent'); if (sp) setTimeout(() => sp.focus(), 400);
         }
@@ -3088,7 +3093,51 @@
                 const ps = document.getElementById('trade-play-id'); if (ps && Array.prototype.some.call(ps.options, o => o.value === focus.entry_id)) ps.value = focus.entry_id;
             } catch(e){} 
         }
-    // Główna funkcja dodająca transakcję
+    // ---- ostatni kwadrans sesji wyliczany z godziny zakupu (czas polski) i godzin sesji giełdy tickera ----
+const TRADE_SESSIONS = [   // [prefiksy/sufiksy tickera, strefa giełdy, otwarcie, zamknięcie - minuty od północy; jak entry_eval.SESSIONS w backendzie]
+    [['GPW:', '.WA'], 'Europe/Warsaw', 540, 1020], [['XETR:', '.DE'], 'Europe/Berlin', 540, 1050], [['LSE:', '.L'], 'Europe/London', 480, 990],
+    [['EPA:', 'PA:', 'EURONEXT:', '.PA'], 'Europe/Paris', 540, 1050], [['AMS:', '.AS'], 'Europe/Amsterdam', 540, 1050], [['MIL:', '.MI'], 'Europe/Rome', 540, 1050],
+    [['NASDAQ:', 'NYSE:', 'AMEX:', 'ARCA:', 'BATS:'], 'America/New_York', 570, 960]];
+function tradeSession(ticker) {
+    const t = String(ticker || '').toUpperCase().trim(); if (!t) return null;
+    for (const [keys, tz, op, cl] of TRADE_SESSIONS) if (keys.some(k => k.endsWith(':') ? t.startsWith(k) : t.endsWith(k))) return { tz, op, cl };
+    return /^[A-Z][A-Z0-9-]{0,5}$/.test(t) ? { tz: 'America/New_York', op: 570, cl: 960 } : null;   // goły symbol = USA (jak w backendzie)
+}
+function tzParts(epoch, tz) {
+    const o = {}; new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date(epoch)).forEach(p => { if (p.type !== 'literal') o[p.type] = +p.value; });
+    return o;
+}
+function plTimeToEpoch(date, time) {           // 'RRRR-MM-DD' + 'GG:MM' czasu polskiego -> ms (niezależnie od strefy przeglądarki)
+    const [y, mo, d] = date.split('-').map(Number), [h, mi] = time.split(':').map(Number);
+    let ep = Date.UTC(y, mo - 1, d, h, mi);
+    for (let i = 0; i < 2; i++) { const p = tzParts(ep, 'Europe/Warsaw'); ep -= Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - Date.UTC(y, mo - 1, d, h, mi); }
+    return ep;
+}
+function last15FromTime(ticker, date, time) {  // 1 = zakup w ostatnich 15 min sesji (z fixingiem), 0 = nie, null = nie da się ustalić
+    const s = tradeSession(ticker);
+    if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !/^\d{1,2}:\d{2}/.test(time || '')) return null;
+    const p = tzParts(plTimeToEpoch(date, time.slice(0, 5)), s.tz), m = p.hour * 60 + p.minute;
+    return m >= s.cl - 15 && m <= s.cl + 5 ? 1 : 0;
+}
+function syncLast15(selId, ticker, date, time, hintId) {
+    const sel = document.getElementById(selId); if (!sel) return null;
+    const v = last15FromTime(ticker, date, time), hint = document.getElementById(hintId);
+    if (v != null) sel.value = String(v);
+    sel.disabled = v != null;
+    if (hint) hint.textContent = v != null ? '(wyliczone z godziny zakupu)' : (time ? '(nieznana giełda – wybierz ręcznie)' : '(wpisz godzinę zakupu albo wybierz ręcznie)');
+    return v;
+}
+function syncTradeLast15() {
+    return syncLast15('trade-last15', (document.getElementById('trade-ticker') || {}).value, (document.getElementById('trade-buy-date') || {}).value, (document.getElementById('trade-buy-time') || {}).value, 'trade-last15-hint');
+}
+document.addEventListener('input', e => {
+    const id = e.target && e.target.id;
+    if (id === 'trade-buy-time' || id === 'trade-buy-date') syncTradeLast15();
+    if (id === 'edit-tr-btime' && window.__editTrade) syncLast15('edit-tr-last15', window.__editTrade.ticker, window.__editTrade.buy_date, e.target.value, 'edit-tr-last15-hint');
+});
+document.addEventListener('change', e => { if (e.target && (e.target.id === 'trade-ticker-select' || e.target.id === 'trade-play-id')) setTimeout(syncTradeLast15, 300); });
+// Główna funkcja dodająca transakcję
 async function submitTradeForm(e) { 
     e.preventDefault(); 
     
@@ -3102,7 +3151,8 @@ async function submitTradeForm(e) {
     } 
     
     const baseScore = parseFloat(document.getElementById('trade-score').value) || 0;
-    const last15 = parseInt(document.getElementById('trade-last15').value) || 0;
+    const auto15 = syncTradeLast15();                       // z godziny zakupu, gdy giełda znana; inaczej wybór ręczny
+    const last15 = auto15 != null ? auto15 : (parseInt(document.getElementById('trade-last15').value) || 0);
             
     const data = { 
         focus_id: document.getElementById('trade-focus-id').value || null, 
