@@ -347,6 +347,11 @@
         .plx-h { font-size: 1em; font-weight: 650; margin: 4px 0 2px; }
         .plx-map { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 12px; overflow: hidden; }
         .plx-map-svg { display: block; width: 100%; height: auto; }
+        .plx-sum { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+        @media (max-width: 640px) { .plx-sum { grid-template-columns: 1fr 1fr; gap: 8px; } .plx-sum .plx-kpi { padding: 9px 10px; } .plx-sum .v { font-size: 1.05em; } .plx-sum .s { font-size: .74em; } }
+        .plx-axis-list { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; font-size: .85em; } .plx-axis-list span { color: var(--text-muted); }
+        .plx-candle { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border-color); font-size: .9em; }
+        .plx-candle-sig { margin-top: 4px; color: var(--text-muted); font-size: .92em; }
         .plx-map-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: .8em; color: var(--text-muted); }
         .plx-map-key i, .plx-map-list i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
         .plx-map-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: .85em; }
@@ -6251,18 +6256,12 @@ window.Planer = (function () {
         showOverlay("plx-detail",
             '<div class="plx-head"><div><div class="plx-title"><span class="sd-link" data-tk="' + esc(p.ticker) + '">' + esc(p.ticker) + "</span> " + kindBadge(p.kind, p.kind_label) + ' ' + phaseBadge(p.phase) + '</div><div class="plx-sub">' + esc(p.name) + " · plan od " + date(p.created_at) + (p.closed_at ? " do " + date(p.closed_at) : "") + "</div></div>" +
             '<div class="plx-actions"><button class="hp-btn" onclick="Planer.goTrades()">📊 Transakcje</button><button class="hp-btn" onclick="Planer.closeDetail()">✕ Zamknij</button></div></div>' +
-            '<div class="plx-kpis">' +
-            kpi("Budżet spółki", pct(c.used_pct) + (c.max_pct != null ? " <small class='db-help'>z " + pct(c.max_pct) + "</small>" : " <small class='db-help'>bez limitu</small>"), (amt(c.used_pct, p.money) ? "<b>" + amt(c.used_pct, p.money) + "</b>" + (c.max_pct != null ? " z " + amt(c.max_pct, p.money) : "") + " · " : "") + "zaangażowane w otwartych transakcjach (z dźwignią)") +
-            kpi("Strefy spółki", (p.zones ? p.zones.total : p.legs.length) + ' <small class="db-help">z transakcjami: ' + (p.zones ? p.zones.with_trades : "—") + "</small>", p.zones && p.zones.limit_pct != null ? "limit na strefę: " + pct(p.zones.limit_pct) + (amt(p.zones.limit_pct, p.money) ? " ≈ " + amt(p.zones.limit_pct, p.money) : "") : "bez limitu na strefę") +
-            (p.reserved_pct > 0 ? kpi("Zarezerwowane w planie", pctA(p.reserved_pct, p.money), "do dołożenia w strefach planu") : "") +
-            kpi("Zostaje po inwestycji", '<span class="' + (after == null ? "" : after < -1e-9 ? "plx-neg" : "plx-pos") + '">' + pct(after) + "</span>", (amt(after, p.money) ? "<b>" + amt(after, p.money) + "</b> · " : "") + "budżet spółki po zainwestowaniu całego planu") +
-            kpi("Inwestycje w spółce", c.open_trades + (c.max_trades != null ? " / " + c.max_trades : ""), c.trades_left != null ? (c.trades_left > 0 ? "wolnych miejsc: " + c.trades_left : '<span class="plx-neg">limit wyczerpany</span>') : "bez limitu liczby") + "</div>" +
+            '<div id="plx-sum">' + summaryHtml(p) + "</div>" +
             (p.capital_known ? "" : '<div class="plx-warn">Nie udało się wyliczyć kapitału - procenty budżetu są niedostępne.</div>') +
-            maxBudgetHtml(p) +
-            '<div class="plx-h">Mapa planu</div><div id="plx-map" class="plx-map"></div>' +
+            '<div class="plx-h">Oś planu</div><div id="plx-map" class="plx-map"></div>' +
             (p.unassigned_pct > 0 ? '<div class="plx-warn">Transakcje poza strefami: ' + pct(p.unassigned_pct) + " kapitału (cena zakupu daleko od stref z Form i brak powiązanego zagrania).</div>" : "") +
             (open_ ? '<div id="plx-watch" class="plx-watch"></div>' : "") +
-            '<div class="plx-h">Strefy spółki z Form i dostępne zagrania</div>' +
+            '<div class="plx-h">Strefy spółki z Form i dostępne zagrania</div>' + maxBudgetHtml(p) +
             (p.legs.length ? p.legs.map((l, i) => legCard(l, i, open_)).join("") : '<div class="db-help">Plan nie ma stref.</div>') +
             '<div id="plx-detail-msg" class="plx-err"></div>' +
             (p.money && p.money.currency ? '<div class="db-help">Kwoty w ' + esc(p.money.currency) + (p.money.currency !== "PLN" && p.money.fx ? " po bieżącym kursie " + num(p.money.fx, 4) + " PLN" : "") + " z kapitału " + Math.round(p.money.capital_pln || 0).toLocaleString("pl-PL") + " PLN.</div>" : "") +
@@ -6272,139 +6271,105 @@ window.Planer = (function () {
             '<div class="plx-h">Notatka</div><textarea id="plx-note" class="dbx-in plx-note" maxlength="2000" ' + (open_ ? "" : "readonly") + ">" + esc(p.note) + "</textarea>" +
             '<div class="plx-actions">' + (open_ ? '<button class="hp-btn" onclick="Planer.saveNote()">Zapisz notatkę</button><button class="hp-btn dbx-danger" onclick="Planer.closePlan()">Zamknij plan</button>' : '<button class="hp-btn" onclick="Planer.reopenPlan()">Otwórz ponownie</button>') +
             '<button class="hp-btn" style="margin-left:auto" onclick="Planer.deletePlan()">Usuń plan</button></div>');
-        drawMap(); loadMapBars(p.ticker);
+        drawMap();
         loadWatch();
     }
-    // ---------- mapa planu: strefy, odstępy między nimi, kurs, średnia (i średnia po kolejnych dokładkach), SL i TP ----------
-    const GAP_DEF = { inv_prio: 25, inv: 20, spec_prio: 12, spec: 10 };
+    // ---------- podsumowanie planu (góra Szczegółów) ----------
+    const pln = v => v == null || !isFinite(v) ? "—" : Math.round(v).toLocaleString("pl-PL") + " PLN";
+    const spln = v => v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("pl-PL") + " PLN";
+    const pnlCol = v => v == null ? "" : v >= 0 ? "var(--success)" : "var(--danger)";
+    function summaryHtml(p) {
+        const s = p.summary || {}, c = p.company || {}, w = st.watch && st.watch.plan_id === p.id ? st.watch : null, dc = w && w.day_change;
+        const kpi = (l, v, sub) => '<div class="plx-kpi"><div class="l">' + l + '</div><div class="v">' + v + "</div>" + (sub ? '<div class="s">' + sub + "</div>" : "") + "</div>";
+        const rr = s.sl && s.tp && s.avg_price && s.avg_price > s.sl ? (s.tp - s.avg_price) / (s.avg_price - s.sl) : null;
+        const bl = s.budget_left_pct;
+        return '<div class="plx-kpis plx-sum">' +
+            kpi("Zainwestowano", pln(s.invested_pln), s.n_open ? s.n_open + (s.n_open === 1 ? " otwarta transakcja" : " otw. transakcji") + " · ekspozycja " + pln(s.exposure_pln) + (s.avg_price ? "<br>średnia cena zakupu <b>" + price(s.avg_price) + "</b>" : "") : "brak otwartych transakcji") +
+            kpi("Kurs", price(s.price) + (dc && dc.pct != null ? ' <small style="color:' + pnlCol(dc.pct) + '">' + spct(dc.pct) + "</small>" : ""),
+                dc ? (dc.session_open ? "sesja trwa · zmiana od zamknięcia " : "po sesji · zmiana dnia ") + (w.last_bar ? esc(w.last_bar.date) : "") : (p.status === "OPEN" ? "zmiana dzienna po analizie strażnika…" : "bieżący z bazy")) +
+            kpi("Wynik teraz", '<span style="color:' + pnlCol(s.pnl_pln) + '">' + spln(s.pnl_pln) + "</span>", s.pnl_pct != null ? spct(s.pnl_pct) + " zainwestowanej kwoty" + (s.avg_price && s.price ? " · kurs " + spct((s.price / s.avg_price - 1) * 100) + " vs średnia" : "") : "") +
+            kpi("Przy TP " + (s.tp ? price(s.tp) : "—"), '<span style="color:' + pnlCol(s.gain_at_tp_pln) + '">' + spln(s.gain_at_tp_pln) + "</span>", s.tp ? spct(s.gain_at_tp_pct) + " · TP z ostatniej inwestycji (" + esc(s.tp_from || "") + ")" + (rr ? " · R:R od średniej " + num(rr, 1) : "") : "brak TP w transakcjach") +
+            kpi("Przy SL " + (s.sl ? price(s.sl) : "—"), '<span style="color:' + pnlCol(s.loss_at_sl_pln) + '">' + spln(s.loss_at_sl_pln) + "</span>", s.sl ? spct(s.loss_at_sl_pct) + " · SL z ostatniej inwestycji (" + esc(s.sl_from || "") + ")" : "brak SL w transakcjach") +
+            kpi("Strefy", (s.zones_reachable != null ? s.zones_reachable : "—") + ' <small class="db-help">do uśredniania</small>', "pod kursem bez pozycji: " + (s.zones_below != null ? s.zones_below : "—") + " · z pozycją: " + (s.zones_with_position || 0) +
+                "<br>wolnych wejść: " + (s.trades_left == null ? "bez limitu" : s.trades_left + (c.max_trades != null ? " z " + c.max_trades : ""))) +
+            kpi("Budżet spółki", bl == null ? "bez limitu" : bl >= 0 ? pctA(bl, p.money) : '<span class="plx-neg">przekroczony o ' + pct(-bl) + "</span>",
+                (s.budget_used_pct != null ? "wykorzystano " + pct(s.budget_used_pct) + (s.budget_max_pct != null ? " z " + pct(s.budget_max_pct) : "") : "") + (p.remaining_after_pct != null ? "<br>po zainwestowaniu planu: " + pct(p.remaining_after_pct) : "")) +
+            "</div>";
+    }
+    // ---------- oś cen planu: strefy (zostało / % od kursu), kurs, średnia, zakupy, SL i TP ostatniej inwestycji, ostatnia zamknięta świeca ----------
     let mapRz = null;
     window.addEventListener("resize", () => { clearTimeout(mapRz); mapRz = setTimeout(() => { if (document.querySelector("#plx-map")) drawMap(); }, 150); });
-    async function loadMapBars(tk) {
-        if (st.mapBars && st.mapBars.ticker === tk) { drawMap(); return; }
-        try {
-            const r = await fetch(API_BASE_URL + "/api/candles?ticker=" + encodeURIComponent(tk) + "&tf=1d&limit=260");
-            const d = await r.json(); if (!r.ok || d.status === "error") throw new Error(d.message || "HTTP " + r.status);
-            st.mapBars = { ticker: tk, bars: (d.bars || []).filter(b => b.c != null) };
-        } catch (e) { st.mapBars = { ticker: tk, bars: [], err: e.message }; }
-        drawMap();
-    }
-    const isoDay = t => typeof t === "number" ? new Date(t * 1000).toISOString().slice(0, 10) : String(t).slice(0, 10);
-    function mapModel() {
-        const p = st.detail; if (!p) return null;
-        const w = st.watch && st.watch.plan_id === p.id ? st.watch : null, pos = w && w.position;
-        const bars = st.mapBars && st.mapBars.ticker === p.ticker ? st.mapBars.bars : [];
-        const wl = {}; (w ? w.legs : []).forEach(l => { wl[l.entry_id] = l; });
-        const zones = p.legs.filter(l => !l.missing && l.start != null && l.end != null).map(l => {
-            const x = wl[l.entry_id] || {}, pl = (l.plays || [])[0] || {};
-            return { av: l.available, id: l.entry_id, lo: Math.min(l.start, l.end), hi: Math.max(l.start, l.end), side: l.side, used: l.used_pct || 0, planned: l.planned_pct, left: l.left_pct,
-                entry: pl.entry_point, sl: x.sl ? x.sl.level : pl.stop_loss, slBroken: !!(x.sl && x.sl.broken), tp: x.tp1 && x.tp1.price ? x.tp1.price : pl.take_profit, card: x.card };
-        }).sort((a, b) => b.hi - a.hi);
-        zones.forEach((z, i) => { z.n = i + 1; });
-        const last = bars.length ? bars[bars.length - 1].c : null;
-        const px = (pos && pos.price) || last;
-        const open = (p.trades || []).filter(t => t.status === "OPEN" && t.side === "LONG" && t.buy_price > 0);
-        const expo = open.reduce((s, t) => s + (t.invested_pct || 0), 0);
-        let avg = pos && pos.avg_price;
-        if (!avg && open.length && expo > 0) avg = expo / open.reduce((s, t) => s + (t.invested_pct || 0) / t.buy_price, 0);
-        const longs = zones.filter(z => z.side === "LONG");
-        let sl = pos && pos.sl_plan, tp = pos && pos.tp_plan;
-        const ref = avg || px;
-        if (!sl && ref) { const c = longs.map(z => z.sl).filter(v => v && v < ref); sl = c.length ? Math.min(...c) : null; }
-        if (!tp && ref) { const c = longs.map(z => z.tp).filter(v => v && v > ref); tp = c.length ? Math.min(...c) : null; }
-        // zasięg uśredniania wg Planera: kolejne strefy LONG pod kursem bez pozycji, w limicie wejść spółki i w odstępie typu spółki
-        const maxGap = (w && w.settings && w.settings.max_gap_pct) || GAP_DEF[p.kind] || 10, left = p.company ? p.company.trades_left : null;
-        let k = 0, prev = null, broken = null, units = avg ? expo / avg : 0, ex = expo;
-        longs.forEach(z => {
-            z.hasPos = z.used > 1e-9;
-            z.dist = px ? (z.hi < px ? (z.hi / px - 1) * 100 : z.lo > px ? (z.lo / px - 1) * 100 : 0) : null;
-            if (z.hasPos || !px || z.hi >= px) { prev = z; return; }
-            if (broken) { z.out = broken; return; }
-            const g = prev ? (z.hi / prev.lo - 1) * 100 : null;
-            if (left != null && k >= left) broken = "poza limitem wejść (" + (p.company.max_trades != null ? "maks. " + p.company.max_trades : "limit") + ")";
-            else if (g != null && Math.abs(g) > maxGap) broken = "odstęp " + num(Math.abs(g), 1) + "% > " + num(maxGap, 0) + "% (typ spółki)";
-            if (broken) { z.out = broken; return; }
-            k++; z.reach = k;
-            const add = z.left != null ? z.left : z.planned, at = z.entry && z.entry >= z.lo && z.entry <= z.hi ? z.entry : z.hi;
-            if (add > 0 && at > 0 && (avg || !open.length)) { ex += add; units += add / at; z.avgAfter = ex / units; }
-            prev = z;
-        });
-        longs.forEach((z, i) => { const nx = longs[i + 1]; if (nx) z.gapNext = (nx.hi / z.lo - 1) * 100; });
-        return { p, w, bars, zones, longs, price: px, avg, sl, tp, maxGap, open, rr: avg && sl && tp && avg > sl ? (tp - avg) / (avg - sl) : null };
+    function spread(items, top, bot, h) {                 // rozsuwa etykiety w pionie (bez nakładania), w granicach [top, bot]
+        items.sort((a, b) => a.y - b.y);
+        let yb = top - h; items.forEach(it => { it.ly = Math.max(it.y, yb + h); yb = it.ly; });
+        let lim = bot; for (let i = items.length - 1; i >= 0; i--) { if (items[i].ly > lim) items[i].ly = lim; lim = items[i].ly - h; }
+        return items;
     }
     function drawMap() {
         const el = $("#plx-map"); if (!el) return;
-        const m = mapModel(); if (!m) return;
-        if (!m.zones.length) { el.innerHTML = '<div class="db-help">Plan nie ma stref z Form – nie ma czego rysować.</div>'; return; }
-        const W = Math.max(300, (el.clientWidth || 824) - 24), mob = W < 640, big = W > 1300;
-        const H = mob ? 400 : big ? 560 : 470, axW = mob ? 0 : 58, labW = mob ? 0 : Math.min(380, Math.round(W * 0.33)), gapW = mob ? 54 : 74;
-        const cx0 = axW, cW = W - axW - labW - gapW, gx = cx0 + cW, lx = gx + gapW, top = 14, bot = H - 22;
-        const N = mob ? 70 : big ? 160 : 120, bars = m.bars.slice(-N);
-        const vals = [m.price, m.avg, m.sl, m.tp].concat(...m.zones.map(z => [z.lo, z.hi]), m.longs.map(z => z.avgAfter), bars.map(b => b.l), bars.map(b => b.h)).filter(v => v > 0 && isFinite(v));
-        let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.05 || hi * 0.02; lo -= pad; hi += pad;
-        const Y = v => top + (hi - v) / (hi - lo) * (bot - top), fz = mob ? 11 : big ? 14 : 12.5;
-        const T = (x, y, s, fill, o) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" style="fill:' + fill + ';font-size:' + ((o && o.fs) || fz) + 'px' + (o && o.w ? ";font-weight:" + o.w : "") + '"' + (o && o.a ? ' text-anchor="' + o.a + '"' : "") + ">" + esc(s) + "</text>";
+        const p = st.detail; if (!p) return;
+        const s = p.summary || {}, w = st.watch && st.watch.plan_id === p.id ? st.watch : null, lb = w && w.last_bar, m = p.money;
+        const zones = p.legs.filter(l => !l.missing && l.start != null && l.end != null).map(l => ({ l, lo: Math.min(l.start, l.end), hi: Math.max(l.start, l.end) })).sort((a, b) => b.hi - a.hi);
+        zones.forEach((z, i) => { z.n = i + 1; });
+        if (!zones.length && !s.price) { el.innerHTML = '<div class="db-help">Plan nie ma stref z Form.</div>'; return; }
+        const px = s.price, W = Math.max(300, (el.clientWidth || 824) - 24), mob = W < 640, big = W > 1300;
+        const H = mob ? 430 : big ? 580 : 500, top = 16, bot = H - 16, fz = mob ? 10.5 : big ? 14 : 12.5, lh = fz * 1.35;
+        const ax = Math.round(W * (mob ? 0.62 : 0.40)), zw = mob ? 22 : 56, cx = ax - zw - (mob ? 14 : 26);
+        const vals = [px, s.avg_price, s.sl, s.tp].concat(...zones.map(z => [z.lo, z.hi]), (s.buys || []).map(b => b.price), lb ? [lb.h, lb.l] : []).filter(v => v > 0 && isFinite(v));
+        let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.06 || hi * 0.03; lo -= pad; hi += pad;
+        const Y = v => top + (hi - v) / (hi - lo) * (bot - top);
+        const T = (x, y, t, fill, o) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" style="fill:' + fill + ";font-size:" + ((o && o.fs) || fz) + "px" + (o && o.w ? ";font-weight:" + o.w : "") + '"' + (o && o.a ? ' text-anchor="' + o.a + '"' : "") + ">" + esc(t) + "</text>";
         const L = (x1, y1, x2, y2, col, wd, dash, op) => '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" style="stroke:' + col + ";stroke-width:" + wd + (dash ? ";stroke-dasharray:" + dash : "") + (op ? ";opacity:" + op : "") + '"/>';
-        const C = { long: "#0ecb81", short: "#f6465d", price: "#fcd535", avg: "#89b4fa", sl: "#f6465d", tp: "#0ecb81", mut: "var(--text-muted)", txt: "var(--text-main)", grid: "var(--border-color)" };
-        let s = '<defs><pattern id="plx-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" style="stroke:#848e9c;stroke-width:2;opacity:.35"/></pattern></defs>';
-        // siatka cen
-        if (!mob) { const r = (hi - lo) / 5, mg = Math.pow(10, Math.floor(Math.log10(r))), stp = [1, 2, 2.5, 5, 10].map(k => k * mg).find(k => k >= r) || r, dg = stp >= 1 ? 0 : stp >= 0.1 ? 1 : 2;
-            for (let v = Math.ceil(lo / stp) * stp; v <= hi; v += stp) { const y = Y(v); s += L(cx0, y, gx, y, C.grid, 1, "2 4") + T(axW - 6, y + 4, num(v, dg), C.mut, { a: "end", fs: fz - 1.5 }); } }
-        // strefy
-        m.zones.forEach(z => {
-            const y1 = Y(z.hi), y2 = Y(z.lo), h = Math.max(3, y2 - y1), col = z.side === "LONG" ? C.long : C.short;
-            const op = z.out ? .06 : z.hasPos ? .26 : .14;
-            s += '<rect x="' + cx0 + '" y="' + y1.toFixed(1) + '" width="' + cW + '" height="' + h.toFixed(1) + '" style="fill:' + col + ";fill-opacity:" + op + ";stroke:" + col + ";stroke-opacity:" + (z.out ? .25 : .55) + '"><title>' + esc("S" + z.n + " " + price(z.lo) + "–" + price(z.hi) + (z.out ? " · " + z.out : "")) + "</title></rect>";
-            if (z.out) s += '<rect x="' + cx0 + '" y="' + y1.toFixed(1) + '" width="' + cW + '" height="' + h.toFixed(1) + '" style="fill:url(#plx-hatch)"/>';
-            if (z.hasPos) s += '<rect x="' + cx0 + '" y="' + y1.toFixed(1) + '" width="4" height="' + h.toFixed(1) + '" style="fill:' + col + '"/>';
-            s += T(cx0 + 8, y1 + Math.min(h, 16) - 3, "S" + z.n + (z.side === "SHORT" ? " podaż" : ""), col, { w: 700, fs: fz - 1 });
-            if (z.sl && z.side === "LONG" && Math.abs(z.sl - (m.sl || 0)) > 1e-9) s += L(cx0, Y(z.sl), gx, Y(z.sl), C.sl, 1, "2 3", .7) + T(gx - 4, Y(z.sl) - 3, "SL S" + z.n + (z.slBroken ? " złamany" : ""), C.sl, { a: "end", fs: fz - 2 });
+        const C = { long: "#0ecb81", short: "#f6465d", price: "#fcd535", avg: "#89b4fa", sl: "#f6465d", tp: "#0ecb81", buy: "#fab387", mut: "var(--text-muted)", axis: "var(--border-color)" };
+        let g = L(ax, top - 6, ax, bot + 6, C.axis, 2);
+        // podziałka osi (co „ładny” krok)
+        const r = (hi - lo) / (mob ? 5 : 7), mg = Math.pow(10, Math.floor(Math.log10(r))), stp = [1, 2, 2.5, 5, 10].map(k => k * mg).find(k => k >= r) || r, dg = stp >= 1 ? 0 : stp >= 0.1 ? 1 : 2;
+        for (let v = Math.ceil(lo / stp) * stp; v <= hi; v += stp) g += L(ax - 4, Y(v), ax + 4, Y(v), C.mut, 1, "", .6) + (zones.some(z => v >= z.lo - stp * .15 && v <= z.hi + stp * .15) ? "" : T(ax + 7, Y(v) + 3.5, num(v, dg), C.mut, { fs: fz - 2.5 }));
+        // strefy na osi + opisy po prawej
+        const right = [];
+        zones.forEach(z => {
+            const col = z.l.side === "LONG" ? C.long : C.short, y1 = Y(z.hi), y2 = Y(z.lo), hasPos = (z.l.used_pct || 0) > 1e-9, a = z.l.available;
+            g += '<rect x="' + (ax - zw) + '" y="' + y1.toFixed(1) + '" width="' + (zw * 2) + '" height="' + Math.max(3, y2 - y1).toFixed(1) + '" rx="3" style="fill:' + col + ";fill-opacity:" + (hasPos ? .32 : .16) + ";stroke:" + col + ';stroke-opacity:.6"/>' +
+                (hasPos ? '<rect x="' + (ax - zw) + '" y="' + y1.toFixed(1) + '" width="4" height="' + Math.max(3, y2 - y1).toFixed(1) + '" style="fill:' + col + '"/>' : "") + T(ax - zw + 7, (y1 + y2) / 2 + fz * .35, "S" + z.n, col, { w: 700, fs: fz - 1 });
+            const dist = px ? (z.hi < px ? (z.hi / px - 1) * 100 : z.lo > px ? (z.lo / px - 1) * 100 : 0) : null;
+            const left = a && a.pct != null ? (a.pct > 0.05 ? "zostało " + pct(a.pct, 1) + (amt(a.pct, m) ? " ≈ " + amt(a.pct, m) : "") : "zostało 0% (" + (AV_NAME[a.binding] || a.binding) + ")") : "bez limitu";
+            right.push({ d: dist == null ? "" : dist === 0 ? "w strefie" : spct(dist, 1), y: (y1 + y2) / 2, col, t: "S" + z.n + " · " + price(z.lo) + "–" + price(z.hi) + (z.l.side === "SHORT" ? " (podaż)" : "") + (hasPos ? " · pozycja " + pct(z.l.used_pct, 1) : ""),
+                sub: (dist == null ? "" : dist === 0 ? "kurs w strefie · " : spct(dist, 1) + " od kursu · ") + left });
         });
-        // świece dzienne w tle
-        if (bars.length) {
-            const bw = cW / N, x0 = cx0 + (N - bars.length) * bw;
-            bars.forEach((b, i) => {
-                const x = x0 + i * bw + bw / 2, col = b.c >= b.o ? C.long : C.short, yo = Y(Math.max(b.o, b.c)), yc = Y(Math.min(b.o, b.c));
-                s += L(x, Y(b.h), x, Y(b.l), col, 1, "", .55) + '<rect x="' + (x - bw * .35).toFixed(1) + '" y="' + yo.toFixed(1) + '" width="' + Math.max(1, bw * .7).toFixed(1) + '" height="' + Math.max(1, yc - yo).toFixed(1) + '" style="fill:' + col + ';opacity:.55"/>';
-            });
-            const days = bars.map(b => isoDay(b.t));
-            (m.p.trades || []).filter(t => t.buy_price > 0 && t.buy_date >= days[0]).forEach(t => {
-                let i = days.length - 1; while (i > 0 && days[i] > t.buy_date) i--;          // sesja zakupu (albo ostatnia przed nią)
-                const x = x0 + i * bw + bw / 2, y = Y(t.buy_price), sh = t.side === "LONG";
-                s += '<path d="M' + x.toFixed(1) + " " + (y + (sh ? 2 : -2)).toFixed(1) + " l-6 " + (sh ? 10 : -10) + " h12 z\" style=\"fill:" + (t.status === "OPEN" ? C.price : C.mut) + ';stroke:#0b0e11;stroke-width:1"><title>' + esc((sh ? "Kupno " : "Sprzedaż ") + t.buy_date + " po " + price(t.buy_price) + (t.status === "OPEN" ? "" : " (zamknięta)")) + "</title></path>";
-            });
-        } else s += T(cx0 + cW / 2, (top + bot) / 2, st.mapBars && st.mapBars.err ? "Brak świec: " + st.mapBars.err : st.mapBars ? "Brak świec dziennych" : "Ładowanie świec…", C.mut, { a: "middle" });
-        // odstępy między strefami LONG i od kursu do najbliższej strefy
-        const brk = (ya, yb, txt, col, sub, inside) => {
-            const x = inside ? gx - 12 : gx + 10, ym = (ya + yb) / 2, tx = inside ? x - 7 : x + 7, o = inside ? { a: "end" } : {};
-            return L(x, ya, x, yb, col, 1.5) + L(x - 4, ya, x + 4, ya, col, 1.5) + L(x - 4, yb, x + 4, yb, col, 1.5) + T(tx, ym + (sub ? -1 : 4), txt, col, { ...o, w: 650, fs: fz - 1 }) + (sub ? T(tx, ym + fz, sub, col, { ...o, fs: fz - 3 }) : "");
-        };
-        m.longs.forEach(z => { if (z.gapNext != null) { const nx = m.longs[m.longs.indexOf(z) + 1], far = Math.abs(z.gapNext) > m.maxGap; s += brk(Y(z.lo), Y(nx.hi), num(z.gapNext, 1) + "%", far ? "#f0883e" : C.mut, far ? "> " + num(m.maxGap, 0) + "%" : ""); } });
-        const near = m.price && m.longs.find(z => z.hi < m.price);
-        if (near && !m.longs.some(z => z.lo <= m.price && z.hi >= m.price)) s += brk(Y(m.price), Y(near.hi), num((near.hi / m.price - 1) * 100, 1) + "%", C.price, "do S" + near.n, true);
-        // linie poziomów
-        const lines = [];
-        const hl = (v, col, wd, dash, name, sub) => { if (!(v > 0)) return; s += L(cx0, Y(v), gx, Y(v), col, wd, dash); lines.push({ y: Y(v), col, t: name + " " + price(v), sub }); };
-        hl(m.tp, C.tp, 2, "", "TP planu", m.avg ? spct((m.tp / m.avg - 1) * 100, 1) + " od średniej" + (m.rr ? " · R:R " + num(m.rr, 1) : "") : "");
-        hl(m.price, C.price, 1.5, "5 4", "Kurs", m.avg ? spct((m.price / m.avg - 1) * 100, 1) + " vs średnia" : (st.watch ? "" : "ostatnie zamknięcie"));
-        hl(m.avg, C.avg, 2.5, "", "Średnia", m.open.length + " otw. transakcji");
-        hl(m.sl, C.sl, 2, "", "SL planu", m.avg ? spct((m.sl / m.avg - 1) * 100, 1) + " od średniej" : "SL najniższej strefy");
-        m.longs.forEach(z => { if (z.avgAfter) { const y = Y(z.avgAfter); s += L(cx0 + cW * .72, y, gx, y, C.avg, 1.5, "3 3") + '<circle cx="' + (gx - 3) + '" cy="' + y.toFixed(1) + '" r="3" style="fill:' + C.avg + '"><title>' + esc("Średnia po dokładce w S" + z.n + " ≈ " + price(z.avgAfter)) + "</title></circle>"; } });
-        // etykiety (desktop: kolumna po prawej z rozsuwaniem; telefon: lista pod wykresem)
-        const zl = m.zones.map(z => ({ y: (Y(z.hi) + Y(z.lo)) / 2, col: z.side === "LONG" ? (z.out ? C.mut : C.long) : C.short,
-            t: "S" + z.n + " · " + price(z.lo) + "–" + price(z.hi) + (z.side === "SHORT" ? " (podaż)" : ""),
-            sub: [z.dist == null ? "" : z.dist === 0 ? "kurs w strefie" : spct(z.dist, 1) + " od kursu", z.side === "LONG" ? (z.hasPos ? "pozycja " + pct(z.used, 1) + (z.planned != null ? " z " + pct(z.planned, 1) : "") : z.out ? z.out : z.reach ? z.reach + ". dokładka" : "") : "", z.side === "LONG" && z.av ? (z.av.pct == null ? "dostępne: bez limitu" : "dostępne teraz " + pct(z.av.pct, 1)) : "", z.avgAfter ? "śr. po ≈ " + price(z.avgAfter) : ""].filter(Boolean).join(" · ") }));
-        const all = lines.concat(zl).sort((a, b) => a.y - b.y);
-        let leg = "";
-        if (!mob) {
-            const hh = it => it.sub ? fz * 2.35 : fz * 1.35;
-            let yb = top - 4; all.forEach(it => { it.ly = Math.max(it.y - hh(it) / 2, yb + 3); yb = it.ly + hh(it); });
-            let lim = H - 2; for (let i = all.length - 1; i >= 0; i--) { const it = all[i]; if (it.ly + hh(it) > lim) it.ly = lim - hh(it); lim = it.ly - 3; }
-            all.forEach(it => { const ym = it.ly + hh(it) / 2; s += L(gx + gapW - 18, it.y, lx - 2, ym, it.col, 1, "", .5) + T(lx + 4, it.ly + fz, it.t, it.col, { w: 650 }) + (it.sub ? T(lx + 4, it.ly + fz * 2.15, it.sub, C.mut, { fs: fz - 1.5 }) : ""); });
-        } else leg = '<div class="plx-map-list">' + all.map(it => '<div><i style="background:' + it.col + '"></i><b style="color:' + it.col + '">' + esc(it.t) + "</b>" + (it.sub ? " <span>" + esc(it.sub) + "</span>" : "") + "</div>").join("") + "</div>";
-        el.innerHTML = '<svg class="plx-map-svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Mapa planu: strefy, kurs, średnia, SL i TP">' + s + "</svg>" + leg +
-            '<div class="plx-map-key"><span><i style="background:' + C.price + '"></i>kurs</span><span><i style="background:' + C.avg + '"></i>średnia (kropki: średnia po dokładce w kolejnej strefie, budżet z planu)</span><span><i style="background:' + C.sl + '"></i>SL planu / SL strefy (kropkowany)</span><span><i style="background:' + C.tp + '"></i>TP planu</span>' +
-            '<span><i style="background:' + C.long + ';opacity:.5"></i>strefa (pasek z lewej = pozycja)</span><span><i style="background:repeating-linear-gradient(45deg,#848e9c 0 2px,transparent 2px 5px)"></i>poza zasięgiem uśredniania (limit wejść / odstęp ' + num(m.maxGap, 0) + "%)</span><span>▲ zakup</span><span>% w kolumnie = odstęp od dołu strefy do góry następnej, żółty = od kursu do najbliższej strefy</span></div>" +
-            (st.watch && st.watch.plan_id === m.p.id ? "" : m.p.status === "OPEN" ? '<div class="db-help">Średnia, SL i TP planu uzupełnią się po analizie strażnika…</div>' : '<div class="db-help">Plan zamknięty – SL i TP z zagrań Form.</div>');
+        // poziomy i zakupy po lewej
+        const leftL = [];
+        const lvl = (v, col, wd, dash, t, sub) => { if (!(v > 0)) return; g += L(cx - 10, Y(v), ax + zw + 6, Y(v), col, wd, dash); leftL.push({ y: Y(v), col, t: t + " " + price(v), sub }); };
+        lvl(s.tp, C.tp, 2, "", "TP", s.gain_at_tp_pln != null ? spln(s.gain_at_tp_pln) + (mob ? "" : " · ostatnia inwestycja") : "");
+        lvl(px, C.price, 2, "6 4", "Kurs", w && w.day_change && w.day_change.pct != null ? spct(w.day_change.pct) + " dziś" : "");
+        lvl(s.avg_price, C.avg, 2.5, "", mob ? "Śr." : "Średnia", s.n_open ? (mob ? "" : s.n_open + " otw. transakcji · ") + "kurs " + spct((px / s.avg_price - 1) * 100) : "");
+        lvl(s.sl, C.sl, 2, "", "SL", s.loss_at_sl_pln != null ? spln(s.loss_at_sl_pln) + (mob ? "" : " · ostatnia inwestycja") : "");
+        (s.buys || []).forEach(b => { const y = Y(b.price); g += '<path d="M' + (ax - zw - 4) + " " + y.toFixed(1) + " l-8 -5 v10 z\" style=\"fill:" + C.buy + '"><title>' + esc("Zakup " + b.date + " po " + price(b.price)) + "</title></path>";
+            leftL.push({ y, col: C.buy, t: (mob ? "▸ " : "▸ zakup ") + price(b.price), sub: b.date, small: true }); });
+        // ostatnia zamknięta świeca dzienna
+        let candleNote = "";
+        if (lb) {
+            const up = lb.c >= lb.o, col = up ? C.long : C.short, bx = cx, yo = Y(Math.max(lb.o, lb.c)), yc = Y(Math.min(lb.o, lb.c));
+            g += L(bx, Y(lb.h), bx, Y(lb.l), col, 1.5) + '<rect x="' + (bx - 6) + '" y="' + yo.toFixed(1) + '" width="12" height="' + Math.max(1.5, yc - yo).toFixed(1) + '" style="fill:' + col + '"><title>' + esc("Świeca " + lb.date + ": O " + price(lb.o) + " H " + price(lb.h) + " L " + price(lb.l) + " C " + price(lb.c)) + "</title></rect>" +
+                T(bx, Y(lb.l) + fz + 2, mob ? lb.date.slice(5) : "świeca " + lb.date.slice(5), C.mut, { a: "middle", fs: fz - 2.5 });
+            const inZ = zones.find(z => lb.l <= z.hi && lb.h >= z.lo), wl = inZ && w ? w.legs.find(x => x.entry_id === inZ.l.entry_id) : null;
+            const sc = wl ? (WSTATE[wl.state] || ["#848e9c", wl.state]) : null;
+            candleNote = '<div class="plx-candle"><b>🕯 Ostatnia zamknięta świeca ' + esc(lb.date) + "</b>: O " + price(lb.o) + " · H " + price(lb.h) + " · L " + price(lb.l) + " · C " + price(lb.c) + (lb.change_pct != null ? ' <span style="color:' + pnlCol(lb.change_pct) + '">' + spct(lb.change_pct) + "</span>" : "") +
+                (inZ ? "<br>W strefie <b>S" + inZ.n + " " + price(inZ.lo) + "–" + price(inZ.hi) + "</b>" + (sc ? ': <span style="color:' + sc[0] + '">' + esc(sc[1]) + "</span>" + (wl.why ? " – " + esc(wl.why) : "") : "") +
+                    (wl && wl.signals.length ? '<div class="plx-candle-sig">' + wl.signals.map(x => (WICON[x.kind] || "⚪") + " " + esc(x.text)).join("<br>") + "</div>" : "")
+                    : '<br><span class="db-help">Świeca poza strefami planu.</span>') + "</div>";
+        }
+        // etykiety bez nakładania: lewa kolumna (poziomy, zakupy), prawa (strefy)
+        const lx = cx - 22, rx = ax + zw + 14;
+        spread(leftL, top + 4, bot - 4, lh * 2).forEach(it => {
+            g += L(lx + 4, it.ly, cx - 10, it.y, it.col, 1, "", .45) + T(lx, it.ly - (it.sub ? 1 : -fz * .35), it.t, it.col, { a: "end", w: it.small ? 500 : 650, fs: it.small ? fz - 1.5 : fz }) + (it.sub ? T(lx, it.ly + fz * .95, it.sub, C.mut, { a: "end", fs: fz - 2.5 }) : "");
+        });
+        spread(right, top + 4, bot - 4, mob ? lh * 1.2 : lh * 2).forEach(it => {
+            g += L(ax + zw + 2, it.y, rx - 3, it.ly, it.col, 1, "", .45) + (mob ? T(rx, it.ly + fz * .35, it.t.split(" · ")[0] + " " + it.d, it.col, { w: 650 })
+                : T(rx, it.ly - 1, it.t, it.col, { w: 650 }) + T(rx, it.ly + fz * .95, it.sub, C.mut, { fs: fz - 2 }));
+        });
+        const zlist = mob && right.length ? '<div class="plx-axis-list">' + right.slice().sort((a, b) => a.y - b.y).map(it => '<div><b style="color:' + it.col + '">' + esc(it.t) + "</b> <span>" + esc(it.sub) + "</span></div>").join("") + "</div>" : "";
+        el.innerHTML = '<svg class="plx-map-svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Oś cen planu">' + g + "</svg>" + zlist + candleNote +
+            (w ? "" : p.status === "OPEN" ? '<div class="db-help">Ostatnia świeca i zmiana dzienna pojawią się po analizie strażnika…</div>' : "");
     }
     // ---------- strażnik planu: stany stref, sygnały siły/słabości i propozycje dokładek (po zamknięciu sesji) ----------
     const WSTATE = { W_DRODZE: ["#848e9c", "W drodze – bez analizy"], PRZY_STREFIE: ["#fcd535", "Przy strefie"], UTKNAL: ["#89b4fa", "Utknął (>3 mies.)"], UNIEWAZNIONE: ["#fcd535", "Strefa złamana"], CEL: ["#0ecb81", "Cel"] };
@@ -6423,18 +6388,6 @@ window.Planer = (function () {
         const v = SLREV[r.verdict] || ["#848e9c", r.verdict];
         return '<div class="plx-play" style="border-left:3px solid ' + v[0] + ';padding-left:8px;margin:6px 0"><b style="color:' + v[0] + '">🛡 Przegląd SL ' + price(r.level) + " – " + esc(v[1]) + "</b> (złamanie " + esc(r.bar_date) + ", wynik " + r.score + (r.sessions_below ? ", " + r.sessions_below + " sesji pod poziomem" : ", kurs wrócił nad poziom") + ")<br>" + esc(r.action) +
             '<div class="db-help">' + (r.evidence || []).map(esc).join("<br>") + "</div></div>";
-    }
-    function positionHtml(d) {
-        const p = d.position; if (!p) return "";
-        const c = (v) => v == null ? "" : (v >= 0 ? "var(--success)" : "var(--danger)");
-        return '<div class="plx-kpis" style="margin:8px 0">' +
-            '<div class="plx-kpi"><div class="l">Średnia cena zakupu</div><div class="v">' + price(p.avg_price) + '</div><div class="s">' + p.n + " otw. transakcji · koszt pozycji / liczba jednostek (ważona)</div></div>" +
-            '<div class="plx-kpi"><div class="l">Kurs vs średnia</div><div class="v" style="color:' + c(p.vs_avg_pct) + '">' + spct(p.vs_avg_pct) + '</div><div class="s">kurs ' + price(p.price) + (p.price_source === "baza" ? " (bieżący, jak w Transakcjach)" : " (zamknięcie " + esc(p.close_date || "") + ")") +
-                (p.close != null && p.price_source === "baza" && Math.abs(p.close - p.price) > 1e-9 ? "<br>zamknięcie " + esc(p.close_date || "") + ": " + price(p.close) : "") +
-                "<br>" + (p.lowest_buy === p.highest_buy ? "zakup " + price(p.lowest_buy) : "zakupy " + price(p.lowest_buy) + "–" + price(p.highest_buy)) + "</div></div>" +
-            '<div class="plx-kpi"><div class="l">SL planu</div><div class="v">' + price(p.sl_plan) + '</div><div class="s">' + (p.sl_plan ? spct(p.to_sl_pct) + " od średniej · SL najniższej strefy" : "brak świec SL stref") + (p.risk_to_sl_pct != null ? "<br>ryzyko do SL: " + pct(p.risk_to_sl_pct) + " kapitału" + (amt(p.risk_to_sl_pct, MD()) ? " ≈ " + amt(p.risk_to_sl_pct, MD()) : "") : "") + "</div></div>" +
-            '<div class="plx-kpi"><div class="l">TP planu</div><div class="v">' + price(p.tp_plan) + '</div><div class="s">' + (p.tp_plan ? spct(p.to_tp_pct) + " od średniej" + (p.rr_from_avg != null ? " · R:R od średniej " + num(p.rr_from_avg, 1) : "") + (p.tp_reached ? " · <b>osiągnięty</b>" : "") : "brak TP nad średnią") + "</div></div></div>" +
-            '<div class="db-help" style="margin-bottom:6px">Wspólny punkt odniesienia dla całej pozycji; sygnały i kartki nadal działają na poziomie stref (SL i TP każdej strefy zostają).</div>';
     }
     function cardHtml(l) {
         if (!l.card) return "";
@@ -6470,7 +6423,7 @@ window.Planer = (function () {
         } catch (err) { const b = $("#plx-watch"); if (b) b.insertAdjacentHTML("afterbegin", '<div class="plx-warn">' + esc(err.message) + "</div>"); }
     });
     function watchHtml(d) {
-        let h = '<div class="plx-h">Strażnik planu <span class="db-help">· po zamknięciu sesji ' + esc(d.bar_date) + ' · między strefami analiza wyłączona, dopóki kurs nie utknął na dłużej</span> <button class="hp-btn" style="padding:3px 10px" data-plx-watch>↻</button>' + (d.card ? ' <span class="ev-kind" style="color:' + (CARD_COL[d.card.level] || "#848e9c") + ';border-color:' + (CARD_COL[d.card.level] || "#848e9c") + '">' + d.card.icon + " " + esc(d.card.label) + "</span>" : "") + '</div>' + positionHtml(d) + watchControlsHtml(d);
+        let h = '<div class="plx-h">Strażnik planu <span class="db-help">· po zamknięciu sesji ' + esc(d.bar_date) + ' · między strefami analiza wyłączona, dopóki kurs nie utknął na dłużej</span> <button class="hp-btn" style="padding:3px 10px" data-plx-watch>↻</button>' + (d.card ? ' <span class="ev-kind" style="color:' + (CARD_COL[d.card.level] || "#848e9c") + ';border-color:' + (CARD_COL[d.card.level] || "#848e9c") + '">' + d.card.icon + " " + esc(d.card.label) + "</span>" : "") + '</div>' + watchControlsHtml(d);
         d.legs.forEach(l => {
             const sc = WSTATE[l.state] || ["#848e9c", l.state];
             h += '<div class="plx-zone"><div class="plx-zhead"><span class="plx-zside ' + (l.side === "LONG" ? "long" : "short") + '">' + arrow(l.side) + '</span><span class="plx-zrange">' + price(l.zone[0]) + " – " + price(l.zone[1]) + '</span>' +
@@ -6488,7 +6441,7 @@ window.Planer = (function () {
     async function loadWatch() {
         const box = $("#plx-watch"); if (!box || !st.detail || st.detail.status !== "OPEN") return;
         box.innerHTML = '<div class="plx-h">Strażnik planu</div><div class="db-help">Analizuję zamknięte świece dzienne…</div>';
-        try { const d = await api("/api/planner/watch?plan_id=" + st.detail.id); st.watch = d; if ($("#plx-watch")) $("#plx-watch").innerHTML = watchHtml(d); drawMap(); }
+        try { const d = await api("/api/planner/watch?plan_id=" + st.detail.id); st.watch = d; if ($("#plx-watch")) $("#plx-watch").innerHTML = watchHtml(d); drawMap(); if ($("#plx-sum") && st.detail) $("#plx-sum").innerHTML = summaryHtml(st.detail); }
         catch (e) { if ($("#plx-watch")) $("#plx-watch").innerHTML = '<div class="plx-h">Strażnik planu</div><div class="plx-warn">' + esc(e.message) + "</div>"; }
     }
     document.addEventListener("click", e => { if (e.target.closest && e.target.closest("[data-plx-watch]")) loadWatch(); });
