@@ -7392,6 +7392,25 @@ window.Measure = (function () {
         }
         return null;
     }
+    // OPD dla strefy (jak strażnik planu, plan_cards.opd_status): ostatni potwierdzony dołek po korpusach (±3 świece) PONIŻEJ strefy
+    // (SHORT: szczyt powyżej) z ostatnich 250 sesji; złamany, gdy zamknięcie pod nim i brak powrotu zamknięciem nad poziom
+    function zoneOpdOf(bars, long, z) {
+        const B = bars.slice(-250), n = 3, v = b => long ? Math.min(b.o, b.c) : -Math.max(b.o, b.c), c = b => long ? b.c : -b.c, edge = long ? z.lo : -z.hi;
+        let cur = null, broken = null;
+        for (let i = 0; i < B.length; i++) {
+            if (broken) { if (c(B[i]) > broken.lv) broken = null; else continue; }      // w czasie złamania nowe dołki się nie liczą (jak backend)
+            const j = i - n;
+            if (j >= n) {
+                const x = v(B[j]); let ok = true;
+                for (let k = j - n; k < j && ok; k++) if (!(v(B[k]) > x)) ok = false;
+                for (let k = j + 1; k <= i && ok; k++) if (!(v(B[k]) >= x)) ok = false;
+                if (ok && x < edge && x < c(B[i])) cur = { lv: x, t: B[j].t };
+            }
+            if (cur && c(B[i]) < cur.lv) broken = { lv: cur.lv, t: cur.t, at: B[i].t };
+        }
+        const o = broken || cur; if (!o) return null;
+        return { level: long ? o.lv : -o.lv, t: o.t, broken: [], zone: true, brokenAt: broken ? broken.at : null };
+    }
     let opdLine = null, slLine = null, pickLine = null;
     function drawOpdButtons() {                          // ✎ zmiana OPD wskazanego automatycznie; ↺ powrót do automatu
         const el = $("#fz-opd-btns"); if (!el) return;
@@ -7411,11 +7430,16 @@ window.Measure = (function () {
         if (!candle || !M.bars.length) return null;
         const long = isLong(), z = formZone(), mo = M.opdManual;
         if (mo && mo.d) { const b = M.bars.find(x => dateOf(x.t) === mo.d); if (b) mo.t = b.t; }        // zapisany OPD: świeca z tej daty
-        const name = (long ? "OPD" : "OPS") + (mo ? " (ręcznie)" : "");
-        let o = opdOf(M.bars, long);
+        const name = (long ? "OPD" : "OPS") + (mo ? " (ręcznie)" : z ? " strefy" : "");
+        const cur = opdOf(M.bars, long), zo = z ? zoneOpdOf(M.bars, long, z) : null;
+        let o = z ? zo : cur;
+        const curNote = z && cur && (!zo || Math.abs(cur.level - zo.level) > 1e-9) ? " Bieżący " + (long ? "OPD" : "OPS") + " kursu: " + price(cur.level) + " (" + dateOf(cur.t) + ")." : "";
+        if (z && !zo && !mo) { drawOpdButtons(); if (opdLine) { try { candle.removePriceLine(opdLine); } catch (e) {} opdLine = null; }
+            if (box) { box.textContent = "Brak potwierdzonego " + (long ? "dołka poniżej" : "szczytu powyżej") + " strefy w ostatnich 250 sesjach – wskaż " + (long ? "OPD" : "OPS") + " ręcznie (✎)." + curNote; box.style.color = "var(--accent-hover)"; }
+            return null; }
         if (mo) {                                           // OPD wskazany ręcznie ma pierwszeństwo; sprawdzamy, czy nie został przebity zamknięciem
             const br = M.bars.find(b => b.t > mo.t && (long ? b.c < mo.level : b.c > mo.level));
-            o = { level: mo.level, t: mo.t, broken: [], manual: true, brokenAt: br ? br.t : null, auto: o };
+            o = { level: mo.level, t: mo.t, broken: [], manual: true, brokenAt: br ? br.t : null, auto: z ? zo : cur };
         }
         drawOpdButtons();
         if (opdLine) { try { candle.removePriceLine(opdLine); } catch (e) {} opdLine = null; }
@@ -7426,7 +7450,8 @@ window.Measure = (function () {
         if (!isNaN(slv)) slLine = candle.createPriceLine({ price: slv, color: "#f6465d", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "SL " + price(slv) });
         const prev = (o.broken.length ? " Przebite zamknięciem: " + o.broken.map(b => price(b.level) + " (" + dateOf(b.at) + ")").join(", ") + " → obowiązuje kolejny " + (long ? "niższy" : "wyższy") + " " + name + "." : "") +
             (o.manual && o.brokenAt ? " ⚠ Wskazany " + name + " został przebity zamknięciem " + dateOf(o.brokenAt) + "." : "") +
-            (o.manual && o.auto ? " Automatycznie: " + price(o.auto.level) + " (" + dateOf(o.auto.t) + ")." : "");
+            (o.zone && o.brokenAt ? " ⚠ " + name + " przebity zamknięciem " + dateOf(o.brokenAt) + " i kurs nie wrócił nad niego – struktura pod strefą złamana." : "") +
+            (o.manual && o.auto ? " Automatycznie" + (z ? " dla strefy" : "") + ": " + price(o.auto.level) + " (" + dateOf(o.auto.t) + ")." : "") + (o.manual ? "" : curNote);
         let res = { ok: null, text: name + " " + price(o.level) + " (" + dateOf(o.t) + ")." + prev };
         if (z) {
             const ok = long ? z.lo > o.level : z.hi < o.level;
@@ -7440,7 +7465,7 @@ window.Measure = (function () {
             res = { ok: ok, far: far, mid: mid, gap_atr: gapAtr, text: (ok ? "✓ Strefa " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dateOf(o.t) + ") – zgodnie z zasadą " + (long ? "wyższych dołków" : "niższych szczytów") + "." + dist
                 : "✗ Strefa nie leży " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dateOf(o.t) + ") – dla " + (long ? "LONG strefa musi być powyżej ostatniego potwierdzonego dołka" : "SHORT strefa musi być poniżej ostatniego potwierdzonego szczytu") + ".") + prev };
         }
-        if (box) { box.textContent = res.text; box.style.color = res.ok === false || res.far ? "var(--danger)" : res.mid ? "var(--accent-hover)" : res.ok ? "var(--success)" : ""; }
+        if (box) { box.textContent = res.text; box.style.color = res.ok === false || res.far || o.brokenAt ? "var(--danger)" : res.mid ? "var(--accent-hover)" : res.ok ? "var(--success)" : ""; }
         const sl = parseFloat($("#form-sl").value);
         if (slb && z && !isNaN(sl)) {
             const okSl = long ? sl <= z.lo : sl >= z.hi;
