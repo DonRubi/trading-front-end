@@ -6324,17 +6324,31 @@ window.Planer = (function () {
         const H = mob ? 430 : big ? 580 : 500, top = 16, bot = H - 16, fz = mob ? 10.5 : big ? 14 : 12.5, lh = fz * 1.35;
         const ax = Math.round(W * (mob ? 0.62 : 0.40)), zw = mob ? 22 : 56, cx = ax - zw - (mob ? 14 : 26);
         const vals = [px, s.avg_price, s.sl, s.tp].concat(...zones.map(z => [z.lo, z.hi]), (s.buys || []).map(b => b.price), lb ? [lb.h, lb.l] : []).filter(v => v > 0 && isFinite(v));
-        let lo = Math.min(...vals), hi = Math.max(...vals); const lpad = (Math.log(hi) - Math.log(lo)) * 0.06 || 0.03; lo = lo * Math.exp(-lpad); hi = hi * Math.exp(lpad);
-        const Y = v => top + (Math.log(hi) - Math.log(v)) / (Math.log(hi) - Math.log(lo)) * (bot - top);        // skala logarytmiczna: równe % = równe odległości
+        // skala logarytmiczna ze skracaniem pustych odcinków: odstęp między kolejnymi poziomami do GAP_T (~6%) w pełnej proporcji,
+        // dłuższy – skrócony do ok. ¼ zakresu reszty osi i oznaczony przerwą „≈ +x%” (daleki TP nie ściska stref, kursu i średniej)
+        const GAP_T = Math.log(1.06), knots = [...new Set(vals.map(v => Math.log(v)))].sort((a, b) => a - b), disp = [0], breaks = [];
+        const gaps = knots.slice(1).map((k, i) => k - knots[i]), core = gaps.filter(x => x <= GAP_T).reduce((a, x) => a + x, 0);
+        const brk = gp => Math.min(GAP_T, Math.max(0.015, 0.25 * core)) + 0.02 * (gp - GAP_T);          // przerwa: ok. ¼ zakresu reszty osi
+        for (let i = 1; i < knots.length; i++) { const gp = gaps[i - 1]; disp.push(disp[i - 1] + (gp <= GAP_T ? gp : brk(gp)));
+            if (gp > GAP_T) breaks.push({ a: knots[i - 1], b: knots[i], pct: (Math.exp(gp) - 1) * 100 }); }
+        const dTot = disp[disp.length - 1] || 0.03, dpad = dTot * 0.07 || 0.02;
+        const dOf = lv => { if (lv <= knots[0]) return lv - knots[0]; for (let i = 1; i < knots.length; i++) if (lv <= knots[i]) return disp[i - 1] + (lv - knots[i - 1]) / (knots[i] - knots[i - 1]) * (disp[i] - disp[i - 1]); return dTot + lv - knots[knots.length - 1]; };
+        const Y = v => top + (dTot + dpad - dOf(Math.log(v))) / (dTot + 2 * dpad) * (bot - top);
+        let lo = Math.exp(knots[0] - dpad), hi = Math.exp(knots[knots.length - 1] + dpad);
+        const inBreak = v => breaks.some(b => Math.log(v) > b.a + GAP_T * 0.5 && Math.log(v) < b.b - GAP_T * 0.5);
         const T = (x, y, t, fill, o) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" style="fill:' + fill + ";font-size:" + ((o && o.fs) || fz) + "px" + (o && o.w ? ";font-weight:" + o.w : "") + '"' + (o && o.a ? ' text-anchor="' + o.a + '"' : "") + ">" + esc(t) + "</text>";
         const L = (x1, y1, x2, y2, col, wd, dash, op) => '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" style="stroke:' + col + ";stroke-width:" + wd + (dash ? ";stroke-dasharray:" + dash : "") + (op ? ";opacity:" + op : "") + '"/>';
         const C = { long: "#0ecb81", short: "#f6465d", price: "#fcd535", avg: "#89b4fa", sl: "#f6465d", tp: "#0ecb81", buy: "#fab387", mut: "var(--text-muted)", axis: "var(--border-color)" };
         let g = L(ax, top - 6, ax, bot + 6, C.axis, 2);
         // podziałka osi (co „ładny” krok)
-        const r = (hi - lo) / (mob ? 5 : 7), mg = Math.pow(10, Math.floor(Math.log10(r))), stp = [1, 2, 2.5, 5, 10].map(k => k * mg).find(k => k >= r) || r, dg = stp >= 1 ? 0 : stp >= 0.1 ? 1 : 2;
+        const r = Math.exp(knots[0]) * (Math.exp(dTot || 0.05) - 1) / (mob ? 5 : 7), mg = Math.pow(10, Math.floor(Math.log10(r))), stp = [1, 2, 2.5, 5, 10].map(k => k * mg).find(k => k >= r) || r, dg = stp >= 1 ? 0 : stp >= 0.1 ? 1 : 2;
         let lastY = 1e9;
-        for (let v = Math.ceil(lo / stp) * stp; v <= hi; v += stp) { const y = Y(v); if (lastY - y < 18) continue; lastY = y;
+        for (let v = Math.ceil(lo / stp) * stp, n_ = 0; v <= hi && n_ < 2000; v += stp, n_++) { if (inBreak(v)) continue; const y = Y(v); if (lastY - y < 18) continue; lastY = y;
             g += L(ax - 4, y, ax + 4, y, C.mut, 1, "", .6) + (zones.some(z => v >= z.lo - stp * .15 && v <= z.hi + stp * .15) ? "" : T(ax + 7, y + 3.5, num(v, dg), C.mut, { fs: fz - 2.5 })); }
+        breaks.forEach(b => { const ya = Y(Math.exp(b.a)), yb = Y(Math.exp(b.b)), ym = (ya + yb) / 2;
+            g += '<rect x="' + (ax - 7) + '" y="' + (ym - 6).toFixed(1) + '" width="14" height="12" style="fill:var(--bg-main)"/>' +
+                '<path d="M' + (ax - 8) + " " + (ym - 2).toFixed(1) + " l5 -4 l6 8 l5 -4 M" + (ax - 8) + " " + (ym + 4).toFixed(1) + ' l5 -4 l6 8 l5 -4" style="fill:none;stroke:var(--text-muted);stroke-width:1.3"/>' +
+                T(ax + 12, ym + 4, "≈ " + spct(b.pct, 0) + " (skrócone)", C.mut, { fs: fz - 2.5 }); });
         // strefy na osi + opisy po prawej
         const right = [];
         zones.forEach(z => {

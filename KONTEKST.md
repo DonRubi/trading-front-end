@@ -78,5 +78,7 @@ Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https
 
 - **Szczegóły planu – kolejność i oś log (2026-10-13)**: podsumowanie → oś planu (skala logarytmiczna, na telefonie bez listy stref – krótkie etykiety „S# % od kursu · zostało”) z opisem ostatniej świecy → transakcje w planie → historia sygnałów strażnika (`histHtml`, 8 najnowszych + „Starsze”, numer strefy jak na osi `zoneNo`) → notatka → zwijane sekcje `details.plx-sec`: „Strażnik stref” (nagłówek: kartka, sesja, ile dokładek możliwych) i „Strefy z Form – budżety i zagrania” (stan zwinięcia w `st.secOpen`).
 
+- **Oś planu – skracanie pustych odcinków (2026-10-13)**: skala log z węzłami w poziomach (strefy, kurs, średnia, SL, TP, zakupy, świeca); odstęp między kolejnymi poziomami ≤ 6% w pełnej proporcji, dłuższy rysowany jako przerwa (zygzak na osi, „≈ +x% (skrócone)”) o wysokości ok. ¼ zakresu reszty osi – daleki TP nie ściska stref.
+
 ## Do zrobienia (zapisane na prośbę użytkownika)
 - **Transakcje: kroczący take profit i stop loss** – dopracować w zakładce Transakcje. Planer (podsumowanie i oś) bierze SL/TP z ostatniej inwestycji – po wprowadzeniu kroczących poziomów ma pokazywać ich bieżącą wartość.
