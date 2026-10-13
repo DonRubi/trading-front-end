@@ -781,6 +781,7 @@
                     </div>
                     <div class="tr-grid">
                         <label class="tr-f"><span>Data zakupu</span><input type="date" id="trade-buy-date" required></label>
+                        <label class="tr-f" title="Czas polski. Punkty końca dnia (EOD) oceniają świecę 1H, w której kupiono."><span>Godzina zakupu (czas PL)</span><input type="time" id="trade-buy-time"></label>
                         <label class="tr-f"><span>Cena zakupu</span><input type="number" step="0.0001" id="trade-buy-price" required></label>
                         <label class="tr-f"><span>Wydano gotówki</span><input type="number" step="0.01" id="trade-spent" required></label>
                         <label class="tr-f"><span>Dźwignia (1 = akcje)</span><input type="number" step="0.01" min="1" id="trade-leverage" value="1" required></label>
@@ -846,14 +847,14 @@
     </section>
     <section id="eod-module" class="app-module">
         <div class="hp-wrap">
-            <div class="hp-topbar"><div><div class="tr-title">Koniec dnia (EOD)</div><span class="hp-sub">Punkty 0–5 po zamknięciu sesji: świeca, indeks, VIX, wolumen, HTF oraz powtórzona ocena wejścia (świeca, wolumen, CVD, reakcja w strefie) – razem z Focus daje 20 pkt.</span></div>
+            <div class="hp-topbar"><div><div class="tr-title">Koniec dnia (EOD)</div><span class="hp-sub">Punkty 0–5 po zamknięciu sesji: świeca dzienna, indeks, VIX, wolumen, HTF, CVD dnia / ostatniej godziny / kwadransu oraz świece 1H z godziny zakupu i z końca sesji – razem z Focus daje 20 pkt.</span></div>
                 <div class="hp-tools"><button class="hp-btn" type="button" onclick="FocusEod.loadEod()">↻ Odśwież</button></div></div>
             <section class="hp-panel"><div class="hp-content" style="padding-top:16px">
                 <div class="tr-filters fe-filters fe-2">
                     <input type="search" id="eod-q" placeholder="Szukaj spółki…" oninput="FocusEod.renderEod()">
                     <select id="eod-scope" onchange="FocusEod.renderEod()"><option value="open" selected>Otwarte transakcje</option><option value="30">Zakupy z 30 dni</option><option value="all">Wszystkie</option></select>
                 </div>
-                <div class="hp-table-wrap"><table class="hp-table tr-table"><thead><tr><th>Zakup</th><th>Spółka</th><th>Focus (wejście)</th><th>EOD</th><th>Ocena wejścia: wejście → zamknięcie</th><th>Składniki EOD</th><th>Razem</th><th>Akcje</th></tr></thead><tbody id="eod-body"><tr><td colspan="8" class="hp-empty">Ładowanie…</td></tr></tbody></table></div>
+                <div class="hp-table-wrap"><table class="hp-table tr-table"><thead><tr><th>Zakup</th><th>Spółka</th><th>Focus (wejście)</th><th>EOD</th><th>Godzina zakupu · CVD dnia / ost. godziny</th><th>Składniki EOD</th><th>Razem</th><th>Akcje</th></tr></thead><tbody id="eod-body"><tr><td colspan="8" class="hp-empty">Ładowanie…</td></tr></tbody></table></div>
             </div></section>
         </div>
     </section>
@@ -1776,6 +1777,7 @@
                 let html = `
                     <div class="form-row">
                         <div class="form-group"><label>Komentarz</label><input type="text" id="edit-tr-comment" value="${item.comment || ''}" required></div>
+                        <div class="form-group"><label>Godzina zakupu (czas PL)</label><input type="time" id="edit-tr-btime" value="${item.buy_time || ''}" title="Do punktów końca dnia: świeca 1H, w której kupiono"></div>
                         <div class="form-group"><label>Ostatni Kwadrans?</label><select id="edit-tr-last15"><option value="0" ${item.last_15_min==0?'selected':''}>Nie</option><option value="1" ${item.last_15_min==1?'selected':''}>Tak (+1 pkt)</option></select></div>
                     </div>
                     <div class="form-row">
@@ -1856,6 +1858,7 @@
                 payload = { 
                     id: currentEditId, 
                     comment: document.getElementById('edit-tr-comment').value,
+                    buy_time: document.getElementById('edit-tr-btime').value || null,
                     last_15_min: newLast15,
                     focus_score: newScore, // Bezpiecznie aktualizowany Score w bazie
                     buy_price: document.getElementById('edit-tr-buy').value, 
@@ -2889,6 +2892,7 @@
             document.getElementById('trade-focus-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
             document.getElementById('trade-play-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
             document.getElementById('trade-buy-date').valueAsDate = new Date(); 
+            document.getElementById('trade-buy-time').value = new Date().toTimeString().slice(0, 5);
             fetchTradesEntries(); 
             if (window.__pendingTradePlay) { const p = window.__pendingTradePlay; window.__pendingTradePlay = null; applyTradePlay(p); }
         }
@@ -2912,7 +2916,7 @@
             }
             if (p.evalData && p.evalData.summary && p.evalData.summary.price) document.getElementById('trade-buy-price').value = Number(p.evalData.summary.price).toFixed(4);
             const asOf = p.evalData && ((p.evalData.summary || {}).as_of || (p.evalData.entry_eval || {}).as_of);
-            if (asOf) document.getElementById('trade-buy-date').value = String(asOf).slice(0, 10);      // ocena z wybranej chwili -> data zakupu z tej chwili
+            if (asOf) { document.getElementById('trade-buy-date').value = String(asOf).slice(0, 10); document.getElementById('trade-buy-time').value = String(asOf).slice(11, 16); }      // ocena z wybranej chwili -> data i godzina zakupu z tej chwili
             const form = document.getElementById('trade-form'); if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
             const sp = document.getElementById('trade-spent'); if (sp) setTimeout(() => sp.focus(), 400);
         }
@@ -3107,6 +3111,7 @@ async function submitTradeForm(e) {
         direction: document.getElementById('trade-direction').value, 
         stock_name: document.getElementById('trade-name').value, 
         buy_date: document.getElementById('trade-buy-date').value, 
+        buy_time: document.getElementById('trade-buy-time').value || null,
         buy_price: document.getElementById('trade-buy-price').value, 
         spent: spent, 
         leverage: lev, 
@@ -7498,13 +7503,17 @@ window.FocusEod = (function () {
             const ev = t.entry_eval || {}, eod = t.eod_eval || {}, man = eod.manual, rc = eod.entry_recheck;
             const focusPts = ev.points != null ? ev.points : null, eodPts = t.eod_score != null ? parseFloat(t.eod_score) : null;
             const total = (focusPts != null || eodPts != null) ? (focusPts || 0) + (eodPts || 0) : null;
-            const comps = (eod.components || []).filter(c => c.weight > 0).map(c => '<span class="ev-chip" title="waga ' + c.weight + '">' + esc(c.label) + " " + Math.round(c.norm * 100) + "%</span>").join(" ");
-            const delta = rc && rc.delta != null ? ' <b style="color:' + (rc.delta >= 0 ? "var(--success)" : "var(--danger)") + '">' + (rc.delta > 0 ? "+" : "") + f1(rc.delta) + "</b>" : "";
+            const comps = (eod.components || []).filter(c => c.weight > 0).map(c => '<span class="ev-chip" title="waga ' + c.weight + '">' + esc(c.label) + " " + (c.norm == null ? "–" : Math.round(c.norm * 100) + "%") + "</span>").join(" ");
+            const byId = {}; (eod.components || []).forEach(c => { byId[c.id] = c; });
+            const flow = c => !c || c.raw == null ? "–" : '<b style="color:' + (c.raw >= 0 ? "var(--success)" : "var(--danger)") + '">' + (c.raw > 0 ? "+" : "") + f1(c.raw) + "%</b>";
+            const bt = t.buy_time || (eod.buy_moment ? String(eod.buy_moment.at).slice(11, 16) : "");
+            const btCell = (bt ? "🕒 " + esc(bt) + (t.buy_time ? "" : ' <span class="tr-cnt" title="' + esc((eod.buy_moment || {}).source || "") + '">(z oceny)</span>') : '<span class="tr-cnt" title="Wpisz godzinę w edycji transakcji – EOD oceni świecę 1H zakupu">brak godziny</span>') +
+                (byId.cvd_day || byId.cvd_hour ? '<div class="tr-cnt" title="CVD w kierunku pozycji, % wolumenu">CVD ' + flow(byId.cvd_day) + " / " + flow(byId.cvd_hour) + "</div>" : rc ? '<div class="tr-cnt">ocena wejścia ' + f1(t.entry_score) + " → " + f1(rc.score) + " (stara metoda)</div>" : "");
             return '<tr><td>' + esc(t.buy_date || "–") + '<div class="tr-cnt">#' + t.id + (t.status === "CLOSED" ? " · zamknięta" : "") + "</div></td>" +
                 '<td><span class="hp-tk sd-link" data-tk="' + esc(t.ticker) + '" style="color:var(--accent)">' + esc(t.ticker) + '</span><div class="tr-cnt">' + esc(t.form_id || "") + "</div></td>" +
                 "<td>" + (focusPts != null ? "<b>" + f1(focusPts) + "</b>/" + f1(ev.max_points || 15) : "–") + (t.focus_eval_id ? '<div class="tr-cnt">Focus #' + t.focus_eval_id + "</div>" : "") + "</td>" +
                 "<td>" + (eodPts != null ? "<b>" + f1(eodPts) + "</b>/" + f1(eod.max_points || 5) + (man ? ' <span class="tr-cnt" title="' + esc(man.note || "") + '">✎ ręcznie' + (man.auto != null ? " (rekom. " + f1(man.auto) + ")" : "") + "</span>" : "") + (eod.bar_date ? '<div class="tr-cnt">sesja ' + esc(eod.bar_date) + "</div>" : "") : '<span class="tr-cnt">jeszcze nie policzone</span>') + "</td>" +
-                "<td>" + (t.entry_score != null ? f1(t.entry_score) : "–") + " → " + (rc ? "<b>" + f1(rc.score) + "</b>" + delta : "–") + "</td>" +
+                "<td>" + btCell + "</td>" +
                 "<td>" + (comps || '<span class="tr-cnt">–</span>') + "</td>" +
                 "<td><b>" + (total != null ? f1(total) + "/20" : "–") + "</b></td>" +
                 '<td style="white-space:nowrap"><button class="hp-btn" style="padding:4px 10px" data-eod-det="' + t.id + '" title="Szczegóły obliczeń">🔍 Szczegóły</button> <button class="hp-btn" style="padding:4px 10px" data-eod-calc="' + t.id + '">' + (eodPts != null ? "↻ Policz" : "Policz") + '</button> <button class="hp-btn" style="padding:4px 10px" data-eod-fix="' + t.id + '" data-val="' + (man ? man.score : "") + '">✎ Popraw</button></td></tr>';
@@ -7514,10 +7523,11 @@ window.FocusEod = (function () {
     const plNum = x => String(x == null ? "" : x).replace(/(\d)\.(\d)/g, "$1,$2");
     function detailHtml(t) {
         const ev = t.entry_eval || {}, eod = t.eod_eval || {}, man = eod.manual, rc = eod.entry_recheck, comps = eod.components || [];
-        const mx = eod.max_points || 5, used = comps.filter(c => c.weight > 0), wsum = used.reduce((a, c) => a + c.weight, 0);
+        const mx = eod.max_points || 5, used = comps.filter(c => c.weight > 0 && c.norm != null), wsum = used.reduce((a, c) => a + c.weight, 0);
         const auto = man ? man.auto : (t.eod_score != null ? parseFloat(t.eod_score) : null);
         let h = '<div class="plx-head"><div><div class="plx-title">Szczegóły EOD · <span class="sd-link" data-tk="' + esc(t.ticker) + '">' + esc(t.ticker) + "</span> #" + t.id + '</div><div class="plx-sub">' +
             "zakup " + esc(t.buy_date || "–") + (eod.bar_date ? " · sesja oceniona: <b>" + esc(eod.bar_date) + "</b>" : "") + (eod.direction ? " · " + esc(eod.direction) : "") + (eod.benchmark ? " · indeks odniesienia " + esc(eod.benchmark) : "") +
+            (eod.buy_moment ? " · godzina zakupu <b>" + esc(String(eod.buy_moment.at).slice(11, 16)) + "</b> (" + esc(eod.buy_moment.source || "") + ")" : t.buy_time ? " · godzina zakupu " + esc(t.buy_time) : "") +
             (eod.computed_at ? " · policzono " + esc(eod.computed_at) : "") + '</div></div><div class="plx-actions"><button class="hp-btn" data-eod-calc="' + t.id + '">↻ Przelicz</button><button class="hp-btn" data-eod-close>✕</button></div></div>';
         if (!comps.length) return h + '<div class="ev-empty">Punkty końca dnia nie zostały jeszcze policzone. Kliknij „↻ Przelicz” po zamknięciu sesji.</div>';
         const focusPts = ev.points != null ? ev.points : null, eodPts = t.eod_score != null ? parseFloat(t.eod_score) : null;
@@ -7525,23 +7535,24 @@ window.FocusEod = (function () {
             '<div class="plx-kpi"><div class="l">Focus (wejście)</div><div class="v">' + (focusPts != null ? f1(focusPts) + " / " + f1(ev.max_points || 15) : "–") + '</div><div class="s">' + (t.focus_eval_id ? "wpis Focus #" + t.focus_eval_id : "bez wpisu Focus") + "</div></div>" +
             '<div class="plx-kpi"><div class="l">Razem</div><div class="v">' + ((focusPts != null || eodPts != null) ? f1((focusPts || 0) + (eodPts || 0)) + " / 20" : "–") + '</div><div class="s">Focus + EOD</div></div></div>';
         h += '<div class="plx-h">Jak policzono punkty</div><div class="ev-muted">Każdy składnik dostaje ocenę 0–100%. Punkty = Σ (waga × ocena) / Σ wag × ' + f1(mx) +
-            " = " + (wsum ? used.map(c => c.weight + "×" + Math.round(c.norm * 100) + "%").join(" + ") + " / " + wsum + " × " + f1(mx) + " = <b>" + f1(auto) + "</b>" : "–") + ". Wagi ustawiasz w Serwisie (Baza danych → Serwis → Punktacja).</div>";
+            " = " + (wsum ? used.map(c => c.weight + "×" + Math.round(c.norm * 100) + "%").join(" + ") + " / " + wsum + " × " + f1(mx) + " = <b>" + f1(auto) + "</b>" : "–") + ". Składnik bez danych (np. brak godziny zakupu albo sesja starsza niż ok. 60 dni świec 5m) jest pomijany razem ze swoją wagą. Wagi ustawiasz w Serwisie (Baza danych → Serwis → Punktacja).</div>";
         h += '<div class="table-responsive"><table class="ev-table eod-det"><thead><tr><th>Składnik</th><th>Wynik</th><th>Ocena</th><th>Waga</th><th>Wkład w punkty</th><th>Co zmierzono i według jakiej zasady</th></tr></thead><tbody>' +
             comps.map(c => {
-                const contrib = c.weight > 0 && wsum ? c.weight * c.norm / wsum * mx : 0, col = c.norm >= 0.7 ? "var(--success)" : c.norm >= 0.4 ? "var(--accent-hover)" : "var(--danger)";
-                return '<tr class="' + (c.weight > 0 ? "" : "eod-off") + '"><td><b>' + esc(c.label) + "</b></td><td>" + f1(c.raw) + " / " + f1(c.max) + '</td><td><b style="color:' + col + '">' + Math.round(c.norm * 100) + "%</b></td><td>" + (c.weight > 0 ? c.weight : "0 (info)") +
-                    "</td><td><b>" + (c.weight > 0 ? f1(contrib) : "–") + "</b> pkt</td><td>" + ((c.facts || []).map(x => "<div>• " + esc(plNum(x)) + "</div>").join("") || '<div class="ev-muted">brak zapisanych wartości – kliknij „↻ Przelicz”</div>') +
+                const miss = c.norm == null, on = c.weight > 0 && !miss, contrib = on && wsum ? c.weight * c.norm / wsum * mx : 0, col = c.norm >= 0.7 ? "var(--success)" : c.norm >= 0.4 ? "var(--accent-hover)" : "var(--danger)";
+                const rawTxt = c.raw == null ? "–" : c.unit === "%" ? (c.id.startsWith("cvd") && c.raw > 0 ? "+" : "") + f1(c.raw) + "%" : f1(c.raw) + " / " + f1(c.max);
+                return '<tr class="' + (on ? "" : "eod-off") + '"><td><b>' + esc(c.label) + "</b></td><td>" + rawTxt + '</td><td>' + (miss ? '<span class="ev-muted">brak danych</span>' : '<b style="color:' + col + '">' + Math.round(c.norm * 100) + "%</b>") + "</td><td>" + (c.weight > 0 ? c.weight + (miss ? " (pominięta)" : "") : "0 (info)") +
+                    "</td><td><b>" + (on ? f1(contrib) : "–") + "</b> pkt</td><td>" + ((c.facts || []).map(x => "<div>• " + esc(plNum(x)) + "</div>").join("") || '<div class="ev-muted">brak zapisanych wartości – kliknij „↻ Przelicz”</div>') +
                     (c.rule ? '<div class="ev-muted eod-rule">Zasada: ' + esc(c.rule) + "</div>" : "") + "</td></tr>";
             }).join("") + '<tr class="eod-sum"><td colspan="3"><b>Razem (automat)</b></td><td>' + wsum + '</td><td><b>' + f1(auto) + " / " + f1(mx) + "</b></td><td></td></tr></tbody></table></div>";
         if (eod.info && eod.info.obv_raw != null) h += '<div class="ev-muted">Informacyjnie (bez wpływu na punkty): OBV z 10 sesji ' + f1(eod.info.obv_raw) + " / " + f1(eod.info.obv_max || 3) + ".</div>";
         if (rc) {
             const at = {}; (ev.conditions || []).forEach(c => { at[c.id] = c.score; });
-            h += '<div class="plx-h">Ocena wejścia: przy wejściu → na zamknięciu</div><div class="ev-muted">Wynik ' + f1(rc.entry_score) + " → <b>" + f1(rc.score) + "</b>/100" + (rc.delta != null ? ' (<b style="color:' + (rc.delta >= 0 ? "var(--success)" : "var(--danger)") + '">' + (rc.delta > 0 ? "+" : "") + f1(rc.delta) + "</b>)" : "") + " · " + esc(rc.verdict || "") + "</div>" +
+            h += '<div class="plx-h">Ocena wejścia: przy wejściu → na zamknięciu (zapis starszą metodą – po „↻ Przelicz” zastąpią ją składniki CVD i świec 1H)</div><div class="ev-muted">Wynik ' + f1(rc.entry_score) + " → <b>" + f1(rc.score) + "</b>/100" + (rc.delta != null ? ' (<b style="color:' + (rc.delta >= 0 ? "var(--success)" : "var(--danger)") + '">' + (rc.delta > 0 ? "+" : "") + f1(rc.delta) + "</b>)" : "") + " · " + esc(rc.verdict || "") + "</div>" +
                 '<div class="table-responsive"><table class="ev-table"><thead><tr><th>Warunek</th><th>Przy wejściu</th><th>Na zamknięciu</th><th>Zmiana</th><th>Co widać na zamknięciu</th></tr></thead><tbody>' +
                 (rc.conditions || []).map(c => { const a = at[c.id], b = c.score, d = (a != null && b != null) ? (b - a) * 100 : null;
                     return "<tr><td>" + esc(c.label) + (c.weight === 0 ? ' <span class="ev-muted">(waga 0)</span>' : "") + "</td><td>" + (a == null ? "–" : Math.round(a * 100) + "%") + "</td><td><b>" + (b == null ? "brak danych" : Math.round(b * 100) + "%") + "</b></td><td>" +
                         (d == null ? "–" : '<span style="color:' + (d >= 0 ? "var(--success)" : "var(--danger)") + '">' + (d > 0 ? "+" : "") + Math.round(d) + " pp</span>") + '</td><td class="ev-muted">' + esc(plNum(c.detail)) + "</td></tr>"; }).join("") + "</tbody></table></div>";
-        } else if (t.form_id) h += '<div class="ev-muted">Powtórzona ocena wejścia: brak (zagranie z Form niedostępne albo brak danych w chwili liczenia).</div>';
+        }
         if ((eod.warnings || []).length) h += '<div class="plx-warn">' + eod.warnings.map(esc).join("<br>") + "</div>";
         return h;
     }
