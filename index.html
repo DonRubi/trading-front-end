@@ -1159,15 +1159,21 @@
             </div>
             <div class="dbx-panel lim-panel" id="scoring-panel">
                 <h4>🎯 Punktacja inwestycji i cięcie budżetu</h4>
-                <p class="db-help">Punkty budżetowe = <b>Score z Form × mnożnik</b> + <b>punkty za moment wejścia</b>. Od ich procentu (względem maksimum) zależy, jaka część dostępnego budżetu (limity powyżej / plan) przysługuje na wejście. Punkty za koniec dnia (po zamknięciu sesji) dochodzą do łącznego wyniku, ale nie wpływają na budżet.</p>
+                <p class="db-help">Punkty budżetowe = <b>Score z Form × mnożnik</b> + <b>punkty za moment wejścia</b>. Od ich procentu (względem maksimum) zależy, jaka część dostępnego budżetu (limity powyżej / plan) przysługuje na wejście, a kwotę dodatkowo ogranicza ryzyko: strata przy SL jako % kapitału bieżącego, łączne ryzyko portfela i obsunięcie. Punkty za koniec dnia (po zamknięciu sesji) dochodzą do łącznego wyniku, ale nie wpływają na budżet.</p>
                 <div class="sc-grid">
                     <label>Mnożnik Score z Form<input type="number" id="sc-mult" min="0.5" max="10" step="0.5"></label>
                     <label>Maks. punktów za moment wejścia<input type="number" id="sc-entry" min="0" max="20" step="0.5"></label>
                     <label>Maks. punktów za koniec dnia<input type="number" id="sc-eod" min="0" max="20" step="0.5"></label>
                     <label title="Spółki oznaczone jako priorytet (Inwestycja/Spekulacja · priorytet) dostają tyle punktów gratis do punktów budżetowych (bez przekraczania maksimum).">Bonus za spółkę z priorytetem (pkt)<input type="number" id="sc-prio" min="0" max="5" step="0.5"></label>
                     <label title="Gdy ocena momentu wejścia (0–100) jest niższa, dostępny budżet = 0 niezależnie od punktów Form. 0 = bramka wyłączona. Zalecane ok. 50.">Bramka: min. ocena wejścia (0–100)<input type="number" id="sc-gate" min="0" max="100" step="5"></label>
+                    <label title="Strata przy SL jednej transakcji nie większa niż ten % kapitału bieżącego – przy dalekim SL pozycja jest mniejsza. 0 = bez limitu.">Ryzyko na transakcję (% kapitału)<input type="number" id="sc-risk" min="0" max="10" step="0.25"></label>
+                    <label title="Suma strat wszystkich otwartych pozycji, gdyby doszły do SL. Nowe wejście dostaje najwyżej wolną część. 0 = bez limitu.">Maks. ryzyko portfela do SL (%)<input type="number" id="sc-heat" min="0" max="100" step="0.5"></label>
+                    <label title="Obsunięcie portfela (TWR od szczytu), od którego ryzyko na transakcję spada o połowę.">Obsunięcie: zmniejsz ryzyko od (%)<input type="number" id="sc-ddr" min="0" max="100" step="1"></label>
+                    <label title="Obsunięcie portfela, od którego nowe wejścia i dokładki są wstrzymane (Twoja tolerancja ok. 20%).">Obsunięcie: wstrzymaj wejścia od (%)<input type="number" id="sc-dds" min="0" max="100" step="1"></label>
+                    <label title="Ciągłe: między widełkami część budżetu rośnie liniowo (bez skoku o 50% za 0,01 pkt). Schodkowe: jak dawniej.">Widełki<select id="sc-cont"><option value="true">ciągłe (zalecane)</option><option value="false">schodkowe</option></select></label>
                 </div>
                 <div class="db-help" id="sc-summary"></div>
+                <div class="db-help" id="sc-risk-now"></div>
                 <div class="dbx-cols" style="margin-top:8px">
                     <div><h5 style="margin:6px 0">Moment wejścia – wagi warunków (0 = tylko informacyjnie)</h5><table class="hp-table" style="width:100%;"><tbody id="sc-wentry"></tbody></table></div>
                     <div><h5 style="margin:6px 0">Koniec dnia (po zamknięciu sesji) – wagi składników</h5><table class="hp-table" style="width:100%;"><tbody id="sc-weod"></tbody></table><div class="db-help">Liczone automatycznie z dziennych świec (świeca, indeks, VIX, wolumen, HTF) i skalowane do punktów za koniec dnia.</div></div>
@@ -2156,6 +2162,8 @@
             document.getElementById('sc-wentry').innerHTML = Object.keys(r.entry_weights || {}).map(k => scWRow('entry', k, scLabels.entry[k] || k, r.entry_weights[k])).join('');
             document.getElementById('sc-weod').innerHTML = Object.keys(r.eod_weights || {}).map(k => scWRow('eod', k, scLabels.eod[k] || k, r.eod_weights[k])).join('');
             document.getElementById('sc-mult').value = r.form_mult; document.getElementById('sc-entry').value = r.entry_max; document.getElementById('sc-eod').value = r.eod_max; document.getElementById('sc-gate').value = r.entry_gate_score || 0; document.getElementById('sc-prio').value = r.priority_bonus != null ? r.priority_bonus : 1;
+            document.getElementById('sc-risk').value = r.risk_pct != null ? r.risk_pct : 1; document.getElementById('sc-heat').value = r.heat_max_pct != null ? r.heat_max_pct : 8;
+            document.getElementById('sc-ddr').value = r.dd_reduce_pct != null ? r.dd_reduce_pct : 10; document.getElementById('sc-dds').value = r.dd_stop_pct != null ? r.dd_stop_pct : 20; document.getElementById('sc-cont').value = r.tiers_continuous === false ? 'false' : 'true';
             document.getElementById('sc-tiers').innerHTML = r.tiers.map(scTierRow).join('');
             updateScoringSummary();
         }
@@ -2165,7 +2173,9 @@
             const budget = 5 * m + e;
             const rows = [...document.querySelectorAll('#sc-tiers tr')].map(tr => ({ p: parseFloat(tr.querySelector('[data-k=min_pct]').value), b: parseFloat(tr.querySelector('[data-k=budget_pct]').value) })).filter(x => !isNaN(x.p)).sort((a, b) => b.p - a.p);
             document.getElementById('sc-summary').innerHTML = `Maksimum punktów budżetowych: <b>${fmt(budget)}</b> (Form 5 × ${fmt(m)} = ${fmt(5 * m)} + wejście ${fmt(e)}); łącznie z końcem dnia: <b>${fmt(budget + d)}</b>. ` +
-                rows.map(x => `od ${fmt(x.p)}% (≥ ${fmt(budget * x.p / 100)} pkt) → ${fmt(x.b)}% budżetu`).join(' · ');
+                rows.map(x => `od ${fmt(x.p)}% (≥ ${fmt(budget * x.p / 100)} pkt) → ${fmt(x.b)}% budżetu`).join(' · ') +
+                (document.getElementById('sc-cont') && document.getElementById('sc-cont').value === 'true' ? ' (między widełkami liniowo)' : '') +
+                `. Wielkość pozycji ogranicza też ryzyko: strata przy SL ≤ ${fmt(parseFloat(document.getElementById('sc-risk').value) || 0)}% kapitału, łącznie ≤ ${fmt(parseFloat(document.getElementById('sc-heat').value) || 0)}%.`;
         }
         async function loadWatchSettings() {
             const box = document.getElementById('pw-gaps'), msg = document.getElementById('pw-msg');
@@ -2191,6 +2201,12 @@
                 const res = await fetch(`${API_BASE_URL}/api/settings/scoring`), d = await res.json();
                 if (!res.ok || d.status !== 'success') throw new Error(d.message || ('HTTP ' + res.status));
                 scoringDefaults = d.defaults; scLabels = { entry: d.entry_labels || {}, eod: d.eod_labels || {} }; fillScoring(d.rules); msg.style.color = ''; msg.textContent = d.warning ? d.warning : '';
+                fetch(`${API_BASE_URL}/api/portfolio/risk`).then(r => r.json()).then(x => {
+                    const k = x && x.risk, el = document.getElementById('sc-risk-now'); if (!k || !el) return;
+                    const f = v => v == null ? '–' : String(Math.round(v * 10) / 10).replace('.', ',');
+                    el.innerHTML = `Teraz: kapitał bieżący <b>${Math.round(k.equity || 0).toLocaleString('pl-PL')} PLN</b> (niezrealizowane ${Math.round(k.unrealized_pln || 0).toLocaleString('pl-PL')} PLN) · ryzyko otwartych pozycji do SL <b>${f(k.heat_pct)}%</b> · obsunięcie od szczytu <b>${f(k.drawdown_pct)}%</b> (maks. ${f(k.max_drawdown_pct)}%)` +
+                        ((k.no_sl || []).length ? ` · <span style="color:var(--accent-hover)">bez SL: ${k.no_sl.join(', ')}</span>` : '');
+                }).catch(() => {});
             } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Nie udało się wczytać zasad punktacji: ' + (e.message || e); }
         }
         function addScoringTier() { document.getElementById('sc-tiers').insertAdjacentHTML('beforeend', scTierRow({ min_pct: 0, budget_pct: 0 })); updateScoringSummary(); }
@@ -2198,6 +2214,7 @@
         async function saveScoring() {
             const msg = document.getElementById('sc-msg');
             const rules = { form_mult: document.getElementById('sc-mult').value, entry_max: document.getElementById('sc-entry').value, eod_max: document.getElementById('sc-eod').value, entry_gate_score: document.getElementById('sc-gate').value, priority_bonus: document.getElementById('sc-prio').value,
+                risk_pct: document.getElementById('sc-risk').value, heat_max_pct: document.getElementById('sc-heat').value, dd_reduce_pct: document.getElementById('sc-ddr').value, dd_stop_pct: document.getElementById('sc-dds').value, tiers_continuous: document.getElementById('sc-cont').value === 'true',
                 tiers: [...document.querySelectorAll('#sc-tiers tr')].map(tr => ({ min_pct: tr.querySelector('[data-k=min_pct]').value, budget_pct: tr.querySelector('[data-k=budget_pct]').value })), entry_weights: {}, eod_weights: {} };
             document.querySelectorAll('#scoring-panel [data-w]').forEach(i => { rules[i.dataset.w === 'entry' ? 'entry_weights' : 'eod_weights'][i.dataset.k] = i.value; });
             msg.style.color = ''; msg.textContent = 'Zapisywanie…';
@@ -6501,6 +6518,13 @@ window.Wejscie = (function () {
                 '<div class="plx-kpi"><div class="l">Część budżetu wg punktów</div><div class="v">' + Math.round(b.factor * 100) + '%</div><div class="s">' + (d.scoring ? esc(d.scoring.tier) : "") + "</div></div>" +
                 '<div class="plx-kpi"><div class="l">Rekomendowany budżet</div><div class="v" style="color:' + (b.recommended_pct > 0 ? "var(--success)" : "var(--danger)") + '">' + pct(b.recommended_pct) + '</div><div class="s">kapitału na to wejście (ekspozycja z dźwignią)' +
                     (b.recommended_ccy != null ? '<br><b style="color:var(--text-main);font-size:1.15em">≈ ' + ccy(b.recommended_ccy, b.currency) + "</b>" + (b.units ? " · " + b.units + " szt. po " + price(d.price) : "") + (b.currency !== "PLN" && b.recommended_pln != null ? " · " + ccy(b.recommended_pln, "PLN") : "") : "") + "</div></div></div>";
+            const rk = d.risk || {}, pf = rk.portfolio || {};
+            if (rk.steps && rk.steps.length) budget += '<div class="ev-note"><b>Limit ryzyka</b>' + (rk.stop_pct != null ? " · SL " + num(rk.stop_pct, 1) + "% od wejścia" : "") + (rk.loss_at_sl_pln != null ? " · strata przy SL ≈ " + ccy(rk.loss_at_sl_pln, "PLN") : "") +
+                (rk.budget_pct != null && rk.final_pct != null && rk.final_pct < rk.budget_pct - 0.005 ? ' · <b style="color:var(--accent-hover)">budżet z punktów ' + pct(rk.budget_pct) + " → " + pct(rk.final_pct) + "</b>" : "") +
+                "<br>" + rk.steps.map(esc).join("<br>") +
+                '<br><span class="ev-muted">Portfel: kapitał bieżący ' + (pf.equity != null ? ccy(pf.equity, "PLN") : "–") + " · ryzyko otwartych pozycji do SL " + (pf.heat_pct != null ? num(pf.heat_pct, 1) + "%" : "–") +
+                " · obsunięcie od szczytu " + (pf.drawdown_pct != null ? num(pf.drawdown_pct, 1) + "%" : "–") + ((pf.no_sl || []).length ? " · bez SL: " + esc(pf.no_sl.join(", ")) : "") +
+                ". Przy dźwigni kwotę „wydano” podziel przez dźwignię – limit dotyczy ekspozycji.</span></div>";
         }
         const co = b.company || {};
         const companyLine = '<div class="ev-muted" style="margin:6px 0">Maks. budżet spółki: <input id="ev-maxb" type="number" step="0.1" min="0.1" max="100" value="' + (co.max_pct != null ? co.max_pct : "") + '" style="width:80px"> % kapitału <button class="hp-btn" style="padding:2px 8px" data-ev-maxb>Zapisz</button> <span>(ustal przed wejściem; puste = limit z Serwisu)</span></div>' +
