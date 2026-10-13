@@ -888,7 +888,7 @@
                     <table class="macro-custom-table"> <thead><tr><th>Waluta</th><th>Wartość</th></tr></thead> <tbody id="s-curr-breakdown"></tbody> </table> 
                 </div> 
                 <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;"> 
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Wykres Liniowy: Historia ROI % Portfela vs S&P 500</h4> 
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Wykres liniowy: zwrot portfela (TWR) vs S&P 500 w PLN</h4> 
                     <div style="position: relative; height: 250px; width: 100%;"> <canvas id="roiChart"></canvas> </div> 
                 </div> 
             </div> 
@@ -1651,6 +1651,16 @@
                 return res;
             };
         })();
+        // Score Form: powody mierzące ten sam fakt rynkowy (jak reasons.OVERLAP_GROUPS w backendzie) liczą się jak jeden -
+        // największy w całości + połowa pozostałych z grupy
+        const QD_OVERLAP_GROUPS = [["trend", "swing"], ["range", "path"], ["fibo", "elliott", "one2one", "xabcd", "correction"]];
+        const QD_LABEL_TYPE = { "luka (fvg)": "fvg", "potwierdzony dołek/szczyt": "swing", "zdrowy trend": "trend", "poziomy fibo": "fibo", "korekta 1:1": "one2one", "xabcd": "xabcd", "rgr": "rgr",
+            "fale elliotta": "elliott", "vwap": "vwap", "volume profile": "vp", "analiza zewnętrzna": "external", "powtórzenie korekty": "correction", "konsolidacja / akumulacja": "range", "droga otwarta (zs i ops)": "path" };
+        function qdOverlapCut(byType) {
+            let cut = 0;
+            QD_OVERLAP_GROUPS.forEach(g => { const p = g.filter(t => byType[t] != null).map(t => byType[t]).sort((a, b) => a - b); if (p.length >= 2) cut += 0.5 * p.slice(0, -1).reduce((a, b) => a + b, 0); });
+            return cut;
+        }
         let isPrivacyMode = false;
         
         let tickerDataArray = [], currentTickerPage = 1, tickerPageSize = 20;
@@ -2417,7 +2427,7 @@
                 onFocusIdChange(); 
                 fetchFocusEntries(); 
             } catch(e) { console.error(e); } 
-            document.getElementById('focus-date').valueAsDate = new Date();
+            document.getElementById('focus-date').value = new Date().toLocaleDateString('sv');
         }
 
         // Nowa funkcja wywoływana po wybraniu Tickera (Z uwzględnieniem filtra Mute)
@@ -2923,7 +2933,7 @@
 
             document.getElementById('trade-focus-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
             document.getElementById('trade-play-id').innerHTML = '<option value="">Najpierw wybierz ticker...</option>';
-            document.getElementById('trade-buy-date').valueAsDate = new Date(); 
+            document.getElementById('trade-buy-date').value = new Date().toLocaleDateString('sv'); 
             document.getElementById('trade-buy-time').value = new Date().toTimeString().slice(0, 5);
             syncTradeLast15();
             fetchTradesEntries(); 
@@ -3171,7 +3181,8 @@ async function submitTradeForm(e) {
     e.preventDefault(); 
     
     const spent = parseFloat(document.getElementById('trade-spent').value); 
-    const lev = parseInt(document.getElementById('trade-leverage').value); 
+    const lev = parseFloat(String(document.getElementById('trade-leverage').value).replace(',', '.')); 
+    if (!(lev > 0)) { alert('Dźwignia musi być liczbą większą od zera (np. 1 albo 2,5).'); return; }
     const maxSpendStr = document.getElementById('trade-max-spend').value; 
     const maxSpend = parseFloat(maxSpendStr.split(" ")[0]); 
     
@@ -4173,47 +4184,15 @@ async function handleTradeAutomation(tradeId, tradeData) {
     
         // --- SKRÓCONE NARZĘDZIA POMOCNICZE ---
         function renderDepositsTable() { const tb = document.getElementById('s-dep-table'); if(!depositsDataArray || depositsDataArray.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:var(--text-muted);">Brak wpłat.</td></tr>'; return; } tb.innerHTML = depositsDataArray.map(x => `<tr><td>${x.deposit_date || x.created_at ? (x.deposit_date || x.created_at).split('T')[0] : '-'}</td><td class="sensitive" style="font-weight:bold;">${Number(x.amount || 0).toFixed(2)} ${x.currency || 'PLN'}</td><td style="color:var(--text-muted);">${x.currency || 'PLN'}</td><td class="sensitive" style="color:var(--success); font-weight:bold;">${Number(x.amount_pln || x.amount || 0).toFixed(2)} PLN</td><td><button class="btn-delete" onclick="deleteDeposit(${x.id})">Usuń</button></td></tr>`).join(''); }
-        function renderSummaryClosed() { const fMonth = document.getElementById('s-cls-month-filter').value; const fCur = document.getElementById('s-cls-cur-filter').value; const fLev = document.getElementById('s-cls-lev-filter').value; const closedByMonth = {}; const closedByCurr = {}; const closedByLev = {}; let filteredPnlPln = 0; allTradesData.forEach(trade => { try { const s = calculateTradeStats(trade); if (!s.isClosed) return; const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty'; const curr = trade.currency || 'USD'; const lev = parseInt(trade.leverage) || 1; if (fMonth !== 'ALL' && month !== fMonth) return; if (fCur !== 'ALL' && curr !== fCur) return; if (fLev === '>1' && lev <= 1) return; if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseInt(fLev)) return; filteredPnlPln += s.profPln; if(!closedByMonth[month]) closedByMonth[month] = 0; closedByMonth[month] += s.profPln; if(!closedByCurr[curr]) closedByCurr[curr] = 0; closedByCurr[curr] += s.profPln; if(!closedByLev[lev]) closedByLev[lev] = 0; closedByLev[lev] += s.profPln; } catch(e) {} }); const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML=''; Object.keys(closedByMonth).sort().reverse().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML=''; Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML=''; Object.keys(closedByLev).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const totalEl = document.getElementById('s-cls-filtered-total'); if(totalEl) { totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN'; totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)'; } }
+        function renderSummaryClosed() { const fMonth = document.getElementById('s-cls-month-filter').value; const fCur = document.getElementById('s-cls-cur-filter').value; const fLev = document.getElementById('s-cls-lev-filter').value; const closedByMonth = {}; const closedByCurr = {}; const closedByLev = {}; let filteredPnlPln = 0; allTradesData.forEach(trade => { try { const s = calculateTradeStats(trade); if (!s.isClosed) return; const month = trade.sell_date ? trade.sell_date.substring(0, 7) : 'Brak daty'; const curr = trade.currency || 'USD'; const lev = parseFloat(trade.leverage) || 1; if (fMonth !== 'ALL' && month !== fMonth) return; if (fCur !== 'ALL' && curr !== fCur) return; if (fLev === '>1' && lev <= 1) return; if (fLev !== 'ALL' && fLev !== '>1' && lev !== parseFloat(fLev)) return; filteredPnlPln += s.profPln; if(!closedByMonth[month]) closedByMonth[month] = 0; closedByMonth[month] += s.profPln; if(!closedByCurr[curr]) closedByCurr[curr] = 0; closedByCurr[curr] += s.profPln; if(!closedByLev[lev]) closedByLev[lev] = 0; closedByLev[lev] += s.profPln; } catch(e) {} }); const cMonth = document.getElementById('s-cls-month'); cMonth.innerHTML=''; Object.keys(closedByMonth).sort().reverse().forEach(k => { cMonth.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByMonth[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByMonth[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByMonth).length === 0) cMonth.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cCurr = document.getElementById('s-cls-curr'); cCurr.innerHTML=''; Object.keys(closedByCurr).sort().forEach(k => { cCurr.innerHTML += `<tr><td>${k}</td><td class="sensitive" style="color:${closedByCurr[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByCurr[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByCurr).length === 0) cCurr.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const cLev = document.getElementById('s-cls-lev'); cLev.innerHTML=''; Object.keys(closedByLev).sort((a,b)=>parseFloat(a)-parseFloat(b)).forEach(k => { cLev.innerHTML += `<tr><td>Dźwignia x${k}</td><td class="sensitive" style="color:${closedByLev[k]>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${closedByLev[k].toFixed(2)} PLN</td></tr>`; }); if(Object.keys(closedByLev).length === 0) cLev.innerHTML = '<tr><td colspan="2" style="text-align:center;">Brak danych</td></tr>'; const totalEl = document.getElementById('s-cls-filtered-total'); if(totalEl) { totalEl.innerText = filteredPnlPln.toFixed(2) + ' PLN'; totalEl.style.color = filteredPnlPln >= 0 ? 'var(--success)' : 'var(--danger)'; } }
         
         async function drawSummaryChart() { 
             try { 
-                const res = await fetch(`${API_BASE_URL}/api/portfolio/roi/history`); 
-                const roiHistory = await res.json() || []; 
-                if (!Array.isArray(roiHistory) || roiHistory.length === 0) return; 
-                
-                roiHistory.sort((a, b) => new Date(a.date) - new Date(b.date)); 
-                const labels = []; const roiDataset = []; const sp500Dataset = []; 
-                
-                let baselineSp500 = null; 
-                if (macroDataArray && macroDataArray.length > 0) {
-                    // Kopiujemy i sortujemy bazę makro chronologicznie
-                    const sortedMacro = [...macroDataArray].sort((a, b) => a.date.localeCompare(b.date));
-                    
-                    // Szukamy pierwszej dostępnej ceny S&P500 począwszy od 1 lutego 2026
-                    for (let row of sortedMacro) {
-                        if (row.sp500 && row.date >= '2026-02-01') {
-                            baselineSp500 = parseFloat(row.sp500);
-                            break;
-                        }
-                    }
-                }
-                
-                roiHistory.forEach(entry => { 
-                    labels.push(entry.date); 
-                    roiDataset.push(parseFloat(entry.roi_pct) || 0); 
-                    let sp500Pct = 0; 
-                    if (baselineSp500 && macroDataArray && macroDataArray.length > 0) { 
-                        const macroDay = macroDataArray.find(m => m.date === entry.date); 
-                        if (macroDay && macroDay.sp500) { 
-                            const currentSp500 = parseFloat(macroDay.sp500); 
-                            sp500Pct = ((currentSp500 - baselineSp500) / baselineSp500) * 100; 
-                        } else { 
-                            sp500Pct = sp500Dataset.length > 0 ? sp500Dataset[sp500Dataset.length - 1] : 0; 
-                        } 
-                    } 
-                    sp500Dataset.push(sp500Pct); 
-                }); 
-                
+                // TWR portfela (wpłaty nie zniekształcają wyniku) i S&P 500 przeliczony na PLN – te same dane co wykres na stronie głównej
+                const res = await fetch(`${API_BASE_URL}/api/home/performance?range=all`); 
+                const d = await res.json().catch(() => ({})); 
+                if (d.status !== 'success' || !Array.isArray(d.labels) || !d.labels.length) return; 
+                const labels = d.labels, roiDataset = d.portfolio, sp500Dataset = d.sp500, spLabel = 'S&P 500 ' + (d.sp500_currency === 'PLN' ? 'w PLN (%)' : '(%)');
                 const ctx = document.getElementById('roiChart').getContext('2d'); 
                 if(summaryChartInstance) summaryChartInstance.destroy(); 
                 Chart.defaults.color = '#cdd6f4'; 
@@ -4222,14 +4201,14 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     data: { 
                         labels: labels, 
                         datasets: [ 
-                            { label: 'Twój Portfel (ROI %)', data: roiDataset, borderColor: '#0ecb81', backgroundColor: 'rgba(14, 203, 129, 0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#0ecb81' }, 
-                            { label: 'S&P 500 (%)', data: sp500Dataset, borderColor: '#89b4fa', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], tension: 0.3, pointRadius: 0 } 
+                            { label: 'Twój Portfel (TWR %)', data: roiDataset, borderColor: '#0ecb81', backgroundColor: 'rgba(14, 203, 129, 0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#0ecb81' }, 
+                            { label: spLabel, data: sp500Dataset, spanGaps: true, borderColor: '#89b4fa', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], tension: 0.3, pointRadius: 0 } 
                         ] 
                     }, 
                     options: { 
                         responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false, }, 
                         scales: { y: { grid: {color: 'rgba(255,255,255,0.05)'}, ticks: {color: '#cdd6f4'} }, x: { grid: {display: false}, ticks: {color: '#cdd6f4', maxTicksLimit: 10} } }, 
-                        plugins: { legend: { display: true, position: 'top', labels: {color: '#cdd6f4'} }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%'; } } } } 
+                        plugins: { legend: { display: true, position: 'top', labels: {color: '#cdd6f4'} }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + (context.parsed.y == null ? '–' : context.parsed.y.toFixed(2) + '%'); } } } } 
                     } 
                 }); 
             } catch (err) { console.error("Chart error", err); } 
@@ -4277,7 +4256,8 @@ async function handleTradeAutomation(tradeId, tradeData) {
         // waluta wg giełdy - ta sama tabela co w backendzie (get_currency_by_ticker); serwer i tak ustala walutę przy zapisie
         function getCurrencyForFrontend(ticker) {
             if (!ticker) return 'USD';
-            const t = String(ticker).toUpperCase(), has = a => a.some(x => x.endsWith(':') ? t.includes(x) : t.endsWith(x));
+            const t = String(ticker).toUpperCase().trim(), pre = t.includes(':') ? t.split(':')[0] + ':' : null;
+            const has = a => a.some(x => x.endsWith(':') ? pre === x : t.endsWith(x));      // dokładny prefiks giełdy (BIST:… nie trafia w ST:)
             if (has(['GPW:', '.WA', 'LSE:', '.L', 'OMXSTO:', 'ST:', '.ST', 'OMXCOP:', 'CO:', '.CO'])) return 'PLN';      // Londyn, Sztokholm, Kopenhaga celowo jak w backendzie
             if (has(['XETR:', '.DE', 'PA:', 'EPA:', 'EURONEXT:', '.PA', 'AMS:', '.AS', 'HE:', 'OMXHEL:', '.HE', 'GETTEX:', 'MUN:', '.MU', 'FRA:', 'FWB:', '.F'])) return 'EUR';
             return 'USD';
@@ -4338,25 +4318,21 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 
                 let prof = 0; 
                 if (buyPrice !== 0) { 
-                    prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + div - cfdCost; 
+                    prof = (val * (((cp - buyPrice) / buyPrice) * mod)) + (mod > 0 ? div : -Math.abs(div)) - cfdCost;    // short płaci dywidendę 
                 } 
                 
-                // --- POPRAWKA 2: PANCERNY FALLBACK WALUTOWY ---
-                let rawFx = parseFloat(isClosed ? (item.sell_fx_rate || item.buy_fx_rate || 1) : (item.buy_fx_rate || 1)); 
+                // Kursy walut jak w portfelu (portfolio_math): kapitał po kursie zakupu, wartość po kursie sprzedaży (zamknięte)
+                // albo bieżącym (otwarte, `fx_now` z serwera). Zysk w PLN = wartość·kurs końcowy − wydano·kurs zakupu,
+                // więc obejmuje też zmianę kursu na samym kapitale. Brak kursu zakupu -> kurs bieżący/sprzedaży (przybliżenie).
                 const currentCur = item.currency || getCurrencyForFrontend(item.ticker);
-                
-                // Jeśli kurs z bazy to "1" dla waluty obcej, ratujemy sytuację przybliżeniem
-                if (isNaN(rawFx) || rawFx <= 0 || (rawFx === 1.0 && currentCur !== 'PLN')) {
-                    if (currentCur === 'USD') rawFx = 4.0;
-                    else if (currentCur === 'EUR') rawFx = 4.3;
-                    else rawFx = 1.0;
-                }
-                const usedFx = rawFx;
-                // ----------------------------------------------
+                const fxOk = v => { const x = parseFloat(v); return isFinite(x) && x > 0 && !(x === 1 && currentCur !== 'PLN') ? x : null; };
+                const fxEnd = currentCur === 'PLN' ? 1 : (isClosed ? fxOk(item.sell_fx_rate) : fxOk(item.fx_now)) || fxOk(item.buy_fx_rate) || ({ USD: 4.0, EUR: 4.3 }[currentCur] || 1);
+                const fxBuy = currentCur === 'PLN' ? 1 : fxOk(item.buy_fx_rate) || fxEnd;
+                const usedFx = fxBuy;
 
-                const profPln = prof * usedFx; 
-                const valPln = val * usedFx; 
-                const spentPln = spent * usedFx; 
+                const profPln = (spent + prof) * fxEnd - spent * fxBuy; 
+                const valPln = val * fxEnd; 
+                const spentPln = spent * fxBuy; 
                 
                 const tp = parseFloat(item.tp) || 0; 
                 const sl = parseFloat(item.sl) || 0; 
@@ -4381,7 +4357,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 if (pd > 100) pd = 100; 
                 
                 // Zwracamy również usedFx, by frontend widział z jakiego kursu ostatecznie skorzystał
-                return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln, usedFx }; 
+                return { isClosed, cp, val, prof, profPln, rr, prog, dsl, pd, pc, valPln, spentPln, usedFx, fxEnd }; 
             } catch (error) { 
                 return { isClosed: false, cp:0, val:0, prof:0, profPln:0, rr:0, prog:0, dsl:0, pd:0, pc:'gray', valPln:0, spentPln:0, usedFx: 1 }; 
             } 
@@ -4391,7 +4367,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
         function openCloseModal(id) { 
         document.getElementById('sell-modal').style.display = 'flex'; 
         document.getElementById('sell-trade-id').value = id; 
-        document.getElementById('sell-date').valueAsDate = new Date(); 
+        document.getElementById('sell-date').value = new Date().toLocaleDateString('sv'); 
         document.getElementById('sell-price').value = ''; 
         document.getElementById('sell-fraction').value = '1'; 
     
@@ -4451,7 +4427,12 @@ async function handleTradeAutomation(tradeId, tradeData) {
             let fraction = 1.0; 
             if(fracStr.includes('%')) { fraction = parseFloat(fracStr.replace('%', '')) / 100.0; } 
             else if(fracStr.includes('/')) { const parts = fracStr.split('/'); fraction = parseFloat(parts[0]) / parseFloat(parts[1]); } 
-            else { let parsed = parseFloat(fracStr); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; } 
+            else { let parsed = parseFloat(fracStr.replace(',', '.')); if (parsed > 1.0) fraction = parsed / 100.0; else fraction = parsed; } 
+            if (!(fraction > 0 && fraction <= 1)) return alert('Zamykana część musi być z przedziału 0–100% (np. 50%, 1/2 albo 0,5).');
+            if (!date) return alert('Podaj datę sprzedaży.');
+            if (window.__selling) return;                       // podwójne kliknięcie nie zamknie pozycji dwa razy
+            window.__selling = true;
+            const btn = document.querySelector('[onclick="confirmSell()"]'); if (btn) { btn.disabled = true; btn.style.opacity = .6; }
     
             try { 
                 const closeRes = await fetch(`${API_BASE_URL}/api/trades/close`, { 
@@ -4460,10 +4441,12 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     body: JSON.stringify({ id: id, fraction: fraction, sell_price: price, sell_date: date, cfd_cost: cfdCost, exit_reason: exitReason }) 
                 }); 
                 const closeJson = await closeRes.json().catch(() => ({}));
+                if (!closeRes.ok || closeJson.status !== 'success') { alert(closeJson.message || ('Błąd zamknięcia pozycji (HTTP ' + closeRes.status + ')')); fetchTradesEntries(true); return; }
                 closeSellModal(); 
                 fetchTradesEntries(true); 
                 if (closeJson.plan_closed && window.Planer) Planer.toast('🧭 Plan #' + closeJson.plan_closed + ' zamknął się automatycznie - zamknięto ostatnią pozycję planu.', 8000);
-            } catch(e) {} 
+            } catch(e) { alert('Błąd połączenia z serwerem: ' + (e.message || e)); }
+            finally { window.__selling = false; if (btn) { btn.disabled = false; btn.style.opacity = ''; } }
         }
         async function loadDailyBriefs() { try { const response = await fetch(`${API_BASE_URL}/api/blog/briefs`); const data = await response.json(); const container = document.getElementById('dailybrief-carousel'); container.innerHTML = ''; if(Array.isArray(data)) { data.forEach(item => { container.innerHTML += `<div class="brief-card"><h4>${item.title}</h4><div class="brief-text">${item.summary}</div><div class="brief-card-footer"><a href="${item.url}" target="_blank" class="brief-link">Oryginalny wpis 🔗</a></div></div>`; }); } } catch (error) {} }
         
@@ -4473,7 +4456,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
             const select = document.getElementById('div-trade-id'); 
             select.innerHTML = '<option value="">Wybierz otwartą pozycję...</option>'; 
             openTrades.forEach(t => { select.innerHTML += `<option value="${t.id}">ID: #${t.id} | ${t.ticker} (${t.direction})</option>`; }); 
-            document.getElementById('div-date').valueAsDate = new Date(); 
+            document.getElementById('div-date').value = new Date().toLocaleDateString('sv'); 
             
             // Pobieranie statusu RĘCZNEGO (z przeglądarki)
             const lastUpdateMsg = localStorage.getItem('last_price_update');
@@ -5360,7 +5343,7 @@ window.HomePage = (function () {
             g.addColorStop(0, "rgba(252,213,53,.28)"); g.addColorStop(1, "rgba(252,213,53,0)");
             const datasets = [
                 { label: "Portfel", data: d.portfolio, borderColor: css("--accent-hover") || "#fcd535", backgroundColor: g, fill: true, borderWidth: 2.4, tension: .3, pointRadius: 0, pointHoverRadius: 5, spanGaps: true },
-                { label: "S&P 500", data: d.sp500, borderColor: "#60a5fa", borderWidth: 2, tension: .3, pointRadius: 0, pointHoverRadius: 5, spanGaps: true },
+                { label: d.sp500_currency === "PLN" ? "S&P 500 (w PLN)" : "S&P 500", data: d.sp500, borderColor: "#60a5fa", borderWidth: 2, tension: .3, pointRadius: 0, pointHoverRadius: 5, spanGaps: true },
             ];
             if (chart) { chart.data.labels = labels; chart.data.datasets.forEach((ds, i) => ds.data = datasets[i].data); chart.update(); return; }
             const muted = css("--text-muted") || "#848e9c";
@@ -6298,7 +6281,7 @@ window.Planer = (function () {
                 cardHtml(l) +
                 (l.signals.length ? l.signals.map(s => '<div class="plx-play" style="color:var(--text-main)">' + (WICON[s.kind] || "⚪") + " " + esc(s.text) + "</div>").join("") : '<div class="plx-play db-help">Brak sygnałów.</div>') +
                 '<div class="plx-play">' + l.proposals.map(p => p.available
-                    ? '<span class="ev-chip" title="' + esc(p.reason) + '">➕ ' + esc(p.label) + ": do " + pct(p.cap_pct) + " kapitału" + (amt(p.cap_pct, MD()) ? " ≈ " + amt(p.cap_pct, MD()) : "") + "</span>"
+                    ? '<span class="ev-chip" title="' + esc(p.reason) + '">➕ ' + esc(p.label) + (p.cap_pct == null ? ": bez limitu strefy (ustaw limity w Serwisie)" : ": do " + pct(p.cap_pct) + " kapitału" + (amt(p.cap_pct, MD()) ? " ≈ " + amt(p.cap_pct, MD()) : "")) + "</span>"
                     : '<span class="db-help" title="' + esc((p.blockers || []).join("; ") || p.reason) + '">' + esc(p.label) + ": niedostępna</span>").join(" ") +
                 (l.proposals.some(p => p.available) ? ' <button class="hp-btn" data-ev-eval="' + esc(d.ticker) + '" data-entry="' + esc(l.entry_id) + '">Oceń wejście i ustal kwotę →</button>' : "") + "</div></div>";
         });
@@ -6637,13 +6620,19 @@ window.FormZones = (function () {
 
     // ---------- obliczenia (te same reguły statusu i R:R co dotąd) ----------
     // punktacja ułamkowa: powód zmierzony = jego jakość (60% wypełnienia = 0,6), zakończony/wygasły = 0, niezmierzony (dawny) = 1; razem max 5
-    function reasonPoints(name, e) {
-        const d = (Array.isArray(e.reasons_detail) ? e.reasons_detail : []).find(x => String(x.label).toLowerCase() === String(name).toLowerCase());
-        if (!d) return 1;
+    function reasonPoints(name, e) {                 // jak reasons.reason_points: dopasowanie po typie, bez pomiaru 0,5 (wpis bez żadnych pomiarów - 1)
+        const dl = Array.isArray(e.reasons_detail) ? e.reasons_detail : [], typ = QD_LABEL_TYPE[String(name).toLowerCase()];
+        const d = dl.find(x => typ && x.type === typ) || dl.find(x => String(x.label).toLowerCase() === String(name).toLowerCase());
+        if (!d) return dl.length ? 0.5 : 1;
         if (d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły")) return 0;
         return Math.max(0, Math.min(1, +d.quality || 0));
     }
-    const scoreAuto = e => Math.min(5, Math.round((Array.isArray(e.reasons) ? e.reasons : []).reduce((s, r) => s + reasonPoints(r, e), 0) * 100) / 100);
+    const scoreAuto = e => {                         // rekomendacja z serwera (score_auto), a lokalnie te same zasady (z grupami nakładania)
+        if (e.score_auto != null && !isNaN(+e.score_auto)) return +e.score_auto;
+        const by = {}; let sum = 0;
+        (Array.isArray(e.reasons) ? e.reasons : []).forEach(r => { const p = reasonPoints(r, e), t = QD_LABEL_TYPE[String(r).toLowerCase()]; sum += p; if (t) by[t] = Math.max(by[t] || 0, p); });
+        return Math.min(5, Math.round((sum - qdOverlapCut(by)) * 100) / 100);
+    };
     const scoreOf = e => (e.score_manual != null && e.score_manual !== "") ? Math.max(0, Math.min(5, +e.score_manual)) : scoreAuto(e);     // ręczna korekta ma pierwszeństwo przed rekomendacją
     const fmtScore = v => num(v, 1);
     function view(e) {
@@ -7378,8 +7367,8 @@ window.Measure = (function () {
     const ended = d => d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły");
     // „Zdrowy trend” i „Potwierdzony dołek/szczyt” mierzą ten sam ostatni dołek (OPD) – razem: większy w całości + połowa mniejszego (jak w backendzie)
     function overlapCut(list, pts) {
-        const by = {}; list.forEach(d => { if (d.type === "trend" || d.type === "swing") by[d.type] = Math.max(by[d.type] || 0, pts(d)); });
-        return by.trend != null && by.swing != null ? 0.5 * Math.min(by.trend, by.swing) : 0;
+        const by = {}; list.forEach(d => { by[d.type] = Math.max(by[d.type] || 0, pts(d)); });
+        return qdOverlapCut(by);
     }
     function drawScore() {
         const box = $("#fz-scorebar"); if (!box) return;
@@ -7387,7 +7376,8 @@ window.Measure = (function () {
         const raw = M.added.reduce((s, d) => s + pts(d), 0) - overlapCut(M.added, pts), sc = Math.min(5, raw);
         const r = M.result, pending = r && !M.added.some(d => d.type === r.type && d.quality === r.quality) && r.type;
         const same = pending ? M.added.find(d => d.type === r.type) : null;          // ponowne dodanie tego samego typu zastępuje poprzedni pomiar
-        const after = pending ? Math.min(5, raw - (same ? pts(same) : 0) + (r.quality || 0)) : null;
+        const nextList = pending ? M.added.filter(d => d !== same).concat([r]) : null;
+        const after = pending ? Math.min(5, nextList.reduce((s, d) => s + pts(d), 0) - overlapCut(nextList, pts)) : null;
         const col = sc >= 3.5 ? "var(--success)" : sc >= 2 ? "var(--accent-hover)" : sc > 0 ? "#f0883e" : "var(--text-muted)";
         const seg = i => { const f = Math.max(0, Math.min(1, sc - i)), g = after != null ? Math.max(0, Math.min(1, after - i)) : 0;
             return '<span class="fz-sseg"><i style="width:' + f * 100 + '%;background:' + col + '"></i>' + (g > f ? '<i class="fz-spend" style="left:' + f * 100 + '%;width:' + (g - f) * 100 + '%"></i>' : "") + "</span>"; };
