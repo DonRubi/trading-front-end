@@ -1204,6 +1204,7 @@
                     <div class="dbx-actions">
                         <button class="hp-btn dbx-danger" onclick="forceAlertsCheck()">🔔 Wymuś sprawdzenie alertów</button>
                         <button class="hp-btn dbx-blue" onclick="forceCronPricesUpdate()">📈 Wymuś aktualizację cen</button>
+                        <button class="hp-btn" onclick="if (qdSetApiKey() !== null) location.reload()" title="Klucz dostępu do API zapamiętany w tej przeglądarce">🔑 Klucz dostępu</button>
                         <button class="hp-btn dbx-green" onclick="fixTickerNames()">🏢 Pobierz nazwy spółek z Yahoo</button>
                         <button class="hp-btn" onclick="fixHistoricalFxRates()">🛠️ Nadpisz kursy „4.0” w Supabase</button>
                         <button class="hp-btn" onclick="forceCurrencyUpdate()">🔄 Przelicz i napraw waluty wg giełd</button>
@@ -1621,6 +1622,34 @@
                 const allowed = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname.endsWith('.onrender.com') || u.hostname === 'quant.31-70-115-174.sslip.io';
                 return allowed ? u.origin : DEFAULT;
             } catch (e) { return DEFAULT; }
+        })();
+        // Klucz dostępu do API (gdy serwer ma ustawiony API_TOKEN): dołączany do każdego zapytania do backendu,
+        // pytamy o niego raz (401) i pamiętamy w tej przeglądarce. Zmiana: Serwis -> „🔑 Klucz dostępu”.
+        const QD_KEY_STORE = 'qd-api-key';
+        function qdApiKey() { try { return localStorage.getItem(QD_KEY_STORE) || ''; } catch (e) { return ''; } }
+        function qdSetApiKey(ask) {
+            const k = prompt(ask || 'Klucz dostępu do API Quant Desk (API_TOKEN z pliku .env na serwerze).\nZostanie zapamiętany w tej przeglądarce. Puste = usuń zapamiętany klucz.', qdApiKey());
+            if (k === null) return null;
+            try { k.trim() ? localStorage.setItem(QD_KEY_STORE, k.trim()) : localStorage.removeItem(QD_KEY_STORE); } catch (e) {}
+            return k.trim();
+        }
+        (() => {
+            const nativeFetch = window.fetch.bind(window);
+            let asking = null;                                          // jedno okno z pytaniem naraz, choć zapytań jest wiele
+            const withKey = (init, key) => { const h = new Headers((init && init.headers) || {}); if (key) h.set('X-API-Key', key); return { ...(init || {}), headers: h }; };
+            window.fetch = async (input, init) => {
+                const url = typeof input === 'string' ? input : (input && input.url) || '';
+                if (!url.startsWith(API_BASE_URL)) return nativeFetch(input, init);
+                const key = qdApiKey();
+                let res = await nativeFetch(input, withKey(init, key));
+                if (res.status === 401) {
+                    const used = key;
+                    asking = asking || Promise.resolve().then(() => qdApiKey() !== used ? qdApiKey() : qdSetApiKey('Serwer wymaga klucza dostępu do API (API_TOKEN z pliku .env na serwerze). Podaj klucz – zostanie zapamiętany w tej przeglądarce:')).finally(() => setTimeout(() => { asking = null; }, 1500));
+                    const k2 = await asking;
+                    if (k2 && k2 !== used) res = await nativeFetch(input, withKey(init, k2));
+                }
+                return res;
+            };
         })();
         let isPrivacyMode = false;
         
@@ -4477,7 +4506,8 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     el.innerHTML = `<strong style="color:#a6e3a1;">Pamięć serwera:</strong><br>Zajęte: <strong style="color:${col}">${m.rss_mb != null ? n(m.rss_mb) + ' MB z ' + m.limit_mb + ' MB (' + pct + '%)' : 'brak odczytu'}</strong>` +
                         `<br>Świece w pamięci: ${n(c.mb)} MB z limitu ${c.limit_mb} MB · ${c.symbols} spółek · ${c.entries} zestawów` +
                         `<br><span style="color:var(--text-muted)">Trafienia ${c.hits} · pobrania ${c.misses} · usunięte (limit) ${c.evicted} · przeterminowane ${c.expired}</span>` +
-                        (m.version && m.version.commit ? `<br>Wersja na serwerze: <strong>${String(m.version.commit).replace(/[^0-9a-f]/gi, '')}</strong>` + (m.version.date ? ' z ' + new Date(m.version.date).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' }) : '') : '');
+                        (m.version && m.version.commit ? `<br>Wersja na serwerze: <strong>${String(m.version.commit).replace(/[^0-9a-f]/gi, '')}</strong>` + (m.version.date ? ' z ' + new Date(m.version.date).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' }) : '') : '') +
+                        (m.security ? `<br>Zabezpieczenia: klucz API <strong style="color:${m.security.api_token ? 'var(--success)' : 'var(--danger)'}">${m.security.api_token ? 'włączony' : 'WYŁĄCZONY (ustaw API_TOKEN w .env)'}</strong> · klucz Supabase <strong style="color:${m.security.supabase_key_env ? 'var(--success)' : 'var(--accent-hover)'}">${m.security.supabase_key_env ? 'sekretny z .env' : 'publiczny (domyślny w kodzie)'}</strong>` : '');
                 }
             } catch(e) {}
             // Harmonogram na własnym serwerze (scheduler.py) i kopie zapasowe Supabase
