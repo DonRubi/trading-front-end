@@ -119,6 +119,7 @@
         .hp-b-long, .hp-b-buy { background: rgba(14,203,129,.15); color: var(--success); }
         .hp-b-short, .hp-b-sell { background: rgba(246,70,93,.15); color: var(--danger); }
         .hp-b-check { background: rgba(96,165,250,.16); color: #60a5fa; }
+        button.hp-note-go { border: 0; cursor: pointer; font-family: inherit; font-size: .74rem; padding: 5px 11px; } button.hp-note-go:hover { filter: brightness(1.25); box-shadow: 0 0 0 1px currentColor inset; }
         .hp-b-stale { background: rgba(252,213,53,.16); color: var(--accent-hover); }
         .hp-table th[data-sort] { cursor: pointer; user-select: none; }
         .hp-table th[data-sort]:hover { color: var(--text-main); }
@@ -344,6 +345,12 @@
         .plx-kpi { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; }
         .plx-kpi .l { color: var(--text-muted); font-size: 0.72em; text-transform: uppercase; letter-spacing: .06em; } .plx-kpi .v { font-size: 1.35em; font-weight: 700; margin-top: 4px; } .plx-kpi .s { color: var(--text-muted); font-size: 0.78em; margin-top: 2px; }
         .plx-h { font-size: 1em; font-weight: 650; margin: 4px 0 2px; }
+        .plx-map { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 12px; overflow: hidden; }
+        .plx-map-svg { display: block; width: 100%; height: auto; }
+        .plx-map-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: .8em; color: var(--text-muted); }
+        .plx-map-key i, .plx-map-list i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+        .plx-map-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: .85em; }
+        .plx-map-list span { color: var(--text-muted); }
         .plx-zone { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; }
         .plx-zone.pick { cursor: pointer; } .plx-zone.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; } .plx-zone.dis { opacity: .5; cursor: not-allowed; }
         .plx-zhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -5382,6 +5389,19 @@ window.HomePage = (function () {
 
     // ---------- notatnik ----------
     const ACTION = { check: "Sprawdź", buy: "Kup", sell: "Sprzedaj" };
+    // akcja notatki prowadzi do zakładki z wpisanym tickerem: Sprawdź -> Form, Kup -> Focus, Sprzedaj -> Transakcje (otwarte)
+    const GO = { check: ["form-module", "Form", "#fz-q"], buy: ["focus2-module", "Focus", "#fe-q"], sell: ["tradeslist-module", "Transakcje", "#trade-search"] };
+    function goNote(n) {
+        const g = GO[n.action]; if (!g || typeof openModule !== "function") return;
+        const q = String(n.ticker || ""), base = q.includes(":") ? q.split(":")[1] : q;
+        const inp = $(g[2]); if (inp) inp.value = base;
+        if (n.action === "sell") { const f = $("#trade-status-filter"); if (f) f.value = "OPEN"; }
+        if (n.action === "buy") { const f = $("#fe-used"); if (f) f.value = "all"; }
+        openModule(g[0], g[1]);
+        if (n.action === "check" && window.FormZones) FormZones.set("q", base);
+        if (n.action === "sell" && typeof handleTradesFilter === "function") { try { handleTradesFilter(); } catch (e) {} }
+        window.scrollTo(0, 0);
+    }
     function alertTag(n) {
         if (!n.alert_at) return "";
         const t = new Date(n.alert_at).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -5397,7 +5417,7 @@ window.HomePage = (function () {
     function noteRow(n, i) {
         const date = n.created_at ? new Date(n.created_at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
         return '<tr class="hp-note-row ' + (n.done ? "hp-done" : "") + '" data-id="' + esc(n.id) + '" style="animation-delay:' + (i * 30) + 'ms">' +
-            '<td><span class="hp-tk sd-link" data-tk="' + esc(n.ticker) + '">' + esc(n.ticker) + '</span></td><td><span class="hp-badge hp-b-' + esc(n.action) + '" style="margin-left:0">' + (ACTION[n.action] || esc(n.action)) + "</span></td>" +
+            '<td><span class="hp-tk sd-link" data-tk="' + esc(n.ticker) + '">' + esc(n.ticker) + '</span></td><td><button type="button" class="hp-badge hp-b-' + esc(n.action) + ' hp-note-go" style="margin-left:0" title="' + (GO[n.action] ? "Przejdź do: " + GO[n.action][1] + " (ticker " + esc(n.ticker) + ")" : "") + '">' + (ACTION[n.action] || esc(n.action)) + (GO[n.action] ? " →" : "") + "</button></td>" +
             '<td class="hp-col-date" style="white-space:nowrap;color:var(--text-muted)">' + date + '</td><td class="hp-desc">' + esc(n.description) + alertTag(n) + "</td>" +
             '<td class="hp-r"><input type="checkbox" class="hp-chk" aria-label="Wykreśl notatkę" ' + (n.done ? "checked" : "") + "></td>" +
             '<td class="hp-r"><button class="hp-x" type="button" aria-label="Usuń notatkę">×</button></td></tr>';
@@ -5473,6 +5493,7 @@ window.HomePage = (function () {
         $("#hp-notes").addEventListener("click", async ev => {
             const tr = ev.target.closest("tr.hp-note-row"); if (!tr) return;
             const n = notes.find(x => String(x.id) === tr.dataset.id); if (!n) return;
+            if (ev.target.closest(".hp-note-go")) { goNote(n); return; }
             try {
                 if (ev.target.classList.contains("hp-chk")) {
                     const prev = n.done; n.done = ev.target.checked; tr.classList.toggle("hp-done", n.done);
@@ -6223,6 +6244,7 @@ window.Planer = (function () {
             kpi("Inwestycje w spółce", c.open_trades + (c.max_trades != null ? " / " + c.max_trades : ""), c.trades_left != null ? (c.trades_left > 0 ? "wolnych miejsc: " + c.trades_left : '<span class="plx-neg">limit wyczerpany</span>') : "bez limitu liczby") + "</div>" +
             (p.capital_known ? "" : '<div class="plx-warn">Nie udało się wyliczyć kapitału - procenty budżetu są niedostępne.</div>') +
             maxBudgetHtml(p) +
+            '<div class="plx-h">Mapa planu</div><div id="plx-map" class="plx-map"></div>' +
             (p.unassigned_pct > 0 ? '<div class="plx-warn">Transakcje poza strefami: ' + pct(p.unassigned_pct) + " kapitału (cena zakupu daleko od stref z Form i brak powiązanego zagrania).</div>" : "") +
             (open_ ? '<div id="plx-watch" class="plx-watch"></div>' : "") +
             '<div class="plx-h">Strefy spółki z Form i dostępne zagrania</div>' +
@@ -6235,7 +6257,139 @@ window.Planer = (function () {
             '<div class="plx-h">Notatka</div><textarea id="plx-note" class="dbx-in plx-note" maxlength="2000" ' + (open_ ? "" : "readonly") + ">" + esc(p.note) + "</textarea>" +
             '<div class="plx-actions">' + (open_ ? '<button class="hp-btn" onclick="Planer.saveNote()">Zapisz notatkę</button><button class="hp-btn dbx-danger" onclick="Planer.closePlan()">Zamknij plan</button>' : '<button class="hp-btn" onclick="Planer.reopenPlan()">Otwórz ponownie</button>') +
             '<button class="hp-btn" style="margin-left:auto" onclick="Planer.deletePlan()">Usuń plan</button></div>');
+        drawMap(); loadMapBars(p.ticker);
         loadWatch();
+    }
+    // ---------- mapa planu: strefy, odstępy między nimi, kurs, średnia (i średnia po kolejnych dokładkach), SL i TP ----------
+    const GAP_DEF = { inv_prio: 25, inv: 20, spec_prio: 12, spec: 10 };
+    let mapRz = null;
+    window.addEventListener("resize", () => { clearTimeout(mapRz); mapRz = setTimeout(() => { if (document.querySelector("#plx-map")) drawMap(); }, 150); });
+    async function loadMapBars(tk) {
+        if (st.mapBars && st.mapBars.ticker === tk) { drawMap(); return; }
+        try {
+            const r = await fetch(API_BASE_URL + "/api/candles?ticker=" + encodeURIComponent(tk) + "&tf=1d&limit=260");
+            const d = await r.json(); if (!r.ok || d.status === "error") throw new Error(d.message || "HTTP " + r.status);
+            st.mapBars = { ticker: tk, bars: (d.bars || []).filter(b => b.c != null) };
+        } catch (e) { st.mapBars = { ticker: tk, bars: [], err: e.message }; }
+        drawMap();
+    }
+    const isoDay = t => typeof t === "number" ? new Date(t * 1000).toISOString().slice(0, 10) : String(t).slice(0, 10);
+    function mapModel() {
+        const p = st.detail; if (!p) return null;
+        const w = st.watch && st.watch.plan_id === p.id ? st.watch : null, pos = w && w.position;
+        const bars = st.mapBars && st.mapBars.ticker === p.ticker ? st.mapBars.bars : [];
+        const wl = {}; (w ? w.legs : []).forEach(l => { wl[l.entry_id] = l; });
+        const zones = p.legs.filter(l => !l.missing && l.start != null && l.end != null).map(l => {
+            const x = wl[l.entry_id] || {}, pl = (l.plays || [])[0] || {};
+            return { id: l.entry_id, lo: Math.min(l.start, l.end), hi: Math.max(l.start, l.end), side: l.side, used: l.used_pct || 0, planned: l.planned_pct, left: l.left_pct,
+                entry: pl.entry_point, sl: x.sl ? x.sl.level : pl.stop_loss, slBroken: !!(x.sl && x.sl.broken), tp: x.tp1 && x.tp1.price ? x.tp1.price : pl.take_profit, card: x.card };
+        }).sort((a, b) => b.hi - a.hi);
+        zones.forEach((z, i) => { z.n = i + 1; });
+        const last = bars.length ? bars[bars.length - 1].c : null;
+        const px = (pos && pos.price) || last;
+        const open = (p.trades || []).filter(t => t.status === "OPEN" && t.side === "LONG" && t.buy_price > 0);
+        const expo = open.reduce((s, t) => s + (t.invested_pct || 0), 0);
+        let avg = pos && pos.avg_price;
+        if (!avg && open.length && expo > 0) avg = expo / open.reduce((s, t) => s + (t.invested_pct || 0) / t.buy_price, 0);
+        const longs = zones.filter(z => z.side === "LONG");
+        let sl = pos && pos.sl_plan, tp = pos && pos.tp_plan;
+        const ref = avg || px;
+        if (!sl && ref) { const c = longs.map(z => z.sl).filter(v => v && v < ref); sl = c.length ? Math.min(...c) : null; }
+        if (!tp && ref) { const c = longs.map(z => z.tp).filter(v => v && v > ref); tp = c.length ? Math.min(...c) : null; }
+        // zasięg uśredniania wg Planera: kolejne strefy LONG pod kursem bez pozycji, w limicie wejść spółki i w odstępie typu spółki
+        const maxGap = (w && w.settings && w.settings.max_gap_pct) || GAP_DEF[p.kind] || 10, left = p.company ? p.company.trades_left : null;
+        let k = 0, prev = null, broken = null, units = avg ? expo / avg : 0, ex = expo;
+        longs.forEach(z => {
+            z.hasPos = z.used > 1e-9;
+            z.dist = px ? (z.hi < px ? (z.hi / px - 1) * 100 : z.lo > px ? (z.lo / px - 1) * 100 : 0) : null;
+            if (z.hasPos || !px || z.hi >= px) { prev = z; return; }
+            if (broken) { z.out = broken; return; }
+            const g = prev ? (z.hi / prev.lo - 1) * 100 : null;
+            if (left != null && k >= left) broken = "poza limitem wejść (" + (p.company.max_trades != null ? "maks. " + p.company.max_trades : "limit") + ")";
+            else if (g != null && Math.abs(g) > maxGap) broken = "odstęp " + num(Math.abs(g), 1) + "% > " + num(maxGap, 0) + "% (typ spółki)";
+            if (broken) { z.out = broken; return; }
+            k++; z.reach = k;
+            const add = z.left != null ? z.left : z.planned, at = z.entry && z.entry >= z.lo && z.entry <= z.hi ? z.entry : z.hi;
+            if (add > 0 && at > 0 && (avg || !open.length)) { ex += add; units += add / at; z.avgAfter = ex / units; }
+            prev = z;
+        });
+        longs.forEach((z, i) => { const nx = longs[i + 1]; if (nx) z.gapNext = (nx.hi / z.lo - 1) * 100; });
+        return { p, w, bars, zones, longs, price: px, avg, sl, tp, maxGap, open, rr: avg && sl && tp && avg > sl ? (tp - avg) / (avg - sl) : null };
+    }
+    function drawMap() {
+        const el = $("#plx-map"); if (!el) return;
+        const m = mapModel(); if (!m) return;
+        if (!m.zones.length) { el.innerHTML = '<div class="db-help">Plan nie ma stref z Form – nie ma czego rysować.</div>'; return; }
+        const W = Math.max(300, (el.clientWidth || 824) - 24), mob = W < 640, big = W > 1300;
+        const H = mob ? 400 : big ? 560 : 470, axW = mob ? 0 : 58, labW = mob ? 0 : Math.min(380, Math.round(W * 0.33)), gapW = mob ? 54 : 74;
+        const cx0 = axW, cW = W - axW - labW - gapW, gx = cx0 + cW, lx = gx + gapW, top = 14, bot = H - 22;
+        const N = mob ? 70 : big ? 160 : 120, bars = m.bars.slice(-N);
+        const vals = [m.price, m.avg, m.sl, m.tp].concat(...m.zones.map(z => [z.lo, z.hi]), m.longs.map(z => z.avgAfter), bars.map(b => b.l), bars.map(b => b.h)).filter(v => v > 0 && isFinite(v));
+        let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.05 || hi * 0.02; lo -= pad; hi += pad;
+        const Y = v => top + (hi - v) / (hi - lo) * (bot - top), fz = mob ? 11 : big ? 14 : 12.5;
+        const T = (x, y, s, fill, o) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" style="fill:' + fill + ';font-size:' + ((o && o.fs) || fz) + 'px' + (o && o.w ? ";font-weight:" + o.w : "") + '"' + (o && o.a ? ' text-anchor="' + o.a + '"' : "") + ">" + esc(s) + "</text>";
+        const L = (x1, y1, x2, y2, col, wd, dash, op) => '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" style="stroke:' + col + ";stroke-width:" + wd + (dash ? ";stroke-dasharray:" + dash : "") + (op ? ";opacity:" + op : "") + '"/>';
+        const C = { long: "#0ecb81", short: "#f6465d", price: "#fcd535", avg: "#89b4fa", sl: "#f6465d", tp: "#0ecb81", mut: "var(--text-muted)", txt: "var(--text-main)", grid: "var(--border-color)" };
+        let s = '<defs><pattern id="plx-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" style="stroke:#848e9c;stroke-width:2;opacity:.35"/></pattern></defs>';
+        // siatka cen
+        if (!mob) { const r = (hi - lo) / 5, mg = Math.pow(10, Math.floor(Math.log10(r))), stp = [1, 2, 2.5, 5, 10].map(k => k * mg).find(k => k >= r) || r, dg = stp >= 1 ? 0 : stp >= 0.1 ? 1 : 2;
+            for (let v = Math.ceil(lo / stp) * stp; v <= hi; v += stp) { const y = Y(v); s += L(cx0, y, gx, y, C.grid, 1, "2 4") + T(axW - 6, y + 4, num(v, dg), C.mut, { a: "end", fs: fz - 1.5 }); } }
+        // strefy
+        m.zones.forEach(z => {
+            const y1 = Y(z.hi), y2 = Y(z.lo), h = Math.max(3, y2 - y1), col = z.side === "LONG" ? C.long : C.short;
+            const op = z.out ? .06 : z.hasPos ? .26 : .14;
+            s += '<rect x="' + cx0 + '" y="' + y1.toFixed(1) + '" width="' + cW + '" height="' + h.toFixed(1) + '" style="fill:' + col + ";fill-opacity:" + op + ";stroke:" + col + ";stroke-opacity:" + (z.out ? .25 : .55) + '"><title>' + esc("S" + z.n + " " + price(z.lo) + "–" + price(z.hi) + (z.out ? " · " + z.out : "")) + "</title></rect>";
+            if (z.out) s += '<rect x="' + cx0 + '" y="' + y1.toFixed(1) + '" width="' + cW + '" height="' + h.toFixed(1) + '" style="fill:url(#plx-hatch)"/>';
+            if (z.hasPos) s += '<rect x="' + cx0 + '" y="' + y1.toFixed(1) + '" width="4" height="' + h.toFixed(1) + '" style="fill:' + col + '"/>';
+            s += T(cx0 + 8, y1 + Math.min(h, 16) - 3, "S" + z.n + (z.side === "SHORT" ? " podaż" : ""), col, { w: 700, fs: fz - 1 });
+            if (z.sl && z.side === "LONG" && Math.abs(z.sl - (m.sl || 0)) > 1e-9) s += L(cx0, Y(z.sl), gx, Y(z.sl), C.sl, 1, "2 3", .7) + T(gx - 4, Y(z.sl) - 3, "SL S" + z.n + (z.slBroken ? " złamany" : ""), C.sl, { a: "end", fs: fz - 2 });
+        });
+        // świece dzienne w tle
+        if (bars.length) {
+            const bw = cW / N, x0 = cx0 + (N - bars.length) * bw;
+            bars.forEach((b, i) => {
+                const x = x0 + i * bw + bw / 2, col = b.c >= b.o ? C.long : C.short, yo = Y(Math.max(b.o, b.c)), yc = Y(Math.min(b.o, b.c));
+                s += L(x, Y(b.h), x, Y(b.l), col, 1, "", .55) + '<rect x="' + (x - bw * .35).toFixed(1) + '" y="' + yo.toFixed(1) + '" width="' + Math.max(1, bw * .7).toFixed(1) + '" height="' + Math.max(1, yc - yo).toFixed(1) + '" style="fill:' + col + ';opacity:.55"/>';
+            });
+            const days = bars.map(b => isoDay(b.t));
+            (m.p.trades || []).filter(t => t.buy_price > 0 && t.buy_date >= days[0]).forEach(t => {
+                let i = days.length - 1; while (i > 0 && days[i] > t.buy_date) i--;          // sesja zakupu (albo ostatnia przed nią)
+                const x = x0 + i * bw + bw / 2, y = Y(t.buy_price), sh = t.side === "LONG";
+                s += '<path d="M' + x.toFixed(1) + " " + (y + (sh ? 2 : -2)).toFixed(1) + " l-6 " + (sh ? 10 : -10) + " h12 z\" style=\"fill:" + (t.status === "OPEN" ? C.price : C.mut) + ';stroke:#0b0e11;stroke-width:1"><title>' + esc((sh ? "Kupno " : "Sprzedaż ") + t.buy_date + " po " + price(t.buy_price) + (t.status === "OPEN" ? "" : " (zamknięta)")) + "</title></path>";
+            });
+        } else s += T(cx0 + cW / 2, (top + bot) / 2, st.mapBars && st.mapBars.err ? "Brak świec: " + st.mapBars.err : st.mapBars ? "Brak świec dziennych" : "Ładowanie świec…", C.mut, { a: "middle" });
+        // odstępy między strefami LONG i od kursu do najbliższej strefy
+        const brk = (ya, yb, txt, col, sub, inside) => {
+            const x = inside ? gx - 12 : gx + 10, ym = (ya + yb) / 2, tx = inside ? x - 7 : x + 7, o = inside ? { a: "end" } : {};
+            return L(x, ya, x, yb, col, 1.5) + L(x - 4, ya, x + 4, ya, col, 1.5) + L(x - 4, yb, x + 4, yb, col, 1.5) + T(tx, ym + (sub ? -1 : 4), txt, col, { ...o, w: 650, fs: fz - 1 }) + (sub ? T(tx, ym + fz, sub, col, { ...o, fs: fz - 3 }) : "");
+        };
+        m.longs.forEach(z => { if (z.gapNext != null) { const nx = m.longs[m.longs.indexOf(z) + 1], far = Math.abs(z.gapNext) > m.maxGap; s += brk(Y(z.lo), Y(nx.hi), num(z.gapNext, 1) + "%", far ? "#f0883e" : C.mut, far ? "> " + num(m.maxGap, 0) + "%" : ""); } });
+        const near = m.price && m.longs.find(z => z.hi < m.price);
+        if (near && !m.longs.some(z => z.lo <= m.price && z.hi >= m.price)) s += brk(Y(m.price), Y(near.hi), num((near.hi / m.price - 1) * 100, 1) + "%", C.price, "do S" + near.n, true);
+        // linie poziomów
+        const lines = [];
+        const hl = (v, col, wd, dash, name, sub) => { if (!(v > 0)) return; s += L(cx0, Y(v), gx, Y(v), col, wd, dash); lines.push({ y: Y(v), col, t: name + " " + price(v), sub }); };
+        hl(m.tp, C.tp, 2, "", "TP planu", m.avg ? spct((m.tp / m.avg - 1) * 100, 1) + " od średniej" + (m.rr ? " · R:R " + num(m.rr, 1) : "") : "");
+        hl(m.price, C.price, 1.5, "5 4", "Kurs", m.avg ? spct((m.price / m.avg - 1) * 100, 1) + " vs średnia" : (st.watch ? "" : "ostatnie zamknięcie"));
+        hl(m.avg, C.avg, 2.5, "", "Średnia", m.open.length + " otw. transakcji");
+        hl(m.sl, C.sl, 2, "", "SL planu", m.avg ? spct((m.sl / m.avg - 1) * 100, 1) + " od średniej" : "SL najniższej strefy");
+        m.longs.forEach(z => { if (z.avgAfter) { const y = Y(z.avgAfter); s += L(cx0 + cW * .72, y, gx, y, C.avg, 1.5, "3 3") + '<circle cx="' + (gx - 3) + '" cy="' + y.toFixed(1) + '" r="3" style="fill:' + C.avg + '"><title>' + esc("Średnia po dokładce w S" + z.n + " ≈ " + price(z.avgAfter)) + "</title></circle>"; } });
+        // etykiety (desktop: kolumna po prawej z rozsuwaniem; telefon: lista pod wykresem)
+        const zl = m.zones.map(z => ({ y: (Y(z.hi) + Y(z.lo)) / 2, col: z.side === "LONG" ? (z.out ? C.mut : C.long) : C.short,
+            t: "S" + z.n + " · " + price(z.lo) + "–" + price(z.hi) + (z.side === "SHORT" ? " (podaż)" : ""),
+            sub: [z.dist == null ? "" : z.dist === 0 ? "kurs w strefie" : spct(z.dist, 1) + " od kursu", z.side === "LONG" ? (z.hasPos ? "pozycja " + pct(z.used, 1) + (z.planned != null ? " z " + pct(z.planned, 1) : "") : z.out ? z.out : z.reach ? z.reach + ". dokładka · " + (z.left == null ? "bez limitu strefy" : z.left > 1e-9 ? "budżet " + pct(z.left, 1) : "budżet spółki wyczerpany") : "") : "", z.avgAfter ? "śr. po ≈ " + price(z.avgAfter) : ""].filter(Boolean).join(" · ") }));
+        const all = lines.concat(zl).sort((a, b) => a.y - b.y);
+        let leg = "";
+        if (!mob) {
+            const hh = it => it.sub ? fz * 2.35 : fz * 1.35;
+            let yb = top - 4; all.forEach(it => { it.ly = Math.max(it.y - hh(it) / 2, yb + 3); yb = it.ly + hh(it); });
+            let lim = H - 2; for (let i = all.length - 1; i >= 0; i--) { const it = all[i]; if (it.ly + hh(it) > lim) it.ly = lim - hh(it); lim = it.ly - 3; }
+            all.forEach(it => { const ym = it.ly + hh(it) / 2; s += L(gx + gapW - 18, it.y, lx - 2, ym, it.col, 1, "", .5) + T(lx + 4, it.ly + fz, it.t, it.col, { w: 650 }) + (it.sub ? T(lx + 4, it.ly + fz * 2.15, it.sub, C.mut, { fs: fz - 1.5 }) : ""); });
+        } else leg = '<div class="plx-map-list">' + all.map(it => '<div><i style="background:' + it.col + '"></i><b style="color:' + it.col + '">' + esc(it.t) + "</b>" + (it.sub ? " <span>" + esc(it.sub) + "</span>" : "") + "</div>").join("") + "</div>";
+        el.innerHTML = '<svg class="plx-map-svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Mapa planu: strefy, kurs, średnia, SL i TP">' + s + "</svg>" + leg +
+            '<div class="plx-map-key"><span><i style="background:' + C.price + '"></i>kurs</span><span><i style="background:' + C.avg + '"></i>średnia (kropki: średnia po dokładce w kolejnej strefie, budżet z planu)</span><span><i style="background:' + C.sl + '"></i>SL planu / SL strefy (kropkowany)</span><span><i style="background:' + C.tp + '"></i>TP planu</span>' +
+            '<span><i style="background:' + C.long + ';opacity:.5"></i>strefa (pasek z lewej = pozycja)</span><span><i style="background:repeating-linear-gradient(45deg,#848e9c 0 2px,transparent 2px 5px)"></i>poza zasięgiem uśredniania (limit wejść / odstęp ' + num(m.maxGap, 0) + "%)</span><span>▲ zakup</span><span>% w kolumnie = odstęp od dołu strefy do góry następnej, żółty = od kursu do najbliższej strefy</span></div>" +
+            (st.watch && st.watch.plan_id === m.p.id ? "" : m.p.status === "OPEN" ? '<div class="db-help">Średnia, SL i TP planu uzupełnią się po analizie strażnika…</div>' : '<div class="db-help">Plan zamknięty – SL i TP z zagrań Form.</div>');
     }
     // ---------- strażnik planu: stany stref, sygnały siły/słabości i propozycje dokładek (po zamknięciu sesji) ----------
     const WSTATE = { W_DRODZE: ["#848e9c", "W drodze – bez analizy"], PRZY_STREFIE: ["#fcd535", "Przy strefie"], UTKNAL: ["#89b4fa", "Utknął (>3 mies.)"], UNIEWAZNIONE: ["#fcd535", "Strefa złamana"], CEL: ["#0ecb81", "Cel"] };
@@ -6317,7 +6471,7 @@ window.Planer = (function () {
     async function loadWatch() {
         const box = $("#plx-watch"); if (!box || !st.detail || st.detail.status !== "OPEN") return;
         box.innerHTML = '<div class="plx-h">Strażnik planu</div><div class="db-help">Analizuję zamknięte świece dzienne…</div>';
-        try { const d = await api("/api/planner/watch?plan_id=" + st.detail.id); if ($("#plx-watch")) $("#plx-watch").innerHTML = watchHtml(d); }
+        try { const d = await api("/api/planner/watch?plan_id=" + st.detail.id); st.watch = d; if ($("#plx-watch")) $("#plx-watch").innerHTML = watchHtml(d); drawMap(); }
         catch (e) { if ($("#plx-watch")) $("#plx-watch").innerHTML = '<div class="plx-h">Strażnik planu</div><div class="plx-warn">' + esc(e.message) + "</div>"; }
     }
     document.addEventListener("click", e => { if (e.target.closest && e.target.closest("[data-plx-watch]")) loadWatch(); });
