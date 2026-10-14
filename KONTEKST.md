@@ -82,5 +82,7 @@ Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https
 
 - **EOD v3 (2026-10-13)**: szczegóły EOD pokazują strefę z Form i OPD użyte do oceny wolumenu (`eod_eval.zone`), albo informację, że transakcja nie ma zagrania.
 
+- **Tryb reakcji (2026-10-14)**: szczegóły EOD oznaczają ocenę liczoną w trybie reakcji (`eod_eval.reaction_mode`: korekta do strefy, kurs przy strefie); opis zakładki EOD wspomina tryb.
+
 ## Do zrobienia (zapisane na prośbę użytkownika)
 - **Transakcje: kroczący take profit i stop loss** – dopracować w zakładce Transakcje. Planer (podsumowanie i oś) bierze SL/TP z ostatniej inwestycji – po wprowadzeniu kroczących poziomów ma pokazywać ich bieżącą wartość.
