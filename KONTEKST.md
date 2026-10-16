@@ -3,12 +3,13 @@
 Ten frontend (`index.html`) współpracuje z backendem `DonRubi/quant-desk-backend`.
 Pełny kontekst projektu (decyzje, definicje rachunków, następne kroki, instrukcja testowania) jest w tamtym repozytorium:
 
-- `docs/KONTEKST.md` (decyzje użytkownika, stan prac, następne kroki)
+- `docs/KONTEKST.md` – **zacznij od sekcji 0** („Start nowej rozmowy”, stan 2026-10-16): infrastruktura, zasady pracy, bezpieczeństwo, profil użytkownika i ustalenia, co zrobiono, praca na realnych danych, co dostroić
 - `docs/TESTOWANIE.md`
 - `docs/OCENA_WEJSCIA_KATALOG.md` (warunki oceny wejścia do wyboru)
 - `docs/FORM_POWODY.md` (powody w Form jako mierzalne detektory – wdrożone)
 
-Gałąź robocza w obu repozytoriach: `claude/eager-maxwell-iu3x1v` (nic nie jest scalone do `main`).
+Gałąź robocza w obu repozytoriach: `claude/eager-maxwell-iu3x1v`; po każdej skończonej i przetestowanej zmianie przewijany jest też `main` (GitHub Pages publikuje `main`).
+Klucz API: przy pierwszym zapytaniu frontend prosi o `API_TOKEN` (z `.env` na serwerze) i trzyma go w `localStorage` (`qd-api-key`) – klucza nie wklejamy w czat.
 Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https://quant.31-70-115-174.sslip.io`** (od 2026-10-12; Render wstrzymany). Parametr testowy `?api=` podmienia adres backendu (`localhost`, `*.onrender.com` – wycofanie, serwer IONOS).
 
 ## Moduły frontendu (skrypty na końcu `index.html`, globalne na `window`)
