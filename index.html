@@ -300,6 +300,9 @@
         .td-list { display: flex; flex-direction: column; gap: 12px; } .td-group h4 { margin: 0 0 6px; font-size: .74rem; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); font-weight: 600; }
         .td-item { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; background: var(--bg-main); border: 1px solid var(--border-color); border-left: 3px solid var(--td, var(--border-color)); border-radius: 10px; padding: 8px 12px; color: var(--text-main); font: inherit; font-size: .88rem; cursor: pointer; margin-bottom: 5px; }
         .td-item:hover { border-color: var(--accent); } .td-ic { font-size: 1.05rem; line-height: 1.3; } .td-t { flex: 1; min-width: 0; } .td-t b { margin-right: 4px; } .td-t small { display: block; color: var(--text-muted); font-size: .82em; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .td-wrap { display: flex; gap: 6px; align-items: stretch; } .td-wrap .td-item { flex: 1; min-width: 0; } .td-x { background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 10px; padding: 0 10px; cursor: pointer; font-size: .9rem; } .td-x:hover { color: var(--danger); border-color: var(--danger); }
+        .td-filter { display: flex; align-items: center; gap: 8px; margin: -2px 0 6px; font-size: .8rem; color: var(--text-muted); flex-wrap: wrap; } .td-filter select { background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 3px 6px; font-size: .95em; }
+        .td-opd-close { color: var(--danger); font-weight: 600; } .td-opd-wick { color: #fcd535; font-weight: 600; } .td-more { background: none; border: 0; color: var(--accent-hover); cursor: pointer; font-size: .82rem; padding: 4px 2px; }
         .td-go { color: var(--accent-hover); white-space: nowrap; font-size: .82em; font-weight: 600; align-self: center; } .td-ok { color: var(--success); padding: 6px 2px; font-size: .9rem; }
         /* ---------- panel boczny z modułami (komputer, ≥1200 px) ---------- */
         #side-nav { display: none; }
@@ -8370,6 +8373,16 @@ window.HomeTodo = (function () {
     const COL = { red: "var(--danger)", orange: "#f0883e", yellow: "#fcd535", tp: "var(--success)" };
     const NEAR = 2.0;              // „przy strefie”: w strefie albo do 2% od punktu wejścia
     let seq = 0, data = {};
+    const OPD_KEY = "td.opdfilter";
+    const optGet = () => { try { return localStorage.getItem(OPD_KEY) || "all"; } catch (e) { return "all"; } };
+    const optSet = v => { try { localStorage.setItem(OPD_KEY, v); } catch (e) {} };
+    function opdBroken(opd, mode) { return !!opd && opd.kind && (mode === "any" || (mode === "close" && opd.kind === "close")); }          // OPD przebity w ostatnich 5 sesjach
+    function opdBadge(opd) {
+        if (!opd) return "";
+        if (opd.kind === "close") return ' · <span class="td-opd-close" title="Zamknięcie świecy poniżej OPD w ostatnich ' + opd.days + ' sesjach">🔴 OPD ' + price(opd.level) + ' przebity zamknięciem ' + esc(opd.close_date) + "</span>";
+        if (opd.kind === "wick") return ' · <span class="td-opd-wick" title="Knot poniżej OPD w ostatnich ' + opd.days + ' sesjach, zamknięcie utrzymane nad poziomem">🟡 OPD ' + price(opd.level) + " przebity knotem " + esc(opd.wick_date) + "</span>";
+        return " · OPD " + price(opd.level) + (opd.manual ? " (ręczny)" : "");
+    }
     async function get(path) { const r = await fetch(API_BASE_URL + path); const d = await r.json().catch(() => ({})); if (!r.ok || (d && d.status === "error")) throw new Error((d && d.message) || "HTTP " + r.status); return d; }
     async function load() {
         const my = ++seq, box = $("#hp-todo"); if (!box) return;
@@ -8396,11 +8409,15 @@ window.HomeTodo = (function () {
         if (cards.length) g.push('<div class="td-group"><h4>Kartki planów</h4>' + cards.map(c => item('data-td-plan="' + c.plan_id + '"', COL[c.level], c.icon, "<b>" + esc(c.ticker) + "</b>" + esc(c.label) + (c.entry_id ? " · " + esc(c.entry_id) : ""), esc(String(c.text || "").replace(c.icon + " " + c.label + ": ", "")) + (c.bar_date ? " · sesja " + esc(c.bar_date) : ""), "Plan →")).join("") + "</div>");
         if (sls.length) g.push('<div class="td-group"><h4>SL złamany – przegląd (decyzja z kontekstu)</h4>' + sls.map(c => item('data-td-plan="' + c.plan_id + '"', c.label.indexOf("zmniejsz") >= 0 ? "#f6465d" : c.label.indexOf("czekaj") >= 0 ? "#fcd535" : "#0ecb81", "🛡", "<b>" + esc(c.ticker) + "</b>" + esc(c.label.replace("Przegląd SL: ", "")) + (c.entry_id ? " · " + esc(c.entry_id) : ""), esc(c.text || "") + (c.bar_date ? " · sesja " + esc(c.bar_date) : ""), "Plan →")).join("") + "</div>");
         if (tps.length) g.push('<div class="td-group"><h4>Take profit osiągnięty – przegląd</h4>' + tps.map(c => item('data-td-plan="' + c.plan_id + '"', COL.tp, "🎯", "<b>" + esc(c.ticker) + "</b>" + esc(c.entry_id || ""), esc(c.text || ""), "Plan →")).join("") + "</div>");
-        if (d.near.length) g.push('<div class="td-group"><h4>Przy strefach z Form</h4>' + d.near.map(x => item('data-td-eval="' + esc(x.r.ticker) + '" data-entry="' + esc(x.p.entry_id) + '"', "var(--accent-hover)", "📍",
+        const mode = optGet(), nearAll = d.near, nearVis = nearAll.filter(x => !opdBroken(x.p.opd, mode)), hidden = nearAll.length - nearVis.length;
+        if (nearAll.length) g.push('<div class="td-group"><h4>Przy strefach z Form</h4><div class="td-filter"><label for="td-opd-filter">Przebity OPD (ostatnie 5 sesji):</label><select id="td-opd-filter">' +
+            [["all", "pokaż wszystkie"], ["close", "ukryj przebite zamknięciem"], ["any", "ukryj przebite knotem lub zamknięciem"]].map(o => '<option value="' + o[0] + '"' + (o[0] === mode ? " selected" : "") + ">" + o[1] + "</option>").join("") +
+            "</select>" + (hidden ? "<span>(ukryto " + hidden + ")</span>" : "") + "</div>" + nearVis.map(x => item('data-td-eval="' + esc(x.r.ticker) + '" data-entry="' + esc(x.p.entry_id) + '"', "var(--accent-hover)", "📍",
             "<b>" + esc(x.r.ticker) + "</b>" + (x.p.in_zone ? "w strefie" : (x.p.distance_pct > 0 ? "+" : "") + num(x.p.distance_pct, 1) + "% od wejścia"),
-            esc(x.p.entry_id) + " · strefa " + price(x.p.zone[0]) + "–" + price(x.p.zone[1]) + " · wejście " + price(x.p.entry) + (x.p.rr ? " · R:R " + num(x.p.rr, 1) : ""), "Oceń →")).join("") + "</div>");
-        if (d.focus.length) g.push('<div class="td-group"><h4>Focus bez transakcji</h4>' + d.focus.slice(0, 6).map(f => { const sm = f.summary || {};
-            return item('data-td-fe="' + f.id + '"', "#89b4fa", "💾", "<b>" + esc(f.ticker) + "</b>" + esc(f.verdict || ""), esc(f.entry_id || "") + " · " + (f.points != null ? num(f.points, 1) + "/" + num(f.max_points || 15, 0) + " pkt · " : "") + "rek. " + (f.recommended_pct == null ? "–" : num(f.recommended_pct, 1) + "%") + (sm.recommended_ccy != null ? " ≈ " + Math.round(sm.recommended_ccy).toLocaleString("pl-PL") + " " + esc(sm.currency || "") : "") + " · " + new Date(f.created_at).toLocaleDateString("pl-PL"), "Transakcja →"); }).join("") + "</div>");
+            esc(x.p.entry_id) + " · strefa " + price(x.p.zone[0]) + "–" + price(x.p.zone[1]) + " · wejście " + price(x.p.entry) + (x.p.rr ? " · R:R " + num(x.p.rr, 1) : "") + opdBadge(x.p.opd), "Oceń →")).join("") + "</div>");
+        if (d.focus.length) g.push('<div class="td-group"><h4>Focus bez transakcji (' + d.focus.length + ')</h4>' + d.focus.slice(0, 6).map(f => { const sm = f.summary || {};
+            return '<div class="td-wrap">' + item('data-td-fe="' + f.id + '"', "#89b4fa", "💾", "<b>" + esc(f.ticker) + "</b>" + esc(f.verdict || ""), esc(f.entry_id || "") + " · " + (f.points != null ? num(f.points, 1) + "/" + num(f.max_points || 15, 0) + " pkt · " : "") + "rek. " + (f.recommended_pct == null ? "–" : num(f.recommended_pct, 1) + "%") + (sm.recommended_ccy != null ? " ≈ " + Math.round(sm.recommended_ccy).toLocaleString("pl-PL") + " " + esc(sm.currency || "") : "") + " · " + new Date(f.created_at).toLocaleDateString("pl-PL"), "Transakcja →") + '<button type="button" class="td-x" data-td-fe-del="' + f.id + '" title="Usuń wpis Focus (bez transakcji)">✕</button></div>'; }).join("") +
+            (d.focus.length > 6 ? '<button type="button" class="td-more" data-td-more-focus>+ ' + (d.focus.length - 6) + " więcej w zakładce Focus →</button>" : "") + "</div>");
         if (d.eod.length) g.push('<div class="td-group"><h4>Brak oceny końca dnia (EOD)</h4>' + d.eod.slice(0, 8).map(t => item('data-td-eod="' + t.id + '"', "#cba6f7", "🌙", "<b>" + esc(t.ticker) + "</b>#" + t.id, "zakup " + esc(t.buy_date || "") + " – policz punkty 0–5 po sesji", "EOD →")).join("") + "</div>");
         const n = cards.length + tps.length + sls.length + d.near.length + d.focus.length + d.eod.length;
         box.innerHTML = g.join("") || '<div class="td-ok">✓ Nic pilnego – brak kartek, spółek przy strefach i zaległych ocen.</div>';
@@ -8410,10 +8427,18 @@ window.HomeTodo = (function () {
         const t = e.target; if (!t.closest) return;
         const pl = t.closest("[data-td-plan]"); if (pl) { openModule("planner-module", "Planer"); if (window.Planer) Planer.openPlan(pl.dataset.tdPlan); return; }
         const ev = t.closest("[data-td-eval]"); if (ev) { if (window.Wejscie) Wejscie.evaluate(ev.dataset.tdEval, ev.dataset.entry); return; }
+        const del = t.closest("[data-td-fe-del]");
+        if (del) { e.stopPropagation(); const id = del.dataset.tdFeDel, f = data.focus.find(x => String(x.id) === id);
+            if (!confirm("Usunąć wpis Focus" + (f ? " " + f.ticker + " " + (f.entry_id || "") : "") + " #" + id + "? Transakcji z niego nie ma, więc nic innego się nie zmieni.")) return;
+            fetch(API_BASE_URL + "/api/focus/evals/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: isNaN(+id) ? id : +id }) })
+                .then(r => r.json().catch(() => ({}))).then(d => { if (d.status === "error") throw new Error(d.message || "błąd"); data.focus = data.focus.filter(x => String(x.id) !== id); render(); })
+                .catch(err => alert("Nie udało się usunąć wpisu: " + err.message)); return; }
+        if (t.closest("[data-td-more-focus]")) { openModule("focus2-module", "Focus"); return; }
         const fe = t.closest("[data-td-fe]"); if (fe) { const f = data.focus.find(x => String(x.id) === fe.dataset.tdFe); if (f) prefillTradeFromPlay(f.ticker, f.entry_id, { entry_score: f.score, entry_eval: f.entry_eval, summary: f.summary }, f.id); return; }
         if (t.closest("[data-td-eod]")) { openModule("eod-module", "Koniec dnia (EOD)"); return; }
         if (t.closest("#hp-refresh")) load();
     });
+    document.addEventListener("change", e => { if (e.target && e.target.id === "td-opd-filter") { optSet(e.target.value); render(); } });
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", load); else load();
     return { load: load };
 })();
