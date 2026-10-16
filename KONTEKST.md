@@ -85,5 +85,7 @@ Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https
 
 - **Tryb reakcji (2026-10-14)**: szczegóły EOD oznaczają ocenę liczoną w trybie reakcji (`eod_eval.reaction_mode`: korekta do strefy, kurs przy strefie); opis zakładki EOD wspomina tryb.
 
+- **Lista uwag z realnych danych (2026-10-16)**: Form – RGR/oRGR dostaje z formularza `params.tp/sl` (jak XABCD i droga otwarta; w `Measure` przy pomiarze i w `reverifyAll`), opisy „?” (`TYPES.rgr.help`) mówią o kontroli świec między zaznaczeniami, stanie formacji i strefie za zasięgiem; opis konsolidacji (`TYPES.range.help`): strefa to poziom na przyszłość, oceniana jest historia wykresu. Wynik RGR ma nowe pola (`state`, `scenario`, `integrity`, `reaction`) – frontend pokazuje je tylko przez listę faktów. Jakość powodów punktowych uwzględnia teraz odległość od punktu wejścia jedną regułą (backend: `ENTRY_WEIGHT`, pole `quality_structure`). EOD: nowy składnik `cvd_events` pojawia się sam w szczegółach (`FocusEod.detailHtml` iteruje po składnikach), waga edytowalna w Serwisie → Punktacja (etykiety z `eod_labels`); opis zakładki EOD zaktualizowany. Szczegóły w `docs/KONTEKST.md` backendu, sekcja 0.5 pkt 10.
+
 ## Do zrobienia (zapisane na prośbę użytkownika)
 - **Transakcje: kroczący take profit i stop loss** – dopracować w zakładce Transakcje. Planer (podsumowanie i oś) bierze SL/TP z ostatniej inwestycji – po wprowadzeniu kroczących poziomów ma pokazywać ich bieżącą wartość.
