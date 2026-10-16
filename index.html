@@ -385,7 +385,7 @@
         .plx-toast { position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 20px); max-width: min(560px, 92vw); background: var(--bg-card); border: 1px solid var(--accent); color: var(--text-main); padding: 12px 18px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.55); z-index: 1300; opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; font-size: 0.9rem; line-height: 1.45; }
         .plx-toast.show { opacity: 1; transform: translate(-50%, 0); }
         /* Form: strefy z zagraniami */
-        .fz-zone td { cursor: pointer; } .fz-chev { display: inline-block; width: 1.2em; color: var(--text-muted); transition: transform .15s; } .fz-zone.open .fz-chev { transform: rotate(90deg); }
+        .fz-zone td, .fz-tk td, .fz-play td { cursor: pointer; } .fz-tk td { background: rgba(255,255,255,.03); } .fz-tk.open .fz-chev, .fz-play.open .fz-chev { transform: rotate(90deg); } .fz-z2 td:first-child { padding-left: 2.2em; } .fz-z2 td { font-size: .93rem; } .ev-table .fz-sub .fz-reasons td { background: rgba(0,0,0,.15); cursor: default; padding: 6px 12px 10px 2.6em; } .fz-chev { display: inline-block; width: 1.2em; color: var(--text-muted); transition: transform .15s; } .fz-zone.open .fz-chev { transform: rotate(90deg); }
         .ev-table .fz-plays td { background: rgba(0,0,0,.18); cursor: default; padding: 0; } .fz-sub { width: 100%; border-collapse: collapse; font-size: 0.86rem; } .ev-table .fz-sub th { text-align: left; color: var(--text-muted); font-weight: 500; font-size: 0.74rem; text-transform: uppercase; padding: 8px 10px; cursor: default; border-bottom: 0; } .ev-table .fz-sub td { padding: 8px 10px; border-top: 1px dashed var(--border-color); vertical-align: top; }
         .fz-muted-row { opacity: .55; } .fz-reason { display: inline-block; background: rgba(201,148,0,.12); border: 1px solid rgba(201,148,0,.35); border-radius: 999px; padding: 1px 8px; margin: 1px 3px 1px 0; font-size: 0.78rem; white-space: nowrap; }
         .fz-res { display: flex; flex-direction: column; gap: 4px; margin: -4px 0 8px; } .fz-res button { text-align: left; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 10px; padding: 8px 12px; cursor: pointer; } .fz-res button:hover { border-color: var(--accent); }
@@ -401,7 +401,7 @@
         .fz-ssub { font-size: .84rem; color: var(--text-muted); } .fz-ssub b { color: var(--text-main); } .fz-safter { color: var(--accent-hover); } .fz-safter b { color: var(--accent-hover); }
         .fz-schips { display: flex; flex-wrap: wrap; gap: 4px; } .fz-schip { font-size: .78rem; border: 1px solid var(--border-color); border-radius: 999px; padding: 1px 8px; } .fz-schip b { color: var(--success); } .fz-schip.off { opacity: .5; text-decoration: line-through; }
         @media (max-width: 760px) { .fz-scorebar { top: 0; gap: 10px; padding: 8px 10px; } .fz-sbig { min-width: 80px; } .fz-sbig b { font-size: 1.8rem; } }
-        .fz-pickrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -2px 0 10px; } .fz-pickrow .ev-muted { font-size: .84rem; }
+        .fz-pickrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -2px 0 10px; } .fz-pickrow .ev-muted { font-size: .84rem; } .fz-pickbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; } .fz-pv { color: var(--accent-hover); font-weight: 600; margin-left: 4px; } .fz-pickmsg { font-size: .84rem; margin: 2px 0; }
         .fz-side { border: 1px solid var(--accent); background: transparent; color: var(--accent-hover); border-radius: 999px; padding: 0 8px; font-size: .78rem; cursor: pointer; margin-left: 4px; }
         .fz-q { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--accent); background: transparent; color: var(--accent-hover); font-weight: 700; font-size: 12px; cursor: pointer; padding: 0; margin-left: 4px; vertical-align: middle; }
         .fz-help { background: rgba(252,213,53,.06); border: 1px solid rgba(252,213,53,.35); border-radius: 10px; padding: 10px 14px; margin: 6px 0 10px; font-size: .9em; line-height: 1.5; color: var(--text-main); white-space: normal; }
@@ -672,7 +672,7 @@
     <section id="form-module" class="app-module">
         <div id="fz-root">
             <div class="macro-header-container"><h3>Form – strefy i zagrania</h3></div>
-            <div class="ev-muted">Zagrania pogrupowane po strefach. Wyciszone zagrania są domyślnie ukryte (i nie pojawiają się w Radarze, Planerze ani w wyborze w Transakcjach).</div>
+            <div class="ev-muted">Spółki → strefy → zagrania → powody (rozwijane). Po zwinięciu widać najbliższe wejście i jego status, priorytet i strefę. Wyciszone zagrania są domyślnie ukryte (i nie pojawiają się w Radarze, Planerze ani w wyborze w Transakcjach).</div>
             <div class="ev-controls">
                 <input type="search" id="fz-q" placeholder="Szukaj tickera lub nazwy…" oninput="FormZones.set('q', this.value)">
                 <select onchange="FormZones.set('mute', this.value)"><option value="0" selected>Bez wyciszonych</option><option value="1">Tylko wyciszone</option><option value="ALL">Wszystkie (z wyciszonymi)</option></select>
@@ -697,15 +697,15 @@
                     <input type="hidden" id="form-ticker">
                                         <div class="form-row"><div class="form-group"><label>Kierunek</label><select id="form-direction"><option value="DBR">DBR (Long)</option><option value="RBR">RBR (Long)</option><option value="DBD">DBD (Short)</option><option value="RBD">RBD (Short)</option></select></div><div class="form-group"><label>Priorytet</label><select id="form-priority"><option value="0">Normalny (0)</option><option value="1">Wysoki (1)</option></select></div><div class="form-group"><label>Typ wejścia <button type="button" class="fz-q" data-help-toggle="form-etype-help" title="Objaśnienie">?</button></label><select id="form-etype"><option value="korekta">Korekta do strefy</option><option value="wybicie">Wybicie (zamknięcie nad oporem)</option></select></div></div><div class="fz-help" id="form-etype-help" hidden></div>
                     <div class="form-row"><div class="form-group"><label>Początek strefy</label><input type="number" id="form-start" step="any" required></div><div class="form-group"><label>Koniec strefy</label><input type="number" id="form-end" step="any" required></div></div>
-                    <div class="fz-pickrow"><button type="button" class="hp-btn" data-pick="zone">🎯 Strefa z wykresu (2 punkty)</button><span id="fz-opd-check" class="ev-muted"></span><span id="fz-opd-btns"></span></div>
                     <div class="form-group"><label>Punkt wejścia</label><input type="number" id="form-entry" step="any" required></div><div class="form-group"><label>Take Profit</label><input type="number" id="form-tp" step="any" required></div>
-                    <div class="form-row"><div class="form-group"><label>Stop loss (korpus świecy SL)</label><input type="number" id="form-sl" step="any" placeholder="domyślnie koniec strefy"></div><div class="form-group"><label>Świeca SL – jej przebicie korpusem (zamknięciem) = SL</label><input type="date" id="form-slc"></div></div>
-                    <div class="fz-pickrow"><button type="button" class="hp-btn" data-pick="sl">🎯 Świeca SL z wykresu</button><span id="fz-sl-check" class="ev-muted">LONG: SL = dół korpusu wskazanej świecy, SHORT: góra korpusu.</span></div>
+                    <div class="form-row"><div class="form-group"><label>Stop loss (korpus świecy SL)</label><input type="number" id="form-sl" step="any" placeholder="domyślnie korpus OPD"></div><div class="form-group"><label>Świeca SL – jej przebicie korpusem (zamknięciem) = SL</label><input type="date" id="form-slc"></div></div>
                     <div class="form-group" style="display:none" aria-hidden="true"><label>Powody wejścia (Opcjonalne)</label><input type="text" id="form-reason-1" list="reasons-list" placeholder="Powód 1..."><input type="text" id="form-reason-2" list="reasons-list" placeholder="Powód 2..."><input type="text" id="form-reason-3" list="reasons-list" placeholder="Powód 3..."><input type="text" id="form-reason-4" list="reasons-list" placeholder="Powód 4..."><input type="text" id="form-reason-5" list="reasons-list" placeholder="Powód 5..."><datalist id="reasons-list"></datalist></div>
                     <div id="fz-measure" style="display:none">
                         <div class="plx-h" style="margin-top:14px">Powody mierzone na wykresie</div>
                         <div class="ev-muted">Wskaż kotwice kliknięciem w wykres, a aplikacja sprawdzi, czy powód jest prawdziwy i czy Twoja strefa leży tam, gdzie on wskazuje. Strefy z Form i wpisywana strefa są zaznaczone na wykresie.</div>
                         <div class="plx-actions" style="margin:8px 0"><button type="button" class="hp-btn ev-go" data-ms-tf="1d">1D</button><button type="button" class="hp-btn" data-ms-tf="1w">1W</button><label class="ev-muted" style="margin-left:10px;cursor:pointer" title="Punkty wskazywane na wykresie przyciągają się do knotów i brzegów korpusów świec"><input type="checkbox" id="fz-magnet" checked> 🧲 Magnes (knoty i korpusy)</label><span id="fz-chart-note" class="ev-muted"></span></div>
+                        <div class="fz-pickbar" id="fz-pickbar"><button type="button" class="hp-btn" data-pick="zone">🎯 Strefa z wykresu (2 punkty)</button><button type="button" class="hp-btn" data-pick="sl">🎯 Świeca SL z wykresu</button><span id="fz-opd-btns"></span></div>
+                        <div id="fz-opd-check" class="ev-muted fz-pickmsg"></div><div id="fz-sl-check" class="ev-muted fz-pickmsg">LONG: SL domyślnie = dół korpusu OPD (wskaż inną świecę albo wpisz wartość); SHORT: góra korpusu OPS.</div>
                         <div style="position:relative"><div class="ohlc-legend" id="fz-ohlc"></div><div id="fz-chart"></div></div>
                         <div id="fz-types" class="plx-actions" style="margin:8px 0"></div>
                         <div id="fz-editor"></div>
@@ -4530,6 +4530,12 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     el.innerHTML = `<strong style="color:#a6e3a1;">Pamięć serwera:</strong><br>Zajęte: <strong style="color:${col}">${m.rss_mb != null ? n(m.rss_mb) + ' MB z ' + m.limit_mb + ' MB (' + pct + '%)' : 'brak odczytu'}</strong>` +
                         `<br>Świece w pamięci: ${n(c.mb)} MB z limitu ${c.limit_mb} MB · ${c.symbols} spółek · ${c.entries} zestawów` +
                         `<br><span style="color:var(--text-muted)">Trafienia ${c.hits} · pobrania ${c.misses} · usunięte (limit) ${c.evicted} · przeterminowane ${c.expired}</span>` +
+                        (m.external ? (() => {                       // zapytania do źródeł danych: Twelve Data ma limity planu (8/min, 800/dobę), Yahoo nie publikuje swoich
+                            const y = m.external.yahoo || {}, t = m.external.twelvedata || {}, near = (v, lim) => lim && v >= lim * 0.8;
+                            const tc = near(t.today_utc, t.limit_day) || near(t.peak_minute_1h, t.limit_minute) ? 'var(--accent-hover)' : 'var(--success)';
+                            return `<br>Zapytania do Yahoo: ostatnia godzina <strong>${y.last_hour ?? 0}</strong> (szczyt ${y.peak_minute_1h ?? 0}/min) · 24 h ${y.last_24h ?? 0} · błędy 429: <strong style="color:${y.http_429_24h ? 'var(--danger)' : 'var(--success)'}">${y.http_429_24h ?? 0}</strong>` +
+                                `<br>Twelve Data: dziś (UTC) <strong style="color:${tc}">${t.today_utc ?? 0} z ${t.limit_day ?? 800}</strong> · szczyt ${t.peak_minute_1h ?? 0}/${t.limit_minute ?? 8} na minutę · wstrzymane bezpiecznikiem ${t.denied_by_guard ?? 0} · odmowy dostawcy ${t.limit_replies_24h ?? 0}`;
+                        })() : '') +
                         (m.version && m.version.commit ? `<br>Wersja na serwerze: <strong>${String(m.version.commit).replace(/[^0-9a-f]/gi, '')}</strong>` + (m.version.date ? ' z ' + new Date(m.version.date).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' }) : '') : '') +
                         (m.security ? `<br>Zabezpieczenia: klucz API <strong style="color:${m.security.api_token ? 'var(--success)' : 'var(--danger)'}">${m.security.api_token ? 'włączony' : 'WYŁĄCZONY (ustaw API_TOKEN w .env)'}</strong> · klucz Supabase <strong style="color:${m.security.supabase_key_env ? 'var(--success)' : 'var(--accent-hover)'}">${m.security.supabase_key_env ? 'sekretny z .env' : 'publiczny (domyślny w kodzie)'}</strong>` : '');
                 }
@@ -6808,7 +6814,7 @@ window.FormZones = (function () {
     const arrow = long => long ? '<span style="color:var(--success)">▲</span>' : '<span style="color:var(--danger)">▼</span>';
     const RANK = { "Skupienie": 0, "Obserwacja": 1, "Czekanie": 2, "Ignorowanie": 3, "Brak danych": 4 };
     const STCOL = { "Skupienie": "#0ecb81", "Obserwacja": "#848e9c", "Czekanie": "#fcd535", "Ignorowanie": "#f6465d", "Brak danych": "#848e9c" };
-    const S = { q: "", mute: "0", status: "ALL", prio: "ALL", key: "dist", dir: 1, open: new Set(), shown: [] };
+    const S = { q: "", mute: "0", status: "ALL", prio: "ALL", key: "ticker", dir: 1, open: new Set(), openT: new Set(), openP: new Set(), shown: [], shownT: [] };      // open = strefy, openT = spółki, openP = zagrania (powody)
     const isMuted = e => e.mute == 1;
     const tickerRow = t => (typeof tickerDataArray !== "undefined" ? tickerDataArray : []).find(x => x.ticker === t);
 
@@ -6855,10 +6861,11 @@ window.FormZones = (function () {
         });
         return [...map.values()];
     }
-    function build() {
+    const absRaw = p => p.raw == null ? 1e9 : Math.abs(p.raw);
+    function build() {                                // spółki -> strefy -> zagrania; po zwinięciu widać najbliższe wejście i jego dane (status, priorytet, strefa)
         const q = S.q.trim().toLowerCase();
         const zones = zonesOf(Array.isArray(formEntries) ? formEntries : []);
-        const out = [];
+        const byT = new Map();
         zones.forEach(z => {
             const tm = tickerRow(z.ticker), name = tm && tm.stock_name ? tm.stock_name : "";
             if (q && (z.ticker + " " + name).toLowerCase().indexOf(q) < 0) return;
@@ -6866,14 +6873,23 @@ window.FormZones = (function () {
             const vis = z.all.filter(p => (S.mute === "ALL" || (S.mute === "1") === p.muted) && (S.status === "ALL" || p.status === S.status));
             if (!vis.length) return;
             vis.sort((x, y) => (x.e.entry_id < y.e.entry_id ? -1 : 1));
-            const near = vis.slice().sort((x, y) => (x.raw == null ? 1e9 : Math.abs(x.raw)) - (y.raw == null ? 1e9 : Math.abs(y.raw)))[0];
-            const best = vis.reduce((m, p) => RANK[p.status] < RANK[m] ? p.status : m, "Brak danych");
-            out.push({ key: z.key, ticker: z.ticker, name: name, lo: z.lo, hi: z.hi, long: z.long, vis: vis, near: near, status: best,
-                       hiddenMuted: z.all.filter(p => p.muted).length - vis.filter(p => p.muted).length,
-                       prio: vis.some(p => p.e.priority === 1), date: vis.reduce((m, p) => (p.e.created_at || "") > m ? p.e.created_at : m, "") });
+            const near = vis.slice().sort((x, y) => absRaw(x) - absRaw(y))[0];
+            const zo = { key: z.key, ticker: z.ticker, name: name, lo: z.lo, hi: z.hi, long: z.long, vis: vis, near: near, status: near.status,
+                         hiddenMuted: z.all.filter(p => p.muted).length - vis.filter(p => p.muted).length, prio: near.e.priority === 1,
+                         reasons: vis.reduce((n, p) => n + (Array.isArray(p.e.reasons) ? p.e.reasons.length : 0), 0),
+                         date: vis.reduce((m, p) => (p.e.created_at || "") > m ? p.e.created_at : m, "") };
+            if (!byT.has(z.ticker)) byT.set(z.ticker, { ticker: z.ticker, name: name, zones: [] });
+            byT.get(z.ticker).zones.push(zo);
         });
-        const f = { ticker: z => z.ticker, dist: z => z.near.raw == null ? 1e9 : Math.abs(z.near.raw), plays: z => z.vis.length, status: z => RANK[z.status], date: z => z.date || "" }[S.key] || (z => z.ticker);
-        out.sort((a, b) => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * S.dir; });
+        const out = [...byT.values()].map(t => {
+            t.zones.sort((a, b) => absRaw(a.near) - absRaw(b.near));
+            const nz = t.zones[0];
+            return Object.assign(t, { near: nz.near, nearZone: nz, status: nz.status, prio: nz.prio,
+                plays: t.zones.reduce((n, z) => n + z.vis.length, 0), reasons: t.zones.reduce((n, z) => n + z.reasons, 0),
+                hiddenMuted: t.zones.reduce((n, z) => n + z.hiddenMuted, 0), date: t.zones.reduce((m, z) => (z.date || "") > m ? z.date : m, "") });
+        });
+        const f = { ticker: t => t.ticker, dist: t => absRaw(t.near), plays: t => t.plays, status: t => RANK[t.status], date: t => t.date || "" }[S.key] || (t => t.ticker);
+        out.sort((a, b) => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * S.dir || (a.ticker < b.ticker ? -1 : 1); });
         return out;
     }
 
@@ -6908,40 +6924,58 @@ window.FormZones = (function () {
         return '<span class="fz-reason fz-v-' + esc(d.verdict) + (ended ? " fz-ended" : "") + '" title="' + esc((d.facts || []).join("\n")) + '">' + esc(name) + " " + mark + " " + Math.round((d.quality || 0) * 100) + "%" + tail +
             (d.ref ? " → " + price(d.ref.value) + " (" + (APPLYL[d.ref.applies_to] || esc(d.ref.role)) + ")" : "") + (links ? " " + links : "") + "</span>";
     }
+    const plural = (n, a, b, c) => n === 1 ? a : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? b : c;
+    function reasonSummary(e) {                      // ile powodów i jak wypadły (✓ / ~ / ✗), bez zakończonych i wygasłych
+        const det = Array.isArray(e.reasons_detail) ? e.reasons_detail : [], n = Array.isArray(e.reasons) ? e.reasons.length : 0, c = { OK: 0, PARTIAL: 0, FAIL: 0 };
+        det.forEach(d => { if (c[d.verdict] != null && !(d.lifecycle && (d.lifecycle.status === "zakończony" || d.lifecycle.status === "wygasły"))) c[d.verdict]++; });
+        return "<b>" + n + "</b>" + (det.length ? ' <span class="ev-muted">· <span style="color:#0ecb81">' + c.OK + '✓</span> <span style="color:#fcd535">' + c.PARTIAL + '~</span> <span style="color:#f6465d">' + c.FAIL + "✗</span></span>" : "");
+    }
+    const distCell = d => '<td style="color:' + (d == null ? "var(--text-muted)" : d >= 0 ? "var(--success)" : "var(--danger)") + ';font-weight:700">' + (d == null ? "–" : (d > 0 ? "+" : "") + num(d, 1) + "%") + "</td>";
+    const statCell = st => '<td style="color:' + STCOL[st] + ';font-weight:700">' + esc(st) + "</td>";
+    const prioCell = on => "<td>" + (on ? '<span style="color:#fcd535;font-weight:700" title="Priorytet najbliższego wejścia">⚡ Wysoki</span>' : '<span class="ev-muted">–</span>') + "</td>";
+    const zoneTxt = z => arrow(z.long) + " " + price(z.lo) + "–" + price(z.hi);
     function playRows(z) {
+        const COLS = 11;
         return '<table class="fz-sub"><thead><tr><th>ID</th><th>Data</th><th>Wejście</th><th>TP</th><th>SL</th><th>R:R</th><th>Score</th><th>Powody</th><th>Priorytet</th><th>Wyciszenie</th><th></th></tr></thead><tbody>' +
             z.vis.map(p => {
-                const e = p.e, id = esc(e.entry_id), d = e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–";
+                const e = p.e, id = esc(e.entry_id), open = S.openP.has(e.entry_id), d = e.created_at ? new Date(e.created_at).toLocaleDateString("pl-PL") : "–";
                 const prio = e.priority === 1 ? '<span style="color:#fcd535;font-weight:700;cursor:pointer;border-bottom:1px dashed #fcd535" onclick="updateFormEntryField(\'' + id + '\',\'priority\',0)">⚡ Wysoki</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'priority\',1)">Normalny</span>';
-                const mute = p.muted ? '<span style="color:var(--danger);font-weight:700;cursor:pointer;border-bottom:1px dashed var(--danger)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',0)">🔕 Wyciszone</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',1)">🔔 Aktywne</span>';
+                const mute = p.muted ? '<span style="color:var(--danger);font-weight:700;cursor:pointer;border-bottom:1px dashed var(--danger)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',0)">🔕 Wyciszone</span>' : '<span style="color:var(--text-muted);cursor:pointer;border-bottom:1px dashed var(--text-muted)" onclick="updateFormEntryField(\'' + id + '\',\'mute\',1)">Aktywne</span>';
                 const reasons = ((Array.isArray(e.reasons) ? e.reasons : []).map(r => chip(r, e)).join("") || '<span class="ev-muted">brak</span>') + ReasonChart.analysisBadge(e);
-                return '<tr class="' + (p.muted ? "fz-muted-row" : "") + '"><td><a href="#" data-fz-detail="' + id + '" title="Szczegóły zagrania"><b>' + id + "</b></a></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
-                    '</td><td style="color:#a6e3a1;font-weight:700" title="Suma jakości powodów (np. powód wypełniony w 60% = 0,6)">' + fmtScore(p.score) + "/5</td><td>" + reasons + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
-                    '<td style="white-space:nowrap"><button class="btn-edit" data-fz-detail="' + id + '" title="Szczegóły zagrania">🔍</button> <button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="FormZones.openEdit(\'' + id + '\')" title="Edytuj w oknie Form">✎</button> <button class="btn-delete" onclick="deleteAdvancedFormEntry(\'' + id + '\')" style="padding:3px 8px">Usuń</button></td></tr>';
+                return '<tr class="fz-play' + (p.muted ? " fz-muted-row" : "") + (open ? " open" : "") + '" data-fz-ptoggle="' + id + '"><td><span class="fz-chev">▸</span><a href="#" data-fz-detail="' + id + '" title="Szczegóły zagrania"><b>' + id + "</b></a></td><td>" + d + "</td><td><b>" + price(p.entry) + "</b></td><td>" + price(p.tp) + "</td><td>" + price(p.sl) + "</td><td>" + num(p.rr, 2) +
+                    '</td><td style="color:#a6e3a1;font-weight:700" title="Suma jakości powodów (np. powód wypełniony w 60% = 0,6)">' + fmtScore(p.score) + '/5</td><td title="Kliknij, by zobaczyć powody tego zagrania">' + reasonSummary(e) + "</td><td>" + prio + "</td><td>" + mute + "</td>" +
+                    '<td style="white-space:nowrap"><button class="btn-edit" data-fz-detail="' + id + '" title="Szczegóły zagrania">🔍</button> <button class="btn-edit" onclick="copyFormEntry(\'' + id + '\')" title="Klonuj do nowego wpisu">📋</button> <button class="btn-edit" onclick="FormZones.openEdit(\'' + id + '\')" title="Edytuj">✏️</button> <button class="btn-edit" onclick="deleteFormEntry(\'' + id + '\')" title="Usuń">🗑️</button></td></tr>' +
+                    (open ? '<tr class="fz-reasons"><td colspan="' + COLS + '">' + reasons + "</td></tr>" : "");
             }).join("") + "</tbody></table>";
     }
     function render() {
         const box = $("#fz-body"); if (!box) return;
-        const zones = S.shown = build();
+        const tickers = S.shownT = build();
+        const zones = S.shown = tickers.reduce((a, t) => a.concat(t.zones), []);
         const plays = zones.reduce((n, z) => n + z.vis.length, 0);
-        $("#fz-count").textContent = zones.length + " stref · " + plays + " zagrań" + (S.mute === "0" ? " (wyciszone ukryte)" : S.mute === "1" ? " (tylko wyciszone)" : "");
-        if (!zones.length) { box.innerHTML = '<div class="ev-empty">' + (formEntries && formEntries.length ? "Brak stref spełniających filtry." : "Ładowanie…") + "</div>"; return; }
+        $("#fz-count").textContent = tickers.length + " " + plural(tickers.length, "spółka", "spółki", "spółek") + " · " + zones.length + " " + plural(zones.length, "strefa", "strefy", "stref") + " · " + plays + " " + plural(plays, "zagranie", "zagrania", "zagrań") + (S.mute === "0" ? " (wyciszone ukryte)" : S.mute === "1" ? " (tylko wyciszone)" : "");
+        if (!tickers.length) { box.innerHTML = '<div class="ev-empty">' + (formEntries && formEntries.length ? "Brak spółek spełniających filtry." : "Ładowanie…") + "</div>"; return; }
         const th = (k, t) => '<th data-fz-sort="' + k + '">' + t + (S.key === k ? (S.dir > 0 ? " ▲" : " ▼") : "") + "</th>";
-        let h = '<div class="table-responsive"><table class="ev-table"><thead><tr>' + th("ticker", "Spółka") + "<th>Strefa</th>" + th("plays", "Zagrania") + "<th>Najbliższe wejście</th>" + th("dist", "Odległość") + th("status", "Status") + "<th>Prio</th><th></th></tr></thead><tbody>";
-        zones.forEach(z => {
-            const open = S.open.has(z.key), n = z.near, d = n.raw;
-            h += '<tr class="fz-zone' + (open ? " open" : "") + '" data-fz-toggle="' + esc(z.key) + '"><td><span class="fz-chev">▸</span><a class="sd-link" data-tk="' + esc(z.ticker) + '"><b>' + esc(z.ticker) + '</b></a><div class="ev-muted" style="margin-left:1.2em">' + esc(z.name) + "</div></td>" +
-                "<td>" + arrow(z.long) + " " + price(z.lo) + "–" + price(z.hi) + "</td><td>" + z.vis.length + (z.hiddenMuted > 0 ? ' <span class="ev-muted">(+' + z.hiddenMuted + " wyciszone)</span>" : "") + "</td>" +
-                "<td>" + price(n.entry) + "</td><td style=\"color:" + (d == null ? "var(--text-muted)" : d >= 0 ? "var(--success)" : "var(--danger)") + ';font-weight:700">' + (d == null ? "–" : (d > 0 ? "+" : "") + num(d, 1) + "%") + "</td>" +
-                '<td style="color:' + STCOL[z.status] + ';font-weight:700">' + esc(z.status) + "</td><td>" + (z.prio ? "⭐" : "") + "</td>" +
-                '<td class="ev-act"><a class="hp-btn ev-tv" href="' + esc(getTradingViewLink(z.ticker)) + '" target="_blank" rel="noopener">📈 TV</a> <button class="hp-btn" data-fz-add="' + esc(z.key) + '">＋ zagranie</button></td></tr>';
-            if (open) h += '<tr class="fz-plays"><td colspan="8">' + playRows(z) + "</td></tr>";
+        let h = '<div class="table-responsive"><table class="ev-table"><thead><tr>' + th("ticker", "Spółka") + "<th>Strefa</th>" + th("plays", "Zagrania") + "<th>Powody</th><th>Najbliższe wejście</th>" + th("dist", "Odległość") + th("status", "Status") + "<th>Prio</th><th></th></tr></thead><tbody>";
+        tickers.forEach(t => {
+            const openT = S.openT.has(t.ticker), n = t.near, nz = t.nearZone;
+            h += '<tr class="fz-tk' + (openT ? " open" : "") + '" data-fz-ttoggle="' + esc(t.ticker) + '"><td><span class="fz-chev">▸</span><a class="sd-link" data-tk="' + esc(t.ticker) + '"><b>' + esc(t.ticker) + '</b></a><div class="ev-muted" style="margin-left:1.2em">' + esc(t.name) + (t.name ? " · " : "") + t.zones.length + " " + plural(t.zones.length, "strefa", "strefy", "stref") + "</div></td>" +
+                "<td>" + zoneTxt(nz) + "</td><td>" + t.plays + (t.hiddenMuted > 0 ? ' <span class="ev-muted">(+' + t.hiddenMuted + " wyciszone)</span>" : "") + "</td><td>" + t.reasons + "</td><td><b>" + price(n.entry) + "</b> <span class=\"ev-muted\">" + esc(n.e.entry_id) + "</span></td>" + distCell(n.raw) + statCell(t.status) + prioCell(t.prio) +
+                '<td class="ev-act"><a class="hp-btn ev-tv" href="' + esc(getTradingViewLink(t.ticker)) + '" target="_blank" rel="noopener">📈 TV</a> <button class="hp-btn" data-fz-addt="' + esc(t.ticker) + '">＋ zagranie</button></td></tr>';
+            if (!openT) return;
+            t.zones.forEach(z => {
+                const open = S.open.has(z.key), zn = z.near;
+                h += '<tr class="fz-zone fz-z2' + (open ? " open" : "") + '" data-fz-toggle="' + esc(z.key) + '"><td><span class="fz-chev">▸</span><span class="ev-muted">strefa</span></td>' +
+                    "<td>" + zoneTxt(z) + "</td><td>" + z.vis.length + (z.hiddenMuted > 0 ? ' <span class="ev-muted">(+' + z.hiddenMuted + " wyciszone)</span>" : "") + "</td><td>" + z.reasons + "</td><td><b>" + price(zn.entry) + '</b> <span class="ev-muted">' + esc(zn.e.entry_id) + "</span></td>" + distCell(zn.raw) + statCell(z.status) + prioCell(z.prio) +
+                    '<td class="ev-act"><button class="hp-btn" data-fz-add="' + esc(z.key) + '">＋ zagranie</button></td></tr>';
+                if (open) h += '<tr class="fz-plays"><td colspan="9">' + playRows(z) + "</td></tr>";
+            });
         });
         box.innerHTML = h + "</tbody></table></div>";
     }
     function set(k, v) { S[k] = v; render(); }
     function sort(k) { S.dir = S.key === k ? -S.dir : 1; S.key = k; render(); }
-    function toggleAll() { if (S.open.size) S.open.clear(); else S.shown.forEach(z => S.open.add(z.key)); render(); }
+    function toggleAll() { if (S.open.size || S.openT.size || S.openP.size) { S.open.clear(); S.openT.clear(); S.openP.clear(); } else S.shownT.forEach(t => { S.openT.add(t.ticker); t.zones.forEach(z => S.open.add(z.key)); }); render(); }
 
     // ---------- okno „Dodaj nowy wpis” ----------
     function lock(on) { document.body.style.overflow = on ? "hidden" : (document.querySelector(".plx-overlay.open") ? "hidden" : ""); }
@@ -7151,8 +7185,14 @@ window.FormZones = (function () {
         const sortEl = t.closest("[data-fz-sort]"); if (sortEl) { sort(sortEl.dataset.fzSort); return; }
         const addEl = t.closest("[data-fz-add]");
         if (addEl) { const z = S.shown.find(x => x.key === addEl.dataset.fzAdd); if (z) openAdd(z.ticker, z.vis[0].e); return; }
+        const addT = t.closest("[data-fz-addt]");
+        if (addT) { const tk = S.shownT.find(x => x.ticker === addT.dataset.fzAddt); if (tk) openAdd(tk.ticker, tk.near.e); return; }
+        const tkRow = t.closest("[data-fz-ttoggle]");
+        if (tkRow && !t.closest("a, button, [data-tk]")) { const k = tkRow.dataset.fzTtoggle; S.openT.has(k) ? S.openT.delete(k) : S.openT.add(k); render(); return; }
         const row = t.closest("[data-fz-toggle]");
         if (row && !t.closest("a, button, [data-tk]")) { const k = row.dataset.fzToggle; S.open.has(k) ? S.open.delete(k) : S.open.add(k); render(); return; }
+        const pRow = t.closest("[data-fz-ptoggle]");
+        if (pRow && !t.closest("a, button, [data-tk], [onclick]")) { const k = pRow.dataset.fzPtoggle; S.openP.has(k) ? S.openP.delete(k) : S.openP.add(k); render(); return; }
         const pick = t.closest("[data-fz-pick]"); if (pick) { choose(pick.dataset.fzPick, null); return; }
         const zt = t.closest("[data-fz-ztoggle]"); if (zt && !t.closest("button")) { zt.parentNode.classList.toggle("open"); return; }
         const zb = t.closest("[data-fz-zone]");
@@ -7328,11 +7368,17 @@ window.Measure = (function () {
         drawPickButtons();
         if (M.pick) $("#fz-chart").scrollIntoView({ behavior: "smooth", block: "center" });
     }
+    function pickValue(mode) {                          // wybrane wartości w nawiasie po oznaczeniu na wykresie
+        if (mode === "zone") { const a = parseFloat($("#form-start").value), b = parseFloat($("#form-end").value); return isNaN(a) || isNaN(b) ? "" : "(" + price(a) + " → " + price(b) + ")"; }
+        if (mode === "sl") { const v = parseFloat($("#form-sl").value), d = $("#form-slc").value; return isNaN(v) ? "" : "(" + price(v) + (d ? ", " + d : "") + (M.slAuto && !M.slUser ? ", z " + (isLong() ? "OPD" : "OPS") : "") + ")"; }
+        if (mode === "opd") { const o = M.opdShown; return o ? "(" + price(o.level) + (o.t ? ", " + dateOf(o.t) : "") + (M.opdManual ? ", ręcznie" : ", automatyczny") + ")" : ""; }
+        return "";
+    }
     function drawPickButtons() {
         document.querySelectorAll("[data-pick]").forEach(b => {
-            const on = M.pick === b.dataset.pick;
+            const mode = b.dataset.pick, on = M.pick === mode, val = on ? "" : pickValue(mode);
             b.classList.toggle("ev-go", on);
-            b.textContent = on ? "✕ Anuluj wskazywanie" : b.dataset.pick === "zone" ? "🎯 Strefa z wykresu (2 punkty)" : b.dataset.pick === "opd" ? "✎ Zmień " + (isLong() ? "OPD" : "OPS") + " (kliknij świecę)" : "🎯 Świeca SL z wykresu";
+            b.innerHTML = (on ? "✕ Anuluj wskazywanie" : mode === "zone" ? "🎯 Strefa z wykresu (2 punkty)" : mode === "opd" ? "✎ Zmień " + (isLong() ? "OPD" : "OPS") + " (kliknij świecę)" : "🎯 Świeca SL z wykresu") + (val ? ' <span class="fz-pv">' + val + "</span>" : "");
         });
     }
     function handlePick(param) {
@@ -7342,6 +7388,7 @@ window.Measure = (function () {
             M.opdManual = { level: r4(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)), t: bar.t };
             M.pick = null; setStatus((long ? "OPD" : "OPS") + " wskazany ręcznie: " + price(M.opdManual.level) + " (" + (long ? "dół" : "góra") + " korpusu świecy z " + dateOf(bar.t) + ").");
         } else if (M.pick === "sl") {
+            M.slUser = true;
             setVal("form-sl", r4(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)));
             setVal("form-slc", dateOf(bar.t));
             M.pick = null; setStatus("SL: " + (long ? "dół" : "góra") + " korpusu świecy z " + dateOf(bar.t) + " = " + price(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)));
@@ -7405,7 +7452,8 @@ window.Measure = (function () {
     function drawOpdButtons() {                          // ✎ zmiana OPD wskazanego automatycznie; ↺ powrót do automatu
         const el = $("#fz-opd-btns"); if (!el) return;
         const nm = isLong() ? "OPD" : "OPS";
-        el.innerHTML = ' <button type="button" class="hp-btn fz-opdbtn' + (M.pick === "opd" ? " ev-go" : "") + '" data-pick="opd">' + (M.pick === "opd" ? "✕ Anuluj wskazywanie" : "✎ Zmień " + nm + " (kliknij świecę)") + "</button>" +
+        const val = M.pick === "opd" ? "" : pickValue("opd");
+        el.innerHTML = ' <button type="button" class="hp-btn fz-opdbtn' + (M.pick === "opd" ? " ev-go" : "") + '" data-pick="opd">' + (M.pick === "opd" ? "✕ Anuluj wskazywanie" : "✎ Zmień " + nm + " (kliknij świecę)" + (val ? ' <span class="fz-pv">' + val + "</span>" : "")) + "</button>" +
             (M.opdManual ? ' <button type="button" class="hp-btn fz-opdbtn" data-opd-auto>↺ ' + nm + " automatyczny</button>" : "");
     }
     document.addEventListener("click", e => { if (e.target.closest && e.target.closest("[data-opd-auto]")) { e.preventDefault(); M.opdManual = null; setStatus(""); opdCheck(); } });
@@ -7415,6 +7463,14 @@ window.Measure = (function () {
         opdCheck(); drawOpdButtons();
     }
     const opdValue = () => M.opdManual ? { opd_level: M.opdManual.level, opd_date: M.opdManual.t ? dateOf(M.opdManual.t) : null } : { opd_level: null };
+    function applyAutoSl(o) {                           // SL domyślnie na korpusie wybranego OPD/OPS, dopóki użytkownik nie wskaże innej świecy ani nie wpisze wartości
+        if (!o || (window.FormZones && FormZones.editingId && FormZones.editingId() != null) || M.slUser) return;      // edycja istniejącego wpisu: SL zostaje, jak zapisano
+        const lv = r4(o.level), cur = parseFloat($("#form-sl").value);
+        if (!isNaN(cur) && !M.slAuto) return;           // wartość nie pochodzi z automatu
+        M.slAuto = true;
+        if (isNaN(cur) || Math.abs(cur - lv) > 1e-9) setVal("form-sl", lv);
+        if (o.t) setVal("form-slc", dateOf(o.t));
+    }
     function opdCheck() {
         const box = $("#fz-opd-check"), slb = $("#fz-sl-check");
         if (!candle || !M.bars.length) return null;
@@ -7426,14 +7482,16 @@ window.Measure = (function () {
         const curNote = z && cur && (!zo || Math.abs(cur.level - zo.level) > 1e-9) ? " Bieżący " + (long ? "OPD" : "OPS") + " kursu: " + price(cur.level) + " (" + dateOf(cur.t) + ")." : "";
         if (z && !zo && !mo) { drawOpdButtons(); if (opdLine) { try { candle.removePriceLine(opdLine); } catch (e) {} opdLine = null; }
             if (box) { box.textContent = "Brak potwierdzonego " + (long ? "dołka poniżej" : "szczytu powyżej") + " strefy w ostatnich 250 sesjach – wskaż " + (long ? "OPD" : "OPS") + " ręcznie (✎)." + curNote; box.style.color = "var(--accent-hover)"; }
-            return null; }
+            M.opdShown = null; drawPickButtons(); return null; }
         if (mo) {                                           // OPD wskazany ręcznie ma pierwszeństwo; sprawdzamy, czy nie został przebity zamknięciem
             const br = M.bars.find(b => b.t > mo.t && (long ? b.c < mo.level : b.c > mo.level));
             o = { level: mo.level, t: mo.t, broken: [], manual: true, brokenAt: br ? br.t : null, auto: z ? zo : cur };
         }
+        M.opdShown = o ? { level: o.level, t: o.t } : null;
+        applyAutoSl(o);
         drawOpdButtons();
         if (opdLine) { try { candle.removePriceLine(opdLine); } catch (e) {} opdLine = null; }
-        if (!o) { if (box) box.textContent = "Brak potwierdzonego " + (long ? "dołka" : "szczytu") + " na wykresie – możesz wskazać go ręcznie."; return null; }
+        if (!o) { drawPickButtons(); if (box) box.textContent = "Brak potwierdzonego " + (long ? "dołka" : "szczytu") + " na wykresie – możesz wskazać go ręcznie."; return null; }
         opdLine = candle.createPriceLine({ price: o.level, color: "#f38ba8", lineWidth: 2, lineStyle: mo ? 2 : 0, axisLabelVisible: true, title: name + " " + price(o.level) });
         if (slLine) { try { candle.removePriceLine(slLine); } catch (e) {} slLine = null; }
         const slv = parseFloat($("#form-sl").value);
@@ -7459,12 +7517,16 @@ window.Measure = (function () {
         const sl = parseFloat($("#form-sl").value);
         if (slb && z && !isNaN(sl)) {
             const okSl = long ? sl <= z.lo : sl >= z.hi;
-            slb.textContent = (okSl ? "✓ SL " + price(sl) + " " + (long ? "pod" : "nad") + " strefą" : "✗ SL " + price(sl) + " leży w strefie lub po złej stronie") + " · " + (long ? (sl < o.level ? "pod" : "nad") : (sl > o.level ? "nad" : "pod")) + " " + name + " " + price(o.level) + ".";
+            slb.textContent = (M.slAuto && !M.slUser ? "SL domyślnie z korpusu " + name + " (wskaż inną świecę albo wpisz wartość). " : "") + (okSl ? "✓ SL " + price(sl) + " " + (long ? "pod" : "nad") + " strefą" : "✗ SL " + price(sl) + " leży w strefie lub po złej stronie") + " · " + (long ? (sl < o.level ? "pod" : "nad") : (sl > o.level ? "nad" : "pod")) + " " + name + " " + price(o.level) + ".";
             slb.style.color = okSl ? "" : "var(--danger)";
         }
+        drawPickButtons();
         return res;
     }
-    document.addEventListener("input", e => { if (["form-start", "form-end", "form-sl", "form-entry"].indexOf(e.target.id) >= 0 && candle) { drawBase(); opdCheck(); } });
+    document.addEventListener("input", e => {
+        if (e.target.id === "form-sl" && e.isTrusted) M.slUser = true;                 // wpisana ręcznie wartość SL wyłącza automat
+        if (["form-start", "form-end", "form-sl", "form-entry"].indexOf(e.target.id) >= 0 && candle) { drawBase(); opdCheck(); drawPickButtons(); }
+    });
     document.addEventListener("change", e => { if (e.target.id === "form-direction" && candle) { drawBase(); opdCheck(); } });
     document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-pick]"); if (b) { e.preventDefault(); startPick(b.dataset.pick); } });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && M.repick != null) { M.repick = null; setStatus(""); drawEditor(); e.stopPropagation(); return; } if (e.key === "Escape" && M.pick) { M.pick = null; if (pickLine) { try { candle.removePriceLine(pickLine); } catch (x) {} pickLine = null; } setStatus(""); drawPickButtons(); e.stopPropagation(); } }, true);
@@ -7777,7 +7839,7 @@ window.Measure = (function () {
         $("#fz-measure").style.display = "block"; drawTypes(); drawEditor(); drawResultCard(); drawAdded(); $$tf();
         setTimeout(() => { if (changed || !M.bars.length) loadBars(); else { ensureChart(); drawBase(); } }, 30);
     }
-    function reset() { M.pick = null; M.opdManual = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.saved = []; M.reverifyNote = null; M.editing = M.editApply = M.repick = null; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
+    function reset() { M.pick = null; M.opdManual = null; M.slUser = M.slAuto = false; M.opdShown = null; opdLine = slLine = pickLine = null; snapLine = null; M.ticker = ""; M.added = []; M.saved = []; M.reverifyNote = null; M.editing = M.editApply = M.repick = null; M.anchors = []; M.result = null; M.type = null; M.bars = []; if (chart) { chart.remove(); chart = candle = vol = prim = null; priceLines = []; extraSeries = []; } const m = $("#fz-measure"); if (m) m.style.display = "none"; drawScore(); }
     function setAdded(details, savedNames) {                         // edycja wpisu: zapisane zmierzone powody wracają do listy (można je usuwać i dodawać nowe)
         M.added = (details || []).map(d => JSON.parse(JSON.stringify(d))); M.reverifyNote = null;
         M.saved = (savedNames || []).map(r => String(r).trim().toLowerCase());
