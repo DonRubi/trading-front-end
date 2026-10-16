@@ -59,6 +59,9 @@
         .tr-table tr.tr-hidden { display: none; }
         .tr-pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
         .tr-cnt { font-size: 0.72rem; color: var(--text-muted); }
+        .tr-lv { min-width: 150px; } .tr-lv-row { display: flex; gap: 6px; } .tr-lv-row label { display: flex; align-items: center; gap: 4px; font-size: .74rem; color: var(--text-muted); }
+        .tr-lv-in { width: 82px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 4px 6px; color: var(--text-main); font-size: .85rem; } .tr-lv-in:focus { outline: 0; border-color: var(--accent); }
+        .tr-lv-sum { font-size: .78rem; line-height: 1.45; margin-top: 4px; } .tr-lv-save { margin-top: 4px; padding: 3px 8px; font-size: .74rem; }
         .tr-table .btn-edit, .tr-table .btn-delete { padding: 3px 9px !important; border-radius: 8px; font-size: 0.75rem; margin: 2px; flex: none !important; }
         .tr-table td:last-child { min-width: 150px; }
         .hp-wrap { max-width: 1500px; margin: 0 auto; padding: 15px; display: flex; flex-direction: column; gap: 14px; }
@@ -125,6 +128,7 @@
         .hp-table th[data-sort]:hover { color: var(--text-main); }
         .hp-arrow::after { content: ' ↕'; opacity: .35; }
         .hp-table th.hp-sorted .hp-arrow::after { content: attr(data-arrow); opacity: 1; color: var(--accent-hover); }
+        .hp-px { font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; font-weight: 400; } .hp-px b { color: var(--text-main); font-weight: 600; }
         .hp-name { font-size: 0.68rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .hp-table tr.hp-total td { border-top: 2px solid var(--border-color); font-weight: 700; background: rgba(255,255,255,.03); }
         .hp-wbar { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
@@ -144,6 +148,8 @@
         .hp-chk:active { transform: scale(.9); }
         .hp-chk:checked { background: var(--accent); border-color: var(--accent); }
         .hp-chk:checked::after { content: ""; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid #0b0e11; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+        .hp-note-tools { display: flex; justify-content: flex-end; margin: -4px 0 8px; } .hp-edit { background: none; border: 0; color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 6px; } .hp-edit:hover { color: var(--accent-hover); background: rgba(201,148,0,.12); }
+        .hp-note-row.hp-editing td { background: rgba(201,148,0,.06); } .hp-note-row.hp-editing select, .hp-note-row.hp-editing input { width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 8px; color: var(--text-main); }
         .hp-x { background: none; border: 0; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 2px 6px; border-radius: 6px; }
         .hp-x:hover { color: var(--danger); background: rgba(246,70,93,.1); }
         .hp-panel .dashboard-grid { padding: 0; }
@@ -552,18 +558,15 @@
         <button type="button" class="sn-item" data-sn="planner-module" onclick="openModule('planner-module', 'Planer')"><span class="sn-ic">🧭</span>Planer</button>
         <div class="sn-label">Narzędzia i analiza</div>
         <button type="button" class="sn-item" data-sn="dailybrief-module" onclick="openModule('dailybrief-module', 'Przegląd dnia')"><span class="sn-ic">📰</span>Przegląd dnia</button>
-        <button type="button" class="sn-item" data-sn="technicalanalysis-module" onclick="openModule('technicalanalysis-module', 'Analiza techniczna')"><span class="sn-ic">📐</span>Analiza techniczna</button>
         <button type="button" class="sn-item" data-sn="alerthistory-module" onclick="openModule('alerthistory-module', 'Historia alertów')"><span class="sn-ic">🔔</span>Historia alertów</button>
         <button type="button" class="sn-item" data-sn="summary-module" onclick="openModule('summary-module', 'Podsumowanie')"><span class="sn-ic">📈</span>Podsumowanie</button>
         <button type="button" class="sn-item" data-sn="database-module" onclick="openModule('database-module', 'Baza danych')"><span class="sn-ic">🗄️</span>Baza danych</button>
-        <button type="button" class="sn-item sn-privacy" onclick="togglePrivacy()"><span class="sn-ic">🙈</span>Tryb ukrycia danych</button>
     </nav>
     <header>
         <div class="header-actions">
             <button class="back-btn" id="back-btn" onclick="openDashboard()">← Powrót</button>
             <h1 id="app-title">Quant<span>Desk</span></h1>
         </div>
-        <button class="privacy-btn" id="privacy-btn" onclick="togglePrivacy()" title="Tryb ukrycia danych">👁️</button>
     </header>
 
     <main id="dashboard">
@@ -638,6 +641,7 @@
                             <span id="hp-n-alert-fields" hidden><input type="date" id="hp-n-adate" aria-label="Dzień alertu"> <input type="time" id="hp-n-atime" aria-label="Godzina alertu (czas w Polsce)"> <span class="hp-note">czas w Polsce</span></span>
                         </div>
                     </form>
+                    <div class="hp-note-tools"><button type="button" class="hp-btn" id="hp-n-clear" hidden>🧹 Wyczyść odznaczone</button></div>
                     <div class="hp-table-wrap"><table class="hp-table">
                         <thead><tr><th>Ticker</th><th>Akcja</th><th class="hp-col-date">Data</th><th>Opis</th><th class="hp-r">Check</th><th></th></tr></thead>
                         <tbody id="hp-notes"></tbody>
@@ -662,7 +666,6 @@
                     <div class="mn-label">Narzędzia i analiza</div>
                     <div class="dashboard-grid">
                         <div class="menu-card" onclick="openModule('dailybrief-module', 'Przegląd dnia')"><span class="icon">📰</span><h3>Przegląd dnia</h3></div>
-                        <div class="menu-card" onclick="openModule('technicalanalysis-module', 'Analiza techniczna')"><span class="icon">📐</span><h3>Analiza techniczna</h3></div>
                         <div class="menu-card" onclick="openModule('alerthistory-module', 'Historia alertów')"><span class="icon">🔔</span><h3>Historia alertów</h3></div>
                         <div class="menu-card" onclick="openModule('summary-module', 'Podsumowanie')"><span class="icon">📈</span><h3>Podsumowanie</h3></div>
                         <div class="menu-card" onclick="openModule('database-module', 'Baza danych')"><span class="icon">🗄️</span><h3>Baza danych</h3></div>
@@ -1322,231 +1325,6 @@
         <div class="pagination-container"> <button onclick="changeAlertPage(-1)" id="alert-prev-page" class="btn-pag">◀ Poprzednia</button> <div style="display:flex; align-items:center; gap:10px;"><span id="alert-page-info">Strona 1 z 1</span><button onclick="toggleAllRows('alerts', this)" style="padding:4px 8px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); border-radius:4px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:0.2s;">Pokaż wszystko</button></div> <button onclick="changeAlertPage(1)" id="alert-next-page" class="btn-pag">Następna ▶</button> </div> 
     </section>
 
-    <section id="technicalanalysis-module" class="app-module">
-        <div class="macro-header-container">
-            <h3>Zaawansowana Analiza Techniczna</h3>
-        </div>
-        
-        <div class="tabs" style="margin-bottom: 20px;">
-            <button class="tab-btn active" onclick="switchTechTab('harmonics')">XABCD</button>
-            <button class="tab-btn" onclick="switchTechTab('elliott')">Fale Elliotta</button>
-            <button class="tab-btn" onclick="switchTechTab('rgr')">RGR / oRGR</button>
-            <button class="tab-btn" onclick="switchTechTab('fvg')">Analiza FVG (SMC)</button>
-            <button class="tab-btn" onclick="switchTechTab('structure')">Struktury (OPD/OPS)</button>
-        </div>
-
-        <div id="tab-harmonics" class="tab-content active">
-            <div class="journal-container">
-                <div class="journal-sidebar">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Kalkulator XABCD</h4>
-                    <form onsubmit="calculateHarmonics(event)">
-                        <div class="form-row">
-                            <div class="form-group"><label>Punkt X</label><input type="number" step="0.01" id="ha-x" required></div>
-                            <div class="form-group"><label>Punkt A</label><input type="number" step="0.01" id="ha-a" required></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Punkt B</label><input type="number" step="0.01" id="ha-b" required></div>
-                            <div class="form-group"><label>Punkt C</label><input type="number" step="0.01" id="ha-c" required></div>
-                        </div>
-                        <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Wylicz Punkt D i Formację</button>
-                    </form>
-                </div>
-                <div class="journal-main">
-                    <h4 style="margin-bottom: 15px;">Wynik analizy struktury:</h4>
-                    <div id="ha-results" class="kpi-grid">
-                        <div style="grid-column: 1 / -1; color: var(--text-muted); text-align: center; padding: 30px;">Wprowadź punkty X, A, B, C po lewej stronie.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-elliott" class="tab-content">
-            <div class="journal-container">
-                <div class="journal-sidebar">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Walidator Fal Elliotta</h4>
-                    <form onsubmit="calculateElliott(event)">
-                        <div class="form-group">
-                            <label>Kierunek cyklu</label>
-                            <select id="ew-direction">
-                                <option value="UP">Wzrostowy (Impuls Hossa)</option>
-                                <option value="DOWN">Spadkowy (Impuls Bessa)</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Punkt X (Start)</label><input type="number" step="0.01" id="ew-x" required></div>
-                            <div class="form-group"><label>Fala 1 (Koniec)</label><input type="number" step="0.01" id="ew-1" required></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Fala 2 (Koniec)</label><input type="number" step="0.01" id="ew-2" required></div>
-                            <div class="form-group"><label>Fala 3 (Koniec)</label><input type="number" step="0.01" id="ew-3" required></div>
-                        </div>
-                        <div class="form-group"><label>Fala 4 (Koniec)</label><input type="number" step="0.01" id="ew-4" required></div>
-                        <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Sprawdź i Wyznacz Zasięgi</button>
-                    </form>
-                </div>
-                <div class="journal-main">
-                    <div id="ew-score-container" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                        <h3 style="margin-bottom: 10px;">Ocena Zgodności: <span id="ew-score-text" style="color:var(--text-muted);">Brak danych</span></h3>
-                        <div id="ew-rules-list" style="font-size: 0.9em; line-height: 1.6; color: var(--text-muted);">Oczekuję na dane...</div>
-                    </div>
-                    <div class="kpi-grid" id="ew-projections" style="display:none;">
-                        <div class="kpi-card"><h4>Projekcja Fali 5</h4><div class="value" id="ew-p5" style="color:var(--success);">-</div></div>
-                        <div class="kpi-card"><h4>Korekta A</h4><div class="value" id="ew-pa" style="color:var(--danger);">-</div></div>
-                        <div class="kpi-card"><h4>Korekta B</h4><div class="value" id="ew-pb" style="color:#89b4fa;">-</div></div>
-                        <div class="kpi-card"><h4>Korekta C</h4><div class="value" id="ew-pc" style="color:var(--danger);">-</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-rgr" class="tab-content">
-            <div class="journal-container">
-                <div class="journal-sidebar">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Model RGR / oRGR</h4>
-                    <form onsubmit="calculateRGR(event)">
-                        <div class="form-group">
-                            <label>Typ Formacji</label>
-                            <select id="rgr-type">
-                                <option value="RGR">RGR (Spadkowa / Głowa z Ramionami)</option>
-                                <option value="ORGR">oRGR (Wzrostowa / Odwrócona)</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Lewe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-ls" required></div>
-                            <div class="form-group"><label>Lewa Linia Szyi</label><input type="number" step="0.01" id="rgr-ln" required></div>
-                        </div>
-                        <div class="form-group"><label>Głowa (Szczyt absolutny)</label><input type="number" step="0.01" id="rgr-h" required></div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Prawa Linia Szyi</label><input type="number" step="0.01" id="rgr-rn" required></div>
-                            <div class="form-group"><label>Prawe Ramię (Szczyt)</label><input type="number" step="0.01" id="rgr-rs" required></div>
-                        </div>
-                        <div class="form-group">
-                            <label>Punkt Przebicia Szyi</label>
-                            <input type="number" step="0.01" id="rgr-bp" placeholder="Opcjonalne">
-                        </div>
-                        <button type="submit" class="btn-submit" style="background: var(--accent); color:#000;">Zbadaj Formację</button>
-                    </form>
-                </div>
-                <div class="journal-main">
-                    <div id="rgr-validation" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                        <h3 style="margin-bottom: 10px;">Zgodność z modelem: <span id="rgr-valid-text" style="color:var(--text-muted);">Brak danych</span></h3>
-                        <p id="rgr-valid-desc" style="color: var(--text-muted); font-size: 0.9em;"></p>
-                    </div>
-                    <div class="kpi-grid" id="rgr-targets" style="display:none;">
-                        <div class="kpi-card"><h4>Kąt Linii Szyi</h4><div class="value" id="rgr-angle" style="color:#89b4fa;">-</div></div>
-                        <div class="kpi-card"><h4>Wysokość Głowy</h4><div class="value" id="rgr-height" style="color:var(--text-main);">-</div></div>
-                        <div class="kpi-card"><h4>Zasięg (TP)</h4><div class="value" id="rgr-target" style="color:var(--accent);">-</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div id="tab-fvg" class="tab-content">
-            <div class="journal-sidebar">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Kwalifikator FVG (Quant)</h4>
-                    <form onsubmit="fetchFvgData(event)">
-                        <div class="form-group">
-                            <label>Wybierz Setup (ID Form - Opcjonalne do konfrontacji)</label>
-                            <select id="fvg-form-select" onchange="onFvgFormSelectChange()" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; margin-bottom:12px;">
-                                <option value="">-- Wpisz ticker, aby załadować setupy --</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Ticker (Auto lub z palca)</label>
-                                <input type="text" id="fvg-ticker" placeholder="Wpisz ticker..." required oninput="loadFvgFormDropdown()">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Data FVG (Świeca D0)</label>
-                                <input type="date" id="fvg-date" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Interwał Bazowy</label>
-                                <select id="fvg-timeframe">
-                                    <option value="1d">Dzienny (D1)</option>
-                                    <option value="1wk">Tygodniowy (W1)</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn-submit" id="btn-fvg-fetch" style="background: var(--accent); color:#000;">1. Pobierz Struktury z Yahoo</button>
-                    </form>
-                </div>
-                
-                <div class="journal-main">
-                    <div id="fvg-data-container" style="display:none; background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
-                        <h4 style="margin-bottom: 15px; color:var(--text-main);">Pobrana sekwencja (Sprawdź i ewentualnie popraw knoty):</h4>
-                        <div class="table-responsive" style="margin-bottom: 15px;">
-                            <table class="macro-custom-table" id="fvg-candles-table">
-                                <thead>
-                                    <tr>
-                                        <th>Świeca</th><th>Data</th><th>Otwarcie</th><th>Maks.</th><th>Min.</th><th>Zamknięcie</th><th>Wolumen</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="fvg-candles-tbody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        <div id="tab-structure" class="tab-content" style="display:none;">
-            <div class="journal-container">
-                <div class="journal-sidebar">
-                    <h4 style="color: var(--accent); margin-bottom: 15px;">Kwalifikator Stref (OPD/OPS)</h4>
-                    <form onsubmit="fetchStructureData(event)">
-                        <div class="form-group">
-                            <label>Wybierz Setup (ID Form - Opcjonalne do konfrontacji)</label>
-                            <select id="struct-form-select" onchange="onStructureFormSelectChange()" style="width:100%; padding:10px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:6px; margin-bottom:12px;">
-                                <option value="">-- Wpisz ticker, aby załadować setupy --</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Ticker</label>
-                                <input type="text" id="struct-ticker" placeholder="np. AAPL" required oninput="loadStructureFormDropdown()">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Data Powstania OPD/OPS</label>
-                                <input type="date" id="struct-date" required>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-top: 10px;">
-                            <label style="color: var(--text-muted);">Data Retestu / S-R Flip (Opcjonalnie)</label>
-                            <input type="date" id="struct-flip-date">
-                        </div>
-                        
-                        <button type="submit" class="btn-submit" id="btn-struct-fetch" style="background: var(--accent); color:#000; margin-top: 15px;">1. Pobierz Strefę z Yahoo</button>
-                    </form>
-                </div>
-                
-                <div class="journal-main">
-                    <div id="struct-data-container" style="display:none; background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <h4 style="color:var(--text-main);">Świece budujące Strefę (Origin):</h4>
-                            <span id="struct-zone-bounds" style="background: rgba(201, 148, 0, 0.1); border: 1px solid var(--accent); padding: 5px 10px; border-radius: 4px; font-size: 0.85em; color: var(--accent);"></span>
-                        </div>
-                        
-                        <div class="table-responsive" style="margin-bottom: 15px;">
-                            <table class="macro-custom-table" id="struct-candles-table">
-                                <thead>
-                                    <tr>
-                                        <th>Świeca</th><th>Data</th><th>Otwarcie</th><th>Maks.</th><th>Min.</th><th>Zamknięcie</th><th>Wolumen</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="struct-candles-tbody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-        </div>
-    </section>
-
     <section id="dailybrief-module" class="app-module">
         <div class="macro-header-container"><h3>Wpisy makro (przegląd dnia)</h3></div>
         <div class="brief-carousel-container" id="dailybrief-carousel"><p style="text-align:center; padding:20px;">Ładowanie...</p></div>
@@ -1581,25 +1359,24 @@
         <div class="form-group"><label>Data Sprzedaży</label><input type="date" id="sell-date"></div>
             <div class="form-group"><label>Cena Sprzedaży z platformy</label><input type="number" step="0.0001" id="sell-price" placeholder="np. 154.32"></div>
             
-            <div class="form-group" id="sell-cfd-group" style="display:none; border: 1px dashed var(--danger); padding: 10px; border-radius: 6px; margin-bottom: 10px;">
-                <label style="color:var(--danger);">Koszt Prowadzenia CVD/CFD <br><small style="color:var(--text-muted); font-weight:normal;">Zostanie odjęta od zysku (Profitu).</small></label>
-                <input type="number" step="0.01" id="sell-cfd-cost" value="0">
-            </div>
-
             <div class="form-group" style="margin-top: 15px;">
                 <label style="color: var(--success); font-weight: bold;">Ile % pozycji sprzedajesz?</label>
-                <input type="text" id="sell-fraction" value="1" placeholder="Wpisz np. 1 (całość), 0.5 lub 50%, 1/3" style="width: 100%; padding: 10px; background: #11111b; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4; font-size: 0.95em;">
-                <small style="color: var(--text-muted); display: block; margin-top: 4px; font-size: 0.8em;">Wpisz jako procent (np. 50%), ułamek (np. 1/3) lub 1 dla całości.</small>
+                <input type="text" id="sell-fraction" value="100%" placeholder="100%" style="width: 100%; padding: 10px; background: #11111b; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4; font-size: 0.95em;">
+                <small style="color: var(--text-muted); display: block; margin-top: 4px; font-size: 0.8em;">Domyślnie 100% (cała pozycja). Wpisz procent (np. 50%) albo ułamek (np. 1/3).</small>
+            </div>
+
+            <div class="form-group" id="sell-cfd-group" style="display:none; border: 1px dashed var(--accent); padding: 10px; border-radius: 6px; margin-top: 12px;">
+                <label style="color: var(--accent); font-weight: bold;">Rozliczenie: zysk / strata i koszt CFD <small style="color:var(--text-muted); font-weight:normal;">(<span id="sell-ccy"></span>)</small></label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
+                    <div><small style="color:var(--text-muted)">Zysk / strata (wyliczony)</small><input type="number" step="0.01" id="sell-profit" style="width:100%"></div>
+                    <div><small style="color:var(--text-muted)">Koszt CFD</small><input type="number" step="0.01" id="sell-cfd-cost" value="0" style="width:100%"></div>
+                </div>
+                <small style="color: var(--text-muted); display:block; margin-top:6px; font-size:.78em;">Zmieniasz zysk / stratę – różnica trafia do kosztu CFD. Wpisujesz koszt CFD – koryguje zysk / stratę. Zapisuje się koszt CFD.</small>
             </div>
 
             <div class="form-group" style="margin-top: 15px;">
-                <label style="color: var(--accent); font-weight: bold;">Powód wyjścia z pozycji</label>
-                <select id="sell-reason" style="width: 100%; padding: 10px; background: #11111b; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
-                    <option value="Zrealizowany TP/SL">Zrealizowany TP / SL (Zgodnie z planem)</option>
-                    <option value="Przyspieszony TP">Przyspieszony TP (Oznaki dystrybucji na wykresie)</option>
-                    <option value="Ewakuacja (Strach)">Ręczna ewakuacja (Psychologia: Strach przed stratą / FOMO)</option>
-                    <option value="Ewakuacja (Fundamenty)">Ewakuacja (Złamanie tezy fundamentalnej / SoW)</option>
-                </select>
+                <label style="color: var(--accent); font-weight: bold;">Komentarz do sprzedaży <small style="color:var(--text-muted); font-weight:normal;">(krótko, opcjonalnie)</small></label>
+                <input type="text" id="sell-reason" maxlength="200" placeholder="np. realizacja TP, wyjście przed wynikami…" style="width: 100%; padding: 10px; background: #11111b; border: 1px solid #45475a; border-radius: 6px; color: #cdd6f4;">
             </div>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="closeSellModal()" style="flex:1; background:var(--bg-input); color:var(--text-main); border:none; padding:12px; border-radius:6px; cursor:pointer;">Anuluj</button>
@@ -1694,7 +1471,6 @@
             QD_OVERLAP_GROUPS.forEach(g => { const p = g.filter(t => byType[t] != null).map(t => byType[t]).sort((a, b) => a - b); if (p.length >= 2) cut += 0.5 * p.slice(0, -1).reduce((a, b) => a + b, 0); });
             return cut;
         }
-        let isPrivacyMode = false;
         
         let tickerDataArray = [], currentTickerPage = 1, tickerPageSize = 20;
         let formEntries = [], filteredFormEntries = [], formCurrentPage = 1, formRowsPerPage = 30, formFilterText = '';
@@ -1779,13 +1555,6 @@
             document.querySelectorAll('#side-nav .sn-item').forEach(b => b.classList.toggle('on', b.dataset.sn === 'home'));
             if (window.HomePage) HomePage.refresh();
             if (window.HomeTodo) HomeTodo.load();
-        }
-
-        function togglePrivacy() {
-            isPrivacyMode = !isPrivacyMode;
-            document.getElementById('privacy-btn').innerText = isPrivacyMode ? '🙈' : '👁️';
-            if (isPrivacyMode) document.body.classList.add('privacy-active');
-            else document.body.classList.remove('privacy-active');
         }
 
         // --- GLOBALNA EDYCJA ---
@@ -3477,8 +3246,6 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 : `<div style="display: flex; flex-direction: column; gap: 5px;">
                     <div style="display: flex; gap: 5px;">
                         <button class="btn-delete" onclick="openCloseModal(${item.id})" style="flex:1; padding: 4px 8px;">Sprzedaj</button>
-                        <button class="btn-edit" onclick="openNotesModal(${item.id})" style="flex:1; padding: 4px 8px; background: transparent; color: #89b4fa; border: 1px solid #89b4fa;">📝 Notatnik</button>
-                        <button class="btn-edit" onclick="Planer.openFor('${item.ticker}')" style="flex:1; padding: 4px 8px; background: transparent; color: var(--accent); border: 1px solid var(--accent);">🧭 Planuj</button>
                     </div>
                     </div>`;
                 const levHtml = `<span style="cursor:pointer; border-bottom: 1px dashed var(--accent); color:var(--accent);" onclick="editTradeLeverage(${item.id}, ${item.leverage || 1})" title="Kliknij, aby zmienić dźwignię">x${item.leverage || 1}</span>`;
@@ -3559,6 +3326,20 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 const progs = openT.map(t => t.stats.prog).filter(v => isFinite(v)), prog = progs.length ? progs.reduce((x, v) => x + v, 0) / progs.length : null;
                 let sName = g[0].stock_name || ''; if (!sName) { const td = tickerDataArray.find(t => t.ticker === tk); sName = td && td.stock_name ? td.stock_name : ''; }
                 const planId = (g.find(t => t.plan_id) || {}).plan_id;
+                // TP i SL dla całej spółki (zwinięty widok): domyślnie najwyższe TP i najniższe SL z otwartych inwestycji (SHORT odwrotnie)
+                const openTr = g.filter(t => t.status === 'OPEN' && parseFloat(t.buy_price) > 0);
+                let lvCell = '<td></td>';
+                if (openTr.length) {
+                    const dirOf = t => (['DBR', 'RBR'].includes(t.direction) ? 1 : -1), lmod = dirOf(openTr[0]), mixed = openTr.some(t => dirOf(t) !== lmod);
+                    const tpsV = openTr.map(t => parseFloat(t.tp_max) || parseFloat(t.tp)).filter(v => v > 0), slsV = openTr.map(t => parseFloat(t.sl)).filter(v => v > 0);
+                    const r4 = v => v == null ? '' : String(+v.toFixed(4));
+                    const dTp = tpsV.length ? r4(lmod > 0 ? Math.max(...tpsV) : Math.min(...tpsV)) : '', dSl = slsV.length ? r4(lmod > 0 ? Math.min(...slsV) : Math.max(...slsV)) : '';
+                    const lvPos = openTr.map(t => ({ u: (parseFloat(t.spent) || 0) * (parseFloat(t.leverage) || 1) / parseFloat(t.buy_price), b: parseFloat(t.buy_price), fx: (t.stats && t.stats.fxEnd) || 1 }));
+                    lvCell = mixed ? '<td class="sensitive"><small class="hp-sub">pozycje w obu kierunkach – TP/SL ustaw przy transakcjach</small></td>'
+                        : `<td class="sensitive tr-lv" data-lv-tk="${tk}" data-lv-mod="${lmod}" data-lv-ccy="${g[0].currency || 'USD'}" data-lv-pos="${encodeURIComponent(JSON.stringify(lvPos))}" data-lv-def="${dTp}|${dSl}">
+                            <div class="tr-lv-row"><label>TP <input type="number" step="any" class="tr-lv-in" data-lv="tp" value="${dTp}" title="Take profit dla całej spółki (domyślnie najwyższe TP z inwestycji)"></label><label>SL <input type="number" step="any" class="tr-lv-in" data-lv="sl" value="${dSl}" title="Stop loss dla całej spółki (domyślnie najniższe SL z inwestycji)"></label></div>
+                            <div class="tr-lv-sum"></div><button type="button" class="hp-btn tr-lv-save" data-lv-save hidden>✓ Zapisz TP/SL dla ${openTr.length === 1 ? 'transakcji' : openTr.length + ' transakcji'}</button></td>`;
+                }
                 const curKeys = Object.keys(byCur);
                 const curLines = curKeys.length === 1 ? `${byCur[curKeys[0]].spent.toFixed(2)} ${curKeys[0]}` :            // kilka walut w jednej spółce (np. błędnie zapisana transakcja) - każda opisana
                     curKeys.map(c => `<span title="kapitał transakcji zapisanych w ${c}">w ${c}: ${byCur[c].spent.toFixed(2)} ${c}</span>`).join('<br>') + ' <span title="Transakcje tej spółki mają różne waluty – sprawdź walutę (Serwis → Przelicz i napraw waluty wg giełd)">⚠</span>', profLines = Object.keys(byCur).map(c => `<span style="color:${byCur[c].prof >= 0 ? 'var(--success)' : 'var(--danger)'}">${byCur[c].prof.toFixed(2)} ${c}</span>`).join('<br>');
@@ -3568,14 +3349,15 @@ async function handleTradeAutomation(tradeId, tradeData) {
                     <td></td><td></td>
                     <td class="sensitive" title="Kapitał własny (bez dźwigni) w walucie spółki; w PLN po kursach z dni zakupu">${curLines}<br><b>${sumPln.toFixed(2)} PLN</b> <small class="hp-sub">razem</small></td>
                     <td class="sensitive">${avg ? 'śr. ' + avg.toFixed(avg < 10 ? 4 : 2) : '–'}<br>${cp ? 'teraz <b>' + cp + '</b>' : ''}</td>
-                    <td></td>
+                    ${lvCell}
                     <td class="sensitive"><b>${profLines}</b></td>
                     <td class="sensitive" style="color:${profPln >= 0 ? 'var(--success)' : 'var(--danger)'}"><b>${profPln.toFixed(2)} PLN</b></td>
                     <td>${prog != null ? `<div style="background:var(--bg-input); height:8px; border-radius:4px;"><div style="width:${Math.max(0, Math.min(100, prog * 100))}%; background:var(--accent); height:100%; border-radius:4px;"></div></div><small class="hp-sub">${(prog * 100).toFixed(0)}%</small>` : ''}</td>
-                    <td><button class="hp-btn" style="padding:4px 10px" onclick="event.stopPropagation(); Planer.openFor('${tk}')">🧭 Planuj</button></td></tr>`;
+                    <td></td></tr>`;
                 g.slice().sort((x, y) => new Date(y.buy_date || 0) - new Date(x.buy_date || 0)).forEach(item => { html += rowHtml(item, tk, !open); });
             });
             tb.innerHTML = html;
+            tb.querySelectorAll('.tr-lv').forEach(trLvRecalc);
             const peek = document.getElementById('tr-peek'); if (peek) peek.textContent = groups.length + ' spółek · ' + sortedTrades.length + ' transakcji';
 
             if(sortedTrades.length > 0) {
@@ -3606,6 +3388,36 @@ async function handleTradeAutomation(tradeId, tradeData) {
             }
 
             updatePageInfo('trade-page-info', currentTradePage, maxPage, groups.length, tradePageSize);
+        }
+
+        // ----- TP i SL dla całej spółki (wiersz zwinięty): R:R od średniej ceny oraz nominalny zysk przy TP i strata przy SL -----
+        function trLvRecalc(cell) {
+            if (!cell || !cell.dataset.lvPos) return;
+            const mod = +cell.dataset.lvMod, pos = JSON.parse(decodeURIComponent(cell.dataset.lvPos)), ccy = cell.dataset.lvCcy;
+            const tp = parseFloat(cell.querySelector('[data-lv="tp"]').value), sl = parseFloat(cell.querySelector('[data-lv="sl"]').value);
+            const units = pos.reduce((a, p) => a + p.u, 0), avg = units ? pos.reduce((a, p) => a + p.u * p.b, 0) / units : 0;
+            const val = (lvl, pln) => pos.reduce((a, p) => a + p.u * (lvl - p.b) * mod * (pln ? p.fx : 1), 0);
+            const f0 = v => Math.round(v).toLocaleString('pl-PL'), sg = v => (v >= 0 ? '+' : '−') + f0(Math.abs(v));
+            const rr = (isFinite(tp) && isFinite(sl) && (avg - sl) * mod > 0) ? (tp - avg) * mod / ((avg - sl) * mod) : null;
+            const parts = [];
+            if (rr != null) parts.push(`<b title="Od średniej ceny wejścia ${avg.toFixed(avg < 10 ? 4 : 2)}">R:R ${rr.toFixed(1)}</b>`);
+            if (isFinite(tp)) parts.push(`<span style="color:var(--success)" title="Zysk nominalny, gdy cena dojdzie do TP (z dźwignią)">TP ${sg(val(tp, false))} ${ccy}${ccy !== 'PLN' ? ' (≈ ' + sg(val(tp, true)) + ' PLN)' : ''}</span>`);
+            if (isFinite(sl)) parts.push(`<span style="color:var(--danger)" title="Strata nominalna, gdy cena dojdzie do SL (z dźwignią)">SL ${sg(val(sl, false))} ${ccy}${ccy !== 'PLN' ? ' (≈ ' + sg(val(sl, true)) + ' PLN)' : ''}</span>`);
+            cell.querySelector('.tr-lv-sum').innerHTML = parts.join('<br>') || '<small class="hp-sub">ustaw TP i SL</small>';
+            cell.querySelector('[data-lv-save]').hidden = ((cell.querySelector('[data-lv="tp"]').value || '') + '|' + (cell.querySelector('[data-lv="sl"]').value || '')) === cell.dataset.lvDef;
+        }
+        document.addEventListener('input', e => { if (e.target && e.target.classList && e.target.classList.contains('tr-lv-in')) trLvRecalc(e.target.closest('.tr-lv')); });
+        async function trLvSave(cell) {
+            const tk = cell.dataset.lvTk, tp = cell.querySelector('[data-lv="tp"]').value, sl = cell.querySelector('[data-lv="sl"]').value;
+            if (!tp && !sl) return alert('Podaj TP i/lub SL.');
+            const btn = cell.querySelector('[data-lv-save]'); btn.disabled = true; btn.textContent = 'Zapisuję…';
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/trades/set-levels`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: tk, tp: tp || null, sl: sl || null }) });
+                const j = await res.json().catch(() => ({}));
+                if (!res.ok || j.status !== 'success') throw new Error(j.message || ('HTTP ' + res.status));
+                if (j.warnings && j.warnings.length) alert('Zapisano, ale uwaga:\n' + j.warnings.join('\n'));
+                fetchTradesEntries(true);
+            } catch (err) { alert('Nie udało się zapisać TP/SL: ' + (err.message || err)); btn.disabled = false; btn.textContent = '✓ Zapisz ponownie'; }
         }
 
         async function deleteTrade(id) {
@@ -3686,8 +3498,10 @@ async function handleTradeAutomation(tradeId, tradeData) {
                 if (window.__trOpen.size >= all.length) { window.__trOpen.clear(); btn.textContent = 'Rozwiń wszystkie'; } else { all.forEach(x => window.__trOpen.add(x)); btn.textContent = 'Zwiń wszystkie'; }
                 renderTradesTable(); return;
             }
+            const lvSave = t.closest('[data-lv-save]');
+            if (lvSave) { e.stopPropagation(); trLvSave(lvSave.closest('.tr-lv')); return; }
             const g = t.closest('#trades-table tr.tr-grp');
-            if (g && !t.closest('a, button, .sd-link')) {
+            if (g && !t.closest('a, button, .sd-link, input, label, .tr-lv')) {
                 const tk = g.dataset.grpHead, open = !g.classList.contains('tr-open');
                 g.classList.toggle('tr-open', open);
                 if (open) window.__trOpen.add(tk); else window.__trOpen.delete(tk);
@@ -4413,58 +4227,55 @@ async function handleTradeAutomation(tradeId, tradeData) {
         document.getElementById('sell-trade-id').value = id; 
         document.getElementById('sell-date').value = new Date().toLocaleDateString('sv'); 
         document.getElementById('sell-price').value = ''; 
-        document.getElementById('sell-fraction').value = '1'; 
+        document.getElementById('sell-fraction').value = '100%'; 
+        document.getElementById('sell-reason').value = ''; 
     
         const trade = allTradesData.find(t => t.id === id); 
     
-        // --- 🛡️ INTEGRACJA STRAŻNIKA DYSCYPLINY ---
-        if (trade) {
-            // Obliczamy bieżącą cenę za pomocą istniejącej funkcji
-            const stats = calculateTradeStats(trade);
-            const currentPrice = stats.cp;
-        
-            // Pytamy strażnika o zgodność z planem (Akcja typu: 'SELL')
-            const validation = validateTradeAgainstPlan(id, 'SELL', currentPrice);
-        
-            const warningDiv = document.getElementById('trade-plan-warning');
-            if (warningDiv) {
-                warningDiv.style.display = 'block';
-                warningDiv.innerHTML = validation.message;
-            
-            // Dynamiczne stylowanie na podstawie werdyktu
-            if (validation.type === 'danger') {
-                warningDiv.style.color = 'var(--danger)';
-                warningDiv.style.borderLeft = '4px solid var(--danger)';
-                warningDiv.style.background = 'rgba(246, 70, 93, 0.1)';
-            } else if (validation.type === 'warning') {
-                warningDiv.style.color = 'var(--accent)';
-                warningDiv.style.borderLeft = '4px solid var(--accent)';
-                warningDiv.style.background = 'rgba(201, 148, 0, 0.1)';
-            } else {
-                warningDiv.style.color = 'var(--success)';
-                warningDiv.style.borderLeft = '4px solid var(--success)';
-                warningDiv.style.background = 'rgba(14, 203, 129, 0.1)';
-            }
-            warningDiv.style.padding = "12px";
-            }
-        }
-        // ----------------------------------------
+        // (dawny „strażnik dyscypliny” ze starego Planera Kampanii usunięty - funkcja validateTradeAgainstPlan już nie istnieje i wyjątek przerywał otwieranie okna)
 
-        if(trade && trade.leverage > 1) { 
-        document.getElementById('sell-cfd-group').style.display = 'block'; 
-        document.getElementById('sell-cfd-cost').value = '0'; 
-        } else { 
+        document.getElementById('sell-cfd-cost').value = '0'; document.getElementById('sell-profit').value = ''; 
         document.getElementById('sell-cfd-group').style.display = 'none'; 
-        document.getElementById('sell-cfd-cost').value = '0'; 
-        } 
+        sellRecalc(true);
       }
+    // Rozliczenie przy sprzedaży całości: zysk / strata wyliczone z ceny sprzedaży, a koszt CFD i zysk korygują się nawzajem
+    function sellFraction() {
+        const f = (document.getElementById('sell-fraction').value || '').trim(); let x = 1;
+        if (f.includes('%')) x = parseFloat(f.replace('%', '').replace(',', '.')) / 100; else if (f.includes('/')) { const p = f.split('/'); x = parseFloat(p[0]) / parseFloat(p[1]); } else { const v = parseFloat(f.replace(',', '.')); x = v > 1 ? v / 100 : v; }
+        return x;
+    }
+    function sellBase(trade, price) {                       // zysk przed kosztem CFD - jak w calculateTradeStats
+        const mod = ['DBR', 'RBR'].includes(trade.direction) ? 1 : -1, buy = parseFloat(trade.buy_price) || 0, val = (parseFloat(trade.spent) || 0) * (parseFloat(trade.leverage) || 1), div = parseFloat(trade.dividend) || 0;
+        return buy ? val * (((price - buy) / buy) * mod) + (mod > 0 ? div : -Math.abs(div)) : 0;
+    }
+    function sellRecalc(force) {
+        const grp = document.getElementById('sell-cfd-group'), id = document.getElementById('sell-trade-id').value, trade = allTradesData.find(t => String(t.id) === String(id));
+        const price = parseFloat(document.getElementById('sell-price').value), date = document.getElementById('sell-date').value, full = Math.abs(sellFraction() - 1) < 1e-9;
+        const show = !!(trade && date && price > 0 && full);
+        grp.style.display = show ? 'block' : 'none';
+        if (!show) { document.getElementById('sell-cfd-cost').value = '0'; return; }
+        document.getElementById('sell-ccy').textContent = trade.currency || '';
+        const base = sellBase(trade, price); window.__sellBase = base;
+        if (force || window.__sellFor !== id + '|' + price) {         // nowa cena = nowe wyliczenie (koszt CFD zostaje, zysk się przelicza)
+            window.__sellFor = id + '|' + price;
+            const cfd = parseFloat(document.getElementById('sell-cfd-cost').value) || 0;
+            document.getElementById('sell-profit').value = (base - cfd).toFixed(2);
+        }
+    }
+    ['sell-date', 'sell-price', 'sell-fraction'].forEach(i => document.addEventListener('input', e => { if (e.target && e.target.id === i) sellRecalc(false); }));
+    document.addEventListener('input', e => {
+        if (!e.target || window.__sellBase == null) return;
+        if (e.target.id === 'sell-profit') { const p = parseFloat(e.target.value); if (isFinite(p)) document.getElementById('sell-cfd-cost').value = (window.__sellBase - p).toFixed(2); }
+        if (e.target.id === 'sell-cfd-cost') { const c = parseFloat(e.target.value) || 0; document.getElementById('sell-profit').value = (window.__sellBase - c).toFixed(2); }
+    });
     function closeSellModal() { document.getElementById('sell-modal').style.display = 'none'; }
         async function confirmSell() { 
             const id = document.getElementById('sell-trade-id').value; 
             const price = parseFloat(document.getElementById('sell-price').value); 
             const date = document.getElementById('sell-date').value; 
-            const cfdCost = parseFloat(document.getElementById('sell-cfd-cost').value) || 0; 
-            const exitReason = document.getElementById('sell-reason').value;
+            const cfdShown = document.getElementById('sell-cfd-group').style.display !== 'none';
+            const cfdCost = cfdShown ? (parseFloat(document.getElementById('sell-cfd-cost').value) || 0) : 0; 
+            const exitReason = (document.getElementById('sell-reason').value || '').trim().slice(0, 200) || null;
             const fracStr = document.getElementById('sell-fraction').value.trim(); 
     
             if(!price || isNaN(price)) return alert('Błąd ceny!'); 
@@ -5354,7 +5165,9 @@ window.HomePage = (function () {
             const tr = r.n > 1 ? '<span class="hp-badge hp-b-check" title="Pozycje tego tickera są zsumowane">' + r.n + " transze</span>" : "";
             const stale = STALE[r.price_source] ? '<span class="hp-badge hp-b-stale" title="Wycena nie opiera się na notowaniu z ostatniej minuty">' + STALE[r.price_source] + "</span>" : "";
             const name = r.name ? '<div class="hp-name sd-link" data-tk="' + esc(r.ticker) + '" title="' + esc(r.name) + '">' + esc(r.name) + "</div>" : "";
-            return '<tr style="animation-delay:' + (i * 40) + 'ms"><td><span class="hp-tk sd-link" data-tk="' + esc(r.ticker) + '">' + esc(r.ticker) + '</span><span class="hp-badge ' + cls + '" title="' + levTip + '">' + txt + "</span>" + tr + stale + name + "</td>" +
+            const px = v => v.toLocaleString("pl-PL", { minimumFractionDigits: Math.abs(v) < 10 ? 4 : 2, maximumFractionDigits: Math.abs(v) < 10 ? 4 : 2 });
+            const price = r.price != null ? '<div class="hp-px" title="Aktualny kurs spółki' + (r.ext_price != null ? "; po sesji (" + (EXT_LABEL[r.ext_kind] || r.ext_kind) + ") " + px(r.ext_price) : "") + '">kurs <b>' + px(r.price) + "</b> " + esc(r.currency || "") + (r.ext_price != null ? ' <span class="hp-ext">(' + (EXT_LABEL[r.ext_kind] || r.ext_kind) + " " + px(r.ext_price) + ")</span>" : "") + "</div>" : "";
+            return '<tr style="animation-delay:' + (i * 40) + 'ms"><td><span class="hp-tk sd-link" data-tk="' + esc(r.ticker) + '">' + esc(r.ticker) + '</span><span class="hp-badge ' + cls + '" title="' + levTip + '">' + txt + "</span>" + tr + stale + name + price + "</td>" +
                 '<td class="hp-r"><div class="hp-wbar"><div class="hp-wtrack"><div class="hp-wfill" data-w="' + (r.weight_pct / max * 100).toFixed(1) + '"></div></div><span>' + fmtPlain(r.weight_pct, 1) + "</span></div></td>" +
                 '<td class="hp-r ' + sign(r.day_pct) + '">' + fmtPct(r.day_pct) + extCell(r.ext_move_pct, r.ext_kind, "Sama zmiana wartości pozycji", r.ext_price_pct) + '</td><td class="hp-r ' + sign(r.return_pct) + '">' + fmtPct(r.return_pct) + extCell(r.ext_return_move_pct, r.ext_kind, "Zmiana stopy zwrotu (w pkt proc.)", r.ext_price_pct) + "</td></tr>";
         }).join("");
@@ -5439,19 +5252,31 @@ window.HomePage = (function () {
         const h = new Date(Date.now() + 3600e3), hh = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Warsaw", hour: "2-digit", hour12: false }).format(h);
         t.value = hh + ":00";
     }
+    let editingNote = null;
+    function noteEditRow(n) {
+        const tickers = [...document.querySelectorAll("#hp-n-ticker option")].map(o => o.value).filter(Boolean);
+        if (tickers.indexOf(n.ticker) < 0) tickers.unshift(n.ticker);
+        const date = n.created_at ? new Date(n.created_at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+        return '<tr class="hp-note-row hp-editing" data-id="' + esc(n.id) + '"><td><select class="hp-ed-tk" aria-label="Ticker">' + tickers.map(t => '<option value="' + esc(t) + '"' + (t === n.ticker ? " selected" : "") + ">" + esc(t) + "</option>").join("") + "</select></td>" +
+            '<td><select class="hp-ed-ac" aria-label="Akcja">' + Object.keys(ACTION).map(a => '<option value="' + a + '"' + (a === n.action ? " selected" : "") + ">" + ACTION[a] + "</option>").join("") + "</select></td>" +
+            '<td class="hp-col-date" style="white-space:nowrap;color:var(--text-muted)">' + date + '</td><td><input class="hp-ed-desc" maxlength="500" value="' + esc(n.description) + '" aria-label="Opis"></td>' +
+            '<td class="hp-r" colspan="2" style="white-space:nowrap"><button type="button" class="hp-btn hp-primary hp-ed-save">Zapisz</button> <button type="button" class="hp-btn hp-ed-cancel">Anuluj</button></td></tr>';
+    }
     function noteRow(n, i) {
+        if (editingNote != null && String(editingNote) === String(n.id) && !n.done) return noteEditRow(n);
         const date = n.created_at ? new Date(n.created_at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
         return '<tr class="hp-note-row ' + (n.done ? "hp-done" : "") + '" data-id="' + esc(n.id) + '" style="animation-delay:' + (i * 30) + 'ms">' +
             '<td><span class="hp-tk sd-link" data-tk="' + esc(n.ticker) + '">' + esc(n.ticker) + '</span></td><td><button type="button" class="hp-badge hp-b-' + esc(n.action) + ' hp-note-go" style="margin-left:0" title="' + (GO[n.action] ? "Przejdź do: " + GO[n.action][1] + " (ticker " + esc(n.ticker) + ")" : "") + '">' + (ACTION[n.action] || esc(n.action)) + (GO[n.action] ? " →" : "") + "</button></td>" +
             '<td class="hp-col-date" style="white-space:nowrap;color:var(--text-muted)">' + date + '</td><td class="hp-desc">' + esc(n.description) + alertTag(n) + "</td>" +
             '<td class="hp-r"><input type="checkbox" class="hp-chk" aria-label="Wykreśl notatkę" ' + (n.done ? "checked" : "") + "></td>" +
-            '<td class="hp-r"><button class="hp-x" type="button" aria-label="Usuń notatkę">×</button></td></tr>';
+            '<td class="hp-r" style="white-space:nowrap">' + (n.done ? "" : '<button class="hp-edit" type="button" aria-label="Edytuj notatkę" title="Edytuj wpis">✎</button>') + '<button class="hp-x" type="button" aria-label="Usuń notatkę">×</button></td></tr>';
     }
     function renderNotes() {
         const sorted = [...notes].sort((a, b) => (a.done - b.done) || (new Date(b.created_at) - new Date(a.created_at)));
         $("#hp-notes").innerHTML = sorted.length ? sorted.map(noteRow).join("") : '<tr><td colspan="6" class="hp-empty">Brak notatek - dodaj pierwszą powyżej</td></tr>';
-        const open = notes.filter(n => !n.done).length;
+        const open = notes.filter(n => !n.done).length, done = notes.length - open;
         $("#hp-peek-notes").textContent = open ? open + " aktywnych" : "";
+        const clr = $("#hp-n-clear"); if (clr) { clr.hidden = !done; clr.textContent = "🧹 Wyczyść odznaczone (" + done + ")"; }
     }
     // lista tickerów dostępnych w Database (zakładka Baza) do wyboru w notatniku
     async function loadTickerOptions() {
@@ -5519,6 +5344,15 @@ window.HomePage = (function () {
             const tr = ev.target.closest("tr.hp-note-row"); if (!tr) return;
             const n = notes.find(x => String(x.id) === tr.dataset.id); if (!n) return;
             if (ev.target.closest(".hp-note-go")) { goNote(n); return; }
+            if (ev.target.closest(".hp-edit")) { editingNote = n.id; renderNotes(); const f = $("#hp-notes .hp-ed-desc"); if (f) f.focus(); return; }
+            if (ev.target.closest(".hp-ed-cancel")) { editingNote = null; renderNotes(); return; }
+            if (ev.target.closest(".hp-ed-save")) {
+                try {
+                    const r = await post("/api/notes/edit", { id: n.id, ticker: tr.querySelector(".hp-ed-tk").value, action: tr.querySelector(".hp-ed-ac").value, description: tr.querySelector(".hp-ed-desc").value });
+                    Object.assign(n, r.note || {}); editingNote = null; renderNotes(); showErr("notes", null);
+                } catch (e) { showErr("notes", e); }
+                return;
+            }
             try {
                 if (ev.target.classList.contains("hp-chk")) {
                     const prev = n.done; n.done = ev.target.checked; tr.classList.toggle("hp-done", n.done);
@@ -5529,6 +5363,10 @@ window.HomePage = (function () {
                     notes = notes.filter(x => x !== n); renderNotes();
                 }
             } catch (e) { showErr("notes", e); renderNotes(); }
+        });
+        $("#hp-n-clear").addEventListener("click", async () => {
+            const done = notes.filter(n => n.done).length; if (!done || !confirm("Usunąć wszystkie odznaczone (wykreślone) wpisy: " + done + "?")) return;
+            try { await post("/api/notes/clear-done", {}); notes = notes.filter(n => !n.done); editingNote = null; renderNotes(); showErr("notes", null); } catch (e) { showErr("notes", e); }
         });
         placePill(); refresh();
         setInterval(() => { if (visible()) { loadSummary(); loadChart(); } }, 60000);
@@ -5561,7 +5399,7 @@ window.StockDetail = (function () {
     const fmtCompact = v => { const a = Math.abs(v), s = v < 0 ? "-" : ""; return a >= 1e9 ? s + (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? s + (a / 1e6).toFixed(2) + "M" : a >= 1e3 ? s + (a / 1e3).toFixed(1) + "K" : s + a.toFixed(0); };
 
     let st = { ticker: null, interval: "1d", range: "ytd", markers: "both", zonesOn: new Set(), zonesFor: null, data: null, seq: 0, sort: {}, collapsed: new Set(), groupLev: true, secOpen: true, secClosed: null, cvdMode: "candles", cvdAnchor: "auto", cvdData: null, cvdKey: null, cvdSeq: 0 };
-    let chart = null, candles = null, volume = null, zonesPrim = null, entriesPrim = null, ro = null;
+    let chart = null, candles = null, volume = null, zonesPrim = null, entriesPrim = null, exitsPrim = null, ro = null;
     let cvdChart = null, cvdSeries = null, cvdSeriesMode = null, cvdOverlay = null, syncing = false;
 
     // ---------- prymityw rysujący strefy (delikatna poświata za świecami) ----------
@@ -5600,9 +5438,9 @@ window.StockDetail = (function () {
     }
 
     // ---------- prymityw: punkty wejść na dokładnej cenie (scalone w ciągu dnia), z udziałem w wartości inwestycji ----------
-    function makeEntriesPrimitive() {
+    function makeEntriesPrimitive(shape) {
         const prim = {
-            items: [], maxWeight: 1, hits: [], chart: null, series: null, request: null,
+            shape: shape || "circle", items: [], maxWeight: 1, hits: [], chart: null, series: null, request: null,
             attached(p) { this.chart = p.chart; this.series = p.series; this.request = p.requestUpdate; },
             detached() { this.chart = this.series = this.request = null; },
             updateAllViews() {},
@@ -5629,7 +5467,8 @@ window.StockDetail = (function () {
                             const col = MARK_COLOR[it.kind];
                             // wielkość kropki = wielkość wejścia (nominał z dźwignią), pole proporcjonalne do wagi
                             const r = 3.5 + 8.5 * Math.sqrt(Math.max(0, Math.min(1, (it.weight || 0) / maxW)));
-                            ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+                            ctx.beginPath();
+                            if (prim.shape === "square") ctx.rect(x - r, y - r, 2 * r, 2 * r); else ctx.arc(x, y, r, 0, 2 * Math.PI);        // zamknięcia: kwadrat, bok = wielkość zysku / straty
                             ctx.fillStyle = col; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
                             ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(11,14,17,0.95)"; ctx.stroke();
                             prim.hits.push({ x, y, r, it });
@@ -5656,7 +5495,7 @@ window.StockDetail = (function () {
             '<div class="sd-kpis" id="sd-summary"></div>' +
             '<div class="sd-controls"><div><span class="sd-ctl-l">Zakres</span><span class="sd-seg" id="sd-ranges"></span></div>' +
             '<div><span class="sd-ctl-l">Interwał</span><span class="sd-seg" id="sd-intervals"></span></div>' +
-            '<div><span class="sd-ctl-l">Wejścia</span><span class="sd-seg" id="sd-markers"></span></div>' +
+            '<div><span class="sd-ctl-l" title="Kółka = wejścia (rozmiar = wielkość wejścia), kwadraty = zamknięcia (rozmiar = wielkość zysku / straty)">Wejścia ● / zamknięcia ■</span><span class="sd-seg" id="sd-markers"></span></div>' +
             '<div><span class="sd-ctl-l">CVD</span><span class="sd-seg" id="sd-cvdmode"></span> <select class="sd-select" id="sd-cvdanchor" title="Kiedy zerować sumę CVD (jak „Anchor period" na TradingView)">' + CVD_ANCHORS.map(a => '<option value="' + a[0] + '">reset: ' + a[1] + "</option>").join("") + "</select></div></div>" +
             '<div class="sd-zones" id="sd-zones"></div>' +
             '<div class="sd-chart-wrap"><div class="ohlc-legend" id="sd-ohlc"></div><div id="sd-chart"></div><div class="sd-msg" id="sd-msg"></div></div>' +
@@ -5716,7 +5555,7 @@ window.StockDetail = (function () {
         if (st.ctlDetail) st.ctlDetail.abort(); if (st.ctlCvd) st.ctlCvd.abort();
         if (ro) { ro.disconnect(); ro = null; }
         removeCvd();
-        if (chart) { chart.remove(); chart = candles = volume = zonesPrim = entriesPrim = null; }
+        if (chart) { chart.remove(); chart = candles = volume = zonesPrim = entriesPrim = exitsPrim = null; }
     }
     function setRange(r) {
         st.range = r;
@@ -5769,7 +5608,8 @@ window.StockDetail = (function () {
     function render() {
         const d = st.data, [bcls, btxt] = KIND[d.kind] || KIND.none;
         $("#sd-title").innerHTML = esc(d.ticker) + '<span class="sd-badge ' + bcls + '">' + btxt + "</span>";
-        $("#sd-name").textContent = d.name || "";
+        const tdy = (d.summary || {}).today;
+        $("#sd-name").innerHTML = esc(d.name || "") + (d.price != null ? (d.name ? " · " : "") + 'kurs <b class="sd-px">' + fmtPrice(d.price) + "</b>" + (tdy != null ? ' <span class="' + tone(tdy) + '">' + fmtPct(tdy) + " dziś</span>" : "") : "");
         const tv = $("#sd-tv");
         if (typeof getTradingViewLink === "function") { try { tv.href = getTradingViewLink(d.ticker); tv.hidden = false; } catch (e) { tv.hidden = true; } }
         // wyniki w % względem zainwestowanej kwoty - zależnie od typu pozycji
@@ -5936,7 +5776,7 @@ window.StockDetail = (function () {
     }
 
     // ---------- wykres ----------
-    function clearChart() { if (candles) { candles.setData([]); volume.setData([]); entriesPrim.setItems([]); zonesPrim.setZones([]); } }
+    function clearChart() { if (candles) { candles.setData([]); volume.setData([]); entriesPrim.setItems([]); exitsPrim.setItems([]); zonesPrim.setZones([]); } }
     function drawChart() {
         const d = st.data;
         if (typeof LightweightCharts === "undefined") { showMsg("Biblioteka wykresów nie została załadowana (sprawdź połączenie z internetem)."); return; }
@@ -5957,6 +5797,7 @@ window.StockDetail = (function () {
             candles.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } });
             zonesPrim = makeZonesPrimitive(); candles.attachPrimitive(zonesPrim);
             entriesPrim = makeEntriesPrimitive(); candles.attachPrimitive(entriesPrim);
+            exitsPrim = makeEntriesPrimitive("square"); candles.attachPrimitive(exitsPrim);
             chart.subscribeCrosshairMove(p => { showTip(p); const bars = (st.data && st.data.bars) || []; const b = p && p.time ? bars.find(x => x.time === p.time) : bars[bars.length - 1]; drawOhlc("#sd-ohlc", b ? { t: b.time, o: b.o, h: b.h, l: b.l, c: b.c, v: b.v } : null, st.interval === "1h" || st.interval === "4h"); });
         }
         const intraday = d.interval === "1h" || d.interval === "4h";
@@ -5976,6 +5817,8 @@ window.StockDetail = (function () {
         const items = (d.entries || []).filter(m => mode === "both" || (mode === "open" && m.kind === "open") || (mode === "closed" && m.kind !== "open"));
         // skala wielkości liczona po wszystkich wejściach w danych, więc przełączanie filtra nie zmienia rozmiarów kropek
         entriesPrim.setItems(mode === "none" ? [] : items, Math.max.apply(null, [1].concat((d.entries || []).map(e => e.weight || 0))));
+        const exs = mode === "both" || mode === "closed" ? (d.exits || []) : [];                  // zamknięcia (kwadraty) razem z wejściami zamkniętych i otwartych
+        exitsPrim.setItems(exs, Math.max.apply(null, [1].concat((d.exits || []).map(e => e.weight || 0))));
         zonesPrim.setZones((d.zones || []).filter(z => st.zonesOn.has(z.entry_id)).map(z => ({ lo: Math.min(z.start, z.end), hi: Math.max(z.start, z.end), side: z.side })));
     }
 
@@ -6086,8 +5929,13 @@ window.StockDetail = (function () {
     function showTip(p) {
         const tip = $("#sd-tip"); if (!tip) return;
         let best = null;
-        if (p && p.point && entriesPrim) entriesPrim.hits.forEach(h => { const dd = Math.hypot(h.x - p.point.x, h.y - p.point.y); if (dd <= Math.max(11, h.r + 3) && (!best || dd < best.d)) best = { d: dd, h: h }; });
+        [entriesPrim, exitsPrim].forEach(pr => { if (p && p.point && pr) pr.hits.forEach(h => { const dd = Math.hypot(h.x - p.point.x, h.y - p.point.y); if (dd <= Math.max(11, h.r + 3) && (!best || dd < best.d)) best = { d: dd, h: h, sq: pr === exitsPrim }; }); });
         if (!best) { tip.classList.add("sd-off"); return; }
+        if (best.sq) {
+            const ex = best.h.it;
+            tip.textContent = "Zamknięcie " + fmtPrice(ex.price) + " · " + (ex.count > 1 ? ex.count + " transakcje · " : "") + (ex.pnl_pln >= 0 ? "zysk " : "strata ") + Math.round(Math.abs(ex.pnl_pln)).toLocaleString("pl-PL") + " PLN" + (ex.pnl_pct != null ? " (" + fmtPct(ex.pnl_pct) + ")" : "");
+            tip.classList.remove("sd-off"); return;
+        }
         const it = best.h.it, name = { open: "otwarta", win: "zamknięta z zyskiem", loss: "zamknięta ze stratą" }[it.kind];
         tip.textContent = "Wejście " + fmtPrice(it.price) + " · " + (it.count > 1 ? it.count + " transakcje (" : "") + name + (it.count > 1 ? ")" : "") + (it.share_pct != null ? " · " + fmtPlain(it.share_pct, 1) + " wartości inwestycji" : "");
         tip.classList.remove("sd-off");
