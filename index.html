@@ -451,6 +451,11 @@
         .fz-rblock { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; margin-bottom: 6px; } .fz-rblock summary { cursor: pointer; list-style: none; }
         /* radar zagrań i ocena wejścia */
         #ev-radar { padding: 4px 0 16px; } .ev-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; align-items: center; } .ev-controls input[type=search], .ev-controls select { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; }
+        .an-form { display: grid; grid-template-columns: minmax(150px, 1.2fr) repeat(2, minmax(130px, 1fr)) minmax(170px, 1fr) auto; gap: 8px; margin: 12px 0 6px; align-items: end; } .an-form label { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; color: var(--text-muted); } .an-form input, .an-form select { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 9px 12px; min-width: 0; color: var(--text-main); font-size: .9rem; } .an-go { background: var(--accent-hover); color: #0b0e11; border: 0; border-radius: 10px; padding: 10px 18px; font-weight: 700; cursor: pointer; } .an-go:disabled { opacity: .5; cursor: wait; }
+        .an-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; } .an-presets button { background: none; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 8px; padding: 3px 10px; cursor: pointer; font-size: .8rem; } .an-presets button:hover { color: var(--text-main); border-color: var(--accent); }
+        .an-tbl td, .an-tbl th { white-space: nowrap; }
+        .an-bar { display: inline-block; height: 6px; border-radius: 3px; vertical-align: middle; margin-right: 6px; min-width: 2px; } .an-chart-box { position: relative; height: 340px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; margin: 12px 0; } .an-name { display: block; color: var(--text-muted); font-size: .75rem; font-weight: 400; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+        @media (max-width: 900px) { .an-form { grid-template-columns: 1fr 1fr; } .an-form label:first-child, .an-go { grid-column: 1 / -1; } .an-chart-box { height: 280px; } }
         .ev-count { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px; } .ev-empty { padding: 24px; text-align: center; color: var(--text-muted); } .ev-bad { color: var(--danger); }
         .ev-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } .ev-table th { text-align: left; color: var(--text-muted); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--border-color); cursor: pointer; white-space: nowrap; }
         .ev-table td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; } .ev-table tbody tr:hover { background: rgba(201,148,0,.06); } .ev-act { white-space: nowrap; text-align: right; } .ev-tv { text-decoration: none; display: inline-block; }
@@ -897,6 +902,7 @@
             <button class="tab-btn" onclick="switchSummaryTab('score')">Skuteczność wg punktów</button>
             <button class="tab-btn" onclick="switchSummaryTab('audit')">Audyt zasad (SL/TP)</button>
             <button class="tab-btn" onclick="switchSummaryTab('sim')">Symulator wyjść</button> 
+            <button class="tab-btn" onclick="switchSummaryTab('analogs')">Analogie</button>
         </div> 
         <div id="tab-dashboard" class="tab-content active"> 
             <div class="kpi-grid"> 
@@ -972,6 +978,19 @@
             <div class="plx-actions" style="margin:10px 0;gap:14px"><label class="ev-muted">Zakres: <select id="sim-scope" onchange="loadExitSim()"><option value="closed">tylko zamknięte</option><option value="all">zamknięte + otwarte (do dziś)</option></select></label>
                 <label class="ev-muted">Reguła złamana, gdy: <select id="sim-mode" onchange="loadExitSim()"><option value="close">zamknięcie dnia (korpus)</option><option value="touch">kurs dotknie poziomu (knot)</option></select></label></div>
             <div id="sim-body"><div class="ev-empty">Ładowanie symulacji…</div></div>
+        </div>
+        <div id="tab-analogs" class="tab-content">
+            <div class="ev-muted">Szukam w zapisanych świecach dziennych wszystkich tickerów z bazy (do 10 lat wstecz) okien o podobnym <b>kształcie ceny</b>, <b>zmienności</b> i <b>wolumenie</b> do wskazanego fragmentu wykresu i pokazuję, co działo się z kursem po nich po 1, 3, 6 i 12 miesiącach. To statystyka historyczna, nie prognoza: każdy wynik porównuję z rozkładem <b>bazowym</b> (wszystkie okna archiwum, bez względu na kształt), żeby było widać, czy analogie wnoszą coś ponad zwykłe prawdopodobieństwo wzrostu na tym rynku.</div>
+            <div class="an-form">
+                <label>Ticker<input id="an-ticker" list="an-tickers" placeholder="np. GPW:DEK" autocomplete="off" spellcheck="false"></label><datalist id="an-tickers"></datalist>
+                <label>Od<input type="date" id="an-from"></label>
+                <label>Do<input type="date" id="an-to"></label>
+                <label>Podobieństwo<select id="an-level"><option value="scisle">ścisłe (od 65%)</option><option value="umiarkowane" selected>umiarkowane (od 56%)</option><option value="luzne">luźne (od 47%)</option></select></label>
+                <button type="button" class="an-go" id="an-go">Szukaj analogii</button>
+            </div>
+            <div class="an-presets ev-muted">Zakres: <button type="button" data-an-preset="20">20 sesji</button><button type="button" data-an-preset="40">40</button><button type="button" data-an-preset="60">60</button><button type="button" data-an-preset="120">120</button><button type="button" data-an-preset="250">rok</button> do dziś</div>
+            <div class="ev-muted" id="an-status"></div>
+            <div id="an-body"><div class="ev-empty">Wpisz ticker i zakres dat (domyślnie ostatnie ~60 sesji) i kliknij „Szukaj analogii”.</div></div>
         </div>
         <div id="tab-closed" class="tab-content"> 
             <div class="table-controls"> 
@@ -3517,7 +3536,7 @@ async function handleTradeAutomation(tradeId, tradeData) {
         }
 
         // --- SUMMARY MODULE ---
-        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'score') loadScoreReport(); if(tab === 'audit') loadRuleAudit(); if(tab === 'sim') loadExitSim(); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
+        function switchSummaryTab(tab) { document.querySelectorAll('#summary-module .tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('#summary-module .tab-content').forEach(c => c.classList.remove('active')); event.currentTarget.classList.add('active'); document.getElementById('tab-'+tab).classList.add('active'); if(tab === 'score') loadScoreReport(); if(tab === 'audit') loadRuleAudit(); if(tab === 'sim') loadExitSim(); if(tab === 'analogs' && window.Analogs) Analogs.open(); if(tab === 'dashboard' && summaryChartInstance) { setTimeout(() => { summaryChartInstance.resize(); summaryChartInstance.update(); }, 50); } }
         
         async function initSummaryModule() {
             if(allTradesData.length === 0) { try { const res = await fetch(`${API_BASE_URL}/api/trades/entries`); allTradesData = await res.json() || []; } catch(e) {} }
@@ -8289,6 +8308,169 @@ window.HomeTodo = (function () {
     document.addEventListener("change", e => { if (e.target && e.target.id === "td-opd-filter") { optSet(e.target.value); render(); } });
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", load); else load();
     return { load: load };
+})();
+</script>
+<script>
+/* Zakładka „Analogie” (Podsumowanie): szukanie w archiwum świec dziennych okien podobnych do wskazanego fragmentu wykresu
+   i statystyka tego, co działo się po nich po 1 / 3 / 6 / 12 miesiącach (kontra rozkład bazowy). Backend: analogs.py. */
+window.Analogs = (function () {
+    "use strict";
+    const $ = (s, r) => (r || document).querySelector(s);
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const f1 = (v, d) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const sg = (v, d) => v == null ? "–" : (v > 0 ? "+" : "") + f1(v, d == null ? 1 : d) + "%";
+    const pc = v => v == null ? "–" : f1(v, 0) + "%";
+    const col = v => v == null ? "" : (v >= 0 ? "var(--success)" : "var(--danger)");
+    const HZ = [["21", "1 mies."], ["63", "3 mies."], ["126", "6 mies."], ["252", "12 mies."]];
+    const pad = n => String(n).padStart(2, "0");
+    const ymd = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    let chart = null, inited = false, busy = false, timer = null, lastReq = null;
+
+    function setRange(sessions) {
+        const to = new Date(), from = new Date(); from.setDate(from.getDate() - Math.ceil(sessions * 7 / 5) - 2);
+        $("#an-from").value = ymd(from); $("#an-to").value = ymd(to);
+    }
+    async function fillTickers() {
+        let rows = (typeof tickerDataArray !== "undefined" && Array.isArray(tickerDataArray)) ? tickerDataArray : [];
+        if (!rows.length) { try { const r = await fetch(API_BASE_URL + "/api/database"); const d = await r.json(); rows = Array.isArray(d) ? d : []; } catch (e) { rows = []; } }
+        $("#an-tickers").innerHTML = rows.map(t => `<option value="${esc(t.ticker)}">${esc(t.stock_name || "")}</option>`).join("");
+    }
+    async function status() {
+        const box = $("#an-status"); if (!box) return null;
+        try {
+            const r = await fetch(API_BASE_URL + "/api/analogs/status"), d = await r.json();
+            const b = d.builder || {}, age = d.age_hours;
+            let t = d.tickers ? `Archiwum: ${d.tickers} tickerów` + (age != null ? `, odświeżone ${age < 1 ? "przed chwilą" : f1(age, 0) + " godz. temu"}` : "") + "." : "Archiwum jest puste.";
+            if (b.running) t = `Buduję archiwum świec: ${b.done}/${b.total}${b.current ? " (" + esc(b.current) + ")" : ""}…`;
+            else if (b.errors && b.errors.length) t += ` Nie pobrano ${b.errors.length} tickerów (np. ${esc(b.errors.slice(0, 3).map(e => e.ticker).join(", "))}).`;
+            box.innerHTML = t + (b.running ? "" : ' <a href="#" data-an-rebuild style="color:var(--accent-hover)">Przebuduj archiwum</a>');
+            return d;
+        } catch (e) { box.textContent = ""; return null; }
+    }
+    function poll() {
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+            const d = await status(), b = d && d.builder;
+            const body = $("#an-body");
+            if (b && b.running) {
+                if (body && lastReq) body.innerHTML = `<div class="ev-empty">Archiwum świec dopiero się buduje (${b.done}/${b.total}). Po zakończeniu wyszukam automatycznie – może to potrwać kilka minut.</div>`;
+                poll();
+            } else if (lastReq && d && d.tickers >= 5) search();
+        }, 4000);
+    }
+    const narrow = () => window.innerWidth < 600;
+    function legendLabel(v) {
+        const hz = HZ.find(h => +h[0] === v);
+        if (narrow()) return v === 0 ? "0" : v < 0 ? String(v) : "+" + (hz ? hz[1].replace(/ mies\./, " m.") : v);
+        return v === 0 ? "koniec okna" : v < 0 ? v + " sesji" : "+" + (hz ? hz[1] : v + " sesji");
+    }
+    function drawChart(d) {
+        const cv = $("#an-chart"); if (!cv || !window.Chart) return;
+        if (chart) { chart.destroy(); chart = null; }
+        const muted = getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim() || "#848e9c";
+        const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent-hover").trim() || "#fcd535";
+        const win = d.query.path, sh = d.shape, fp = d.path;
+        const med = [], lo = [], hi = [];
+        if (sh) sh.k.forEach((k, i) => { if (k < 0) { med.push({ x: k, y: sh.p50[i] }); lo.push({ x: k, y: sh.p25[i] }); hi.push({ x: k, y: sh.p75[i] }); } });
+        if (fp) fp.k.forEach((k, i) => { if (fp.p50[i] != null) { med.push({ x: k, y: fp.p50[i] }); lo.push({ x: k, y: fp.p25[i] }); hi.push({ x: k, y: fp.p75[i] }); } });
+        const qpts = win.k.map((k, i) => ({ x: k, y: win.v[i] }));
+        const kmin = win.k[0], kmax = Math.max(0, ...(fp ? fp.k.filter((k, i) => fp.p50[i] != null) : [0]));
+        chart = new Chart(cv.getContext("2d"), {
+            type: "line",
+            data: { datasets: [
+                { label: "p25", data: lo, borderWidth: 0, pointRadius: 0, fill: false, order: 4 },
+                { label: "Środkowe 50% analogii", data: hi, borderWidth: 0, pointRadius: 0, backgroundColor: "rgba(96,165,250,.16)", fill: "-1", order: 3 },
+                { label: "Mediana analogii", data: med, borderColor: "#60a5fa", borderWidth: 2, pointRadius: 0, tension: .2, order: 2, segment: { borderDash: c => c.p1.parsed.x <= 0 ? [5, 4] : undefined } },
+                { label: d.query.symbol + " – wskazane okno", data: qpts, borderColor: accent, borderWidth: 2.6, pointRadius: 0, tension: .15, order: 1 },
+            ] },
+            options: {
+                responsive: true, maintainAspectRatio: false, parsing: false, animation: { duration: 500 },
+                interaction: { mode: "nearest", axis: "x", intersect: false },
+                plugins: {
+                    legend: { labels: { color: muted, filter: it => it.datasetIndex !== 0, boxWidth: 18 } },
+                    tooltip: { filter: it => it.datasetIndex >= 2, callbacks: { title: it => it.length ? legendLabel(Math.round(it[0].parsed.x)) : "", label: c => c.dataset.label + ": " + sg(c.parsed.y, 1) } },
+                },
+                scales: {
+                    x: { type: "linear", min: kmin, max: kmax || 252,
+                        afterBuildTicks: ax => { ax.ticks = [kmin, 0, 21, 63, 126, 252].filter((v, i, a) => v <= (kmax || 252) && a.indexOf(v) === i).map(v => ({ value: v })); },
+                        ticks: { color: muted, callback: v => legendLabel(v), maxRotation: 0, autoSkip: false },
+                        grid: { color: c => c.tick && c.tick.value === 0 ? "rgba(252,213,53,.55)" : "rgba(128,128,128,.12)" } },
+                    y: { grid: { color: "rgba(128,128,128,.12)" }, ticks: { color: muted, callback: v => v + "%" } },
+                },
+            },
+        });
+    }
+    function render(d) {
+        const q = d.query, body = $("#an-body");
+        const kpi = [
+            ["Znalezione analogie", d.found, `z ${d.tickers} spółek · ${d.months} różnych miesięcy`],
+            ["Podobieństwo", d.avg_similarity == null ? "–" : f1(d.avg_similarity, 0) + "%", `średnie · najlepsze ${f1(d.best_similarity, 0)}% · poziom ${esc(d.level_label)} (od ${f1(d.min_similarity, 0)}%)`],
+            ["Wskazane okno", sg(q.ret_pct, 1), `${q.bars} sesji · ${esc(q.from)} → ${esc(q.to)}`],
+            ["Zmienność dzienna", f1(q.vol_daily_pct, 1) + "%", `maks. obsunięcie w oknie ${f1(q.drawdown_pct, 1)}%` + (q.has_volume ? "" : " · brak wolumenu")],
+        ];
+        let h = `<div class="plx-h" style="margin-top:10px">${esc(q.symbol)}${q.name ? ' <span class="ev-muted">' + esc(q.name) + "</span>" : ""}</div>`;
+        h += '<div class="kpi-grid" style="margin:10px 0">' + kpi.map(k => `<div class="kpi-card"><h4>${k[0]}</h4><div class="value">${k[1]}</div><div class="ev-muted">${k[2]}</div></div>`).join("") + "</div>";
+        if (d.summary && d.summary.length) h += '<div class="ev-note" style="margin:8px 0">' + d.summary.map(esc).join("<br>") + "</div>";
+        if (d.found) {
+            h += '<div class="plx-h" style="margin-top:14px">Co było dalej – scenariusze po zakończeniu okna</div>';
+            h += '<div class="table-responsive"><table class="hp-table an-tbl"><thead><tr><th>Po</th><th>Odbicie w górę</th><th>Konsolidacja</th><th>Dalszy spadek</th><th>Mediana</th><th>Zakres 10–90%</th><th>Wzrost</th><th>Próba</th></tr></thead><tbody>';
+            HZ.forEach(([k, lab]) => {
+                const s = d.stats[k]; if (!s || !s.n) { h += `<tr><td><b>${lab}</b></td><td colspan="7" class="ev-muted">brak danych (analogie są zbyt świeże)</td></tr>`; return; }
+                const b = s.base || {}, th = f1(s.threshold, 0);
+                const cell = (v, bv, c) => `<td><span class="an-bar" style="width:${Math.max(2, Math.round(v * .7))}px;background:${c}"></span><b>${pc(v)}</b><div class="ev-muted">bazowo ${pc(bv)}</div></td>`;
+                h += `<tr><td><b>${lab}</b></td>` + cell(s.bigup_pct, b.bigup_pct, "var(--success)") + cell(s.flat_pct, b.flat_pct, "var(--text-muted)") + cell(s.bigdown_pct, b.bigdown_pct, "var(--danger)") +
+                    `<td style="color:${col(s.median)}"><b>${sg(s.median, 1)}</b><div class="ev-muted">bazowo ${sg(b.median, 1)}</div></td>` +
+                    `<td>${sg(s.p10, 0)} … ${sg(s.p90, 0)}<div class="ev-muted">śr. ${sg(s.mean, 1)}</div></td>` +
+                    `<td><b>${pc(s.up_pct)}</b><div class="ev-muted">bazowo ${pc(b.up_pct)}</div></td><td>${s.n}</td></tr>`;
+            });
+            h += "</tbody></table></div>";
+            h += '<div class="ev-muted" style="margin-top:6px">Progi „wyraźnego” ruchu: ' + HZ.map(([k, lab]) => `${f1(d.stats[k].threshold, 0)}% po ${lab}`).join(", ") + ". „Odbicie” = wzrost o co najmniej próg, „dalszy spadek” = spadek o co najmniej próg, „konsolidacja” – pomiędzy. „Bazowo” = ten sam rozkład dla wszystkich okien archiwum.</div>";
+            if (q.realized || d.realized) {
+                const rl = d.realized; if (rl) h += '<div class="ev-muted" style="margin:8px 0">Jak było naprawdę po tym oknie (' + esc(q.symbol) + "): " + HZ.map(([k, lab]) => `${lab} <b style="color:${col(rl[k])}">${sg(rl[k], 1)}</b>`).join(" · ") + ".</div>";
+            }
+            h += '<div class="plx-h" style="margin-top:14px">Typowa droga: okno i to, co było po nim</div><div class="an-chart-box"><canvas id="an-chart"></canvas></div>';
+            h += '<div class="ev-muted">Złota linia – wskazane okno (zmiana % względem jego końca). Niebieska przerywana – typowy kształt okien analogii przed „końcem okna”, niebieska ciągła – mediana ich dalszej drogi; niebieskie pasmo – środkowe 50% analogii (punkty z mniej niż 5 analogii pomijam).</div>';
+            h += '<div class="plx-h" style="margin-top:14px">Najbardziej podobne okna</div><div class="table-responsive"><table class="hp-table an-tbl"><thead><tr><th>Spółka</th><th>Okres</th><th>Podobieństwo</th><th>Ruch w oknie</th>' + HZ.map(x => `<th>Po ${x[1]}</th>`).join("") + "</tr></thead><tbody>";
+            h += d.analogs.map(a => `<tr><td><b>${esc(a.symbol)}</b>${a.name ? '<span class="an-name">' + esc(a.name) + "</span>" : ""}</td><td>${esc(a.from)} → ${esc(a.to)}<div class="ev-muted">${a.bars} sesji</div></td><td><b>${f1(a.similarity, 0)}%</b></td><td style="color:${col(a.ret_pct)}">${sg(a.ret_pct, 1)}</td>` +
+                HZ.map(x => `<td style="color:${col(a.fwd[x[0]])}">${sg(a.fwd[x[0]], 1)}</td>`).join("") + "</tr>").join("");
+            h += "</tbody></table></div>";
+        }
+        h += '<div class="ev-muted" style="margin-top:12px">Jak to czytać: podobieństwo łączy kształt ścieżki zamknięć, wielkość ruchu względem zmienności, zmienność dzienną i profil wolumenu (względem typowego wolumenu danej spółki). W każdej spółce zostaje po jednym, najlepszym oknie z nakładających się. Analogie z jednego okresu rynkowego (np. krach 2020) nie są niezależne – dlatego podaję liczbę różnych miesięcy; im ich mniej, tym mniej wiarygodna statystyka. Stopy zwrotu liczone na zamknięciach dziennych w walucie notowania, bez dywidend. Archiwum: ' + d.universe.tickers + " tickerów, " + d.universe.bars.toLocaleString("pl-PL") + " świec dziennych. To historia, nie gwarancja.</div>";
+        body.innerHTML = h;
+        if (d.found) drawChart(d);
+    }
+    async function search() {
+        if (busy) return;
+        const tk = $("#an-ticker").value.trim().toUpperCase(), from = $("#an-from").value, to = $("#an-to").value, level = $("#an-level").value, body = $("#an-body"), btn = $("#an-go");
+        if (!tk) { body.innerHTML = '<div class="ev-empty ev-bad">Podaj ticker (np. GPW:DEK).</div>'; return; }
+        if (!from || !to) { body.innerHTML = '<div class="ev-empty ev-bad">Podaj zakres dat.</div>'; return; }
+        lastReq = { tk: tk };
+        busy = true; btn.disabled = true; body.innerHTML = '<div class="ev-empty">Szukam analogii w archiwum…</div>';
+        try {
+            const r = await fetch(API_BASE_URL + "/api/analogs/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: tk, from: from, to: to, level: level, top: 30 }) });
+            const d = await r.json().catch(() => ({}));
+            if (r.status === 409 && d.status === "building") { body.innerHTML = `<div class="ev-empty">${esc(d.message)}</div>`; poll(); return; }
+            if (!r.ok || d.status !== "success") throw new Error(d.message || ("HTTP " + r.status));
+            lastReq = null; render(d); status();
+        } catch (e) { lastReq = null; body.innerHTML = '<div class="ev-empty ev-bad">' + esc(e.message || e) + "</div>"; }
+        finally { busy = false; btn.disabled = false; }
+    }
+    function open() {
+        if (!inited) { inited = true; setRange(60); fillTickers(); }
+        status().then(d => { if (d && d.builder && d.builder.running) poll(); });
+    }
+    document.addEventListener("click", async e => {
+        const t = e.target; if (!t || !t.closest) return;
+        if (t.closest("#an-go")) { search(); return; }
+        const pre = t.closest("[data-an-preset]"); if (pre) { setRange(+pre.dataset.anPreset); return; }
+        if (t.closest("[data-an-rebuild]")) {
+            e.preventDefault();
+            try { await fetch(API_BASE_URL + "/api/analogs/rebuild", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); } catch (err) {}
+            status(); poll();
+        }
+    });
+    document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target && e.target.id === "an-ticker") search(); });
+    return { open: open, search: search };
 })();
 </script>
 </body>
