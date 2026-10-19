@@ -7512,6 +7512,14 @@ window.Measure = (function () {
         h += '<button type="button" class="hp-btn ev-go" data-ms-verify' + (ready ? "" : " disabled") + '>Zweryfikuj</button></div>';
         box.innerHTML = h;
     }
+    function tpBlock(tp) {                                       // sugestie Take Profit z formacji (zależne od miejsca wejścia): każdy cel można wpisać do pola TP
+        if (!tp.targets || !tp.targets.length) return '<div class="ev-note" style="margin-top:8px"><b>Take Profit z formacji:</b> brak celu – ' + esc(tp.caution || "") + "</div>";
+        const cur = parseFloat($("#form-tp").value);
+        return '<div class="ev-note fz-tp" style="margin-top:8px"><b>Sugestia Take Profit</b> <span class="ev-muted">– ' + esc(tp.stage) + "</span>" +
+            '<table class="hp-table" style="margin-top:6px"><tbody>' + tp.targets.map(t => '<tr><td><b>TP' + t.n + "</b></td><td><b>" + price(t.price) + "</b></td><td>" + (t.pct > 0 ? "+" : "") + num(t.pct, 1) + "%</td><td>" + (t.rr ? "R:R " + num(t.rr, 1) : "–") + "</td><td>" + esc(t.label) + '<div class="ev-muted">' + esc(t.basis) + "</div></td>" +
+                '<td><button type="button" class="hp-btn' + (!isNaN(cur) && Math.abs(cur - t.price) <= Math.abs(t.price) * 0.0005 ? " ev-go" : "") + '" data-ms-tp="' + t.price + '">' + (!isNaN(cur) && Math.abs(cur - t.price) <= Math.abs(t.price) * 0.0005 ? "✓ ustawiony" : "Ustaw TP") + "</button></td></tr>").join("") + "</tbody></table>" +
+            (tp.caution ? '<div class="ev-muted" style="margin-top:4px">' + esc(tp.caution) + "</div>" : "") + '<div class="ev-muted" style="margin-top:2px">' + esc(tp.theory || "") + " Cele to propozycje z teorii (nie testowane na Twoich danych) – decyzja o TP jest Twoja.</div></div>";
+    }
     function drawResultCard() {
         const box = $("#fz-result"); if (!box) return; const r = M.result;
         if (!r) { box.innerHTML = ""; drawScore(); return; }
@@ -7526,6 +7534,7 @@ window.Measure = (function () {
                 '<select data-ms-apply>' + Object.keys(APPLY).map(k => '<option value="' + k + '"' + (M.apply === k ? " selected" : "") + ">" + APPLY[k][1] + "</option>").join("") + '</select> <button type="button" class="hp-btn" data-ms-fill>Wpisz do pola</button>' +
                 (formation ? '<div class="ev-muted">Formacja wymaga zapisania wartości odniesienia – zostanie zapisana przy powodzie.</div>' : "") + "</div>";
         } else if (formation) { h += '<div class="plx-err">Formacja bez wartości odniesienia – nie można jej dodać.</div>'; }
+        if (r.tp) h += tpBlock(r.tp);
         h += '<div class="plx-actions" style="margin-top:8px"><button type="button" class="hp-btn ev-go" data-ms-add' + (formation && !r.ref ? " disabled" : "") + '>' + (M.added.some(d => d.type === r.type) ? "✓ Zapisz zmiany powodu" : "＋ Dodaj powód do wpisu") + '</button><span class="ev-muted">' + (M.added.some(d => d.type === r.type) ? "zastępuje poprzedni pomiar tego powodu – " : "dodaje ") + '<b>+' + num(Math.max(0, Math.min(1, r.quality || 0)), 2) + "</b> do Score</span></div>";
         box.innerHTML = h;
         drawScore();
@@ -7573,7 +7582,8 @@ window.Measure = (function () {
         const T = TYPES[M.type], z = formZone();
         if (!z) { toast("Najpierw wpisz strefę (początek i koniec) – weryfikacja sprawdza, czy strefa pasuje do powodu."); return; }
         if (!(parseFloat($("#form-entry").value) > 0) && M.type !== "external") { toast("Wpisz też konkretny punkt wejścia – weryfikacja sprawdza, jak daleko od niego leży poziom wskazany przez powód."); $("#form-entry").focus(); return; }
-        const params = M.type === "fibo" ? { log: !!M.opts.log } : M.type === "one2one" ? { log: !!M.opts.log1 } : M.type === "elliott" ? { wave: M.opts.wave || "auto" } : (M.type === "path" || M.type === "xabcd" || M.type === "rgr") ? { tp: parseFloat($("#form-tp").value) || null, sl: parseFloat($("#form-sl").value) || null } :
+        const fTpSl = { tp: parseFloat($("#form-tp").value) || null, sl: parseFloat($("#form-sl").value) || null };
+        const params = M.type === "fibo" ? { log: !!M.opts.log } : M.type === "one2one" ? Object.assign({ log: !!M.opts.log1 }, fTpSl) : M.type === "elliott" ? Object.assign({ wave: M.opts.wave || "auto" }, fTpSl) : (M.type === "path" || M.type === "xabcd" || M.type === "rgr") ? { tp: parseFloat($("#form-tp").value) || null, sl: parseFloat($("#form-sl").value) || null } :
             M.type === "vwap" ? Object.assign({}, M.opts.vwap) : (T.external ? { items: M.items.filter(i => i.url) } : {});
         M.lastParams = params;
         const body = { ticker: M.ticker, tf: M.tf, type: M.type, zone: z, entry: parseFloat($("#form-entry").value) || null, anchors: M.anchors, params: params };
@@ -7616,7 +7626,7 @@ window.Measure = (function () {
         const tp = parseFloat($("#form-tp").value) || null, sl = parseFloat($("#form-sl").value) || null;
         await Promise.all(M.added.map(async (d, i) => {
             const params = Object.assign({}, d.params || {});
-            if (d.type === "path" || d.type === "xabcd" || d.type === "rgr") { params.tp = tp; params.sl = sl; }          // TP/SL z formularza mogły się zmienić
+            if (d.type === "path" || d.type === "xabcd" || d.type === "rgr" || d.type === "one2one" || d.type === "elliott") { params.tp = tp; params.sl = sl; }          // TP/SL z formularza mogły się zmienić
             if (d.type === "external") params.items = d.items || params.items || [];
             try {
                 const res = await fetch(API_BASE_URL + "/api/form/verify", { method: "POST", headers: { "Content-Type": "application/json" },
@@ -7676,6 +7686,7 @@ window.Measure = (function () {
         let el;
         if ((el = t.closest("[data-ms-type]"))) { M.helpOpen = false; selectType(el.dataset.msType); return; }
         if (t.closest("[data-ms-help]")) { M.helpOpen = !M.helpOpen; drawEditor(); return; }
+        if ((el = t.closest("[data-ms-tp]"))) { setVal("form-tp", r4(parseFloat(el.dataset.msTp))); toast("Ustawiono Take Profit " + price(parseFloat(el.dataset.msTp)) + "."); drawResultCard(); return; }
         if (t.closest("[data-ms-verify]")) { verify(); return; }
         if (t.closest("[data-ms-undo]")) { M.repick = null; M.anchors.pop(); resnap(); M.result = null; drawResult(null); drawEditor(); drawResultCard(); return; }
         const sd = t.closest("[data-ms-side]");

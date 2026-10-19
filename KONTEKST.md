@@ -99,5 +99,7 @@ Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https
 
 - **Form: „Luka” i 4H (2026-10-19)**: `Measure.TYPES.gap` („Luka”: dwie świece, opis rodzajów luk), kolejność po „Luka (FVG)” (`ORDER`), `QD_LABEL_TYPE["luka"]`, grupa nakładania `["fvg","gap"]`, kolor `COL.gap`, przecięcie z strefą „Luka ∩ strefa” w szczegółach Form. Przycisk **4H** w oknie nowego wpisu i w szczegółach Form (`/api/candles?tf=4h&limit=1500`, oś czasu z godzinami w strefie giełdy, `dateOf` z godziną tylko na 4H); OPD/OPS i świeca SL zawsze dzienne (`obars()`, `dayOf`, `M.dbars`).
 
+- **Take Profit z formacji (2026-10-19)**: karta wyniku powodu (`drawResultCard`) pokazuje `tpBlock(r.tp)` – „Sugestia Take Profit” z etapem wejścia, tabelą celów (cena, %, R:R, podstawa) i przyciskami „Ustaw TP” (`data-ms-tp` → `#form-tp`); weryfikacja 1:1 i Elliotta wysyła `tp` i `sl` z formularza (dla R:R i porównania z TP z Form). Cele z backendu (`formation_tp.py`, `docs/TAKE_PROFIT_FORMACJE.md`).
+
 ## Do zrobienia (zapisane na prośbę użytkownika)
 - **Transakcje: kroczący take profit i stop loss** – dopracować w zakładce Transakcje. Planer (podsumowanie i oś) bierze SL/TP z ostatniej inwestycji – po wprowadzeniu kroczących poziomów ma pokazywać ich bieżącą wartość.
