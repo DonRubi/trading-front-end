@@ -101,5 +101,7 @@ Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https
 
 - **Take Profit z formacji (2026-10-19)**: karta wyniku powodu (`drawResultCard`) pokazuje `tpBlock(r.tp)` – „Sugestia Take Profit” z etapem wejścia, tabelą celów (cena, %, R:R, podstawa) i przyciskami „Ustaw TP” (`data-ms-tp` → `#form-tp`); weryfikacja 1:1 i Elliotta wysyła `tp` i `sl` z formularza (dla R:R i porównania z TP z Form). Cele z backendu (`formation_tp.py`, `docs/TAKE_PROFIT_FORMACJE.md`).
 
+- **Telefon: dolny pasek i logo (2026-10-19)**: `.bottom-nav` = siatka 4 kolumn (Radar zagrań, Focus, Transakcje, Planer; `data-bn`, `active` ustawiane w `openModule`/`openDashboard`), `body.mod-open` pokazuje w nagłówku logo `#hd-logo` (klik = `openDashboard()`), tytuł modułu w nagłówku też jest klikalny; komputer bez zmian (panel boczny). „Dziś” w karcie TWR pochodzi z backendu (`day_change_pct`: dzisiejsza sesja + pre-market).
+
 ## Do zrobienia (zapisane na prośbę użytkownika)
 - **Transakcje: kroczący take profit i stop loss** – dopracować w zakładce Transakcje. Planer (podsumowanie i oś) bierze SL/TP z ostatniej inwestycji – po wprowadzeniu kroczących poziomów ma pokazywać ich bieżącą wartość.
