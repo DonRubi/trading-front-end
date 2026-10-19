@@ -307,6 +307,9 @@
         .td-item { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; background: var(--bg-main); border: 1px solid var(--border-color); border-left: 3px solid var(--td, var(--border-color)); border-radius: 10px; padding: 8px 12px; color: var(--text-main); font: inherit; font-size: .88rem; cursor: pointer; margin-bottom: 5px; }
         .td-item:hover { border-color: var(--accent); } .td-ic { font-size: 1.05rem; line-height: 1.3; } .td-t { flex: 1; min-width: 0; } .td-t b { margin-right: 4px; } .td-t small { display: block; color: var(--text-muted); font-size: .82em; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .td-wrap { display: flex; gap: 6px; align-items: stretch; } .td-wrap .td-item { flex: 1; min-width: 0; } .td-x { background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 10px; padding: 0 10px; cursor: pointer; font-size: .9rem; } .td-x:hover { color: var(--danger); border-color: var(--danger); }
+        .td-bd { display: inline-flex; gap: 6px; margin-left: 6px; vertical-align: middle; flex-wrap: wrap; } .td-sc, .td-pr { font-size: .68rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border-color); color: var(--text-muted); white-space: nowrap; } .td-sc { color: var(--accent-hover); border-color: rgba(252,213,53,.35); } .td-sc.td-none { color: var(--text-muted); border-color: var(--border-color); font-weight: 500; } .td-pr.on { color: #0b0e11; background: var(--accent-hover); border-color: var(--accent-hover); }
+        .td-snz { font-size: .76rem; white-space: nowrap; } .td-sortnote { margin: 0 0 8px; font-size: .76rem; } .td-snoozed { margin-top: 12px; border: 1px dashed var(--border-color); border-radius: 10px; padding: 8px 12px; } .td-snoozed summary { cursor: pointer; color: var(--text-muted); font-size: .85rem; } .td-snrow { display: flex; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border-color); font-size: .84rem; } .td-snl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+        @media (max-width: 600px) { .td-snz { padding: 0 11px; } .td-snzt { display: none; } }
         .td-filter { display: flex; align-items: center; gap: 8px; margin: -2px 0 6px; font-size: .8rem; color: var(--text-muted); flex-wrap: wrap; } .td-filter select { background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 3px 6px; font-size: .95em; }
         .td-opd-close { color: var(--danger); font-weight: 600; } .td-opd-wick { color: #fcd535; font-weight: 600; } .td-more { background: none; border: 0; color: var(--accent-hover); cursor: pointer; font-size: .82rem; padding: 4px 2px; }
         .td-go { color: var(--accent-hover); white-space: nowrap; font-size: .82em; font-weight: 600; align-self: center; } .td-ok { color: var(--success); padding: 6px 2px; font-size: .9rem; }
@@ -8251,18 +8254,53 @@ window.HomeTodo = (function () {
         return " · OPD " + price(opd.level) + (opd.manual ? " (ręczny)" : "");
     }
     async function get(path) { const r = await fetch(API_BASE_URL + path); const d = await r.json().catch(() => ({})); if (!r.ok || (d && d.status === "error")) throw new Error((d && d.message) || "HTTP " + r.status); return d; }
+    let meta = { entries: {}, byTicker: {}, snoozed: {}, ok: false }, snzOpen = false;
+    const SNZ_DAYS = 7;
+    const pad2 = n => String(n).padStart(2, "0");
+    const fmtDay = iso => { const d = new Date(iso); return isNaN(d) ? "" : pad2(d.getDate()) + "." + pad2(d.getMonth() + 1); };
+    const snoozedKey = k => !!meta.snoozed[k];
+    function setMeta(m) {
+        meta.entries = (m && m.entries) || {}; meta.snoozed = (m && m.snoozed) || {}; meta.ok = !!m; meta.byTicker = {};
+        Object.keys(meta.entries).forEach(id => {                      // najlepsze (Score, potem priorytet) niewyciszone zagranie spółki - dla wpisów bez entry_id (np. EOD)
+            const e = meta.entries[id]; if (e.muted) return;
+            const b = meta.byTicker[e.ticker];
+            if (!b || e.score > b.score || (e.score === b.score && e.priority && !b.priority)) meta.byTicker[e.ticker] = e;
+        });
+    }
+    function metaOf(entryId, ticker) {                                   // Score i priorytet z Form: wpis wskazany przez entry_id, a gdy go brak – najlepsze zagranie spółki
+        const E = meta.entries;
+        if (entryId && E[entryId]) return Object.assign({ own: true }, E[entryId]);
+        const b = meta.byTicker[ticker];
+        return b ? Object.assign({ own: false }, b) : null;
+    }
+    function badges(m) {
+        if (!meta.ok) return "";
+        if (!m) return ' <span class="td-bd"><span class="td-sc td-none" title="Brak aktywnego wpisu tej spółki w Form">Form: brak</span></span>';
+        return ' <span class="td-bd"><span class="td-sc" title="Score z zakładki Form (0–5)' + (m.own ? "" : "; wpis nie wskazuje zagrania – pokazano najlepsze zagranie spółki") + '">Score ' + num(m.score, 1) + "/5" + (m.own ? "" : "*") + "</span>" +
+            '<span class="td-pr' + (m.priority ? " on" : "") + '" title="Priorytet w Form">' + (m.priority ? "★ priorytet" : "bez priorytetu") + "</span></span>";
+    }
+    function byScore(arr, mf) {                                         // Score z Form malejąco; remis: priorytet, potem dotychczasowa kolejność
+        if (!meta.ok) return arr;
+        return arr.map((x, i) => ({ x: x, i: i, m: mf(x) })).sort((a, b) => ((b.m ? b.m.score : -1) - (a.m ? a.m.score : -1)) || ((b.m && b.m.priority ? 1 : 0) - (a.m && a.m.priority ? 1 : 0)) || a.i - b.i).map(o => o.x);
+    }
+    function wrap(inner, key, label, extra) {
+        return '<div class="td-wrap">' + inner + (extra || "") + (meta.ok ? '<button type="button" class="td-x td-snz" data-td-snooze="' + esc(key) + '" data-td-label="' + esc(label) + '" title="Ukryj ten wpis na ' + SNZ_DAYS + ' dni (wróci sam albo przywrócisz go na dole listy)" aria-label="Wycisz na ' + SNZ_DAYS + ' dni">🔕<span class="td-snzt"> Wycisz</span></button>' : "") + "</div>";
+    }
+    const ckey = (kind, c) => kind + ":" + c.plan_id + ":" + (c.entry_id || "");
     async function load() {
         const my = ++seq, box = $("#hp-todo"); if (!box) return;
-        const [cards, radar, focus, trades] = await Promise.allSettled([get("/api/planner/cards"), get("/api/entry/radar"), get("/api/focus/evals?days=14"), get("/api/trades/entries")]);
+        const all = await Promise.allSettled([get("/api/planner/cards"), get("/api/entry/radar"), get("/api/focus/evals?days=14"), get("/api/trades/entries"), get("/api/home/todo-meta")]);
+        const [cards, radar, focus, trades, metaR] = all;
         if (my !== seq) return;
         const today = new Date().toISOString().slice(0, 10);
+        setMeta(metaR.status === "fulfilled" ? metaR.value : null);
         data = {
             cards: cards.status === "fulfilled" ? cards.value.items || [] : [],
-            near: radar.status === "fulfilled" ? (radar.value.rows || []).map(r => ({ r: r, p: (r.plays || []).find(p => p.in_zone) || (r.plays || []).find(p => p.distance_pct != null && Math.abs(p.distance_pct) <= NEAR) })).filter(x => x.p) : [],
+            radar: radar.status === "fulfilled" ? radar.value.rows || [] : [],
             focus: focus.status === "fulfilled" ? (focus.value.evals || []).filter(f => !(f.trade_ids || []).length) : [],
             eod: trades.status === "fulfilled" && Array.isArray(trades.value) ? trades.value.filter(t => t.status === "OPEN" && !t.archived && t.eod_score == null && String(t.buy_date || "") < today) : []
         };
-        const errs = [cards, radar, focus, trades].filter(x => x.status === "rejected").map(x => x.reason.message);
+        const errs = all.slice(0, 4).filter(x => x.status === "rejected").map(x => x.reason.message);
         const err = $("#hp-err-todo"); if (err) { err.hidden = !errs.length || errs.length < 4; err.textContent = errs.length ? "Część danych niedostępna: " + errs.join("; ") : ""; }
         render();
     }
@@ -8272,26 +8310,54 @@ window.HomeTodo = (function () {
     function render() {
         const box = $("#hp-todo"); if (!box) return;
         const g = [], d = data;
-        const cards = d.cards.filter(c => c.kind === "card"), tps = d.cards.filter(c => c.kind === "tp_review"), sls = d.cards.filter(c => c.kind === "sl_review");
-        if (cards.length) g.push('<div class="td-group"><h4>Kartki planów</h4>' + cards.map(c => item('data-td-plan="' + c.plan_id + '"', COL[c.level], c.icon, "<b>" + esc(c.ticker) + "</b>" + esc(c.label) + (c.entry_id ? " · " + esc(c.entry_id) : ""), esc(String(c.text || "").replace(c.icon + " " + c.label + ": ", "")) + (c.bar_date ? " · sesja " + esc(c.bar_date) : ""), "Plan →")).join("") + "</div>");
-        if (sls.length) g.push('<div class="td-group"><h4>SL złamany – przegląd (decyzja z kontekstu)</h4>' + sls.map(c => item('data-td-plan="' + c.plan_id + '"', c.label.indexOf("zmniejsz") >= 0 ? "#f6465d" : c.label.indexOf("czekaj") >= 0 ? "#fcd535" : "#0ecb81", "🛡", "<b>" + esc(c.ticker) + "</b>" + esc(c.label.replace("Przegląd SL: ", "")) + (c.entry_id ? " · " + esc(c.entry_id) : ""), esc(c.text || "") + (c.bar_date ? " · sesja " + esc(c.bar_date) : ""), "Plan →")).join("") + "</div>");
-        if (tps.length) g.push('<div class="td-group"><h4>Take profit osiągnięty – przegląd</h4>' + tps.map(c => item('data-td-plan="' + c.plan_id + '"', COL.tp, "🎯", "<b>" + esc(c.ticker) + "</b>" + esc(c.entry_id || ""), esc(c.text || ""), "Plan →")).join("") + "</div>");
-        const mode = optGet(), nearAll = d.near, nearVis = nearAll.filter(x => !opdBroken(x.p.opd, mode)), hidden = nearAll.length - nearVis.length;
+        const vis = (kind, c) => !snoozedKey(ckey(kind, c));
+        const mc = c => metaOf(c.entry_id, c.ticker);
+        const cards = byScore(d.cards.filter(c => c.kind === "card" && vis("card", c)), mc), tps = byScore(d.cards.filter(c => c.kind === "tp_review" && vis("tp_review", c)), mc), sls = byScore(d.cards.filter(c => c.kind === "sl_review" && vis("sl_review", c)), mc);
+        const lab = (c, grp) => c.ticker + (c.entry_id ? " · " + c.entry_id : "") + " — " + grp;
+        if (cards.length) g.push('<div class="td-group"><h4>Kartki planów</h4>' + cards.map(c => wrap(item('data-td-plan="' + c.plan_id + '"', COL[c.level], c.icon, "<b>" + esc(c.ticker) + "</b>" + esc(c.label) + (c.entry_id ? " · " + esc(c.entry_id) : "") + badges(mc(c)), esc(String(c.text || "").replace(c.icon + " " + c.label + ": ", "")) + (c.bar_date ? " · sesja " + esc(c.bar_date) : ""), "Plan →"), ckey("card", c), lab(c, "Kartki planów"))).join("") + "</div>");
+        if (sls.length) g.push('<div class="td-group"><h4>SL złamany – przegląd (decyzja z kontekstu)</h4>' + sls.map(c => wrap(item('data-td-plan="' + c.plan_id + '"', c.label.indexOf("zmniejsz") >= 0 ? "#f6465d" : c.label.indexOf("czekaj") >= 0 ? "#fcd535" : "#0ecb81", "🛡", "<b>" + esc(c.ticker) + "</b>" + esc(c.label.replace("Przegląd SL: ", "")) + (c.entry_id ? " · " + esc(c.entry_id) : "") + badges(mc(c)), esc(c.text || "") + (c.bar_date ? " · sesja " + esc(c.bar_date) : ""), "Plan →"), ckey("sl_review", c), lab(c, "przegląd SL"))).join("") + "</div>");
+        if (tps.length) g.push('<div class="td-group"><h4>Take profit osiągnięty – przegląd</h4>' + tps.map(c => wrap(item('data-td-plan="' + c.plan_id + '"', COL.tp, "🎯", "<b>" + esc(c.ticker) + "</b>" + esc(c.entry_id || "") + badges(mc(c)), esc(c.text || ""), "Plan →"), ckey("tp_review", c), lab(c, "przegląd TP"))).join("") + "</div>");
+        const mode = optGet(), nearKey = (r, p) => "near:" + r.ticker + ":" + p.entry_id;
+        const nearAll = byScore(d.radar.map(r => { const pls = (r.plays || []).filter(p => !snoozedKey(nearKey(r, p))); return { r: r, p: pls.find(p => p.in_zone) || pls.find(p => p.distance_pct != null && Math.abs(p.distance_pct) <= NEAR) }; }).filter(x => x.p), x => metaOf(x.p.entry_id, x.r.ticker));
+        const nearVis = nearAll.filter(x => !opdBroken(x.p.opd, mode)), hidden = nearAll.length - nearVis.length;
         if (nearAll.length) g.push('<div class="td-group"><h4>Przy strefach z Form</h4><div class="td-filter"><label for="td-opd-filter">Przebity OPD (ostatnie 5 sesji):</label><select id="td-opd-filter">' +
             [["all", "pokaż wszystkie"], ["close", "ukryj przebite zamknięciem"], ["any", "ukryj przebite knotem lub zamknięciem"]].map(o => '<option value="' + o[0] + '"' + (o[0] === mode ? " selected" : "") + ">" + o[1] + "</option>").join("") +
-            "</select>" + (hidden ? "<span>(ukryto " + hidden + ")</span>" : "") + "</div>" + nearVis.map(x => item('data-td-eval="' + esc(x.r.ticker) + '" data-entry="' + esc(x.p.entry_id) + '"', "var(--accent-hover)", "📍",
-            "<b>" + esc(x.r.ticker) + "</b>" + (x.p.in_zone ? "w strefie" : (x.p.distance_pct > 0 ? "+" : "") + num(x.p.distance_pct, 1) + "% od wejścia"),
-            esc(x.p.entry_id) + " · strefa " + price(x.p.zone[0]) + "–" + price(x.p.zone[1]) + " · wejście " + price(x.p.entry) + (x.p.rr ? " · R:R " + num(x.p.rr, 1) : "") + opdBadge(x.p.opd), "Oceń →")).join("") + "</div>");
-        if (d.focus.length) g.push('<div class="td-group"><h4>Focus bez transakcji (' + d.focus.length + ')</h4>' + d.focus.slice(0, 6).map(f => { const sm = f.summary || {};
-            return '<div class="td-wrap">' + item('data-td-fe="' + f.id + '"', "#89b4fa", "💾", "<b>" + esc(f.ticker) + "</b>" + esc(f.verdict || ""), esc(f.entry_id || "") + " · " + (f.points != null ? num(f.points, 1) + "/" + num(f.max_points || 15, 0) + " pkt · " : "") + "rek. " + (f.recommended_pct == null ? "–" : num(f.recommended_pct, 1) + "%") + (sm.recommended_ccy != null ? " ≈ " + Math.round(sm.recommended_ccy).toLocaleString("pl-PL") + " " + esc(sm.currency || "") : "") + " · " + new Date(f.created_at).toLocaleDateString("pl-PL"), "Transakcja →") + '<button type="button" class="td-x" data-td-fe-del="' + f.id + '" title="Usuń wpis Focus (bez transakcji)">✕</button></div>'; }).join("") +
-            (d.focus.length > 6 ? '<button type="button" class="td-more" data-td-more-focus>+ ' + (d.focus.length - 6) + " więcej w zakładce Focus →</button>" : "") + "</div>");
-        if (d.eod.length) g.push('<div class="td-group"><h4>Brak oceny końca dnia (EOD)</h4>' + d.eod.slice(0, 8).map(t => item('data-td-eod="' + t.id + '"', "#cba6f7", "🌙", "<b>" + esc(t.ticker) + "</b>#" + t.id, "zakup " + esc(t.buy_date || "") + " – policz punkty 0–5 po sesji", "EOD →")).join("") + "</div>");
-        const n = cards.length + tps.length + sls.length + d.near.length + d.focus.length + d.eod.length;
-        box.innerHTML = g.join("") || '<div class="td-ok">✓ Nic pilnego – brak kartek, spółek przy strefach i zaległych ocen.</div>';
+            "</select>" + (hidden ? "<span>(ukryto " + hidden + ")</span>" : "") + "</div>" + nearVis.map(x => wrap(item('data-td-eval="' + esc(x.r.ticker) + '" data-entry="' + esc(x.p.entry_id) + '"', "var(--accent-hover)", "📍",
+            "<b>" + esc(x.r.ticker) + "</b>" + (x.p.in_zone ? "w strefie" : (x.p.distance_pct > 0 ? "+" : "") + num(x.p.distance_pct, 1) + "% od wejścia") + badges(metaOf(x.p.entry_id, x.r.ticker)),
+            esc(x.p.entry_id) + " · strefa " + price(x.p.zone[0]) + "–" + price(x.p.zone[1]) + " · wejście " + price(x.p.entry) + (x.p.rr ? " · R:R " + num(x.p.rr, 1) : "") + opdBadge(x.p.opd), "Oceń →"), nearKey(x.r, x.p), x.r.ticker + " · " + x.p.entry_id + " — przy strefach z Form")).join("") + "</div>");
+        const focus = byScore(d.focus.filter(f => !snoozedKey("focus:" + f.id)), f => metaOf(f.entry_id, f.ticker));
+        if (focus.length) g.push('<div class="td-group"><h4>Focus bez transakcji (' + focus.length + ')</h4>' + focus.slice(0, 6).map(f => { const sm = f.summary || {};
+            return wrap(item('data-td-fe="' + f.id + '"', "#89b4fa", "💾", "<b>" + esc(f.ticker) + "</b>" + esc(f.verdict || "") + badges(metaOf(f.entry_id, f.ticker)), esc(f.entry_id || "") + " · " + (f.points != null ? num(f.points, 1) + "/" + num(f.max_points || 15, 0) + " pkt · " : "") + "rek. " + (f.recommended_pct == null ? "–" : num(f.recommended_pct, 1) + "%") + (sm.recommended_ccy != null ? " ≈ " + Math.round(sm.recommended_ccy).toLocaleString("pl-PL") + " " + esc(sm.currency || "") : "") + " · " + new Date(f.created_at).toLocaleDateString("pl-PL"), "Transakcja →"),
+                "focus:" + f.id, f.ticker + (f.entry_id ? " · " + f.entry_id : "") + " — Focus bez transakcji", '<button type="button" class="td-x" data-td-fe-del="' + f.id + '" title="Usuń wpis Focus (bez transakcji)">✕</button>'); }).join("") +
+            (focus.length > 6 ? '<button type="button" class="td-more" data-td-more-focus>+ ' + (focus.length - 6) + " więcej w zakładce Focus →</button>" : "") + "</div>");
+        const eod = byScore(d.eod.filter(t => !snoozedKey("eod:" + t.id)), t => metaOf(null, t.ticker));
+        if (eod.length) g.push('<div class="td-group"><h4>Brak oceny końca dnia (EOD)</h4>' + eod.slice(0, 8).map(t => wrap(item('data-td-eod="' + t.id + '"', "#cba6f7", "🌙", "<b>" + esc(t.ticker) + "</b>#" + t.id + badges(metaOf(null, t.ticker)), "zakup " + esc(t.buy_date || "") + " – policz punkty 0–5 po sesji", "EOD →"), "eod:" + t.id, t.ticker + " #" + t.id + " — brak oceny EOD")).join("") + "</div>");
+        const n = cards.length + tps.length + sls.length + nearAll.length + focus.length + eod.length;
+        const sk = Object.keys(meta.snoozed).sort((a, b) => String(meta.snoozed[a].until).localeCompare(String(meta.snoozed[b].until)));
+        const note = '<div class="ev-muted td-sortnote">' + (meta.ok ? "Wpisy w grupach są posortowane wg Score z Form (od najwyższego); ★ = priorytet w Form, * = Score najlepszego zagrania spółki. „🔕 Wycisz” chowa wpis na " + SNZ_DAYS + " dni." : "Score z Form i wyciszanie są chwilowo niedostępne – lista bez sortowania.") + "</div>";
+        const snz = sk.length ? '<details class="td-snoozed"' + (snzOpen ? " open" : "") + "><summary>🔕 Wyciszone na tydzień (" + sk.length + ')</summary>' + sk.map(k => '<div class="td-snrow"><span class="td-snl">' + esc(meta.snoozed[k].label || k) + '</span><span class="ev-muted">do ' + fmtDay(meta.snoozed[k].until) + '</span><button type="button" class="td-more" data-td-unsnooze="' + esc(k) + '">Przywróć</button></div>').join("") +
+            '<button type="button" class="td-more" data-td-unsnooze-all>Przywróć wszystkie</button></details>' : "";
+        box.innerHTML = (g.length ? note + g.join("") : '<div class="td-ok">✓ Nic pilnego – brak kartek, spółek przy strefach i zaległych ocen.</div>') + snz;
         const pk = $("#hp-peek-todo"); if (pk) pk.textContent = n ? n + (n === 1 ? " sprawa" : n < 5 ? " sprawy" : " spraw") + (cards.some(c => c.level === "red") ? " · 🟥" : "") : "nic pilnego";
+    }
+    async function snoozeCall(path, body, optimistic) {
+        const backup = JSON.stringify(meta.snoozed);
+        optimistic(); render();
+        try {
+            const r = await fetch(API_BASE_URL + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok || d.status === "error") throw new Error(d.message || ("HTTP " + r.status));
+            meta.snoozed = d.snoozed || {}; render();
+        } catch (e) { meta.snoozed = JSON.parse(backup); render(); alert("Nie udało się zmienić wyciszenia: " + (e.message || e)); }
     }
     document.addEventListener("click", e => {
         const t = e.target; if (!t.closest) return;
+        const snb = t.closest("[data-td-snooze]");
+        if (snb) { e.stopPropagation(); const key = snb.dataset.tdSnooze, label = snb.dataset.tdLabel || key;
+            snoozeCall("/api/home/todo/snooze", { key: key, label: label }, () => { meta.snoozed[key] = { until: new Date(Date.now() + SNZ_DAYS * 864e5).toISOString(), label: label }; }); return; }
+        const unb = t.closest("[data-td-unsnooze]");
+        if (unb) { const key = unb.dataset.tdUnsnooze; snzOpen = true; snoozeCall("/api/home/todo/unsnooze", { key: key }, () => { delete meta.snoozed[key]; }); return; }
+        if (t.closest("[data-td-unsnooze-all]")) { snzOpen = true; snoozeCall("/api/home/todo/unsnooze", { all: true }, () => { meta.snoozed = {}; }); return; }
         const pl = t.closest("[data-td-plan]"); if (pl) { openModule("planner-module", "Planer"); if (window.Planer) Planer.openPlan(pl.dataset.tdPlan); return; }
         const ev = t.closest("[data-td-eval]"); if (ev) { if (window.Wejscie) Wejscie.evaluate(ev.dataset.tdEval, ev.dataset.entry); return; }
         const del = t.closest("[data-td-fe-del]");
@@ -8306,6 +8372,7 @@ window.HomeTodo = (function () {
         if (t.closest("#hp-refresh")) load();
     });
     document.addEventListener("change", e => { if (e.target && e.target.id === "td-opd-filter") { optSet(e.target.value); render(); } });
+    document.addEventListener("toggle", e => { if (e.target && e.target.classList && e.target.classList.contains("td-snoozed")) snzOpen = e.target.open; }, true);
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", load); else load();
     return { load: load };
 })();
