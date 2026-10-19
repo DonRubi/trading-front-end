@@ -717,7 +717,7 @@
                     <div id="fz-measure" style="display:none">
                         <div class="plx-h" style="margin-top:14px">Powody mierzone na wykresie</div>
                         <div class="ev-muted">Wskaż kotwice kliknięciem w wykres, a aplikacja sprawdzi, czy powód jest prawdziwy i czy Twoja strefa leży tam, gdzie on wskazuje. Strefy z Form i wpisywana strefa są zaznaczone na wykresie.</div>
-                        <div class="plx-actions" style="margin:8px 0"><button type="button" class="hp-btn ev-go" data-ms-tf="1d">1D</button><button type="button" class="hp-btn" data-ms-tf="1w">1W</button><label class="ev-muted" style="margin-left:10px;cursor:pointer" title="Punkty wskazywane na wykresie przyciągają się do knotów i brzegów korpusów świec"><input type="checkbox" id="fz-magnet" checked> 🧲 Magnes (knoty i korpusy)</label><span id="fz-chart-note" class="ev-muted"></span></div>
+                        <div class="plx-actions" style="margin:8px 0"><button type="button" class="hp-btn" data-ms-tf="4h" title="Wykres 4-godzinny (świece 4H z 1H, ok. 3 lata) – do dokładniejszego ustawienia kotwic; reguły liczone na świecach 4H">4H</button><button type="button" class="hp-btn ev-go" data-ms-tf="1d">1D</button><button type="button" class="hp-btn" data-ms-tf="1w">1W</button><label class="ev-muted" style="margin-left:10px;cursor:pointer" title="Punkty wskazywane na wykresie przyciągają się do knotów i brzegów korpusów świec"><input type="checkbox" id="fz-magnet" checked> 🧲 Magnes (knoty i korpusy)</label><span id="fz-chart-note" class="ev-muted"></span></div>
                         <div class="fz-pickbar" id="fz-pickbar"><button type="button" class="hp-btn" data-pick="zone">🎯 Strefa z wykresu (2 punkty)</button><button type="button" class="hp-btn" data-pick="sl">🎯 Świeca SL z wykresu</button><span id="fz-opd-btns"></span></div>
                         <div id="fz-opd-check" class="ev-muted fz-pickmsg"></div><div id="fz-sl-check" class="ev-muted fz-pickmsg">LONG: SL domyślnie = dół korpusu OPD (wskaż inną świecę albo wpisz wartość); SHORT: góra korpusu OPS.</div>
                         <div style="position:relative"><div class="ohlc-legend" id="fz-ohlc"></div><div id="fz-chart"></div></div>
@@ -1485,8 +1485,8 @@
         })();
         // Score Form: powody mierzące ten sam fakt rynkowy (jak reasons.OVERLAP_GROUPS w backendzie) liczą się jak jeden -
         // największy w całości + połowa pozostałych z grupy
-        const QD_OVERLAP_GROUPS = [["trend", "swing"], ["range", "path"], ["fibo", "elliott", "one2one", "xabcd", "correction"]];
-        const QD_LABEL_TYPE = { "luka (fvg)": "fvg", "potwierdzony dołek/szczyt": "swing", "zdrowy trend": "trend", "poziomy fibo": "fibo", "korekta 1:1": "one2one", "xabcd": "xabcd", "rgr": "rgr",
+        const QD_OVERLAP_GROUPS = [["trend", "swing"], ["range", "path"], ["fvg", "gap"], ["fibo", "elliott", "one2one", "xabcd", "correction"]];
+        const QD_LABEL_TYPE = { "luka (fvg)": "fvg", "luka": "gap", "potwierdzony dołek/szczyt": "swing", "zdrowy trend": "trend", "poziomy fibo": "fibo", "korekta 1:1": "one2one", "xabcd": "xabcd", "rgr": "rgr",
             "fale elliotta": "elliott", "vwap": "vwap", "volume profile": "vp", "analiza zewnętrzna": "external", "powtórzenie korekty": "correction", "konsolidacja / akumulacja": "range", "droga otwarta (zs i ops)": "path" };
         function qdOverlapCut(byType) {
             let cut = 0;
@@ -7090,10 +7090,15 @@ window.Measure = (function () {
     const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const num = (v, d) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
     const price = v => v == null ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
-    const dateOf = t => new Date(t * 1000).toISOString().slice(0, 10);
+    let tzName = "UTC";                                                                       // strefa giełdy z odpowiedzi świec (godziny na wykresie 4H)
+    const intraday = () => M.tf === "4h";
+    const dateOf = t => { if (!intraday()) return new Date(t * 1000).toISOString().slice(0, 10); try { return new Date(t * 1000).toLocaleString("sv-SE", { timeZone: tzName, hour12: false }).slice(0, 16); } catch (e) { return new Date(t * 1000).toISOString().slice(0, 16).replace("T", " "); } };
+    const dayOf = t => new Date(t * 1000).toISOString().slice(0, 10);                     // dzień świecy (OPD, świeca SL i daty zapisywane w Form są dzienne)
+    const obars = () => (intraday() ? (M.dbars || []) : M.bars);                              // świece do OPD/OPS i SL: na wykresie 4H – dzienne
     const FORMATIONS = ["xabcd", "one2one", "rgr", "elliott", "fibo"];
     const TYPES = {
         fvg: { label: "Luka (FVG)", slots: ["Świeca przed luką", "Świeca po luce"], need: 2, bar: true, help: "Kliknij dwie świece, między którymi powstała luka (sąsiednie = luka cenowa, co druga = FVG z trzech świec). Wg SMC: luka kończy się dopiero ZAMKNIĘCIEM za jej dalszą krawędzią (inwersja iFVG), powrót do środka (CE) to wejście; premia za lukę przy przełamaniu struktury (BOS/CHoCH) i w dyskoncie (LONG) / premii (SHORT)." },
+        gap: { label: "Luka", slots: ["Świeca przed luką", "Świeca po luce"], need: 2, bar: true, help: "Luka cenowa między dwiema świecami (osobny powód od „Luka (FVG)”, które szuka próżni w trzech świecach). Kliknij dwie świece – zwykle sąsiednie; aplikacja policzy różnicę wartości (zamknięcie pierwszej → otwarcie drugiej) i sprawdzi, czy powstała luka: pełna (zakresy z knotami się nie pokrywają), otwarcia (otwarcie poza zakresem, knot wrócił) albo korpusów. Gdy wskażesz świece dalej od siebie, wybiorę najlepszą lukę z tego odcinka. Ocena: rozmiar w ATR, rodzaj wg teorii (wybicia > kontynuacji > wyczerpania), wolumen, wypełnienie (luka kończy się zamknięciem za jej dalszą krawędzią) i zgodność ze strefą." },
         swing: { label: "Potwierdzony dołek/szczyt", slots: ["Świeca dołka (dla short: szczytu)"], need: 1, bar: true, help: "Kliknij świecę dołka – liczy się dół korpusu (dla short: góra korpusu). Ocena: świeżość poziomu (Seiden – każdy test go zużywa), wolumen testów (Wyckoff), spring/sweep jako premia i ostrzeżenie przy równych dołkach (SMC – płynność pod spodem)." },
         correction: { label: "Powtórzenie korekty", slots: ["Koniec korekty 1 (opcjonalnie)", "Koniec korekty 2 (opcjonalnie)"], need: 0, bar: true, help: "Spółka w trendzie zwykle cofa się o podobny procent. Aplikacja mierzy poprzednie korekty TEJ spółki w bieżącym trendzie (np. −8%, −11%, −9% od szczytów) i: 1) ocenia obecną korektę względem typowej – mała = siła trendu, typowa = norma, duża = ostrzeżenie (ale struktura cała), z przebiciem ostatniego dołka = słabość; 2) wylicza, gdzie skończyłaby się obecna korekta, gdyby powtórzyła dwie ostatnie (pasmo od mniejszej do większej). Przykład: szczyt 100, ostatnie korekty −8% i −11% → pasmo 89–92; strefa w tym paśmie = wysoka ocena. Bez klikania liczy wszystko samo; możesz wskazać końce dwóch korekt, które mają być wzorcem." },
         range: { label: "Konsolidacja / akumulacja", slots: ["Początek konsolidacji (opcjonalnie)", "Koniec konsolidacji (opcjonalnie)"], need: 0, bar: true, help: "Zakres boczny z wieloma testami krawędzi i jego wybicie ZAMKNIĘCIEM świecy. Strefa to poziom na przyszłość, więc sprawdzam historię wykresu: czy pod Twoją strefą była akumulacja wybita w kierunku zagrania (kontekst przed zakresem, spring, wolumen, obrona poziomu po wybiciu). Bieżący zakres liczy się tylko, gdy strefa leży w nim albo sam go wskażesz (kliknij początek i koniec konsolidacji)." },
@@ -7108,7 +7113,7 @@ window.Measure = (function () {
         vp: { label: "Volume Profile", slots: ["Początek profilu (opcjonalnie)"], need: 0, bar: true, help: "Domyślnie od początku trendu albo od kontynuacji po wyraźnej korekcie; możesz wskazać własny początek." },
         external: { label: "Analiza zewnętrzna", slots: [], need: 0, external: true, help: "Linki do analiz; kilka analiz liczy się jako jeden punkt." }
     };
-    const ORDER = ["range", "path", "fvg", "swing", "trend", "correction", "fibo", "one2one", "xabcd", "rgr", "elliott", "vwap", "vp", "external"];
+    const ORDER = ["range", "path", "fvg", "gap", "swing", "trend", "correction", "fibo", "one2one", "xabcd", "rgr", "elliott", "vwap", "vp", "external"];
     const APPLY = { entry: ["form-entry", "Punkt wejścia"], start: ["form-start", "Początek strefy"], end: ["form-end", "Koniec strefy (SL)"], tp: ["form-tp", "Take Profit"] };
     const M = { magnet: true, ticker: "", tf: "1d", type: null, anchors: [], bars: [], auto: null, result: null, added: [], items: [{}], opts: {}, apply: "entry" };
     const VWAP_DEF = { mult1: 1, mult2: 2, bands: "stdev", period: "" };                  // jak w TradingView: Bands Multiplier #1 = 1, #2 = 2
@@ -7175,12 +7180,16 @@ window.Measure = (function () {
         if (!ensureChart()) return;
         setStatus("Ładowanie wykresu…");
         try {
-            const res = await fetch(API_BASE_URL + "/api/candles?ticker=" + encodeURIComponent(M.ticker) + "&tf=" + M.tf + "&limit=" + (M.tf === "1d" ? 1500 : 520));
+            const res = await fetch(API_BASE_URL + "/api/candles?ticker=" + encodeURIComponent(M.ticker) + "&tf=" + M.tf + "&limit=" + (M.tf === "1w" ? 520 : 1500));
             const d = await res.json(); if (!res.ok || d.status === "error") throw new Error(d.message || "HTTP " + res.status);
-            M.bars = d.bars || [];
+            M.bars = d.bars || []; tzName = d.timezone || "UTC";
+            if (intraday()) {                                                                    // OPD/OPS i SL liczone na świecach dziennych (jak w strażniku), także gdy wykres jest 4H
+                if (!M.dbars || M.dbarsFor !== M.ticker) { try { const rd = await (await fetch(API_BASE_URL + "/api/candles?ticker=" + encodeURIComponent(M.ticker) + "&tf=1d&limit=1500")).json(); M.dbars = rd.bars || []; M.dbarsFor = M.ticker; } catch (e) { M.dbars = []; } }
+            } else { M.dbars = M.bars; M.dbarsFor = M.ticker; }
+            chart.applyOptions({ timeScale: { timeVisible: intraday(), secondsVisible: false, tickMarkFormatter: intraday() ? (t => { const x = dateOf(t); return x.slice(8, 10) + "." + x.slice(5, 7) + " " + x.slice(11); }) : undefined }, localization: { timeFormatter: intraday() ? (t => dateOf(t)) : undefined } });
             candle.setData(M.bars.map(b => ({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c })));
             vol.setData(M.bars.map(b => ({ time: b.t, value: b.v, color: b.c >= b.o ? "rgba(14,203,129,0.25)" : "rgba(246,70,93,0.25)" })));
-            const n = M.bars.length; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (M.tf === "1d" ? 160 : 100)), to: n + 6 });
+            const n = M.bars.length; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (M.tf === "1d" ? 160 : M.tf === "4h" ? 240 : 100)), to: n + 6 });
             setStatus(M.bars.length ? "" : "Brak świec dla tego tickera.");
             drawBase(); drawOhlc(M.bars[M.bars.length - 1]); opdLine = slLine = null; opdCheck();
         } catch (e) { setStatus("Nie udało się wczytać wykresu: " + e.message); }
@@ -7244,7 +7253,7 @@ window.Measure = (function () {
     function pickValue(mode) {                          // wybrane wartości w nawiasie po oznaczeniu na wykresie
         if (mode === "zone") { const a = parseFloat($("#form-start").value), b = parseFloat($("#form-end").value); return isNaN(a) || isNaN(b) ? "" : "(" + price(a) + " → " + price(b) + ")"; }
         if (mode === "sl") { const v = parseFloat($("#form-sl").value), d = $("#form-slc").value; return isNaN(v) ? "" : "(" + price(v) + (d ? ", " + d : "") + (M.slAuto && !M.slUser ? ", z " + (isLong() ? "OPD" : "OPS") : "") + ")"; }
-        if (mode === "opd") { const o = M.opdShown; return o ? "(" + price(o.level) + (o.t ? ", " + dateOf(o.t) : "") + (M.opdManual ? ", ręcznie" : ", automatyczny") + ")" : ""; }
+        if (mode === "opd") { const o = M.opdShown; return o ? "(" + price(o.level) + (o.t ? ", " + dayOf(o.t) : "") + (M.opdManual ? ", ręcznie" : ", automatyczny") + ")" : ""; }
         return "";
     }
     function drawPickButtons() {
@@ -7255,16 +7264,18 @@ window.Measure = (function () {
         });
     }
     function handlePick(param) {
-        const bar = M.bars.find(b => b.t === param.time); if (!bar) return;
+        const bar0 = M.bars.find(b => b.t === param.time); if (!bar0) return;
         const long = isLong();
+        const bar = (M.pick === "opd" || M.pick === "sl") && intraday() ? (obars().find(b => dayOf(b.t) === dayOf(bar0.t)) || null) : bar0;          // OPD i świeca SL to pojęcia dzienne
+        if (!bar) { setStatus("Brak świecy dziennej z tego dnia."); return; }
         if (M.pick === "opd") {                              // ręczny OPD/OPS: dół (SHORT: góra) korpusu wskazanej świecy
             M.opdManual = { level: r4(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)), t: bar.t };
-            M.pick = null; setStatus((long ? "OPD" : "OPS") + " wskazany ręcznie: " + price(M.opdManual.level) + " (" + (long ? "dół" : "góra") + " korpusu świecy z " + dateOf(bar.t) + ").");
+            M.pick = null; setStatus((long ? "OPD" : "OPS") + " wskazany ręcznie: " + price(M.opdManual.level) + " (" + (long ? "dół" : "góra") + " korpusu świecy z " + dayOf(bar.t) + ").");
         } else if (M.pick === "sl") {
             M.slUser = true;
             setVal("form-sl", r4(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)));
-            setVal("form-slc", dateOf(bar.t));
-            M.pick = null; setStatus("SL: " + (long ? "dół" : "góra") + " korpusu świecy z " + dateOf(bar.t) + " = " + price(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)));
+            setVal("form-slc", dayOf(bar.t));
+            M.pick = null; setStatus("SL: " + (long ? "dół" : "góra") + " korpusu świecy z " + dayOf(bar.t) + " = " + price(long ? Math.min(bar.o, bar.c) : Math.max(bar.o, bar.c)));
         } else {                                             // dwa punkty (knot/korpus wg magnesu); początek i koniec ustalane automatycznie
             const y = candle.coordinateToPrice(param.point.y);
             const sn = snapFor(bar, y, null);
@@ -7335,29 +7346,29 @@ window.Measure = (function () {
         M.opdManual = isNaN(lv) ? null : { level: lv, d: date ? String(date).slice(0, 10) : null, t: date ? Math.floor(Date.parse(String(date).slice(0, 10) + "T00:00:00Z") / 1000) : 0 };
         opdCheck(); drawOpdButtons();
     }
-    const opdValue = () => M.opdManual ? { opd_level: M.opdManual.level, opd_date: M.opdManual.t ? dateOf(M.opdManual.t) : null } : { opd_level: null };
+    const opdValue = () => M.opdManual ? { opd_level: M.opdManual.level, opd_date: M.opdManual.t ? dayOf(M.opdManual.t) : null } : { opd_level: null };
     function applyAutoSl(o) {                           // SL domyślnie na korpusie wybranego OPD/OPS, dopóki użytkownik nie wskaże innej świecy ani nie wpisze wartości
         if (!o || (window.FormZones && FormZones.editingId && FormZones.editingId() != null) || M.slUser) return;      // edycja istniejącego wpisu: SL zostaje, jak zapisano
         const lv = r4(o.level), cur = parseFloat($("#form-sl").value);
         if (!isNaN(cur) && !M.slAuto) return;           // wartość nie pochodzi z automatu
         M.slAuto = true;
         if (isNaN(cur) || Math.abs(cur - lv) > 1e-9) setVal("form-sl", lv);
-        if (o.t) setVal("form-slc", dateOf(o.t));
+        if (o.t) setVal("form-slc", dayOf(o.t));
     }
     function opdCheck() {
         const box = $("#fz-opd-check"), slb = $("#fz-sl-check");
-        if (!candle || !M.bars.length) return null;
+        if (!candle || !obars().length) return null;
         const long = isLong(), z = formZone(), mo = M.opdManual;
-        if (mo && mo.d) { const b = M.bars.find(x => dateOf(x.t) === mo.d); if (b) mo.t = b.t; }        // zapisany OPD: świeca z tej daty
+        if (mo && mo.d) { const b = obars().find(x => dayOf(x.t) === mo.d); if (b) mo.t = b.t; }        // zapisany OPD: świeca z tej daty
         const name = (long ? "OPD" : "OPS") + (mo ? " (ręcznie)" : z ? " strefy" : "");
-        const cur = opdOf(M.bars, long), zo = z ? zoneOpdOf(M.bars, long, z) : null;
+        const cur = opdOf(obars(), long), zo = z ? zoneOpdOf(obars(), long, z) : null;
         let o = z ? zo : cur;
-        const curNote = z && cur && (!zo || Math.abs(cur.level - zo.level) > 1e-9) ? " Bieżący " + (long ? "OPD" : "OPS") + " kursu: " + price(cur.level) + " (" + dateOf(cur.t) + ")." : "";
+        const curNote = z && cur && (!zo || Math.abs(cur.level - zo.level) > 1e-9) ? " Bieżący " + (long ? "OPD" : "OPS") + " kursu: " + price(cur.level) + " (" + dayOf(cur.t) + ")." : "";
         if (z && !zo && !mo) { drawOpdButtons(); if (opdLine) { try { candle.removePriceLine(opdLine); } catch (e) {} opdLine = null; }
             if (box) { box.textContent = "Brak potwierdzonego " + (long ? "dołka poniżej" : "szczytu powyżej") + " strefy w ostatnich 250 sesjach – wskaż " + (long ? "OPD" : "OPS") + " ręcznie (✎)." + curNote; box.style.color = "var(--accent-hover)"; }
             M.opdShown = null; drawPickButtons(); return null; }
         if (mo) {                                           // OPD wskazany ręcznie ma pierwszeństwo; sprawdzamy, czy nie został przebity zamknięciem
-            const br = M.bars.find(b => b.t > mo.t && (long ? b.c < mo.level : b.c > mo.level));
+            const br = obars().find(b => b.t > mo.t && (long ? b.c < mo.level : b.c > mo.level));
             o = { level: mo.level, t: mo.t, broken: [], manual: true, brokenAt: br ? br.t : null, auto: z ? zo : cur };
         }
         M.opdShown = o ? { level: o.level, t: o.t } : null;
@@ -7369,22 +7380,22 @@ window.Measure = (function () {
         if (slLine) { try { candle.removePriceLine(slLine); } catch (e) {} slLine = null; }
         const slv = parseFloat($("#form-sl").value);
         if (!isNaN(slv)) slLine = candle.createPriceLine({ price: slv, color: "#f6465d", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "SL " + price(slv) });
-        const prev = (o.broken.length ? " Przebite zamknięciem: " + o.broken.map(b => price(b.level) + " (" + dateOf(b.at) + ")").join(", ") + " → obowiązuje kolejny " + (long ? "niższy" : "wyższy") + " " + name + "." : "") +
-            (o.manual && o.brokenAt ? " ⚠ Wskazany " + name + " został przebity zamknięciem " + dateOf(o.brokenAt) + "." : "") +
-            (o.zone && o.brokenAt ? " ⚠ " + name + " przebity zamknięciem " + dateOf(o.brokenAt) + " i kurs nie wrócił nad niego – struktura pod strefą złamana." : "") +
-            (o.manual && o.auto ? " Automatycznie" + (z ? " dla strefy" : "") + ": " + price(o.auto.level) + " (" + dateOf(o.auto.t) + ")." : "") + (o.manual ? "" : curNote);
-        let res = { ok: null, text: name + " " + price(o.level) + " (" + dateOf(o.t) + ")." + prev };
+        const prev = (o.broken.length ? " Przebite zamknięciem: " + o.broken.map(b => price(b.level) + " (" + dayOf(b.at) + ")").join(", ") + " → obowiązuje kolejny " + (long ? "niższy" : "wyższy") + " " + name + "." : "") +
+            (o.manual && o.brokenAt ? " ⚠ Wskazany " + name + " został przebity zamknięciem " + dayOf(o.brokenAt) + "." : "") +
+            (o.zone && o.brokenAt ? " ⚠ " + name + " przebity zamknięciem " + dayOf(o.brokenAt) + " i kurs nie wrócił nad niego – struktura pod strefą złamana." : "") +
+            (o.manual && o.auto ? " Automatycznie" + (z ? " dla strefy" : "") + ": " + price(o.auto.level) + " (" + dayOf(o.auto.t) + ")." : "") + (o.manual ? "" : curNote);
+        let res = { ok: null, text: name + " " + price(o.level) + " (" + dayOf(o.t) + ")." + prev };
         if (z) {
             const ok = long ? z.lo > o.level : z.hi < o.level;
             // odległość strefy od OPD w ATR (im dalej, tym większe ryzyko przy SL na OPD): ≤ 1,5 ATR ok, 1,5–2 uwaga, > 2 ostrzeżenie
-            const seg = M.bars.slice(-15), atr = seg.length > 1 ? seg.slice(1).reduce((a, b, k) => a + Math.max(b.h - b.l, Math.abs(b.h - seg[k].c), Math.abs(b.l - seg[k].c)), 0) / (seg.length - 1) : 0;
+            const seg = obars().slice(-15), atr = seg.length > 1 ? seg.slice(1).reduce((a, b, k) => a + Math.max(b.h - b.l, Math.abs(b.h - seg[k].c), Math.abs(b.l - seg[k].c)), 0) / (seg.length - 1) : 0;
             const gap = long ? z.lo - o.level : o.level - z.hi, gapAtr = atr ? gap / atr : null;
             const entry = parseFloat($("#form-entry").value) || (z.lo + z.hi) / 2, riskPct = Math.abs(entry - o.level) / entry * 100;
             const far = ok && gapAtr != null && gapAtr > 2, mid = ok && gapAtr != null && gapAtr > 1.5 && !far;
             const dist = gapAtr == null ? "" : " Odległość strefy od " + name + ": " + num(gapAtr, 1) + " ATR (" + num(Math.abs(gap) / o.level * 100, 1) + "%), od wejścia do " + name + " " + num(riskPct, 1) + "%" +
                 (far ? " – ⚠ za daleko (> 2 ATR): duże ryzyko przy SL na " + name + "; rozważ strefę bliżej " + name + " albo mniejszą pozycję." : mid ? " – uwaga, blisko granicy 2 ATR." : " – w normie (≤ 1,5 ATR).");
-            res = { ok: ok, far: far, mid: mid, gap_atr: gapAtr, text: (ok ? "✓ Strefa " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dateOf(o.t) + ") – zgodnie z zasadą " + (long ? "wyższych dołków" : "niższych szczytów") + "." + dist
-                : "✗ Strefa nie leży " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dateOf(o.t) + ") – dla " + (long ? "LONG strefa musi być powyżej ostatniego potwierdzonego dołka" : "SHORT strefa musi być poniżej ostatniego potwierdzonego szczytu") + ".") + prev };
+            res = { ok: ok, far: far, mid: mid, gap_atr: gapAtr, text: (ok ? "✓ Strefa " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dayOf(o.t) + ") – zgodnie z zasadą " + (long ? "wyższych dołków" : "niższych szczytów") + "." + dist
+                : "✗ Strefa nie leży " + (long ? "nad" : "pod") + " " + name + " " + price(o.level) + " (" + dayOf(o.t) + ") – dla " + (long ? "LONG strefa musi być powyżej ostatniego potwierdzonego dołka" : "SHORT strefa musi być poniżej ostatniego potwierdzonego szczytu") + ".") + prev };
         }
         if (box) { box.textContent = res.text; box.style.color = res.ok === false || res.far || o.brokenAt ? "var(--danger)" : res.mid ? "var(--accent-hover)" : res.ok ? "var(--success)" : ""; }
         const sl = parseFloat($("#form-sl").value);
@@ -7902,7 +7913,7 @@ window.ReasonChart = (function () {
     const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const num = (v, d) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
     const price = v => v == null ? "–" : num(v, Math.abs(v) < 10 ? 4 : 2);
-    const COL = { range: "#f9e2af", path: "#fcd535", fvg: "#89b4fa", swing: "#f9e2af", trend: "#94e2d5", correction: "#b4befe", fibo: "#fab387", one2one: "#f38ba8", xabcd: "#cba6f7", rgr: "#f9e2af", elliott: "#f2cdcd", vwap: "#74c7ec", vp: "#fcd535", external: "#a6e3a1" };
+    const COL = { range: "#f9e2af", path: "#fcd535", fvg: "#89b4fa", gap: "#74c7ec", swing: "#f9e2af", trend: "#94e2d5", correction: "#b4befe", fibo: "#fab387", one2one: "#f38ba8", xabcd: "#cba6f7", rgr: "#f9e2af", elliott: "#f2cdcd", vwap: "#74c7ec", vp: "#fcd535", external: "#a6e3a1" };
     const FORMATION = { fibo: 1, one2one: 1, xabcd: 1, rgr: 1, elliott: 1 };
     const S = { id: null, entry: null, tf: "1d", bars: {}, res: {}, hidden: new Set(), seq: 0 };
     let chart = null, candle = null, vol = null, prim = null, lines = [], series = [];
@@ -7931,7 +7942,7 @@ window.ReasonChart = (function () {
 
     // ---------- szkielet sekcji wykresu ----------
     function sectionHtml(e) {
-        return '<div class="plx-h rc-headrow">Wykres i powody<span class="rc-tf"><button class="hp-btn" data-rc-tf="1d">1D</button><button class="hp-btn" data-rc-tf="1w">1W</button></span></div>' +
+        return '<div class="plx-h rc-headrow">Wykres i powody<span class="rc-tf"><button class="hp-btn" data-rc-tf="4h" title="Wykres 4-godzinny; powody zmierzone na 1D/1W widać po przełączeniu na ich interwał">4H</button><button class="hp-btn" data-rc-tf="1d">1D</button><button class="hp-btn" data-rc-tf="1w">1W</button></span></div>' +
             '<div class="rc-layout"><div class="rc-box"><div id="rc-chart"></div></div><aside class="rc-side">' + analysisHtml(e) +
             '<div class="rc-side-h">Powody na wykresie</div><div id="rc-chips" class="rc-list"></div><div class="rc-side-h">Legenda</div><div id="rc-legend" class="rc-legend"></div></aside></div>';
     }
@@ -7993,8 +8004,9 @@ window.ReasonChart = (function () {
     }
     async function bars(tk, tf) {
         const k = tk + "|" + tf; if (S.bars[k]) return S.bars[k];
-        const res = await fetch(API_BASE_URL + "/api/candles?ticker=" + encodeURIComponent(tk) + "&tf=" + tf + "&limit=" + (tf === "1d" ? 1500 : 520));
+        const res = await fetch(API_BASE_URL + "/api/candles?ticker=" + encodeURIComponent(tk) + "&tf=" + tf + "&limit=" + (tf === "1w" ? 520 : 1500));
         const d = await res.json(); if (!res.ok || d.status === "error") throw new Error(d.message || "HTTP " + res.status);
+        S.tz = d.timezone || S.tz || "UTC";
         return (S.bars[k] = d.bars || []);
     }
     async function verifyOne(e, d, tf) {
@@ -8030,11 +8042,11 @@ window.ReasonChart = (function () {
             const ov = r.overlay || {};
             (ov.lines || []).forEach(l => PL(l.price, l.color || col, l.label || "", ST[l.style] != null ? ST[l.style] : 2));
             (ov.bands || []).forEach(b => {
-                const t0 = b.t0 || (d.type === "fvg" && (d.anchors || [])[0] ? d.anchors[0].t : null);
+                const t0 = b.t0 || ((d.type === "fvg" || d.type === "gap") && (d.anchors || [])[0] ? d.anchors[0].t : null);
                 const gold = b.color === "#fcd535";
                 bands.push({ lo: b.lo, hi: b.hi, t0: t0, fill: gold ? "rgba(252,213,53,0.22)" : d.type === "range" ? "rgba(249,226,175,0.12)" : "rgba(137,180,250,0.20)", stroke: b.color || col, bold: gold, label: b.label + (r.lifecycle && r.lifecycle.status === "zakończony" ? " (pokryta)" : "") });
                 const lo = Math.max(b.lo, z.lo), hi = Math.min(b.hi, z.hi);          // część luki pokrywająca się ze strefą – podświetlona
-                if (d.type === "fvg" && hi > lo) bands.push({ lo: lo, hi: hi, t0: t0, fill: "rgba(252,213,53,0.30)", stroke: "#fcd535", dash: true, label: "FVG ∩ strefa" });
+                if ((d.type === "fvg" || d.type === "gap") && hi > lo) bands.push({ lo: lo, hi: hi, t0: t0, fill: "rgba(252,213,53,0.30)", stroke: "#fcd535", dash: true, label: (d.type === "gap" ? "Luka" : "FVG") + " ∩ strefa" });
             });
             (ov.series || []).forEach(s => { const ls = chart.addLineSeries({ color: s.color || col, lineWidth: s.width || 2, lineStyle: s.style === "dashed" ? 2 : s.style === "dotted" ? 1 : 0, priceLineVisible: false, lastValueVisible: true, title: s.name }); ls.setData(s.points.map(p => ({ time: p.t, value: p.v }))); series.push(ls); });
             (ov.segments || []).forEach(sg => { const ls = chart.addLineSeries({ color: sg.color || col, lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: false }); ls.setData([{ time: sg.p1.t, value: sg.p1.v }, { time: sg.p2.t, value: sg.p2.v }]); series.push(ls); });
@@ -8073,7 +8085,7 @@ window.ReasonChart = (function () {
             const r = S.res[key(e, d, S.tf)], other = d.type !== "external" && tfOf(d) !== S.tf, err = S.res["err|" + key(e, d, S.tf)];
             const off = S.hidden.has(d.type), col = COL[d.type] || "#cdd6f4";
             const q = r && r.quality != null ? r.quality : d.quality;
-            const ttl = other ? "Zmierzone na " + (tfOf(d) === "1w" ? "1W" : "1D") + " – przełącz interwał" : err ? "Nie udało się odtworzyć: " + err : (d.facts || []).join("\n");
+            const ttl = other ? "Zmierzone na " + (tfOf(d) === "1w" ? "1W" : tfOf(d) === "4h" ? "4H" : "1D") + " – przełącz interwał" : err ? "Nie udało się odtworzyć: " + err : (d.facts || []).join("\n");
             const v = (r && r.verdict) || d.verdict, vm = v === "OK" ? ["✓", "var(--success)"] : v === "PARTIAL" ? ["~", "var(--accent-hover)"] : ["✗", "var(--danger)"];
             const lc = (r && r.lifecycle) || d.lifecycle || {}, refv = (r && r.ref) || d.ref;
             const sub = [refv ? (refv.label || refv.role || "poziom") + " " + price(refv.value) : "", lc.status === "zakończony" ? "zakończona" : lc.status === "wygasły" ? "wygasła" : "", other ? "zmierzone na " + (tfOf(d) === "1w" ? "1W" : "1D") : "", err ? "⚠ nie odtworzono" : ""].filter(Boolean).join(" · ");
@@ -8088,7 +8100,9 @@ window.ReasonChart = (function () {
             const bs = await bars(e.ticker, S.tf); if (seq !== S.seq || !candle) return;
             candle.setData(bs.map(b => ({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c })));
             vol.setData(bs.map(b => ({ time: b.t, value: b.v, color: b.c >= b.o ? "rgba(14,203,129,0.25)" : "rgba(246,70,93,0.25)" })));
-            const n = bs.length; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (S.tf === "1d" ? 180 : 110)), to: n + 8 });
+            const id = S.tf === "4h", fmtT = t => { try { return new Date(t * 1000).toLocaleString("sv-SE", { timeZone: S.tz || "UTC", hour12: false }).slice(0, 16); } catch (x) { return new Date(t * 1000).toISOString().slice(0, 16).replace("T", " "); } };
+            chart.applyOptions({ timeScale: { timeVisible: id, secondsVisible: false, tickMarkFormatter: id ? (t => { const x = fmtT(t); return x.slice(8, 10) + "." + x.slice(5, 7) + " " + x.slice(11); }) : undefined }, localization: { timeFormatter: id ? fmtT : undefined } });
+            const n = bs.length; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (S.tf === "1d" ? 180 : id ? 260 : 110)), to: n + 8 });
         } catch (x) { const el = $("#rc-legend"); if (el) el.innerHTML = '<span class="plx-err">Nie udało się wczytać wykresu: ' + esc(x.message) + "</span>"; return; }
         draw();
         const todo = details(e).filter(d => d.type !== "external" && tfOf(d) === S.tf);

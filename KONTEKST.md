@@ -97,5 +97,7 @@ Plik `index.html` ma końce linii CRLF. Domyślny backend: **serwer IONOS `https
 
 - **Start → Do zrobienia dziś (2026-10-19)**: `HomeTodo` – przy wpisach „🔕 Wycisz” (7 dni; `wrap`, `snoozeCall`, klucze `card|tp_review|sl_review:<plan>:<entry>`, `near:<ticker>:<entry>`, `focus:<id>`, `eod:<id>`; lista „Wyciszone na tydzień” z „Przywróć”), sortowanie w grupach wg Score z Form (`byScore`, `metaOf`) i plakietki „Score x,x/5” + „★ priorytet / bez priorytetu” (`badges`); dane z `GET /api/home/todo-meta`, a gdy go brak – lista jak dawniej bez przycisków. Radar do „Przy strefach z Form” jest filtrowany po wyciszeniach przed wyborem zagrania spółki.
 
+- **Form: „Luka” i 4H (2026-10-19)**: `Measure.TYPES.gap` („Luka”: dwie świece, opis rodzajów luk), kolejność po „Luka (FVG)” (`ORDER`), `QD_LABEL_TYPE["luka"]`, grupa nakładania `["fvg","gap"]`, kolor `COL.gap`, przecięcie z strefą „Luka ∩ strefa” w szczegółach Form. Przycisk **4H** w oknie nowego wpisu i w szczegółach Form (`/api/candles?tf=4h&limit=1500`, oś czasu z godzinami w strefie giełdy, `dateOf` z godziną tylko na 4H); OPD/OPS i świeca SL zawsze dzienne (`obars()`, `dayOf`, `M.dbars`).
+
 ## Do zrobienia (zapisane na prośbę użytkownika)
 - **Transakcje: kroczący take profit i stop loss** – dopracować w zakładce Transakcje. Planer (podsumowanie i oś) bierze SL/TP z ostatniej inwestycji – po wprowadzeniu kroczących poziomów ma pokazywać ich bieżącą wartość.
